@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InventoryEventType } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { InventoryRepository } from '../infrastructure/inventory.repository';
@@ -90,6 +95,12 @@ export class InventoryService {
 
     const existing = await this.repo.findBalance(input.productId, input.warehouseId);
     const newQty = (existing?.onHandQty ?? 0) + delta;
+    if (newQty < 0) {
+      throw new ConflictException({
+        message: 'Insufficient stock for this adjustment',
+        code: 'INVENTORY_INSUFFICIENT',
+      });
+    }
 
     const balance = await this.repo.upsertBalance({
       productId: input.productId,
@@ -102,6 +113,45 @@ export class InventoryService {
 
   async getBalances(filter: InventoryBalanceFilter) {
     return this.repo.findBalances(filter);
+  }
+
+  /** 後台用：同一倉庫下餘額列附 sku、name，避免前端 N+1 */
+  async getBalancesEnriched(warehouseId: string) {
+    if (!warehouseId?.trim()) {
+      throw new BadRequestException({
+        message: 'warehouseId is required',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+    const wh = await this.prisma.warehouse.findUnique({
+      where: { id: warehouseId.trim() },
+    });
+    if (!wh) {
+      throw new NotFoundException({
+        message: 'Warehouse not found',
+        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
+      });
+    }
+    const balances = await this.repo.findBalances({
+      warehouseIds: [warehouseId.trim()],
+    });
+    const productIds = [...new Set(balances.map((b) => b.productId))];
+    if (productIds.length === 0) {
+      return [];
+    }
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, sku: true, name: true },
+    });
+    const map = new Map(products.map((p) => [p.id, p]));
+    return balances.map((b) => ({
+      productId: b.productId,
+      warehouseId: b.warehouseId,
+      onHandQty: b.onHandQty,
+      updatedAt: b.updatedAt.toISOString(),
+      sku: map.get(b.productId)?.sku ?? null,
+      name: map.get(b.productId)?.name ?? null,
+    }));
   }
 
   async getEvents(filter: InventoryEventFilter) {

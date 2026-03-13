@@ -108,14 +108,35 @@
 
 ## 6. 品牌與商品主檔（stable）
 
+### 6.0 `GET /categories`（stable）
+
+- **Response**：`{ id, code, name, createdAt, updatedAt }[]`
+
+### 6.0b `POST /categories`、`PATCH /categories/:id`（stable）
+
+- **用途**：後台自建分類；**GET 仍公開**（POS 篩選）。寫入與 **`POST/PATCH /products`** 相同：若設定 **`ADMIN_API_KEY`**，須 **`X-Admin-Key`**；未設定則不擋（CI 相容）。
+- **POST body**：`{ "code": "CAT01", "name": "飲料" }`（`code` 唯一）
+- **PATCH body**：`{ "code?": "…", "name?": "…" }`
+- **錯誤**：`400 CATEGORY_CODE_REQUIRED`／`CATEGORY_NAME_REQUIRED`；`409 CATEGORY_CODE_CONFLICT`；`404 CATEGORY_NOT_FOUND`
+
 ### 6.1 `GET /brands`（stable）
 
 - **Response**：`{ id, code, name, createdAt, updatedAt }[]`
 
 ### 6.2 `GET /products`（stable）
 
-- **Query**：`search?`、`sku?`、`categoryId?`、`brandId?`、`tag?`（標籤需與 `tags` 陣列中某一元素完全相等）。
+- **Query**：`search?`、`sku?`、`categoryId?`、`brandId?`、`tag?`（標籤需與 `tags` 陣列中某一元素**完全相等**，含繁體與空白）。
 - **Response 單筆欄位**：`id`、`sku`、`name`、`categoryId`、`brandId`、`tags[]`、`createdAt`、`updatedAt`
+
+**Seed 與 POS「折扣」列對齊之 `tag` 值**（`pnpm db:seed` 後可查 `GET /products?tag=熱銷` 等）：
+
+| tag 值 | 說明（約定） |
+|--------|----------------|
+| `熱銷` | 促銷／熱賣列常用 |
+| `新品` | 新上架 |
+| `清倉` | 出清（與前端「會員價」等並列時，仍以 seed 實際 tags 為準；若需「會員價」請先於 seed 或後台寫入同一字串） |
+
+> 前端 E2E／第三列篩選：呼叫 `getProducts({ tag: '熱銷' })` 等時，字串須與上表及 DB 內 `Product.tags` 一致；選「全部」則不帶 `tag`。
 
 ### 6.3 `POST/PATCH /products`
 

@@ -16,6 +16,21 @@ model Merchant {
 
   stores     Store[]
   warehouses Warehouse[]
+  customers  Customer[]
+}
+
+model Customer {
+  id         String   @id @default(uuid())
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  merchantId String
+  code       String?
+  name       String
+  phone      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  posOrders  PosOrder[]
+
+  @@index([merchantId])
 }
 
 model Store {
@@ -131,11 +146,15 @@ model PosOrder {
   orderNumber String        @unique
   store       Store         @relation(fields: [storeId], references: [id])
   storeId     String
+  customer    Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerId  String?
   totalAmount Decimal
   createdAt   DateTime      @default(now())
 
   items    PosOrderItem[]
   payments PosOrderPayment[]
+
+  @@index([customerId])
 }
 
 model PosOrderPayment {

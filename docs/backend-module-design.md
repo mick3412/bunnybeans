@@ -14,7 +14,7 @@
 | 模組        | 說明                         | 目前狀態             |
 |-------------|------------------------------|----------------------|
 | Merchant    | 商家 / 門市 / 倉庫主檔       | **已實作 CRUD API** |
-| Category    | 商品分類主檔                 | **已實作** `GET /categories` |
+| Category    | 商品分類主檔                 | **已實作** `GET/POST/PATCH /categories`（POST/PATCH 同 products 可選 Admin Key） |
 | Product     | 商品主檔                     | **已實作 CRUD API**（含 categoryId 篩選） |
 | Inventory   | 庫存事件與匯總               | **已實作**           |
 | Finance     | 金流事件                     | **已實作**           |

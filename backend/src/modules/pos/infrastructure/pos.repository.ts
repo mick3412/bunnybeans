@@ -2,9 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 
+const orderInclude = {
+  items: true,
+  payments: true,
+  customer: true,
+} as const;
+
 export interface CreatePosOrderData {
   orderNumber: string;
   storeId: string;
+  customerId?: string | null;
   totalAmount: number;
   items: { productId: string; quantity: number; unitPrice: number }[];
   payments: { method: string; amount: number }[];
@@ -15,11 +22,19 @@ export class PosRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async createOrder(data: CreatePosOrderData) {
-    const { orderNumber, storeId, totalAmount, items, payments } = data;
+    const {
+      orderNumber,
+      storeId,
+      customerId,
+      totalAmount,
+      items,
+      payments,
+    } = data;
     return this.prisma.posOrder.create({
       data: {
         orderNumber,
         storeId,
+        customerId: customerId ?? null,
         totalAmount: new Decimal(totalAmount),
         items: {
           create: items.map((item) => ({
@@ -35,14 +50,14 @@ export class PosRepository {
           })),
         },
       },
-      include: { items: true, payments: true },
+      include: orderInclude,
     });
   }
 
   async findById(id: string) {
     return this.prisma.posOrder.findUnique({
       where: { id },
-      include: { items: true, payments: true },
+      include: orderInclude,
     });
   }
 
@@ -86,6 +101,7 @@ export class PosRepository {
         orderBy: { createdAt: 'desc' },
         skip: filter.skip,
         take: filter.take,
+        include: { customer: true },
       }),
       this.prisma.posOrder.count({ where }),
     ]);

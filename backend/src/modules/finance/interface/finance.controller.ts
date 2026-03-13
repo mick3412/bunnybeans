@@ -1,10 +1,31 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { FinanceEventType } from '@prisma/client';
 import { FinanceService, RecordFinanceEventInput } from '../application/finance.service';
 
 @Controller('finance')
 export class FinanceController {
   constructor(private readonly service: FinanceService) {}
+
+  @Get('events')
+  listEvents(
+    @Query('partyId') partyId?: string,
+    @Query('referenceId') referenceId?: string,
+    @Query('type') type?: FinanceEventType,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.service.listFinanceEvents({
+      partyId: partyId === '' ? undefined : partyId,
+      referenceId: referenceId === '' ? undefined : referenceId,
+      type,
+      from,
+      to,
+      page: page != null ? parseInt(page, 10) : undefined,
+      pageSize: pageSize != null ? parseInt(pageSize, 10) : undefined,
+    });
+  }
 
   @Post('events')
   recordEvent(

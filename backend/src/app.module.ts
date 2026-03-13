@@ -10,6 +10,7 @@ import { ProductModule } from './modules/product/product.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { PosModule } from './modules/pos/pos.module';
+import { AdminApiKeyGuard } from './shared/guards/admin-api-key.guard';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { PosModule } from './modules/pos/pos.module';
     PosModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, AdminApiKeyGuard],
 })
 export class AppModule {}
 

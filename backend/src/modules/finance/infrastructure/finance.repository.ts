@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { FinanceEventType } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -31,5 +32,36 @@ export class FinanceRepository {
         note: data.note ?? null,
       },
     });
+  }
+
+  async listEvents(params: {
+    partyId?: string;
+    referenceId?: string;
+    type?: FinanceEventType;
+    from?: Date;
+    to?: Date;
+    page: number;
+    pageSize: number;
+  }) {
+    const where: Prisma.FinanceEventWhereInput = {};
+    if (params.partyId !== undefined) where.partyId = params.partyId;
+    if (params.referenceId !== undefined) where.referenceId = params.referenceId;
+    if (params.type) where.type = params.type;
+    if (params.from || params.to) {
+      where.occurredAt = {};
+      if (params.from) where.occurredAt.gte = params.from;
+      if (params.to) where.occurredAt.lte = params.to;
+    }
+    const skip = (params.page - 1) * params.pageSize;
+    const [total, rows] = await Promise.all([
+      this.prisma.financeEvent.count({ where }),
+      this.prisma.financeEvent.findMany({
+        where,
+        orderBy: { occurredAt: 'desc' },
+        skip,
+        take: params.pageSize,
+      }),
+    ]);
+    return { items: rows, total };
   }
 }

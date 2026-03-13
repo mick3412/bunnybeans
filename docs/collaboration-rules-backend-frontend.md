@@ -62,9 +62,11 @@
 #### 3.2 前端 Agent
 
 - **負責**
-  - 依 `docs/api-design-*.md` 與 `shared/src/index.ts` 開發 POS UI 與後台管理畫面。
+  - 依 `docs/api-design-*.md` 與 `shared/src/index.ts` 開發 **POS UI** 與 **Admin 後台**（庫存／商品等，見 [docs/admin-inventory-ui.md](admin-inventory-ui.md)）。
   - 在 API 尚未實作時，以 mock API（結構需與文件一致）先完成畫面與資料流。
 - **約束**
+  - **POS**：不直接呼叫 `/inventory/*`、`/finance/*`（扣庫由建單內部完成）。
+  - **Admin**：可呼叫 stable 的 `/inventory/*`（查詢與手動事件）、`/products` CRUD、`/warehouses` 等，仍以文件為準。
   - 不得直接以「閱讀後端程式碼」推論 API 結構後就實作，必須以文件與 shared 型別為準。
   - 若需新增欄位或改動結構：
     - 不直接改 UI 然後假設後端會接受，而是透過 Owner 提出需求。

@@ -1,0 +1,12 @@
+#!/bin/bash
+# 啟動「終端機」跑一鍵 E2E；REPO = 本 App 所在 git 倉庫根（App 須留在 macos/ 底下，或改下面 REPO）
+MACOS_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+REPO="$(cd "$MACOS_DIR/.." && pwd)"
+export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
+
+osascript <<EOF
+tell application "Terminal"
+  activate
+  do script "cd $(printf %q "$REPO") && bash scripts/e2e-one-click.sh; echo ''; read -n 1 -s -p '完成，按任意鍵關閉視窗…'; exit"
+end tell
+EOF

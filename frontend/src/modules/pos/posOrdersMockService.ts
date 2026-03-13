@@ -18,6 +18,10 @@ export interface CreatePosOrderRequest {
   items: PosOrderItemInput[];
   payments: PosPaymentInput[];
   customerId?: string | null;
+  /** 選填；後端可用於依電話查詢／綁定 Customer */
+  customerPhone?: string | null;
+  /** 選填；後端可用於依 email 查詢／綁定 Customer */
+  customerEmail?: string | null;
   allowCredit?: boolean;
 }
 
@@ -27,6 +31,9 @@ export interface PosOrderSummary {
   storeId: string;
   totalAmount: number;
   createdAt: string;
+  /** api-design-pos；後端未回傳時可缺 */
+  customerId?: string | null;
+  customerName?: string | null;
 }
 
 export interface PosOrderDetailItem {
@@ -47,6 +54,7 @@ export interface PosOrderDetail extends PosOrderSummary {
   paidAmount: number;
   remainingAmount: number;
   credit: boolean;
+  customerCode?: string | null;
 }
 
 export interface PosOrderListResponse {
@@ -126,6 +134,7 @@ export const createPosOrderMock = async (
   const remainingAmount = Math.max(0, totalAmount - paidAmount);
   const credit = remainingAmount > 0;
 
+  const cid = (input.customerId ?? '').trim() || null;
   return {
     statusCode: 201,
     message: 'POS 銷售單建立成功（mock）。',
@@ -135,6 +144,9 @@ export const createPosOrderMock = async (
       storeId: context.storeId,
       totalAmount,
       createdAt: now.toISOString(),
+      customerId: cid,
+      customerName: cid ? '（mock 客戶）' : null,
+      customerCode: cid ? 'MOCK' : null,
       items: detailItems,
       payments,
       paidAmount,
@@ -156,6 +168,8 @@ export const listPosOrdersMock = async (): Promise<PosOrderListResponse> => {
     storeId: 'mock-store-1',
     totalAmount: 400 + index * 80,
     createdAt: new Date(baseDate.getTime() + index * 15 * 60 * 1000).toISOString(),
+    customerId: index % 2 === 0 ? `mock-cust-${index}` : null,
+    customerName: index % 2 === 0 ? `示範客戶 ${index + 1}` : null,
   }));
 
   return {

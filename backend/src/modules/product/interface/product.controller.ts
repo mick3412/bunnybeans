@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { ProductService } from '../application/product.service';
 
 @Controller('products')
@@ -34,6 +45,7 @@ export class ProductController {
   }
 
   @Post()
+  @UseGuards(AdminApiKeyGuard)
   create(
     @Body()
     body: {
@@ -48,6 +60,7 @@ export class ProductController {
   }
 
   @Patch(':id')
+  @UseGuards(AdminApiKeyGuard)
   update(
     @Param('id') id: string,
     @Body()
@@ -63,6 +76,7 @@ export class ProductController {
   }
 
   @Delete(':id')
+  @UseGuards(AdminApiKeyGuard)
   delete(@Param('id') id: string) {
     return this.service.deleteProduct(id);
   }

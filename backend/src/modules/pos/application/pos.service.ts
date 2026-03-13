@@ -76,6 +76,21 @@ export class PosService {
       });
     }
 
+    const customerIdTrim = input.customerId?.trim() ?? '';
+    let resolvedCustomerId: string | null = null;
+    if (customerIdTrim) {
+      const customer = await this.prisma.customer.findFirst({
+        where: { id: customerIdTrim, merchantId: store.merchantId },
+      });
+      if (!customer) {
+        throw new NotFoundException({
+          message: 'Customer not found for this store merchant',
+          code: 'POS_CUSTOMER_NOT_FOUND',
+        });
+      }
+      resolvedCustomerId = customer.id;
+    }
+
     const warehouse = store.warehouses[0];
     if (!warehouse) {
       throw new BadRequestException({
@@ -156,6 +171,7 @@ export class PosService {
     const order = await this.posRepo.createOrder({
       orderNumber,
       storeId: input.storeId,
+      customerId: resolvedCustomerId,
       totalAmount,
       items: input.items,
       payments: paymentsToStore,
@@ -173,7 +189,7 @@ export class PosService {
       });
     }
 
-    const partyId = input.customerId ?? null;
+    const partyId = resolvedCustomerId;
     await this.financeService.recordFinanceEvent({
       type: 'SALE_RECEIVABLE',
       partyId,
@@ -283,6 +299,190 @@ export class PosService {
     return this.toOrderDetail(updated);
   }
 
+  async refundToOrder(
+    orderId: string,
+    input: { amount: number; occurredAt?: string; note?: string },
+  ) {
+    const order = await this.posRepo.findById(orderId);
+    if (!order) {
+      throw new NotFoundException({
+        message: 'Order not found',
+        code: 'POS_ORDER_NOT_FOUND',
+      });
+    }
+    if (
+      typeof input.amount !== 'number' ||
+      input.amount <= 0 ||
+      Number.isNaN(input.amount)
+    ) {
+      throw new BadRequestException({
+        message: 'amount must be a positive number',
+        code: 'POS_PAYMENT_AMOUNT_INVALID',
+      });
+    }
+
+    const collected = (order.payments ?? []).reduce(
+      (s, x) => s + Number(x.amount),
+      0,
+    );
+    if (collected < 0.01) {
+      throw new BadRequestException({
+        message: 'No payment on order; cannot refund',
+        code: 'POS_REFUND_NO_PAYMENT',
+      });
+    }
+
+    const receivable = await this.prisma.financeEvent.findFirst({
+      where: { referenceId: orderId, type: 'SALE_RECEIVABLE' },
+    });
+    if (!receivable) {
+      throw new BadRequestException({
+        message: 'No SALE_RECEIVABLE for this order; cannot refund',
+        code: 'POS_CREDIT_NO_RECEIVABLE',
+      });
+    }
+
+    const refundedAgg = await this.prisma.financeEvent.aggregate({
+      where: { referenceId: orderId, type: 'SALE_REFUND' },
+      _sum: { amount: true },
+    });
+    const alreadyRefunded = Number(refundedAgg._sum.amount ?? 0);
+    const maxRefund = Math.round((collected - alreadyRefunded) * 100) / 100;
+    if (input.amount - maxRefund > 0.01) {
+      throw new BadRequestException({
+        message: 'Refund amount exceeds refundable balance',
+        code: 'POS_REFUND_EXCEEDS_PAID',
+      });
+    }
+
+    const occurredAtStr = input.occurredAt
+      ? new Date(input.occurredAt).toISOString()
+      : new Date().toISOString();
+    await this.financeService.recordFinanceEvent({
+      type: 'SALE_REFUND',
+      partyId: receivable.partyId || null,
+      currency: receivable.currency,
+      amount: input.amount,
+      taxAmount: 0,
+      occurredAt: occurredAtStr,
+      referenceId: orderId,
+      note:
+        input.note?.trim() ||
+        `POS ${order.orderNumber} refund`,
+    });
+    return this.toOrderDetail(order);
+  }
+
+  async returnToStock(
+    orderId: string,
+    input: {
+      items: Array<{ productId: string; quantity: number }>;
+      occurredAt?: string;
+    },
+  ) {
+    const order = await this.posRepo.findById(orderId);
+    if (!order) {
+      throw new NotFoundException({
+        message: 'Order not found',
+        code: 'POS_ORDER_NOT_FOUND',
+      });
+    }
+    const items = input.items ?? [];
+    if (!items.length) {
+      throw new BadRequestException({
+        message: 'items must not be empty',
+        code: 'POS_RETURN_ITEMS_EMPTY',
+      });
+    }
+
+    const store = await this.prisma.store.findUnique({
+      where: { id: order.storeId },
+      include: { warehouses: true },
+    });
+    const warehouse = store?.warehouses[0];
+    if (!warehouse) {
+      throw new BadRequestException({
+        message: 'Store has no warehouse',
+        code: 'POS_STORE_NO_WAREHOUSE',
+      });
+    }
+
+    const soldByProduct = new Map<string, number>();
+    for (const line of order.items ?? []) {
+      soldByProduct.set(
+        line.productId,
+        (soldByProduct.get(line.productId) ?? 0) + line.quantity,
+      );
+    }
+
+    const returnedAgg = await this.prisma.inventoryEvent.findMany({
+      where: {
+        referenceId: orderId,
+        type: 'RETURN_FROM_CUSTOMER',
+      },
+      select: { productId: true, quantity: true },
+    });
+    const alreadyByProduct = new Map<string, number>();
+    for (const ev of returnedAgg) {
+      alreadyByProduct.set(
+        ev.productId,
+        (alreadyByProduct.get(ev.productId) ?? 0) + ev.quantity,
+      );
+    }
+
+    const occurredAtStr = input.occurredAt
+      ? new Date(input.occurredAt).toISOString()
+      : new Date().toISOString();
+
+    for (const row of items) {
+      const pid = row.productId?.trim();
+      if (!pid) {
+        throw new BadRequestException({
+          message: 'each item needs productId',
+          code: 'POS_RETURN_PRODUCT_NOT_ON_ORDER',
+        });
+      }
+      const q =
+        typeof row.quantity === 'number' && row.quantity > 0
+          ? Math.floor(row.quantity)
+          : 0;
+      if (q < 1) {
+        throw new BadRequestException({
+          message: 'each item quantity must be a positive integer',
+          code: 'POS_RETURN_EXCEEDS_SOLD',
+        });
+      }
+      const sold = soldByProduct.get(pid);
+      if (sold == null || sold < 1) {
+        throw new BadRequestException({
+          message: `Product ${pid} not on this order`,
+          code: 'POS_RETURN_PRODUCT_NOT_ON_ORDER',
+        });
+      }
+      const already = alreadyByProduct.get(pid) ?? 0;
+      if (already + q - sold > 0) {
+        throw new BadRequestException({
+          message: 'Return quantity exceeds sold less already returned',
+          code: 'POS_RETURN_EXCEEDS_SOLD',
+        });
+      }
+      await this.inventoryService.recordInventoryEvent({
+        productId: pid,
+        warehouseId: warehouse.id,
+        type: 'RETURN_FROM_CUSTOMER',
+        quantity: q,
+        occurredAt: occurredAtStr,
+        referenceId: orderId,
+        note: `POS ${order.orderNumber} return-to-stock`,
+      });
+      alreadyByProduct.set(pid, already + q);
+    }
+
+    const reloaded = await this.posRepo.findById(orderId);
+    if (!reloaded) throw new Error('Order missing after return');
+    return this.toOrderDetail(reloaded);
+  }
+
   async getOrderById(id: string) {
     const order = await this.posRepo.findById(id);
     if (!order) {
@@ -321,6 +521,8 @@ export class PosService {
         storeId: o.storeId,
         totalAmount: Number(o.totalAmount),
         createdAt: o.createdAt.toISOString(),
+        customerId: o.customerId ?? null,
+        customerName: o.customer?.name ?? null,
       })),
       page,
       pageSize,
@@ -332,6 +534,8 @@ export class PosService {
     id: string;
     orderNumber: string;
     storeId: string;
+    customerId?: string | null;
+    customer?: { id: string; name: string; code: string | null } | null;
     totalAmount: { toNumber: () => number };
     createdAt: Date;
     items: Array<{
@@ -362,6 +566,9 @@ export class PosService {
       id: order.id,
       orderNumber: order.orderNumber,
       storeId: order.storeId,
+      customerId: order.customerId ?? null,
+      customerName: order.customer?.name ?? null,
+      customerCode: order.customer?.code ?? null,
       totalAmount: total,
       createdAt: order.createdAt.toISOString(),
       items: order.items.map((i) => ({

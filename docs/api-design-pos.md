@@ -47,6 +47,10 @@ interface CreatePosOrderRequest {
   items: PosOrderItemInput[];
   payments: PosPaymentInput[];
   customerId?: string | null;
+  /** 選填；依電話查詢／綁定 Customer（前端可單一欄位自動辨識後帶入） */
+  customerPhone?: string | null;
+  /** 選填；依 email 查詢／綁定 Customer */
+  customerEmail?: string | null;
   /**
    * 為 true：賒帳／部分付款。規則：
    * - 必填 customerId（掛帳對象）
@@ -57,6 +61,9 @@ interface CreatePosOrderRequest {
   allowCredit?: boolean;
 }
 
+// 若帶 customerId：須為該門市所屬商家（Merchant）底下之 Customer；通過驗證後寫入 PosOrder.customerId。
+// 賒帳 allowCredit: true 時 customerId 必填（與先前一致）。
+
 // POS 銷售單摘要（列表用）
 interface PosOrderSummary {
   id: string;
@@ -64,6 +71,10 @@ interface PosOrderSummary {
   storeId: string;
   totalAmount: number;
   createdAt: string; // ISO datetime
+  /** 訂單掛載之客戶 id；未掛客戶為 null */
+  customerId: string | null;
+  /** 客戶名稱；未掛客戶為 null */
+  customerName: string | null;
 }
 
 // POS 銷售單明細（單筆查詢用；POST 建單成功回應亦同結構）
@@ -82,6 +93,8 @@ interface PosOrderDetail extends PosOrderSummary {
   remainingAmount: number;
   /** true 表示仍有未收（remainingAmount > 0） */
   credit: boolean;
+  /** 客戶代碼；明細專用；未掛或無 code 為 null */
+  customerCode: string | null;
 }
 
 interface PosOrderListResponse {
@@ -102,6 +115,9 @@ interface PosOrderListResponse {
 | `/pos/orders`      | GET    | 取得 POS 銷售單列表（分頁）     | **stable** |
 | `/pos/orders/:id`  | GET    | 取得單筆 POS 銷售單明細         | **stable** |
 | `/pos/orders/:id/payments` | POST | 對既有訂單追加一筆收款（補款） | **stable** |
+| `/pos/orders/:id/refunds` | POST | 對既有訂單登記一筆退款（`SALE_REFUND`） | **stable** |
+| `/pos/orders/:id/returns/stock` | POST | 依訂單明細沖銷入庫（`RETURN_FROM_CUSTOMER`） | **stable** |
+| `/pos/orders/:id/return-to-stock` | POST | 同上（相容舊路徑） | **stable** |
 
 ---
 
@@ -112,7 +128,7 @@ interface PosOrderListResponse {
 - **Method**：`POST`
 - **Path**：`/pos/orders`
 - **用途**：建立一筆銷售單，並在 Application 層觸發：
-  - 建立 `PosOrder` / `PosOrderItem` / `PosOrderPayment`（持久化 `payments[]`）。
+  - 建立 `PosOrder`（可選 **`customerId`**，與門市同 Merchant 之 Customer）/ `PosOrderItem` / `PosOrderPayment`（持久化 `payments[]`）。
   - 透過 `InventoryService` 寫入 `SALE_OUT` 類型的 `InventoryEvent`，更新 `InventoryBalance`。
   - 透過 `FinanceService` 寫入金流：一般單一筆 `SALE_RECEIVABLE`；**賒帳**（`allowCredit: true`）時再加多筆 `SALE_PAYMENT`（每筆實收）。
 - **狀態**：**stable**（已實作）。
@@ -173,7 +189,7 @@ interface PosOrderListResponse {
 **錯誤情境（實際回傳）**
 
 - `400 Bad Request`：`items must not be empty`（`POS_ITEMS_EMPTY`）；未開賒帳時付款須全額（`POS_PAYMENT_MISMATCH`）；賒帳未帶客戶（`POS_CREDIT_REQUIRES_CUSTOMER`）；賒帳實收超過應收（`POS_PAYMENT_EXCEEDS_TOTAL`）；付款金額非法（`POS_PAYMENT_AMOUNT_INVALID`）；`Store has no warehouse configured for inventory`（`POS_STORE_NO_WAREHOUSE`）。
-- `404 Not Found`：`Store not found`（`POS_STORE_NOT_FOUND`）、`Product not found: <id>`（`POS_PRODUCT_NOT_FOUND`）、`Order not found`（`POS_ORDER_NOT_FOUND`）。
+- `404 Not Found`：`Store not found`（`POS_STORE_NOT_FOUND`）、`Product not found: <id>`（`POS_PRODUCT_NOT_FOUND`）、`Order not found`（`POS_ORDER_NOT_FOUND`）、客戶不存在或不屬該門市商家（`POS_CUSTOMER_NOT_FOUND`）。
 - `409 Conflict`：`Insufficient inventory for product <id>: required <n>, on hand <m>`（code: `INVENTORY_INSUFFICIENT`）。
 
 > 錯誤回應由全域 `HttpExceptionFilter` 統一為 `statusCode`、`message`、`error`、`code`、`traceId`，見 `docs/backend-error-format.md`。
@@ -209,6 +225,60 @@ interface PosOrderListResponse {
 
 ---
 
+#### 4.1c 退款（沖帳金流，Phase 1）
+
+- **Method**：`POST`
+- **Path**：`/pos/orders/:id/refunds`
+- **用途**：已實收範圍內登記退款，append **`SALE_REFUND`**；不改 `PosOrderPayment`；**不**自動退庫。
+- **狀態**：**stable**（已實作）。
+
+**Request body**
+
+```json
+{
+  "amount": 50,
+  "occurredAt": "2026-03-13T16:00:00Z",
+  "note": "optional"
+}
+```
+
+- `amount`（必填，&gt; 0）；`occurredAt`、`note` 選填。
+
+**規則**
+
+- 訂單須存在；須有 `SALE_RECEIVABLE`（`partyId`）。
+- 已入帳實收 = `sum(PosOrderPayment)`；若為 0 → `POS_REFUND_NO_PAYMENT`（全賒未收不可退現）。
+- 已退合計 = 該單 `SALE_REFUND` 之和；`amount > 實收 − 已退`（0.01 容差）→ `POS_REFUND_EXCEEDS_PAID`。
+
+**成功回應**：與 `GET /pos/orders/:id` 相同之 `PosOrderDetail`（`201`）。明細之 `paidAmount` 仍為實收列合計；淨收由報表匯總 `SALE_REFUND`。
+
+---
+
+#### 4.1d 退貨入庫（Phase 2，erp-spec 5.2.2）
+
+- **Method**：`POST`
+- **Path**：`/pos/orders/:id/returns/stock`（**建議**）；相容 `/pos/orders/:id/return-to-stock`
+- **用途**：依原訂單扣庫倉 append **`RETURN_FROM_CUSTOMER`**，不回沖金流（退款仍用 §4.1c）。
+- **狀態**：**stable**（已實作）。
+
+**Request body**
+
+```json
+{
+  "items": [{ "productId": "uuid", "quantity": 1 }],
+  "occurredAt": "2026-03-13T17:00:00Z"
+}
+```
+
+- `items`（必填，非空）：每筆 `productId` 須出現在該訂單 `items`；`quantity` 為正整數。
+- 同一訂單累計退貨量（含本次）不可超過該品項原銷售量；`occurredAt` 選填。
+
+**錯誤**：`POS_ORDER_NOT_FOUND`、`POS_RETURN_ITEMS_EMPTY`、`POS_RETURN_PRODUCT_NOT_ON_ORDER`、`POS_RETURN_EXCEEDS_SOLD`。
+
+**成功回應**：與 `GET /pos/orders/:id` 相同之 `PosOrderDetail`（`201`）。
+
+---
+
 #### 4.2 查詢 POS 銷售單列表
 
 - **Method**：`GET`
@@ -234,7 +304,9 @@ interface PosOrderListResponse {
       "orderNumber": "POS-20260313-0001",
       "storeId": "uuid-of-store",
       "totalAmount": 600,
-      "createdAt": "2026-03-13T10:00:01Z"
+      "createdAt": "2026-03-13T10:00:01Z",
+      "customerId": "uuid-or-null",
+      "customerName": "客戶名稱或 null"
     }
   ],
   "page": 1,
@@ -259,6 +331,9 @@ interface PosOrderListResponse {
   "id": "uuid-of-order",
   "orderNumber": "POS-20260313-0001",
   "storeId": "uuid-of-store",
+  "customerId": "uuid-or-null",
+  "customerName": "客戶名稱或 null",
+  "customerCode": "C001 或 null",
   "totalAmount": 600,
   "createdAt": "2026-03-13T10:00:01Z",
   "items": [
@@ -279,7 +354,7 @@ interface PosOrderListResponse {
 }
 ```
 
-> 列表 `GET /pos/orders` 仍不含 `payments`／`paidAmount`／`credit`。舊訂單無付款列時 `payments: []`、`paidAmount: 0`、`remainingAmount` 等於 `totalAmount`、`credit: true`（視為歷史賒帳或未紀錄實收，前端可再與營運確認）。
+> 列表 `GET /pos/orders` 仍不含 `payments`／`paidAmount`／`credit`／`customerCode`（摘要僅 `customerId`、`customerName`）。明細含 `customerCode`。舊訂單無付款列時 `payments: []`、`paidAmount: 0`、`remainingAmount` 等於 `totalAmount`、`credit: true`（視為歷史賒帳或未紀錄實收，前端可再與營運確認）。
 
 ---
 

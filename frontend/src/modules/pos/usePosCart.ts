@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { CartItem, CartSummary, PosProduct } from './types';
 
-/** 暫時關閉：客戶目前未稅經營 */
-const TAX_RATE = 0;
+/** 0 = 未稅，購物車不顯示稅額列；改為 0.05 即 5% */
+export const POS_TAX_RATE = 0;
 
 export const usePosCart = () => {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -38,7 +38,7 @@ export const usePosCart = () => {
 
   const summary: CartSummary = useMemo(() => {
     const subtotal = items.reduce((acc, item) => acc + item.unitPrice * item.quantity, 0);
-    const tax = Math.round(subtotal * TAX_RATE);
+    const tax = Math.round(subtotal * POS_TAX_RATE);
     const total = subtotal + tax;
     return { subtotal, tax, total };
   }, [items]);

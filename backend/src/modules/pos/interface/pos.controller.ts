@@ -45,6 +45,42 @@ export class PosController {
     return this.service.appendPaymentToOrder(id, body);
   }
 
+  @Post(':id/refunds')
+  @HttpCode(201)
+  refund(
+    @Param('id') id: string,
+    @Body() body: { amount: number; occurredAt?: string; note?: string },
+  ) {
+    return this.service.refundToOrder(id, body);
+  }
+
+  /** 舊路徑保留；若環境對連字路徑回 404，請用 returns/stock */
+  @Post(':id/return-to-stock')
+  @HttpCode(201)
+  returnToStock(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      items: Array<{ productId: string; quantity: number }>;
+      occurredAt?: string;
+    },
+  ) {
+    return this.service.returnToStock(id, body);
+  }
+
+  @Post(':id/returns/stock')
+  @HttpCode(201)
+  returnToStockAlias(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      items: Array<{ productId: string; quantity: number }>;
+      occurredAt?: string;
+    },
+  ) {
+    return this.service.returnToStock(id, body);
+  }
+
   @Get()
   list(
     @Query('storeId') storeId?: string,

@@ -67,6 +67,33 @@ async function main() {
     },
   });
 
+  /** Playwright 掛帳 E2E 固定客戶 id；每次 upsert，與 code:C001 是否已存在無關 */
+  const E2E_CUSTOMER_ID = 'e2e00001-0000-4000-8000-00000000c001';
+  await prisma.customer.upsert({
+    where: { id: E2E_CUSTOMER_ID },
+    create: {
+      id: E2E_CUSTOMER_ID,
+      merchantId: merchant.id,
+      code: 'E2E',
+      name: 'E2E 掛帳測試',
+      phone: '0900000001',
+    },
+    update: { merchantId: merchant.id },
+  });
+  const existingCustomer = await prisma.customer.findFirst({
+    where: { merchantId: merchant.id, code: 'C001' },
+  });
+  if (!existingCustomer) {
+    await prisma.customer.create({
+      data: {
+        merchantId: merchant.id,
+        code: 'C001',
+        name: 'Demo 客戶',
+        phone: '0900000000',
+      },
+    });
+  }
+
   const warehouse = await prisma.warehouse.upsert({
     where: { code: 'W001' },
     update: { storeId: store.id },

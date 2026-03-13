@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../shared/components/Button';
-import { usePosCart } from '../modules/pos/usePosCart';
+import { usePosCart, POS_TAX_RATE } from '../modules/pos/usePosCart';
 import type { PosProduct, PosProductDisplay } from '../modules/pos/types';
 import { PosCheckoutModal } from './PosCheckoutModal';
 import type { CreateOrderResult, CategoryDto, BrandDto } from '../modules/pos/posOrdersApi';
@@ -9,11 +9,12 @@ import { getStores, getProducts, getCategories, getBrands } from '../modules/pos
 
 const ALL_ID = '';
 
-const mockDiscountOptions = [
-  { id: ALL_ID, name: '無' },
-  { id: 'promo', name: '促銷中' },
-  { id: 'hot', name: '熱賣' },
-  { id: 'member', name: '會員價' },
+/** 與後端 Product.tags / seed 一致；選「無」不帶 tag query */
+const DISCOUNT_TAG_OPTIONS: { tag: string; name: string }[] = [
+  { tag: '', name: '無' },
+  { tag: '促銷中', name: '促銷中' },
+  { tag: '熱賣', name: '熱賣' },
+  { tag: '會員價', name: '會員價' },
 ];
 
 const mockProducts: PosProductDisplay[] = Array.from({ length: 16 }).map((_, index) => {
@@ -35,12 +36,6 @@ const mockProducts: PosProductDisplay[] = Array.from({ length: 16 }).map((_, ind
   };
 });
 
-function toggleSet(set: string[], id: string, allId: string): string[] {
-  if (id === allId) return [];
-  if (set.includes(id)) return set.filter((x) => x !== id);
-  return [...set, id];
-}
-
 export const PosPage: React.FC = () => {
   const navigate = useNavigate();
   const { items, summary, addProduct, changeQuantity, clearCart } = usePosCart();
@@ -48,7 +43,7 @@ export const PosPage: React.FC = () => {
   const [lastOrderResult, setLastOrderResult] = useState<CreateOrderResult | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
-  const [selectedDiscountIds, setSelectedDiscountIds] = useState<string[]>([]);
+  const [selectedDiscountTag, setSelectedDiscountTag] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [gridCols, setGridCols] = useState<3 | 4 | 5>(5);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -57,7 +52,7 @@ export const PosPage: React.FC = () => {
   const [apiProducts, setApiProducts] = useState<PosProductDisplay[] | null>(null);
   const [apiLoadError, setApiLoadError] = useState<string | null>(null);
 
-  const loadProducts = async (opts?: { categoryId?: string; brandId?: string }) => {
+  const loadProducts = async (opts?: { categoryId?: string; brandId?: string; tag?: string }) => {
     const productsRes = await getProducts(opts);
     if (Array.isArray(productsRes)) {
       setApiProducts(
@@ -126,9 +121,9 @@ export const PosPage: React.FC = () => {
     if (selectedBrandIds.length > 0) {
       list = list.filter((p) => p.brandId && selectedBrandIds.includes(p.brandId));
     }
-    const tagToId = (t: string) => (t === '促銷中' ? 'promo' : t === '熱賣' ? 'hot' : t === '會員價' ? 'member' : t);
-    if (selectedDiscountIds.length > 0) {
-      list = list.filter((p) => p.tags && p.tags.some((t) => selectedDiscountIds.includes(tagToId(t))));
+    /* 折扣由 API tag 篩選；mock 離線時於此補過濾 */
+    if (apiProducts === null && selectedDiscountTag) {
+      list = list.filter((p) => p.tags?.includes(selectedDiscountTag));
     }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -138,24 +133,31 @@ export const PosPage: React.FC = () => {
       );
     }
     return list;
-  }, [productsForGrid, selectedCategoryIds, selectedBrandIds, selectedDiscountIds, searchQuery]);
+  }, [productsForGrid, selectedCategoryIds, selectedBrandIds, selectedDiscountTag, searchQuery, apiProducts]);
 
   const clearFilters = () => {
     setSelectedCategoryIds([]);
     setSelectedBrandIds([]);
-    setSelectedDiscountIds([]);
+    setSelectedDiscountTag('');
     setSearchQuery('');
   };
 
   const hasActiveFilters =
-    selectedCategoryIds.length > 0 || selectedBrandIds.length > 0 || selectedDiscountIds.length > 0 || searchQuery.trim() !== '';
+    selectedCategoryIds.length > 0 ||
+    selectedBrandIds.length > 0 ||
+    selectedDiscountTag !== '' ||
+    searchQuery.trim() !== '';
 
-  const categoryIdForApi = selectedCategoryIds.length === 1 ? selectedCategoryIds[0] : undefined;
-  const brandIdForApi = selectedBrandIds.length === 1 ? selectedBrandIds[0] : undefined;
+  const gridClass =
+    gridCols === 3
+      ? 'grid-cols-2 sm:grid-cols-3'
+      : gridCols === 4
+        ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'
+        : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white/80 px-6 py-3 backdrop-blur">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white/80 px-3 py-3 backdrop-blur sm:px-6">
         <div className="flex items-center gap-2">
           <span className="rounded-md bg-sky-600 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-white">
             POS
@@ -170,6 +172,7 @@ export const PosPage: React.FC = () => {
         <div className="flex items-center gap-3 text-xs text-slate-500">
           <button
             type="button"
+            data-testid="e2e-nav-orders"
             onClick={() => navigate('/pos/orders')}
             className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
           >
@@ -182,10 +185,11 @@ export const PosPage: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex flex-1 gap-4 px-4 pb-4 pt-3">
-        <section className="flex min-w-0 flex-[3] flex-col rounded-2xl bg-white p-3 shadow-sm shadow-slate-200">
-          <div className="mb-3 grid grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_auto] gap-3">
-            <div className="rounded-2xl bg-slate-50 px-3 py-2">
+      {/* 小於 lg：單欄 + 購物車固定底部（圖1）；lg 起才側欄並排（圖2） */}
+      <main className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-[calc(14rem+env(safe-area-inset-bottom))] pt-3 sm:gap-4 sm:px-4 lg:flex-row lg:pb-4 lg:pl-4">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl bg-white p-2 shadow-sm shadow-slate-200 sm:p-3 lg:min-w-0 lg:flex-[3]">
+          <div className="mb-3 grid grid-cols-1 gap-2 min-[640px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] min-[640px]:grid-rows-[auto_auto]">
+            <div className="rounded-2xl bg-slate-50 px-3 py-2 min-[640px]:row-span-2">
               <div className="mb-1 text-[11px] font-semibold text-slate-700">篩選</div>
               <div className="mb-1.5 flex flex-wrap items-center gap-1">
                 <span className="mr-1 text-[11px] font-medium text-slate-500">品項</span>
@@ -203,6 +207,7 @@ export const PosPage: React.FC = () => {
                         await loadProducts({
                           categoryId: cat,
                           brandId: selectedBrandIds.length === 1 ? selectedBrandIds[0] : undefined,
+                          tag: selectedDiscountTag || undefined,
                         });
                       }}
                       className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
@@ -230,6 +235,7 @@ export const PosPage: React.FC = () => {
                         await loadProducts({
                           categoryId: selectedCategoryIds.length === 1 ? selectedCategoryIds[0] : undefined,
                           brandId: id === ALL_ID ? undefined : id,
+                          tag: selectedDiscountTag || undefined,
                         });
                       }}
                       className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
@@ -243,16 +249,21 @@ export const PosPage: React.FC = () => {
               </div>
               <div className="mb-1.5 flex flex-wrap items-center gap-1">
                 <span className="mr-1 text-[11px] font-medium text-slate-500">折扣</span>
-                {mockDiscountOptions.map((d) => {
-                  const selected =
-                    d.id === ALL_ID ? selectedDiscountIds.length === 0 : selectedDiscountIds.includes(d.id);
+                {DISCOUNT_TAG_OPTIONS.map((d) => {
+                  const selected = selectedDiscountTag === d.tag;
                   return (
                     <button
-                      key={d.id}
+                      key={d.tag || 'none'}
                       type="button"
-                      onClick={() =>
-                        setSelectedDiscountIds(d.id === ALL_ID ? [] : toggleSet(selectedDiscountIds, d.id, ALL_ID))
-                      }
+                      data-testid={d.tag ? `pos-filter-tag-${d.tag}` : 'pos-filter-tag-none'}
+                      onClick={async () => {
+                        setSelectedDiscountTag(d.tag);
+                        await loadProducts({
+                          categoryId: selectedCategoryIds.length === 1 ? selectedCategoryIds[0] : undefined,
+                          brandId: selectedBrandIds.length === 1 ? selectedBrandIds[0] : undefined,
+                          tag: d.tag || undefined,
+                        });
+                      }}
                       className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
                         selected ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                       }`}
@@ -279,35 +290,37 @@ export const PosPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-end rounded-2xl bg-slate-50 px-3 py-2">
-              <div className="relative w-full max-w-xs">
-                <input
-                  type="search"
-                  placeholder="搜尋商品或掃條碼..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 pr-8 text-xs text-slate-800 placeholder:text-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                />
-                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">
-                  ⌘K
-                </span>
+            {/* 搜尋、欄數：各一塊卡片，上下排列 */}
+            <div className="flex min-w-0 flex-col gap-2 min-[640px]:contents">
+              <div className="flex items-center rounded-2xl bg-slate-50 px-3 py-2 min-[640px]:col-start-2 min-[640px]:row-start-1">
+                <div className="relative w-full min-w-0">
+                  <input
+                    type="search"
+                    placeholder="搜尋商品或掃條碼..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 pr-8 text-xs text-slate-800 placeholder:text-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                  />
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">
+                    ⌘K
+                  </span>
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-1 rounded-2xl bg-slate-50 px-3 py-2 text-[11px]">
-              <span className="mr-1 text-slate-500">欄數</span>
-              {([3, 4, 5] as const).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setGridCols(n)}
-                  className={`rounded px-2 py-0.5 text-[11px] font-medium ${
-                    gridCols === n ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {n} 欄
-                </button>
-              ))}
+              <div className="flex flex-wrap items-center gap-1 rounded-2xl bg-slate-50 px-3 py-2 text-[11px] min-[640px]:col-start-2 min-[640px]:row-start-2">
+                <span className="mr-1 shrink-0 text-slate-500">欄數</span>
+                {([3, 4, 5] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setGridCols(n)}
+                    className={`rounded px-2 py-0.5 text-[11px] font-medium ${
+                      gridCols === n ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {n} 欄
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -316,29 +329,32 @@ export const PosPage: React.FC = () => {
               {apiLoadError}，結帳將使用 mock 資料；若後端已啟動請重新整理。
             </div>
           )}
+          {/* content-start + 固定卡高：與 3 欄時相同高度，不因欄數或少筆商品而撐滿整區 */}
           <div
-            className={`grid min-h-[280px] max-h-[60vh] auto-rows-[minmax(120px,auto)] gap-2 overflow-y-auto rounded-xl border border-dashed border-slate-200 bg-slate-50 p-2 ${
-              gridCols === 3 ? 'grid-cols-3' : gridCols === 4 ? 'grid-cols-4' : 'grid-cols-5'
-            }`}
+            className={`grid min-h-[min(50vh,380px)] flex-1 content-start gap-2 overflow-y-auto rounded-xl border border-dashed border-slate-200 bg-slate-50 p-2 auto-rows-auto ${gridClass}`}
           >
             {filteredProducts.map((product) => (
               <button
                 key={product.id}
                 type="button"
+                data-testid={`pos-product-${product.id}`}
+                data-product-name={product.name}
                 onClick={() => addProduct(product as PosProduct)}
-                className="flex min-h-[120px] min-w-[100px] flex-col items-start gap-0.5 rounded-lg bg-white px-2 py-1.5 text-left text-[11px] shadow-sm shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-sky-50"
+                className="flex h-[118px] w-full min-w-0 shrink-0 flex-col items-start gap-0.5 rounded-lg bg-white px-2 py-1.5 text-left text-[11px] shadow-sm shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-sky-50 sm:h-[120px]"
               >
                 {product.sku && (
-                  <span className="text-[10px] text-slate-400">{product.sku}</span>
+                  <span className="shrink-0 text-[10px] text-slate-400">{product.sku}</span>
                 )}
-                <span className="line-clamp-2 font-medium text-slate-900">{product.name}</span>
-                <span className="mt-auto text-sky-700">${product.price}</span>
+                <span className="line-clamp-2 min-h-0 flex-1 font-medium leading-snug text-slate-900">
+                  {product.name}
+                </span>
+                <span className="shrink-0 text-sky-700">${product.price}</span>
               </button>
             ))}
           </div>
         </section>
 
-        <section className="flex w-[340px] shrink-0 flex-col rounded-2xl bg-white p-3 shadow-sm shadow-slate-200">
+        <section className="fixed bottom-0 left-0 right-0 z-20 max-h-[42vh] w-full border-t border-slate-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:static lg:z-0 lg:max-h-none lg:w-[340px] lg:shrink-0 lg:self-stretch lg:border-t-0 lg:shadow-sm lg:rounded-2xl lg:pb-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-800">購物車</span>
             <Button type="button" size="sm" variant="secondary" onClick={clearCart}>
@@ -351,7 +367,7 @@ export const PosPage: React.FC = () => {
             ) : (
               items.map((line) => (
                 <div
-                  key={line.productId}
+                  key={line.id}
                   className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5"
                 >
                   <div className="min-w-0 flex-1">
@@ -364,7 +380,7 @@ export const PosPage: React.FC = () => {
                     <button
                       type="button"
                       className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px]"
-                      onClick={() => changeQuantity(line.productId, line.quantity - 1)}
+                      onClick={() => changeQuantity(line.id, line.quantity - 1)}
                     >
                       −
                     </button>
@@ -372,7 +388,7 @@ export const PosPage: React.FC = () => {
                     <button
                       type="button"
                       className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px]"
-                      onClick={() => changeQuantity(line.productId, line.quantity + 1)}
+                      onClick={() => changeQuantity(line.id, line.quantity + 1)}
                     >
                       +
                     </button>
@@ -386,10 +402,12 @@ export const PosPage: React.FC = () => {
               <span>小計</span>
               <span className="tabular-nums">${summary.subtotal.toLocaleString()}</span>
             </div>
-            <div className="flex justify-between">
-              <span>稅額 (5%)</span>
-              <span className="tabular-nums">${summary.tax.toLocaleString()}</span>
-            </div>
+            {POS_TAX_RATE > 0 && (
+              <div className="flex justify-between">
+                <span>稅額 ({Math.round(POS_TAX_RATE * 100)}%)</span>
+                <span className="tabular-nums">${summary.tax.toLocaleString()}</span>
+              </div>
+            )}
             <div className="flex justify-between font-semibold text-slate-900">
               <span>應收</span>
               <span className="tabular-nums">${summary.total.toLocaleString()}</span>
@@ -400,6 +418,7 @@ export const PosPage: React.FC = () => {
             fullWidth
             className="mt-3"
             variant="primary"
+            data-testid="e2e-checkout-open"
             disabled={!items.length || !storeId}
             onClick={() => setCheckoutOpen(true)}
           >

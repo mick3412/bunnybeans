@@ -21,9 +21,10 @@
 
 | 類型 | 最新檔案 | 最後更新 |
 |------|----------|----------|
-| 整合報告 | [integrated-progress-2026-03-13.md](integrated-progress-2026-03-13.md) | 2026-03-13（含 Brand／賒帳彙整） |
-| 後端 | [backend/backend-progress-2026-03-13.md](backend/backend-progress-2026-03-13.md) | 2026-03-13 |
-| 前端 | [frontend/frontend-progress-pos-2026-03-13.md](frontend/frontend-progress-pos-2026-03-13.md) | 2026-03-13（賒帳／品牌列已接） |
+| 整合報告 | [integrated-progress-2026-03-13.md](integrated-progress-2026-03-13.md) | 2026-03-13 **22:12**（jest 12、E2E×5、finance/events、分類、Notion 日報） |
+| Notion 日報 | [notion-daily-2026-03-13.md](notion-daily-2026-03-13.md) | 貼 Notion 用 |
+| 後端 | [backend/backend-progress-2026-03-13.md](backend/backend-progress-2026-03-13.md) | 2026-03-13（22:12 後端紀錄同步／12 tests） |
+| 前端 | [frontend/frontend-progress-pos-2026-03-13.md](frontend/frontend-progress-pos-2026-03-13.md) | 2026-03-13 22:12（returns/stock、E2E×5、3003 維運） |
 
 ---
 
@@ -40,11 +41,8 @@
 - **上方：當前狀態（可改寫）**  
   今日完成、卡點、To Do、需要對方配合（前端可選）。每次更新可改寫為最新內容，代表「目前」狀態。
 - **下方：本日變更紀錄（僅追加、不刪不改）**  
-  在檔案最下方設區段「本日變更紀錄」，每次更新當日進度時**只在此區塊追加**一筆，例如：
-  - `- 10:00 今日完成：新增 POS 整合測試`
-  - `- 14:30 更新：今日完成追加「業務錯誤碼」；卡點改為無`
-  **禁止刪除或改寫此區塊**，僅可追加新行。  
-  詳細區段與範例見 [docs/daily-progress-format.md](../daily-progress-format.md) 的「docs/progress 各端檔案格式」。
+  在檔案最下方設區段「本日變更紀錄」，每次更新當日進度時**只在此區塊追加**一筆；**行首時間須為實際寫入當下**（勿虛構），見 [docs/daily-progress-format.md](../daily-progress-format.md)。  
+  **禁止刪除或改寫此區塊**，僅可追加新行。
 
 ---
 

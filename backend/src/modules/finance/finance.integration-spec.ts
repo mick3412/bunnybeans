@@ -65,4 +65,37 @@ describe('FinanceService (integration)', () => {
 
     await prisma.financeEvent.delete({ where: { id: result.id } });
   }, 10000);
+
+  it('listFinanceEvents filters by referenceId and paginates', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const ref = `fin-list-${Date.now()}`;
+    const a = await financeService.recordFinanceEvent({
+      type: 'SALE_RECEIVABLE',
+      partyId: 'p1',
+      currency: 'TWD',
+      amount: 1,
+      referenceId: ref,
+    });
+    const b = await financeService.recordFinanceEvent({
+      type: 'SALE_PAYMENT',
+      partyId: 'p1',
+      currency: 'TWD',
+      amount: 2,
+      referenceId: ref,
+    });
+
+    const page = await financeService.listFinanceEvents({
+      referenceId: ref,
+      page: 1,
+      pageSize: 10,
+    });
+    expect(page.total).toBeGreaterThanOrEqual(2);
+    const ids = new Set(page.items.map((i) => i.id));
+    expect(ids.has(a.id)).toBe(true);
+    expect(ids.has(b.id)).toBe(true);
+    expect(page.items.every((i) => i.referenceId === ref)).toBe(true);
+
+    await prisma.financeEvent.deleteMany({ where: { referenceId: ref } });
+  }, 10000);
 });

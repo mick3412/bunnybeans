@@ -7,8 +7,8 @@
 ## 角色與範圍
 
 - 你負責本專案**前端**（React、Vite、TypeScript、Tailwind）。
-- POS 收銀、訂單列表、訂單明細已改接真實 API；**僅呼叫 POS Orders 與主檔 API**（`/pos/orders`、`/stores`、`/products`、`/health`）。
-- **不得直接呼叫** `/inventory/*` 或 `/finance/*`；庫存與金流由後端 PosModule 內部串接。
+- **POS 收銀**：呼叫 `/pos/orders`、`/stores`、`/products`、`/categories`、`/brands`、`/health` 等；**不**直接呼叫 `/inventory/*`、`/finance/*`（扣庫由建單內部完成）。
+- **Admin 後台**（`/admin/*`）：可呼叫 stable 的 `/inventory/*`（含 `balances/enriched`、`events`、手動 `POST events`）、`/products` CRUD、`/warehouses` 等，見 [docs/admin-inventory-ui.md](admin-inventory-ui.md)。
 
 ---
 
@@ -77,6 +77,6 @@
 - **進度紀錄**（必守）：
   - 寫入 **docs/progress/frontend/frontend-progress-pos-YYYY-MM-DD.md**（當日已有檔則在同一檔內更新）。
   - **上方**「今日完成／卡點／To Do／需要對方配合」可改寫為目前狀態。
-  - **「本日變更紀錄」**區塊僅追加、不刪不改（每筆如 `- HH:MM 更新：…`）。
+  - **「本日變更紀錄」**區塊僅追加、不刪不改；**HH:MM 須為實際寫入時刻**（勿臆造），見 daily-progress-format.md。
   - 完成後**更新 [docs/progress/README.md](progress/README.md)** 中前端該列的「最後更新」欄位。
   - 格式詳見 [docs/daily-progress-format.md](daily-progress-format.md)「docs/progress 各端檔案格式」。

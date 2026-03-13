@@ -337,6 +337,20 @@
 
 **目的**：提供可控且可稽核的售後流程，避免濫用與損失。
 
+#### 5.2.1 金流沖帳／退款（API Phase 1，與不可變事件一致）
+
+- **原則**：不修改既有 `FinanceEvent`；退款僅 **append** 一筆 **`SALE_REFUND`**（`referenceId` = POS 訂單 id，`partyId` 與該單 `SALE_RECEIVABLE` 相同，`amount` 為正，語意為「已退還客戶之金額」）。
+- **可退上限**：單筆訂單已入帳之實收 = `sum(PosOrderPayment)`；已退合計 = `sum(SALE_REFUND where referenceId = 訂單 id)`；本次退款 `amount <= 已入帳實收 − 已退合計`（容許 0.01 誤差）。未有任何實收（`PosOrderPayment` 總和為 0）則不可走本 API 退款（避免全賒未收卻退現金）。
+- **庫存**：Phase 1 **不**自動 `RETURN_FROM_CUSTOMER`；實體退貨入庫可另開 `POST /inventory/events` 或後續「退貨單」API。
+- **HTTP**：`POST /pos/orders/:id/refunds`，成功回傳與 `GET /pos/orders/:id` 相同之明細（`paidAmount` 仍為原實收列合計；報表端淨收 = 實收 − 已退，由查詢端匯總 `SALE_REFUND`）。
+
+#### 5.2.2 退款與庫存沖銷（草案，Phase 2）
+
+- **與 Phase 1 關係**：Phase 1 退款僅金流 `SALE_REFUND`；**不**自動增加庫存。
+- **目標**：實體退貨時，在不可變前提下 append **`RETURN_FROM_CUSTOMER`**（`quantity` 為正，代表入庫），`referenceId` = POS 訂單 id 或日後「退貨單」id；`productId`／`warehouseId` 與原 `SALE_OUT` 對齊或依退貨明細。
+- **觸發方式（擇一實作）**：(A) 新 API `POST /pos/orders/:id/return-to-stock` body `{ items: [{ productId, quantity }] }`；(B) 後台沿用 `POST /inventory/events` 人工建 `RETURN_FROM_CUSTOMER`（營運責任對齊單據）。
+- **與退款金額**：庫存與金流可分開操作；全額退款 + 全量退貨時仍為兩筆事件類型，報表各自匯總。
+
 - **退貨（有小票 / 發票）**
   1. 由銷售單號 / 發票號搜尋原交易
   2. 選擇要退貨的商品與數量

@@ -12,9 +12,14 @@
     "dev:app": "./scripts/restart-dev.sh",
     "build": "pnpm --filter pos-erp-backend build && pnpm --filter pos-erp-frontend build",
     "lint": "pnpm --filter pos-erp-backend lint && pnpm --filter pos-erp-frontend lint",
-    "test": "pnpm --filter pos-erp-backend test && pnpm --filter pos-erp-frontend test"
+    "test": "pnpm --filter pos-erp-backend test && pnpm --filter pos-erp-frontend test",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:local": "bash scripts/e2e-local.sh",
+    "e2e:one": "bash scripts/e2e-one-click.sh"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/node": "^25.5.0",
     "eslint": "^10.0.3",
     "prettier": "^3.8.1",

@@ -119,12 +119,13 @@ export async function getBrands(traceId?: string): Promise<BrandDto[] | ApiError
 }
 
 export async function getProducts(
-  params?: { categoryId?: string; brandId?: string },
+  params?: { categoryId?: string; brandId?: string; tag?: string },
   traceId?: string,
 ): Promise<ProductDto[] | ApiError> {
   const q = new URLSearchParams();
   if (params?.categoryId) q.set('categoryId', params.categoryId);
   if (params?.brandId) q.set('brandId', params.brandId);
+  if (params?.tag?.trim()) q.set('tag', params.tag.trim());
   const path = `products${q.toString() ? `?${q.toString()}` : ''}`;
   const out = await request<ProductDto[]>(path, { traceId: traceId ?? genTraceId() });
   if (!out.ok) return out.error;
@@ -188,4 +189,79 @@ export async function getOrderById(
   });
   if (!out.ok) return out.error;
   return out.data;
+}
+
+/** POST /pos/orders/:id/payments — 補款；成功回傳更新後 PosOrderDetail */
+export async function appendOrderPayment(
+  orderId: string,
+  body: { method: string; amount: number; occurredAt?: string },
+  traceId?: string,
+): Promise<CreateOrderResult> {
+  const tid = traceId ?? genTraceId();
+  const out = await request<PosOrderDetail>(`pos/orders/${encodeURIComponent(orderId)}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    traceId: tid,
+  });
+  if (!out.ok) {
+    return {
+      statusCode: out.error.statusCode,
+      message: out.error.message,
+      code: out.error.code,
+      traceId: out.error.traceId,
+    };
+  }
+  return { statusCode: 201, message: 'OK', body: out.data, traceId: tid };
+}
+
+/** POST /pos/orders/:id/refunds — 退款 SALE_REFUND；成功回傳更新後 PosOrderDetail */
+export async function postRefund(
+  orderId: string,
+  body: { amount: number; occurredAt?: string; note?: string },
+  traceId?: string,
+): Promise<CreateOrderResult> {
+  const tid = traceId ?? genTraceId();
+  const out = await request<PosOrderDetail>(`pos/orders/${encodeURIComponent(orderId)}/refunds`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    traceId: tid,
+  });
+  if (!out.ok) {
+    return {
+      statusCode: out.error.statusCode,
+      message: out.error.message,
+      code: out.error.code,
+      traceId: out.error.traceId,
+    };
+  }
+  return { statusCode: 201, message: 'OK', body: out.data, traceId: tid };
+}
+
+/** POST /pos/orders/:id/return-to-stock — 退貨入庫 RETURN_FROM_CUSTOMER */
+export async function postReturnToStock(
+  orderId: string,
+  body: {
+    items: Array<{ productId: string; quantity: number }>;
+    occurredAt?: string;
+  },
+  traceId?: string,
+): Promise<CreateOrderResult> {
+  const tid = traceId ?? genTraceId();
+  const out = await request<PosOrderDetail>(
+    `pos/orders/${encodeURIComponent(orderId)}/returns/stock`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+      traceId: tid,
+    },
+  );
+  if (!out.ok) {
+    return {
+      statusCode: out.error.statusCode,
+      message: out.error.message,
+      code: out.error.code,
+      traceId: out.error.traceId,
+    };
+  }
+  return { statusCode: 201, message: 'OK', body: out.data, traceId: tid };
 }

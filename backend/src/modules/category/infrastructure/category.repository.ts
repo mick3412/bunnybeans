@@ -10,4 +10,16 @@ export class CategoryRepository {
       orderBy: { code: 'asc' },
     });
   }
+
+  findById(id: string) {
+    return this.prisma.category.findUnique({ where: { id } });
+  }
+
+  create(data: { code: string; name: string }) {
+    return this.prisma.category.create({ data });
+  }
+
+  update(id: string, data: { code?: string; name?: string }) {
+    return this.prisma.category.update({ where: { id }, data });
+  }
 }

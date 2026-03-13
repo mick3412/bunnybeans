@@ -1,7 +1,8 @@
 # 前後端整合進度報告與開發計畫 2026-03-13
 
-> 整合自 `docs/progress/backend/backend-progress-2026-03-13.md` 與 `docs/progress/frontend/frontend-progress-pos-2026-03-13.md`。  
-> **最後彙整**：2026-03-13（後端：Brand／Tag、`GET /brands`、賒帳 `allowCredit` + `SALE_PAYMENT`、明細 `paidAmount`／`remainingAmount`／`credit`）
+> 整合自 [`backend-progress-2026-03-13.md`](backend/backend-progress-2026-03-13.md)（本日變更至 **22:12**）與 [`frontend-progress-pos-2026-03-13.md`](frontend/frontend-progress-pos-2026-03-13.md)（快照 **22:12**）。  
+> **Notion 日報**（貼上即用）：[`notion-daily-2026-03-13.md`](notion-daily-2026-03-13.md)  
+> **最後彙整**：後端 **jest 12 passed**、**GET /finance/events**、**Category POST/PATCH**、退貨入庫 **`/returns/stock`**；前端 **E2E 5 passed**、退貨入庫 UI、**AdminCategoriesPage**、**3003 單一實例** 維運備註。
 
 ---
 
@@ -9,68 +10,106 @@
 
 | 主題 | 後端 | 前端 | 狀態 |
 |------|------|------|------|
-| payments / 明細 | `PosOrderPayment`、`payments[]` | 實收／收款方式 | **已對齊** |
-| 品項／分類 | `GET /categories`、`GET /products?categoryId=` | 已接 API | **已對齊** |
-| **品牌／標籤** | `Brand`、`GET /brands`、`GET /products?brandId=&tag=`，商品含 `brandId`、`tags` | 第二列仍 mock | **待前端接** |
-| **賒帳** | `allowCredit: true` + `customerId`；`sum(payments) ≤ totalAmount`；`SALE_RECEIVABLE` + `SALE_PAYMENT`；明細 `paidAmount`、`remainingAmount`、`credit` | 結帳仍全額付清；無 `customerId` 送單 | **待前端接** |
-| 錯誤碼 | 含 `POS_CREDIT_REQUIRES_CUSTOMER`、`POS_PAYMENT_EXCEEDS_TOTAL`、`POS_PAYMENT_AMOUNT_INVALID` 等 | `ERROR_CODE_MAP` 待補上列 | **待前端補** |
-| 訂單列表／分頁 | `storeId`／`from`／`to` | 已接 | **已對齊** |
-| 補款 API | 後端 To Do：對既有賒帳單再收一筆 | — | **未做** |
+| POS | 建單、賒帳、補款、退款、**returns/stock**（退貨入庫） | 明細退款 + **退貨入庫** + **5 E2E** | **已對齊** |
+| 金流只讀 | **GET /finance/events** 分頁 | 報表可接 | **後端已上** |
+| 分類 | **POST/PATCH /categories** + Admin Key | **AdminCategoriesPage** | **已對齊** |
+| E2E / CI | backend-ci；**jest 12**（4 suites） | **5 spec**；one-click／App | **已對齊** |
+| 後台 | ADMIN_KEY、enriched、負庫存 | 商家／門市／倉庫 CRUD、分類、X-Admin-Key | **已交付** |
+| 角色 | — | — | [admin-roles.md](../admin-roles.md) |
 
 ---
 
 ## 一、後端現況（摘要）
 
-- POS、Inventory、Finance、主檔、Seed、業務錯誤碼、整合測試（含賒帳／payments）。
-- **BrandModule**：`GET /brands`；Product 帶 `brandId`、`tags`；`GET /products` 支援 `brandId`、`tag`。
-- **賒帳建單**：`POST /pos/orders` body 可選 `allowCredit: true`（須 `customerId`）；`payments` 可為多筆、總和 ≤ 應收；金流寫 `SALE_PAYMENT`。
-- **明細**：`paidAmount`、`remainingAmount`、`credit`；詳見 `docs/api-design-pos.md`。
+- **22:12**：GET /finance/events；Category POST/PATCH；**12 tests**；退貨入庫與 **returns/stock** 文件／實作一致（舊路徑若仍相容見 api-design-pos）。
 
 ---
 
 ## 二、前端現況（摘要）
 
-- 收銀、結帳（全額）、訂單列表／篩選／分頁、明細（payments）；品項列接 categories。
-- **尚未依新合約**：賒帳送單、`GET /brands` 品牌列、`GET /products?brandId=`、明細顯示未收餘額／掛帳標記、新錯誤碼 mapping。
+- **22:12**：`postReturnToStock` → **`/pos/orders/:id/returns/stock`**；**5 passed**；明細 201 成功提示；本機 **僅一後端 :3003**。
 
 ---
 
-## 三、下一步開發計畫（建議順序）
+## 三、下一步開發計畫
 
-1. **前端 P0**：依 `api-design-pos.md` 結帳送 `allowCredit` + `customerId` + `payments`（實收可 &lt; 應收）；訂單明細顯示 `paidAmount`／`remainingAmount`／`credit`；`ERROR_CODE_MAP` 補賒帳相關 code。
-2. **前端 P1**：`GET /brands` 填品牌列；選品牌後 `GET /products?brandId=`（與 category 可並存或依文件）。
-3. **後端（可並行）**：補款／沖帳 API（對既有賒帳單）；可選 E2E。
-4. **折扣列**：仍 mock，直至有 API 或沿用 `tag` 篩選。
-
----
-
-## 四、後端任務清單（剩餘）
-
-- [ ] 補款 API（對既有賒帳單再收一筆）；文件 + 實作。
-- [ ] （可選）全端 E2E；Inventory/Finance 邊界測試。
+| 優先 | 項目 | 後端 | 前端 | 維運 |
+|------|------|------|------|------|
+| P1 | CI／E2E | 維持 backend-ci | **e2e.yml** 對齊 **5 spec** | Actions |
+| P1 | ADMIN_KEY | 已支援 | 分類／商品寫入帶 header | 勿 commit |
+| P2 | 報表 | Finance 列表已可接 | 報表 MVP、toast | — |
+| P2 | Named Tunnel | — | VITE_API_BASE_URL | 固定網域 |
 
 ---
 
-## 五、前端任務清單（剩餘）
+## 四～七、任務／本日變更／參考
 
-- [ ] 賒帳結帳：`allowCredit`、`customerId`、多筆／部分 `payments`。
-- [ ] 明細：`paidAmount`、`remainingAmount`、`credit` 顯示。
-- [ ] `GET /brands` + 品牌篩選 + `GET /products?brandId=`。
-- [ ] `ERROR_CODE_MAP`：`POS_CREDIT_REQUIRES_CUSTOMER`、`POS_PAYMENT_EXCEEDS_TOTAL`、`POS_PAYMENT_AMOUNT_INVALID`。
-- [ ] （可選）E2E；折扣／tag 篩選（若產品需）。
+- 加量任務清單仍見下方 §四、§五（可並行）；本日變更真實時間見 daily-progress-format。
+- [AGENT-DEV-INSTRUCTIONS.md](../AGENT-DEV-INSTRUCTIONS.md) · [notion-daily-2026-03-13.md](notion-daily-2026-03-13.md)
 
 ---
 
-## 六、本日變更紀錄（僅追加）
+## 四、後端任務清單（加量／可並行）
 
-- 彙整：後端 Brand／賒帳／SALE_PAYMENT 已實作；整合表與任務清單更新；`AGENT-DEV-INSTRUCTIONS.md` 已對齊新任務。
+**維運與品質**
+
+- [ ] 維持 CI + jest 全綠；PR 前本地 `db push` + seed + test。
+- [ ] 部署 migrate + seed 一頁式檢查清單（新環境／Preview）。
+- [ ] `GET /health` 可加 `gitSha`／`db:ok`（可選）利於部署驗收。
+
+**POS／庫存**
+
+- [ ] **return-to-stock** 若需多品項一次退：文件 + 實作或維持單品項並寫明。
+- [ ] **GET /finance/events** 已上；可加匯出 CSV 或預設 date range（文件先）。
+- [ ] **GET /inventory/events** 匯出 CSV 或 query 優化（文件先）。
+- [ ] 整合測試：再 1～2 則邊界（空單、0 數量、重複退超量）。
+
+**主檔／後台**
+
+- [ ] **Category** 若需 DELETE／GET single，補 api-design + 實作。
+- [ ] **Product** 加 `search` 後台專用或文件化現有 query。
+- [ ] Seed：多一組「空倉＋新商品」利於 E2E 入庫盤點（可選）。
+
+**文件**
+
+- [ ] api-design-pos 與實作 diff 巡檢；backend-error-format 補漏碼。
+
+---
+
+## 五、前端任務清單（加量／可並行）
+
+**CI／E2E**
+
+- [ ] **e2e.yml** 與 one-click **5 spec** 一致；失敗 trace 上傳（可選）。
+- [ ] **E2E**：後台建商品（需 ADMIN_KEY secret）（可選）。
+
+**POS／明細**
+
+- [ ] 訂單列表：**匯出 CSV** 或列印友善 CSS。
+- [ ] POS：**單價／折扣**若後端有欄位再接；否則 UI 預留。
+
+**後台**
+
+- [ ] 庫存頁：**依 SKU 搜尋**、**匯出餘額 CSV**。
+- [ ] Admin：**toast** 或全域錯誤條。
+
+**產品化**
+
+- [ ] Named Tunnel／Vercel 故障排除短鏈。
+- [ ] **報表 MVP**：靜態頁 + 接 GET /finance/events。
+- [ ] **Loading skeleton**／**空狀態** 統一元件。
+
+---
+
+## 六、本日變更紀錄（整合檔僅追加）
+
+- **22:12 彙整**：後端 GET finance/events、Category POST/PATCH、jest 12；前端 returns/stock、E2E 5、Notion 日報檔；整合表與下一步對齊。
+- 兩端進度檔本日變更須真實 HH:MM。
 
 ---
 
 ## 七、參考文件
 
-- **[後端／前端開發指令](../AGENT-DEV-INSTRUCTIONS.md)**（複製貼上）
-- `docs/api-design-pos.md`、`docs/api-design.md` §6（brands/products）
-- `docs/backend-error-format.md`
-- `docs/progress/backend/backend-progress-2026-03-13.md`
-- `docs/progress/frontend/frontend-progress-pos-2026-03-13.md`
+- [AGENT-DEV-INSTRUCTIONS.md](../AGENT-DEV-INSTRUCTIONS.md)
+- [admin-inventory-ui.md](../admin-inventory-ui.md)、[api-design-pos.md](../api-design-pos.md)、[e2e-pos.md](../e2e-pos.md)
+- [backend-progress-2026-03-13.md](backend/backend-progress-2026-03-13.md)、[frontend-progress-pos-2026-03-13.md](frontend/frontend-progress-pos-2026-03-13.md)

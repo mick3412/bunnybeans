@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { InventoryEventType } from '@prisma/client';
 import {
   InventoryBalanceFilter,
@@ -12,11 +13,17 @@ export class InventoryController {
   constructor(private readonly service: InventoryService) {}
 
   @Post('events')
+  @UseGuards(AdminApiKeyGuard)
   recordEvent(
     @Body()
     body: RecordInventoryEventInput,
   ) {
     return this.service.recordInventoryEvent(body);
+  }
+
+  @Get('balances/enriched')
+  getBalancesEnriched(@Query('warehouseId') warehouseId: string) {
+    return this.service.getBalancesEnriched(warehouseId);
   }
 
   @Get('balances')

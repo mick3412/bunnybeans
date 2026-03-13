@@ -8,7 +8,8 @@
 
 - 你負責本專案**後端**（NestJS、Prisma、PostgreSQL）。
 - POS / Inventory / Finance 模組與主檔 CRUD 已實作且標為 **stable**。
-- **前端只會呼叫 POS Orders API**；庫存與金流由後端 PosModule 內部串接，前端不直接呼叫 `/inventory/*` 或 `/finance/*`。
+- **POS 收銀前端**只呼叫 POS 與主檔 GET（orders、products、stores 等）；扣庫／金流由 PosModule 內部串接，**POS 不直接呼叫** `/inventory/*` 或 `/finance/*`。
+- **Admin 後台前端**可呼叫 stable 的 **Product／Merchant（warehouses）／Inventory** API（見 [docs/admin-inventory-ui.md](admin-inventory-ui.md)）；Finance 仍僅由後端模組內部寫入，Admin MVP 不直接 POST `/finance/events`（除非另有規格）。
 
 ---
 
@@ -27,7 +28,7 @@
 ## 當前狀態
 
 - 主檔 CRUD、Inventory、Finance、POS、Seed、錯誤格式、整合測試、API 文件均已完成／標為 **stable**。
-- 前端尚未改接真實 API；**你的變更不應破壞既有 POS API 合約**。
+- POS 與 Admin 均已可接真實 API；**你的變更不應破壞既有 POS API 合約**；Admin 專用新增 endpoint（如 enriched balances）須先寫入 `api-design-inventory-finance.md` 再實作。
 
 ---
 
@@ -54,6 +55,6 @@
 - **進度紀錄**（必守）：
   - 寫入 **docs/progress/backend/backend-progress-YYYY-MM-DD.md**（當日已有檔則在同一檔內更新）。
   - **上方**「今日完成／卡點／To Do」可改寫為目前狀態。
-  - **「本日變更紀錄」**區塊僅追加、不刪不改（每筆如 `- HH:MM 更新：…`）。
+  - **「本日變更紀錄」**區塊僅追加、不刪不改；**HH:MM 須為實際寫入時刻**（勿臆造），見 daily-progress-format.md。
   - 完成後**更新 [docs/progress/README.md](progress/README.md)** 中後端該列的「最後更新」欄位。
   - 格式詳見 [docs/daily-progress-format.md](daily-progress-format.md)「docs/progress 各端檔案格式」。

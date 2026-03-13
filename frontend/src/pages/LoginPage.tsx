@@ -14,8 +14,9 @@ export const LoginPage: React.FC = () => {
     try {
       setHealthStatus('checking');
       setHealthMessage('');
-      const baseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
-      const res = await fetch(`${baseUrl}/health`);
+      const raw = import.meta.env.VITE_API_BASE_URL;
+      const baseUrl = (typeof raw === 'string' && raw.trim() !== '' ? raw.trim().replace(/\/$/, '') : '') || 'http://localhost:3003';
+      const res = await fetch(`${baseUrl}/health`, { mode: 'cors' });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
@@ -24,7 +25,12 @@ export const LoginPage: React.FC = () => {
       setHealthMessage(`後端正常（${data.timestamp ?? 'unknown'}）`);
     } catch (error) {
       setHealthStatus('error');
-      setHealthMessage('無法連線到後端服務，請稍後再試或檢查伺服器。');
+      const isDeployed = typeof window !== 'undefined' && !window.location.hostname.includes('localhost');
+      setHealthMessage(
+        isDeployed
+          ? '無法連線到後端。若使用 Vercel + Cloudflare Tunnel：請在 Vercel 設定 VITE_API_BASE_URL 為「後端 tunnel 的 https 網址」（勿結尾 /），儲存後 Redeploy；並確認本機已跑後端 :3003 且 cloudflared 視窗仍開著。詳見 repo 內 docs/deploy-preview.md（環境變數與 Named Tunnel）。'
+          : '無法連線到後端服務。請確認後端已啟動（預設 http://localhost:3003）、或於 .env 設定 VITE_API_BASE_URL；若用 Tunnel，請填 Tunnel 的 https 網址後重新 build。詳見 docs/deploy-preview.md。',
+      );
     }
   };
 
@@ -49,8 +55,17 @@ export const LoginPage: React.FC = () => {
           <TextInput label="帳號（暫不驗證）" placeholder="例如：store-admin" />
           <TextInput label="密碼（暫不驗證）" type="password" placeholder="任意密碼即可" />
 
-          <Button type="submit" fullWidth className="mt-2">
+          <Button type="submit" fullWidth className="mt-2" data-testid="e2e-login-submit">
             進入門市收銀
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            className="mt-2"
+            onClick={() => navigate('/admin')}
+          >
+            進入後台（庫存／商品）
           </Button>
         </form>
 
@@ -67,6 +82,20 @@ export const LoginPage: React.FC = () => {
             {healthStatus === 'ok' && healthMessage}
             {healthStatus === 'error' && healthMessage}
           </div>
+          <details className="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-2 text-[11px] text-slate-600">
+            <summary className="cursor-pointer font-medium text-slate-700">連不上後端？部署與 Tunnel</summary>
+            <ul className="mt-2 list-inside list-disc space-y-1 text-slate-600">
+              <li>
+                Vercel：設定 <code className="rounded bg-white px-0.5">VITE_API_BASE_URL</code> = 後端 https（Named
+                Tunnel 固定網域最佳），儲存後 <strong>Redeploy</strong>。
+              </li>
+              <li>
+                後台寫入若開 guard：同時設定{' '}
+                <code className="rounded bg-white px-0.5">VITE_ADMIN_API_KEY</code>（與後端 ADMIN_API_KEY 同值）。
+              </li>
+              <li>完整步驟見 repo <code className="rounded bg-white px-0.5">docs/deploy-preview.md</code></li>
+            </ul>
+          </details>
         </div>
       </div>
     </div>

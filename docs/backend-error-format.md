@@ -30,6 +30,7 @@
 | **POS** | | | |
 | `POS_ITEMS_EMPTY` | 400 | 訂單品項為空 | 請至少加入一項商品 |
 | `POS_STORE_NOT_FOUND` | 404 | 門市不存在 | 找不到門市，請重新選擇 |
+| `POS_CUSTOMER_NOT_FOUND` | 404 | 客戶不存在或不屬於該門市商家 | 找不到客戶，請重新選擇 |
 | `POS_STORE_NO_WAREHOUSE` | 400 | 門市未設定倉庫 | 門市尚未設定庫存倉庫 |
 | `POS_PRODUCT_NOT_FOUND` | 404 | 商品不存在 | 部分商品不存在，請重新整理 |
 | `POS_PAYMENT_MISMATCH` | 400 | 付款總額與訂單總額不符（未開賒帳時須全額付清） | 付款金額與訂單金額不一致 |
@@ -41,13 +42,25 @@
 | `POS_ORDER_ALREADY_SETTLED` | 400 | 訂單已結清，不可再補款 | 此單已收齊，無需補款 |
 | `POS_PAYMENT_EXCEEDS_REMAINING` | 400 | 補款金額超過未收餘額 | 補款金額不可超過未收金額 |
 | `POS_CREDIT_NO_RECEIVABLE` | 400 | 無對應 SALE_RECEIVABLE，無法補款（舊資料） | 無法對此單補款，請聯繫管理員 |
+| `POS_REFUND_NO_PAYMENT` | 400 | 訂單無任何實收（PosOrderPayment 合計為 0），不可退款 | 此單尚未收款，無法退款 |
+| `POS_REFUND_EXCEEDS_PAID` | 400 | 退款金額超過可退餘額（實收 − 已退） | 退款金額不可超過已收金額 |
+| `POS_RETURN_ITEMS_EMPTY` | 400 | 退貨入庫 items 為空 | 請至少選擇一項退貨 |
+| `POS_RETURN_PRODUCT_NOT_ON_ORDER` | 400 | productId 不在該訂單明細 | 僅能退原單商品 |
+| `POS_RETURN_EXCEEDS_SOLD` | 400 | 退貨數量超過原銷量減已退 | 退貨數量不可超過原賣出量 |
 | **Inventory** | | | |
 | `INVENTORY_PRODUCT_NOT_FOUND` | 404 | 商品不存在 | 商品不存在 |
 | `INVENTORY_WAREHOUSE_NOT_FOUND` | 404 | 倉庫不存在 | 倉庫不存在 |
+| `INVENTORY_INVALID_INPUT` | 400 | 缺 warehouseId 等 | 請檢查參數 |
+| `ADMIN_API_KEY_REQUIRED` | 401 | 已設定 ADMIN_API_KEY 但請求未帶或錯誤 | 後台寫入請帶 X-Admin-Key |
 | **Finance** | | | |
 | `FINANCE_UNSUPPORTED_EVENT_TYPE` | 400 | 不支援的金流事件類型 | 金流類型不支援 |
 | `FINANCE_CURRENCY_REQUIRED` | 400 | 未提供幣別 | 請提供幣別 |
 | `FINANCE_AMOUNT_INVALID` | 400 | 金額格式錯誤 | 金額必須為數字 |
+| `FINANCE_LIST_PAGE_INVALID` | 400 | 分頁參數非法 | page ≥ 1，pageSize 1～100 |
+| `CATEGORY_CODE_REQUIRED` | 400 | 未提供分類代碼 | 請提供 code |
+| `CATEGORY_NAME_REQUIRED` | 400 | 未提供分類名稱 | 請提供 name |
+| `CATEGORY_CODE_CONFLICT` | 409 | code 已存在 | 請使用其他代碼 |
+| `CATEGORY_NOT_FOUND` | 404 | 分類不存在 | id 無效 |
 
 ## Request Log
 

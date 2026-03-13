@@ -98,4 +98,44 @@ describe('InventoryService (integration)', () => {
       where: { id: warehouse.merchantId },
     });
   }, 15000);
+
+  it('getBalancesEnriched returns sku and name for warehouse', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const product = await prisma.product.create({
+      data: { sku: `SKU-ENR-${Date.now()}`, name: 'Enriched Product' },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `W-ENR-${Date.now()}`,
+        name: 'Enriched Warehouse',
+        merchantId: (
+          await prisma.merchant.create({
+            data: { code: `M-ENR-${Date.now()}`, name: 'Enr Merchant' },
+          })
+        ).id,
+      },
+    });
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 3,
+    });
+    const enriched = await inventoryService.getBalancesEnriched(warehouse.id);
+    expect(enriched.length).toBe(1);
+    expect(enriched[0].sku).toBe(product.sku);
+    expect(enriched[0].name).toBe('Enriched Product');
+    expect(enriched[0].onHandQty).toBe(3);
+
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.merchant.delete({ where: { id: warehouse.merchantId } });
+  }, 15000);
 });
