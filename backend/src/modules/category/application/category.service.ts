@@ -1,0 +1,11 @@
+import { Injectable } from '@nestjs/common';
+import { CategoryRepository } from '../infrastructure/category.repository';
+
+@Injectable()
+export class CategoryService {
+  constructor(private readonly repo: CategoryRepository) {}
+
+  listCategories() {
+    return this.repo.findAll();
+  }
+}

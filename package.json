@@ -1,0 +1,24 @@
+{
+  "name": "pos-erp-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter pos-erp-backend dev & pnpm --filter pos-erp-frontend dev",
+    "dev:app": "./scripts/restart-dev.sh",
+    "build": "pnpm --filter pos-erp-backend build && pnpm --filter pos-erp-frontend build",
+    "lint": "pnpm --filter pos-erp-backend lint && pnpm --filter pos-erp-frontend lint",
+    "test": "pnpm --filter pos-erp-backend test && pnpm --filter pos-erp-frontend test"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "eslint": "^10.0.3",
+    "prettier": "^3.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

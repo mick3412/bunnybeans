@@ -1,0 +1,129 @@
+import type { PosProduct } from './types';
+
+// 依照 docs/api-design-pos.md 中文件層級型別草稿
+export interface PosOrderItemInput {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface PosPaymentInput {
+  method: string;
+  amount: number;
+}
+
+export interface CreatePosOrderRequest {
+  storeId: string;
+  occurredAt: string;
+  items: PosOrderItemInput[];
+  payments: PosPaymentInput[];
+  customerId?: string | null;
+}
+
+export interface PosOrderSummary {
+  id: string;
+  orderNumber: string;
+  storeId: string;
+  totalAmount: number;
+  createdAt: string;
+}
+
+export interface PosOrderDetailItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface PosOrderDetail extends PosOrderSummary {
+  items: PosOrderDetailItem[];
+}
+
+export interface PosOrderListResponse {
+  items: PosOrderSummary[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+// 簡單成功情境 mock：模擬為單門市、單門市單據編號
+let mockSequence = 1;
+
+export interface MockPosOrderContext {
+  storeId: string;
+}
+
+export interface MockOrderProductLookup {
+  findById(id: string): PosProduct | undefined;
+}
+
+export interface CreatePosOrderResult {
+  statusCode: number;
+  message: string;
+  body?: PosOrderDetail;
+}
+
+export const createPosOrderMock = async (
+  input: CreatePosOrderRequest,
+  context: MockPosOrderContext,
+): Promise<CreatePosOrderResult> => {
+  if (!input.items.length) {
+    return {
+      statusCode: 400,
+      message: '至少需要一筆銷售品項。',
+    };
+  }
+
+  const now = new Date();
+  const id = crypto.randomUUID();
+  const orderNumber = `POS-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(
+    now.getDate(),
+  ).padStart(2, '0')}-${String(mockSequence).padStart(4, '0')}`;
+  mockSequence += 1;
+
+  const detailItems: PosOrderDetailItem[] = input.items.map((item, index) => ({
+    id: `${id}-item-${index + 1}`,
+    productId: item.productId,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+  }));
+
+  const totalAmount = detailItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+
+  return {
+    statusCode: 201,
+    message: 'POS 銷售單建立成功（mock）。',
+    body: {
+      id,
+      orderNumber,
+      storeId: context.storeId,
+      totalAmount,
+      createdAt: now.toISOString(),
+      items: detailItems,
+    },
+  };
+};
+
+export const listPosOrdersMock = async (): Promise<PosOrderListResponse> => {
+  const now = new Date();
+  const baseDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0);
+
+  const items: PosOrderSummary[] = Array.from({ length: 5 }).map((_, index) => ({
+    id: `mock-order-${index + 1}`,
+    orderNumber: `POS-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(
+      now.getDate(),
+    ).padStart(2, '0')}-${String(index + 1).padStart(4, '0')}`,
+    storeId: 'mock-store-1',
+    totalAmount: 400 + index * 80,
+    createdAt: new Date(baseDate.getTime() + index * 15 * 60 * 1000).toISOString(),
+  }));
+
+  return {
+    items,
+    page: 1,
+    pageSize: items.length,
+    total: items.length,
+  };
+};
+
+

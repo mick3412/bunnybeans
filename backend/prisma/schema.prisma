@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Merchant {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stores     Store[]
+  warehouses Warehouse[]
+}
+
+model Store {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  name       String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  merchantId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  warehouses Warehouse[]
+  posOrders  PosOrder[]
+}
+
+model Warehouse {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  name       String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  merchantId String
+  store      Store?   @relation(fields: [storeId], references: [id])
+  storeId    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  inventoryEvents  InventoryEvent[]
+  inventoryBalance InventoryBalance[]
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id         String    @id @default(uuid())
+  sku        String    @unique
+  name       String
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  inventoryEvents  InventoryEvent[]
+  inventoryBalance InventoryBalance[]
+  posOrderItems    PosOrderItem[]
+}
+
+model InventoryEvent {
+  id          String           @id @default(uuid())
+  occurredAt  DateTime
+  type        InventoryEventType
+  product     Product          @relation(fields: [productId], references: [id])
+  productId   String
+  warehouse   Warehouse        @relation(fields: [warehouseId], references: [id])
+  warehouseId String
+  quantity    Int
+  referenceId String?
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  @@index([productId, warehouseId, occurredAt])
+}
+
+model InventoryBalance {
+  id          String    @id @default(uuid())
+  product     Product   @relation(fields: [productId], references: [id])
+  productId   String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  warehouseId String
+  onHandQty   Int
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([productId, warehouseId])
+}
+
+model FinanceEvent {
+  id          String          @id @default(uuid())
+  occurredAt  DateTime
+  type        FinanceEventType
+  partyId     String
+  currency    String
+  amount      Decimal
+  taxAmount   Decimal?
+  referenceId String?
+  note        String?
+  createdAt   DateTime        @default(now())
+
+  @@index([partyId, occurredAt])
+}
+
+model PosOrder {
+  id          String        @id @default(uuid())
+  orderNumber String        @unique
+  store       Store         @relation(fields: [storeId], references: [id])
+  storeId     String
+  totalAmount Decimal
+  createdAt   DateTime      @default(now())
+
+  items PosOrderItem[]
+}
+
+model PosOrderItem {
+  id        String    @id @default(uuid())
+  order     PosOrder  @relation(fields: [orderId], references: [id])
+  orderId   String
+  product   Product   @relation(fields: [productId], references: [id])
+  productId String
+  quantity  Int
+  unitPrice Decimal
+}
+
+enum InventoryEventType {
+  PURCHASE_IN
+  SALE_OUT
+  RETURN_FROM_CUSTOMER
+  RETURN_TO_SUPPLIER
+  TRANSFER_OUT
+  TRANSFER_IN
+  STOCKTAKE_GAIN
+  STOCKTAKE_LOSS
+}
+
+enum FinanceEventType {
+  SALE_RECEIVABLE
+  SALE_REFUND
+  PURCHASE_PAYABLE
+  PURCHASE_REBATE
+  PURCHASE_RETURN
+  ADJUSTMENT
+}
+
