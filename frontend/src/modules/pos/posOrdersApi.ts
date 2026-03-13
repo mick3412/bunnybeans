@@ -39,6 +39,13 @@ export interface ProductDto {
   id: string;
   sku: string;
   name: string;
+  categoryId?: string;
+}
+
+export interface CategoryDto {
+  id: string;
+  code: string;
+  name: string;
 }
 
 export interface ListOrdersParams {
@@ -94,6 +101,12 @@ export async function getStores(traceId?: string): Promise<StoreDto[] | ApiError
 
 export async function getProducts(traceId?: string): Promise<ProductDto[] | ApiError> {
   const out = await request<ProductDto[]>('products', { traceId: traceId ?? genTraceId() });
+  if (!out.ok) return out.error;
+  return Array.isArray(out.data) ? out.data : [];
+}
+
+export async function getCategories(traceId?: string): Promise<CategoryDto[] | ApiError> {
+  const out = await request<CategoryDto[]>('categories', { traceId: traceId ?? genTraceId() });
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
 }

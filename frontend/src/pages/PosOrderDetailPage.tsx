@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../shared/components/Button';
-import { getOrderById } from '../modules/pos/posOrdersApi';
+import { getOrderById, getProducts, getCategories } from '../modules/pos/posOrdersApi';
 import type { PosOrderDetail } from '../modules/pos/posOrdersMockService';
 
 export const PosOrderDetailPage: React.FC = () => {
@@ -10,6 +10,10 @@ export const PosOrderDetailPage: React.FC = () => {
   const [order, setOrder] = useState<PosOrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [productMap, setProductMap] = useState<
+    Record<string, { id: string; sku?: string; name?: string; categoryId?: string }>
+  >({});
+  const [categoryMap, setCategoryMap] = useState<Record<string, { id: string; name: string }>>({});
 
   useEffect(() => {
     if (!id) {
@@ -35,6 +39,34 @@ export const PosOrderDetailPage: React.FC = () => {
       mounted = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (!order) return;
+    let mounted = true;
+    (async () => {
+      const [productsRes, categoriesRes] = await Promise.all([getProducts(), getCategories()]);
+      if (!mounted) return;
+      if (Array.isArray(productsRes)) {
+        const next: Record<string, { id: string; sku?: string; name?: string; categoryId?: string }> = {};
+        for (const p of productsRes) {
+          next[p.id] = { id: p.id, sku: p.sku, name: p.name, categoryId: (p as any).categoryId };
+        }
+        setProductMap(next);
+      }
+      if (Array.isArray(categoriesRes)) {
+        const next: Record<string, { id: string; name: string }> = {};
+        for (const c of categoriesRes) {
+          next[c.id] = { id: c.id, name: c.name };
+        }
+        setCategoryMap(next);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [order]);
+
+  const hasMeta = useMemo(() => Object.keys(productMap).length > 0 || Object.keys(categoryMap).length > 0, [productMap, categoryMap]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100">
@@ -78,6 +110,9 @@ export const PosOrderDetailPage: React.FC = () => {
                 <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="border-b border-slate-200 text-[11px] text-slate-500">
+                      <th className="py-1.5">分類</th>
+                      <th className="py-1.5">品牌</th>
+                      <th className="py-1.5">品名</th>
                       <th className="py-1.5">商品 ID</th>
                       <th className="py-1.5 text-right">數量</th>
                       <th className="py-1.5 text-right">單價</th>
@@ -87,7 +122,22 @@ export const PosOrderDetailPage: React.FC = () => {
                   <tbody>
                     {order.items.map((item) => (
                       <tr key={item.id} className="border-b border-slate-100">
-                        <td className="py-1.5 font-mono text-slate-600">{item.productId}</td>
+                        {(() => {
+                          const meta = productMap[item.productId];
+                          const category = meta?.categoryId ? categoryMap[meta.categoryId] : undefined;
+                          const displayCategory = category?.name ?? '—';
+                          const displayBrand = '—';
+                          const displayName = meta?.name ?? '—';
+                          const displayId = meta?.sku ?? item.productId;
+                          return (
+                            <>
+                              <td className="py-1.5 text-slate-600">{displayCategory}</td>
+                              <td className="py-1.5 text-slate-600">{displayBrand}</td>
+                              <td className="py-1.5 text-slate-800">{displayName}</td>
+                              <td className="py-1.5 font-mono text-[11px] text-slate-500">{displayId}</td>
+                            </>
+                          );
+                        })()}
                         <td className="py-1.5 text-right tabular-nums">{item.quantity}</td>
                         <td className="py-1.5 text-right tabular-nums">${item.unitPrice.toLocaleString()}</td>
                         <td className="py-1.5 text-right tabular-nums font-medium">

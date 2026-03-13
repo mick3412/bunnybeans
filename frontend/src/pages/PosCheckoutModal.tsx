@@ -42,6 +42,10 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
     setReceivedAmount(parsed);
   };
 
+  const fillReceivedWithTotal = () => {
+    setReceivedAmount(totalAmount);
+  };
+
   const handleSubmit = async () => {
     if (!storeId) return;
     setSubmitting(true);
@@ -118,13 +122,24 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-slate-600">實收金額</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="w-32 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-xs text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-100"
-              value={receivedAmount.toString()}
-              onChange={(e) => changeReceived(e.target.value)}
-            />
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                inputMode="numeric"
+                className="w-32 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-xs text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-100"
+                value={receivedAmount.toString()}
+                onChange={(e) => changeReceived(e.target.value)}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={fillReceivedWithTotal}
+                disabled={submitting}
+              >
+                同應收金額
+              </Button>
+            </div>
           </div>
           <div className="flex items-center justify-between text-slate-600">
             <span>找零</span>
