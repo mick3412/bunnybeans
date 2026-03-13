@@ -66,9 +66,11 @@ interface PagedResult<T> {
 | Path                    | Method | 說明                             | 所屬模組   | 狀態   |
 |-------------------------|--------|----------------------------------|------------|--------|
 | `/inventory/events`     | POST   | 新增一筆庫存事件（append-only） | Inventory  | **stable** |
+| `/inventory/transfer`   | POST   | **原子調撥**（來源倉 TRANSFER_OUT + 目的倉 TRANSFER_IN，同一 transaction；與 events 相同須 **X-Admin-Key** 若已設） | Inventory | **stable** |
 | `/inventory/balances`   | GET    | 查詢庫存匯總                     | Inventory  | **stable** |
 | `/inventory/balances/enriched` | GET | 查詢庫存匯總（附 sku、name，需 warehouseId） | Inventory | **stable** |
 | `/inventory/events`     | GET    | 查詢庫存事件歷史（分頁）        | Inventory  | **stable** |
+| `/inventory/events/export` | GET | 庫存事件 CSV（最多 1 萬筆；**X-Admin-Key** 若已設） | Inventory | **stable** |
 | `/finance/events`       | GET    | 查詢金流事件（只讀、分頁／篩選） | Finance    | **stable** |
 | `/finance/events`       | POST   | 新增一筆金流事件（append-only） | Finance    | **stable** |
 
@@ -130,6 +132,13 @@ interface PagedResult<T> {
 - `404 PRODUCT_NOT_FOUND`：商品不存在。
 - `404 WAREHOUSE_NOT_FOUND`：倉庫不存在。
 - `409 INVENTORY_INSUFFICIENT`：不允許負庫存時，出現扣減超過目前庫存的情形。
+
+#### 4.2 原子調撥 `POST /inventory/transfer`（stable）
+
+- **Body**：`fromWarehouseId`、`toWarehouseId`、`productId`、`quantity`（正整數）、`note?`、`occurredAt?`。
+- **行為**：同一 DB transaction 內寫入 `TRANSFER_OUT`（來源倉，數量為負）與 `TRANSFER_IN`（目的倉，數量為正），兩筆事件共用同一 `referenceId`（uuid），並更新兩倉 `InventoryBalance`。來源倉餘額不足 → `409 INVENTORY_INSUFFICIENT`。
+- **錯誤**：`400 INVENTORY_TRANSFER_SAME_WAREHOUSE`（來源＝目的）；`400 INVENTORY_TRANSFER_INVALID`／`INVENTORY_TRANSFER_INVALID_QTY`；`404` 商品或倉不存在（`INVENTORY_PRODUCT_NOT_FOUND`、`INVENTORY_WAREHOUSE_NOT_FOUND`）。
+- **保護**：與 `POST /inventory/events` 相同，若設 `ADMIN_API_KEY` 須 **X-Admin-Key**。
 
 ---
 
@@ -211,6 +220,14 @@ interface PagedResult<T> {
 }
 ```
 
+#### 4.3b 庫存事件 CSV 匯出
+
+- **Method**：`GET`
+- **Path**：`/inventory/events/export`
+- **Query**：與 §4.3 相同（`productId`、`warehouseId`、`type`、`from`、`to`）；**最多 1 萬筆**，UTF-8 BOM。
+- **保護**：與 `POST /inventory/events` 相同，若設 **`ADMIN_API_KEY`** 須 **X-Admin-Key**。
+- **回應**：`200` `text/csv`，檔名建議 `inventory-events.csv`。
+
 ---
 
 ### 5. Finance API 詳細規格
@@ -228,6 +245,7 @@ interface PagedResult<T> {
 - `referenceId`：精確比對（例如 POS 訂單 id）。
 - `type`：`FinanceEventType`。
 - `from` / `to`：`occurredAt` 區間（ISO）。
+- **`preset=last30d`**：僅在**未**帶 `from` 且**未**帶 `to` 時生效，自動篩近 30 日（報表預設；不帶 `preset` 時行為與舊版相同＝不篩日期）。
 - `page`（預設 `1`）、`pageSize`（預設 `50`，上限 `100`）。
 
 **成功回應** `200` — `PagedResult<FinanceEvent>`（與 POST 成功單筆欄位一致；`amount`／`taxAmount` 為數字）

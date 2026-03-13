@@ -33,6 +33,7 @@ export class MerchantRepository {
   findAllStores() {
     return this.prisma.store.findMany({
       orderBy: { code: 'asc' },
+      include: { warehouses: { select: { id: true } } },
     });
   }
 

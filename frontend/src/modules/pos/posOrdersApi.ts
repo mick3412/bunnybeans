@@ -35,6 +35,8 @@ export interface StoreDto {
   id: string;
   code: string;
   name: string;
+  /** 至少一筆時 POS 建單才可扣庫；未綁倉的門市不應當作預設收銀門市 */
+  warehouseIds?: string[];
 }
 
 export interface ProductDto {
@@ -108,6 +110,17 @@ async function request<T>(
 
 export async function getStores(traceId?: string): Promise<StoreDto[] | ApiError> {
   const out = await request<StoreDto[]>('stores', { traceId: traceId ?? genTraceId() });
+  if (!out.ok) return out.error;
+  return Array.isArray(out.data) ? out.data : [];
+}
+
+/** 供 POS 選預設門市：有 storeId 的倉庫對應可扣庫門市（舊後端未回傳 store.warehouseIds 時後備） */
+export async function getWarehouses(traceId?: string): Promise<
+  { id: string; storeId?: string | null }[] | ApiError
+> {
+  const out = await request<{ id: string; storeId?: string | null }[]>('warehouses', {
+    traceId: traceId ?? genTraceId(),
+  });
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
 }

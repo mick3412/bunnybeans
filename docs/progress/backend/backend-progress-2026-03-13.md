@@ -40,6 +40,8 @@
 - **AGENT §一 再一輪**：可選 **`ADMIN_API_KEY`**—未設定不擋；設定時 `POST /inventory/events` 與 **POST/PATCH/DELETE /products** 須 **`X-Admin-Key`**（或 Bearer）；`AdminApiKeyGuard`；`ADMIN_API_KEY_REQUIRED`；admin-inventory-ui／admin-roles／api-design-inventory-finance 已同步。**erp-spec 5.2.2** 退款與庫存沖銷草案（`RETURN_FROM_CUSTOMER`）。本機 **9 tests** 全過。
 - **Phase2 退貨入庫**：`POST /pos/orders/:id/return-to-stock`（`PosService.returnToStock`）—`items[]` 須為該單明細子集、累計退貨量 ≤ 原銷量；append **`RETURN_FROM_CUSTOMER`**（`referenceId` = 訂單 id、與建單同倉）。錯誤碼 `POS_RETURN_ITEMS_EMPTY`、`POS_RETURN_PRODUCT_NOT_ON_ORDER`、`POS_RETURN_EXCEEDS_SOLD`。api-design-pos §4.1d、api-design-inventory-finance、backend-error-format 已同步；整合測試 **10 tests** 全過。
 - **§一加量**：**GET /finance/events** 只讀（`partyId`、`referenceId`、`type`、`from`/`to`、分頁）；**POST/PATCH /categories**（`AdminApiKeyGuard` 與 products 一致）；錯誤碼 `FINANCE_LIST_PAGE_INVALID`、`CATEGORY_*`；api-design-inventory-finance §5.0、api-design.md §6.0b；整合測試 **12 tests**（含 `category.integration-spec`）。
+- **§五 分類 CRUD 完整**：**DELETE /categories/:id**（204）；有 **`Product.categoryId`** → **409 CATEGORY_IN_USE**；**GET /health** 含 **`db.ok`**、可選 **`gitSha`**；integrated §四 對應項已勾選。
+- **§3.2 全包**：**GET /finance/events?preset=last30d**；**GET /categories/enriched**；**GET /inventory/events/export**（CSV，Admin Key）；**e2e.yml** 兩段 job（**backend-test** → **playwright needs**）；api-design／inventory-finance／e2e-pos／AGENT-DEV 已同步；**jest 16 passed**。
 
 ## 卡點
 
@@ -47,8 +49,8 @@
 
 ## To Do
 
-- （可選）GitHub Actions **Playwright** job 與後端 job 串接；見 `docs/e2e-pos.md` CI 小節。
-- 生產若設 `ADMIN_API_KEY`：後台 **POST/PATCH /categories** 與商品相同須帶 **X-Admin-Key**。
+- **e2e.yml** 已串 **backend-test** → **playwright**（同一 workflow）；**backend-ci.yml** 仍獨立跑 jest（PR 雙重驗證可接受）。
+- 生產若設 `ADMIN_API_KEY`：後台 **POST/PATCH/DELETE /categories** 與商品相同須帶 **X-Admin-Key**。
 - 部署 migrate + seed 說明維護。
 - 新環境部署請執行：`pnpm --filter pos-erp-backend exec prisma db push`（或 migrate）後再 `db:seed`。
 - 前後端串接後可視需求補全端 E2E（登入 → 加商品 → 結帳 → 查訂單）。
@@ -78,3 +80,5 @@
 - 17:37 更新：**Phase2 沖銷實作**—`POST /pos/orders/:id/return-to-stock`、`RETURN_FROM_CUSTOMER`、錯誤碼與 api-design；整合測試建單→退 1→庫存 +1、退超過售出 `POS_RETURN_EXCEEDS_SOLD`；jest **10 passed**；README 後端列同步。
 - 21:07 更新：**GET /finance/events** + **Category POST/PATCH**；Finance `recordFinanceEvent` 回傳欄位與列表一致（amount 數字）；jest **12 passed**；AGENT-DEV／admin-inventory-ui／README 同步。
 - 22:12 更新：**後端開發紀錄同步**—今日完成欄已含 POS／退款／return-to-stock／**GET /finance/events**／**Category POST/PATCH**／ADMIN_API_KEY／Backend CI；**jest 12 passed**（4 suites：Inventory、Finance、Category、POS）；卡點無；To Do 維持 E2E 可選、部署 db+seed、ADMIN_KEY 與分類維護；`docs/progress/README.md` 後端列已對齊本筆時間。
+- 00:39 更新：**B-CRUD 完整**—`DELETE /categories/:id`、`CATEGORY_IN_USE`；**GET /health** `db`+`gitSha`；api-design §2.1／§6.0b、admin-inventory-ui、integrated §四；**jest 14 passed**；本機若缺欄位（如 `listPrice`）請 `prisma db push` 與 CI 一致。
+- 01:13 更新：**§3.2 全實作**—finance **`preset=last30d`**、**GET /categories/enriched**、**GET /inventory/events/export**（CSV）、**e2e.yml** `backend-test`→`playwright`；**jest 16 passed**。

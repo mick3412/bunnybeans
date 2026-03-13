@@ -34,7 +34,9 @@
 | `POS_STORE_NO_WAREHOUSE` | 400 | 門市未設定倉庫 | 門市尚未設定庫存倉庫 |
 | `POS_PRODUCT_NOT_FOUND` | 404 | 商品不存在 | 部分商品不存在，請重新整理 |
 | `POS_PAYMENT_MISMATCH` | 400 | 付款總額與訂單總額不符（未開賒帳時須全額付清） | 付款金額與訂單金額不一致 |
-| `POS_CREDIT_REQUIRES_CUSTOMER` | 400 | 賒帳時未帶 customerId | 掛帳請選擇或輸入客戶 |
+| `POS_CREDIT_REQUIRES_CUSTOMER` | 400 | 賒帳時未帶可解析客戶（須 customerId 或唯一 phone/email） | 掛帳請輸入 UUID／手機／Email |
+| `POS_CREDIT_CUSTOMER_NOT_FOUND` | 404 | 賒帳依手機／Email 查無客戶 | 查無客戶，請建立客戶或改用 UUID |
+| `POS_CREDIT_CUSTOMER_LOOKUP_AMBIGUOUS` | 400 | 同商號多筆客戶同手機或同 Email | 請改用會員 ID（UUID） |
 | `POS_PAYMENT_EXCEEDS_TOTAL` | 400 | 賒帳時實收超過應收 | 實收金額不可超過訂單總額 |
 | `POS_PAYMENT_AMOUNT_INVALID` | 400 | 付款列金額非法（負數或非數字） | 請檢查付款金額 |
 | `INVENTORY_INSUFFICIENT` | 409 | 庫存不足（POS 結帳時） | 庫存不足，請調整數量或稍後再試 |
@@ -61,6 +63,7 @@
 | `CATEGORY_NAME_REQUIRED` | 400 | 未提供分類名稱 | 請提供 name |
 | `CATEGORY_CODE_CONFLICT` | 409 | code 已存在 | 請使用其他代碼 |
 | `CATEGORY_NOT_FOUND` | 404 | 分類不存在 | id 無效 |
+| `CATEGORY_IN_USE` | 409 | 分類下仍有商品 | 先改商品分類或刪除商品後再刪 |
 
 ## Request Log
 

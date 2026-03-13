@@ -138,4 +138,55 @@ describe('InventoryService (integration)', () => {
     await prisma.warehouse.delete({ where: { id: warehouse.id } });
     await prisma.merchant.delete({ where: { id: warehouse.merchantId } });
   }, 15000);
+
+  it('transferInventory moves qty atomically between warehouses', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-TR-${Date.now()}`, name: 'Transfer Merchant' },
+    });
+    const wA = await prisma.warehouse.create({
+      data: { code: `W-TR-A-${Date.now()}`, name: 'Transfer A', merchantId: merchant.id },
+    });
+    const wB = await prisma.warehouse.create({
+      data: { code: `W-TR-B-${Date.now()}`, name: 'Transfer B', merchantId: merchant.id },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-TR-${Date.now()}`, name: 'Transfer Product' },
+    });
+
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: wA.id,
+      type: 'PURCHASE_IN',
+      quantity: 50,
+    });
+
+    const out = await inventoryService.transferInventory({
+      fromWarehouseId: wA.id,
+      toWarehouseId: wB.id,
+      productId: product.id,
+      quantity: 15,
+      note: 'integration transfer',
+    });
+
+    expect(out.referenceId).toBeDefined();
+    expect(out.balances.from.onHandQty).toBe(35);
+    expect(out.balances.to.onHandQty).toBe(15);
+
+    const evs = await prisma.inventoryEvent.findMany({
+      where: { referenceId: out.referenceId },
+      orderBy: { type: 'asc' },
+    });
+    expect(evs.length).toBe(2);
+    expect(evs.some((e) => e.type === 'TRANSFER_OUT' && e.quantity === -15)).toBe(true);
+    expect(evs.some((e) => e.type === 'TRANSFER_IN' && e.quantity === 15)).toBe(true);
+
+    await prisma.inventoryEvent.deleteMany({ where: { productId: product.id } });
+    await prisma.inventoryBalance.deleteMany({ where: { productId: product.id } });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: wA.id } });
+    await prisma.warehouse.delete({ where: { id: wB.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 20000);
 });

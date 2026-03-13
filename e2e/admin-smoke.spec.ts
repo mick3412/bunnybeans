@@ -8,4 +8,12 @@ test.describe('後台 Admin smoke', () => {
     await expect(page.getByTestId('e2e-admin-inventory')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('heading', { name: '庫存餘額與異動' })).toBeVisible();
   });
+
+  test('金流報表頁載入', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('button', { name: '進入後台（庫存／商品）' }).click();
+    await page.goto('/admin/reports');
+    await expect(page.getByTestId('e2e-admin-reports')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: '金流報表（MVP）' })).toBeVisible();
+  });
 });

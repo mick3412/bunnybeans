@@ -55,7 +55,8 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 | `e2e/pos-credit.spec.ts` | 掛帳（實收 0 + Demo 客戶 UUID）→ 明細 → 補款 → 未收金額下降 |
 | `e2e/pos-refund.spec.ts` | 全額結帳 → 訂單明細 → 小額退款 → 金額欄清空（API 成功） |
 | `e2e/pos-return-stock.spec.ts` | 全額結帳 → 明細 → 退貨入庫 1 件 → 成功提示 |
-| `e2e/admin-smoke.spec.ts` | 登入 → 後台庫存頁載入 |
+| `e2e/admin-smoke.spec.ts` | 庫存頁載入 + **金流報表** `/admin/reports` |
+| `e2e/admin-categories.spec.ts` | 登入 → **分類維護**頁可見 |
 
 掛帳用客戶 UUID 固定為 **`e2e00001-0000-4000-8000-00000000c001`**（seed 每次 **`upsert`** 之 `code: E2E` 客戶）。請執行 **`pnpm --filter pos-erp-backend db:seed`** 後再跑掛帳 E2E，無需清空舊 C001。
 
@@ -64,6 +65,6 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 | 檔案 | 行為 |
 |------|------|
 | [`.github/workflows/backend-ci.yml`](../.github/workflows/backend-ci.yml) | Postgres 15 → `db push` → seed → **`pnpm --filter pos-erp-backend test`** |
-| [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) | 同上 DB 前置 → 背景後端 **:3003** → **`playwright install chromium --with-deps`** → **`CI=1` `VITE_API_BASE_URL=http://localhost:3003` `pnpm e2e`** |
+| [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) | **Job1 `backend-test`**（Postgres → db push → seed → **jest**）→ **Job2 `playwright`（needs job1）** → 獨立 DB → 後端 **:3003** → Playwright **`pnpm e2e`** |
 
 觸發：`push` / `pull_request` 至 `main` 或 `master`。E2E job 內 **`CI=1`** 時 Playwright 會自起 Vite（見 `playwright.config.ts`）。本機勿設 `CI=1` 若已佔用 5173。

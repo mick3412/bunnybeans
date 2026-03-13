@@ -1,10 +1,25 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { CategoryService } from '../application/category.service';
 
 @Controller('categories')
 export class CategoryController {
   constructor(private readonly service: CategoryService) {}
+
+  @Get('enriched')
+  listEnriched() {
+    return this.service.listCategoriesEnriched();
+  }
 
   @Get()
   list() {
@@ -24,5 +39,12 @@ export class CategoryController {
     @Body() body: { code?: string; name?: string },
   ) {
     return this.service.updateCategory(id, body);
+  }
+
+  @Delete(':id')
+  @UseGuards(AdminApiKeyGuard)
+  @HttpCode(204)
+  async remove(@Param('id') id: string) {
+    await this.service.deleteCategory(id);
   }
 }

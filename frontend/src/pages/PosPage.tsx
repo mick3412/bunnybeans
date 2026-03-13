@@ -5,7 +5,13 @@ import { usePosCart, POS_TAX_RATE } from '../modules/pos/usePosCart';
 import type { PosProduct, PosProductDisplay } from '../modules/pos/types';
 import { PosCheckoutModal } from './PosCheckoutModal';
 import type { CreateOrderResult, CategoryDto, BrandDto } from '../modules/pos/posOrdersApi';
-import { getStores, getProducts, getCategories, getBrands } from '../modules/pos/posOrdersApi';
+import {
+  getStores,
+  getProducts,
+  getCategories,
+  getBrands,
+  getWarehouses,
+} from '../modules/pos/posOrdersApi';
 
 const ALL_ID = '';
 
@@ -84,7 +90,19 @@ export const PosPage: React.FC = () => {
         getProducts(),
       ]);
       if (!mounted) return;
-      if (Array.isArray(storesRes) && storesRes.length > 0) setApiStoreId(storesRes[0].id);
+      if (Array.isArray(storesRes) && storesRes.length > 0) {
+        let chosen: string | null = null;
+        const withWh = storesRes.find((s) => (s.warehouseIds?.length ?? 0) > 0);
+        if (withWh) chosen = withWh.id;
+        else {
+          const wh = await getWarehouses();
+          if (Array.isArray(wh)) {
+            const linked = wh.find((w) => w.storeId);
+            if (linked?.storeId) chosen = linked.storeId;
+          }
+        }
+        setApiStoreId(chosen ?? storesRes[0].id);
+      }
       else if (!Array.isArray(storesRes)) setApiLoadError(storesRes.message ?? '無法載入門市');
       if (Array.isArray(categoriesRes) && categoriesRes.length > 0) setCategories(categoriesRes);
       if (Array.isArray(brandsRes)) setBrands(brandsRes);
@@ -169,7 +187,7 @@ export const PosPage: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-xs text-slate-500">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 sm:gap-3">
           <button
             type="button"
             data-testid="e2e-nav-orders"
@@ -177,6 +195,14 @@ export const PosPage: React.FC = () => {
             className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
           >
             今日訂單
+          </button>
+          <button
+            type="button"
+            data-testid="e2e-nav-admin-inventory"
+            onClick={() => navigate('/admin/inventory')}
+            className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-[11px] font-medium text-violet-800 hover:bg-violet-100"
+          >
+            庫存（後台）
           </button>
           <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-medium text-emerald-700">
             線上 · 已連線伺服器

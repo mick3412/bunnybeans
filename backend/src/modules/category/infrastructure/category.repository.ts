@@ -22,4 +22,23 @@ export class CategoryRepository {
   update(id: string, data: { code?: string; name?: string }) {
     return this.prisma.category.update({ where: { id }, data });
   }
+
+  countProducts(categoryId: string) {
+    return this.prisma.product.count({ where: { categoryId } });
+  }
+
+  deleteById(id: string) {
+    return this.prisma.category.delete({ where: { id } });
+  }
+
+  productsForEnriched() {
+    return this.prisma.product.findMany({
+      where: { categoryId: { not: null } },
+      select: {
+        categoryId: true,
+        tags: true,
+        brand: { select: { code: true } },
+      },
+    });
+  }
 }

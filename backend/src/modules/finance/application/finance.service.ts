@@ -97,6 +97,8 @@ export class FinanceService {
     type?: FinanceEventType;
     from?: string;
     to?: string;
+    /** 僅在未帶 from 且未帶 to 時生效：`last30d` = 近 30 日（報表預設，不破壞既有不帶參行為） */
+    preset?: string;
     page?: number;
     pageSize?: number;
   }) {
@@ -108,8 +110,16 @@ export class FinanceService {
         code: 'FINANCE_LIST_PAGE_INVALID',
       });
     }
-    const from = q.from ? new Date(q.from) : undefined;
-    const to = q.to ? new Date(q.to) : undefined;
+    let from = q.from ? new Date(q.from) : undefined;
+    let to = q.to ? new Date(q.to) : undefined;
+    if (
+      q.preset === 'last30d' &&
+      !q.from?.trim() &&
+      !q.to?.trim()
+    ) {
+      to = new Date();
+      from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
     if (from && Number.isNaN(from.getTime())) {
       throw new BadRequestException({
         message: 'invalid from',

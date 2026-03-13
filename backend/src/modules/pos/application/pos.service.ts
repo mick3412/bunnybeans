@@ -26,7 +26,10 @@ export interface CreatePosOrderInput {
   items: PosOrderItemInput[];
   payments: PosPaymentInput[];
   customerId?: string | null;
-  /** 為 true 時允許實收 &lt; 應收（賒帳）；須帶 customerId；金流寫入 SALE_RECEIVABLE + SALE_PAYMENT */
+  /** 掛帳且未帶 customerId 時，後端依手機／Email 在同一 merchant 下唯一解析客戶 */
+  customerPhone?: string | null;
+  customerEmail?: string | null;
+  /** 為 true 時允許實收 &lt; 應收（賒帳）；須帶 customerId 或可唯一解析的 phone/email；金流寫入 SALE_RECEIVABLE + SALE_PAYMENT */
   allowCredit?: boolean;
 }
 
@@ -45,6 +48,13 @@ export class PosService {
     return `POS-${datePart}-${seq}`;
   }
 
+  /** 比對手機：僅數字，忽略 +886 / 0 前綴差異（末 9 碼相同視為同號） */
+  private static phoneDigitsComparable(s: string): string {
+    const d = s.replace(/\D/g, '');
+    if (d.length >= 9) return d.slice(-9);
+    return d;
+  }
+
   async createOrder(input: CreatePosOrderInput) {
     if (!input.items?.length) {
       throw new BadRequestException({
@@ -54,12 +64,18 @@ export class PosService {
     }
 
     const allowCredit = Boolean(input.allowCredit);
+    const customerIdTrim = input.customerId?.trim() ?? '';
+    const phoneTrim = input.customerPhone?.trim() ?? '';
+    const emailTrim = input.customerEmail?.trim().toLowerCase() ?? '';
 
     if (allowCredit) {
-      const cid = input.customerId?.trim();
-      if (!cid) {
+      const hasId = Boolean(customerIdTrim);
+      const hasPhone = Boolean(phoneTrim);
+      const hasEmail = Boolean(emailTrim);
+      if (!hasId && !hasPhone && !hasEmail) {
         throw new BadRequestException({
-          message: 'customerId is required when allowCredit is true',
+          message:
+            'customerId or unique customerPhone/customerEmail is required when allowCredit is true',
           code: 'POS_CREDIT_REQUIRES_CUSTOMER',
         });
       }
@@ -76,7 +92,6 @@ export class PosService {
       });
     }
 
-    const customerIdTrim = input.customerId?.trim() ?? '';
     let resolvedCustomerId: string | null = null;
     if (customerIdTrim) {
       const customer = await this.prisma.customer.findFirst({
@@ -89,10 +104,63 @@ export class PosService {
         });
       }
       resolvedCustomerId = customer.id;
+    } else if (allowCredit && emailTrim) {
+      const rows = await this.prisma.customer.findMany({
+        where: {
+          merchantId: store.merchantId,
+          email: { equals: emailTrim, mode: 'insensitive' },
+        },
+      });
+      if (rows.length === 0) {
+        throw new NotFoundException({
+          message: 'No customer found for this email in merchant',
+          code: 'POS_CREDIT_CUSTOMER_NOT_FOUND',
+        });
+      }
+      if (rows.length > 1) {
+        throw new BadRequestException({
+          message: 'Multiple customers share this email; use customerId',
+          code: 'POS_CREDIT_CUSTOMER_LOOKUP_AMBIGUOUS',
+        });
+      }
+      resolvedCustomerId = rows[0].id;
+    } else if (allowCredit && phoneTrim) {
+      const needle = PosService.phoneDigitsComparable(phoneTrim);
+      const candidates = await this.prisma.customer.findMany({
+        where: {
+          merchantId: store.merchantId,
+          phone: { not: null },
+        },
+      });
+      const matches = candidates.filter(
+        (c) =>
+          c.phone &&
+          PosService.phoneDigitsComparable(c.phone) === needle &&
+          needle.length >= 8,
+      );
+      if (matches.length === 0) {
+        throw new NotFoundException({
+          message: 'No customer found for this phone in merchant',
+          code: 'POS_CREDIT_CUSTOMER_NOT_FOUND',
+        });
+      }
+      if (matches.length > 1) {
+        throw new BadRequestException({
+          message: 'Multiple customers share this phone; use customerId',
+          code: 'POS_CREDIT_CUSTOMER_LOOKUP_AMBIGUOUS',
+        });
+      }
+      resolvedCustomerId = matches[0].id;
     }
 
-    const warehouse = store.warehouses[0];
-    if (!warehouse) {
+    if (allowCredit && !resolvedCustomerId) {
+      throw new BadRequestException({
+        message: 'Could not resolve customer for credit',
+        code: 'POS_CREDIT_REQUIRES_CUSTOMER',
+      });
+    }
+
+    if (!store.warehouses.length) {
       throw new BadRequestException({
         message: 'Store has no warehouse configured for inventory',
         code: 'POS_STORE_NO_WAREHOUSE',
@@ -109,6 +177,37 @@ export class PosService {
       throw new NotFoundException({
         message: `Product not found: ${missing.join(', ')}`,
         code: 'POS_PRODUCT_NOT_FOUND',
+      });
+    }
+
+    /** 多倉掛同一門市時，勿死用 warehouses[0]（測試倉可能無量）；選第一個能滿足整單的倉 */
+    let warehouse: (typeof store.warehouses)[0] | null = null;
+    for (const wh of store.warehouses) {
+      let canFulfill = true;
+      for (const item of input.items) {
+        const bal = await this.prisma.inventoryBalance.findUnique({
+          where: {
+            productId_warehouseId: {
+              productId: item.productId,
+              warehouseId: wh.id,
+            },
+          },
+        });
+        if ((bal?.onHandQty ?? 0) < item.quantity) {
+          canFulfill = false;
+          break;
+        }
+      }
+      if (canFulfill) {
+        warehouse = wh;
+        break;
+      }
+    }
+    if (!warehouse) {
+      throw new ConflictException({
+        message:
+          'No warehouse under this store has sufficient stock for all line items',
+        code: 'INVENTORY_INSUFFICIENT',
       });
     }
 
@@ -148,24 +247,6 @@ export class PosService {
       ? new Date(input.occurredAt)
       : new Date();
     const occurredAtStr = occurredAt.toISOString();
-
-    for (const item of input.items) {
-      const balance = await this.prisma.inventoryBalance.findUnique({
-        where: {
-          productId_warehouseId: {
-            productId: item.productId,
-            warehouseId: warehouse.id,
-          },
-        },
-      });
-      const onHand = balance?.onHandQty ?? 0;
-      if (onHand < item.quantity) {
-        throw new ConflictException({
-          message: `Insufficient inventory for product ${item.productId}: required ${item.quantity}, on hand ${onHand}`,
-          code: 'INVENTORY_INSUFFICIENT',
-        });
-      }
-    }
 
     const orderNumber = this.generateOrderNumber();
     const order = await this.posRepo.createOrder({

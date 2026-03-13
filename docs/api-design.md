@@ -28,17 +28,22 @@
 
 ### 2.1 `GET /health`（stable）
 
-- **用途**：檢查後端服務是否正常運作，供前端與監控使用。
-- **Request**
-  - 無參數。
+- **用途**：檢查後端與 DB 連線，供前端與部署驗收。
+- **Request**：無參數。
 - **Response（範例）**
 
 ```json
 {
   "status": "ok",
-  "timestamp": "2026-03-12T18:12:31.348Z"
+  "timestamp": "2026-03-12T18:12:31.348Z",
+  "db": { "ok": true },
+  "gitSha": "abc1234"
 }
 ```
+
+- **`status`**：`ok`（DB 可連）或 `degraded`（DB 連線失敗，仍回 200 利於 load balancer）。
+- **`db.ok`**：是否成功執行 DB ping。
+- **`gitSha`**：可選；部署時注入 **`GIT_SHA`**／**`GITHUB_SHA`**／**`VERCEL_GIT_COMMIT_SHA`** 則回傳，否則省略。
 
 ---
 
@@ -112,12 +117,18 @@
 
 - **Response**：`{ id, code, name, createdAt, updatedAt }[]`
 
-### 6.0b `POST /categories`、`PATCH /categories/:id`（stable）
+### 6.0a `GET /categories/enriched`（stable）
 
-- **用途**：後台自建分類；**GET 仍公開**（POS 篩選）。寫入與 **`POST/PATCH /products`** 相同：若設定 **`ADMIN_API_KEY`**，須 **`X-Admin-Key`**；未設定則不擋（CI 相容）。
-- **POST body**：`{ "code": "CAT01", "name": "飲料" }`（`code` 唯一）
-- **PATCH body**：`{ "code?": "…", "name?": "…" }`
-- **錯誤**：`400 CATEGORY_CODE_REQUIRED`／`CATEGORY_NAME_REQUIRED`；`409 CATEGORY_CODE_CONFLICT`；`404 CATEGORY_NOT_FOUND`
+- **用途**：後台報表／篩選；每筆含 **`productCount`**、**`brandCodes[]`**（該分類下商品品牌 code 去重）、**`tags[]`**（該分類下商品 tags 併集去重）。
+- **公開 GET**（與 `/categories` 相同，不強制 Admin Key）。
+
+### 6.0b `POST`／`PATCH`／`DELETE /categories`（stable）
+
+- **用途**：後台分類 CRUD；**GET /categories 仍公開**（POS 篩選）。**POST**／**PATCH**／**DELETE** 與 **`POST/PATCH/DELETE /products`** 相同：若設定 **`ADMIN_API_KEY`**，須 **`X-Admin-Key`**；未設定則不擋（CI 相容）。
+- **POST** `/categories` body：`{ "code": "CAT01", "name": "飲料" }`（`code` 全域唯一）
+- **PATCH** `/categories/:id` body：`{ "code?": "…", "name?": "…" }`
+- **DELETE** `/categories/:id`：若仍有 **`Product.categoryId`** 指向該分類 → **409** **`CATEGORY_IN_USE`**；無引用則 **204** 無 body
+- **錯誤**：`400 CATEGORY_CODE_REQUIRED`／`CATEGORY_NAME_REQUIRED`；`409 CATEGORY_CODE_CONFLICT`；`404 CATEGORY_NOT_FOUND`；`409 CATEGORY_IN_USE`（DELETE）
 
 ### 6.1 `GET /brands`（stable）
 
@@ -125,8 +136,8 @@
 
 ### 6.2 `GET /products`（stable）
 
-- **Query**：`search?`、`sku?`、`categoryId?`、`brandId?`、`tag?`（標籤需與 `tags` 陣列中某一元素**完全相等**，含繁體與空白）。
-- **Response 單筆欄位**：`id`、`sku`、`name`、`categoryId`、`brandId`、`tags[]`、`createdAt`、`updatedAt`
+- **Query**：`search?`、`sku?`、`categoryId?`、`brandId?`、`tag?`（標籤需與 `tags` 陣列中某一元素**完全相等**，含繁體與空白）。`search` 亦會比對 `description`。
+- **Response 單筆欄位**：`id`、`sku`、`name`、`description?`、`specSize?`、`specColor?`、`weightGrams?`、`listPrice`、`salePrice`、`costPrice?`（金額為兩位小數字串）、`categoryId`、`brandId`、`tags[]`、`createdAt`、`updatedAt`
 
 **Seed 與 POS「折扣」列對齊之 `tag` 值**（`pnpm db:seed` 後可查 `GET /products?tag=熱銷` 等）：
 
@@ -140,7 +151,8 @@
 
 ### 6.3 `POST/PATCH /products`
 
-- **Body** 可選：`categoryId`、`brandId`、`tags`（字串陣列）。
+- **Body** 可選：`description`、`specSize`、`specColor`、`weightGrams`、`listPrice`、`salePrice`、`costPrice`（未送則 `listPrice`/`salePrice` 預設 0）、`categoryId`、`brandId`、`tags`（字串陣列）。
+- **POS 建單**：`POST /pos/orders` 仍依 request 的 `unitPrice`；商品主檔 `salePrice` 僅供後台／前端預設帶入，非強制。
 
 ---
 

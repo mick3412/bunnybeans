@@ -8,7 +8,7 @@
 - **角色編制**（名義上兩種，開發不拆權限）：見 **[docs/admin-roles.md](admin-roles.md)**  
   - **擁有者（Owner）**：全部權限。  
   - **Admin**：編制保留，**權限矩陣未訂**；開發階段**一律按擁有者**實作與測試；待客戶真的要 Admin 細分再實作。  
-- **Phase B（後續可選）**：環境變數 **`ADMIN_API_KEY`** 若設定，後台寫入 API 須帶 **`X-Admin-Key`**（或 **`X-Api-Key`**、`Authorization: Bearer <key>`）：`POST /inventory/events`、`POST/PATCH/DELETE /products`。前端於 build 注入 **`VITE_ADMIN_API_KEY`**（與後端同值），`adminApi` 會自動帶 header。未設定時不擋（CI／本機與 POS 不變）。Admin 細粒度 RBAC **仍非必做**。
+- **Phase B（後續可選）**：環境變數 **`ADMIN_API_KEY`** 若設定，後台寫入 API 須帶 **`X-Admin-Key`**：`POST /inventory/events`、`POST/PATCH/DELETE /products`、**`POST /categories`、`PATCH /categories/:id`、`DELETE /categories/:id`**。前端 **`VITE_ADMIN_API_KEY`**；未設定時不擋。Admin 細粒度 RBAC **仍非必做**。
 
 ## 與 POS 邊界
 
@@ -25,7 +25,9 @@
 | `/admin/inventory` | 倉庫選擇、庫存餘額（enriched）、異動明細分頁 |
 | `/admin/products` | 商品列表與新增／編輯／刪除 |
 | `/admin/inventory/adjust` | 手動庫存事件（入庫 PURCHASE_IN、盤點增減等） |
-| `/admin/warehouses` | 倉庫列表（唯讀 MVP；CRUD 可 Phase 3） |
+| `/admin/warehouses` | **倉庫與門市**（同頁：門市 CRUD + 倉庫 CRUD；`/admin/stores` 會導向此頁） |
+| `/admin/categories` | 分類維護（新增、編輯、刪除；需 X-Admin-Key） |
+| `/admin/reports` | 金流報表 MVP（GET /finance/events，近 30 日／全部） |
 
 ## API 對照（Admin）
 
@@ -35,12 +37,16 @@
 | 餘額表（含 sku/name） | GET | `/inventory/balances/enriched?warehouseId=` |
 | 異動明細 | GET | `/inventory/events?warehouseId=&page=&pageSize=` |
 | 手動異動 | POST | `/inventory/events` |
+| 倉庫調撥（雙倉原子） | POST | `/inventory/transfer` |
 | 商品列表 | GET | `/products` |
 | 新增商品 | POST | `/products` |
 | 更新商品 | PATCH | `/products/:id` |
 | 刪除商品 | DELETE | `/products/:id` |
-| 分類／品牌下拉 | GET | `/categories`, `/brands` |
-| 分類維護（後台） | POST/PATCH | `/categories`、`/categories/:id`（若設 `ADMIN_API_KEY` 須 **X-Admin-Key**） |
+| 分類／品牌下拉 | GET | `/categories`, `/categories/enriched`（後台彙總）, `/brands` |
+| 庫存事件匯出 | GET | `/inventory/events/export`（CSV；**X-Admin-Key** 若已設） |
+| 分類列表 | GET | `/categories` |
+| 分類新增／更新 | POST、PATCH | `/categories`、`/categories/:id`（**X-Admin-Key** 與商品相同） |
+| 分類刪除 | DELETE | `/categories/:id`（有商品引用 → **409 CATEGORY_IN_USE**） |
 
 ## 進度紀錄
 

@@ -12,7 +12,7 @@ import {
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 
-export const AdminStoresPage: React.FC = () => {
+export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const [merchants, setMerchants] = useState<MerchantDto[]>([]);
   const [rows, setRows] = useState<StoreDto[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -43,11 +43,9 @@ export const AdminStoresPage: React.FC = () => {
     void load();
   }, []);
 
-  const merchantName = (id: string) => merchants.find((x) => x.id === id)?.name ?? id.slice(0, 8);
-
   const handleCreate = async () => {
     if (!merchantId || !code.trim() || !name.trim()) {
-      setErr('請選商家並填代碼與名稱');
+      setErr('請填代碼與名稱（若無商家資料請先 seed）');
       return;
     }
     setErr(null);
@@ -94,10 +92,13 @@ export const AdminStoresPage: React.FC = () => {
     await load();
   };
 
+  const H = embedded ? 'h2' : 'h1';
   return (
-    <div className="max-w-4xl">
-      <h1 className="mb-2 text-xl font-bold text-slate-900">門市主檔</h1>
-      <p className="mb-4 text-sm text-slate-500">CRUD；須指定所屬商家。</p>
+    <div className={embedded ? '' : 'max-w-4xl'}>
+      <H className="mb-2 text-xl font-bold text-slate-900">門市</H>
+      <p className="mb-4 text-sm text-slate-500">
+        CRUD；所屬商家自動使用系統預設（單一商家情境，不顯示商家選單）。
+      </p>
       {err && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {err}
@@ -106,28 +107,17 @@ export const AdminStoresPage: React.FC = () => {
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-2 text-xs font-semibold text-slate-700">新增門市</div>
         <div className="flex flex-wrap items-end gap-2">
-          <select
-            className="h-9 rounded border border-slate-200 px-2 text-sm"
-            value={merchantId}
-            onChange={(e) => setMerchantId(e.target.value)}
-          >
-            {merchants.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.code} — {m.name}
-              </option>
-            ))}
-          </select>
-          <input
-            className="h-9 rounded border border-slate-200 px-2 text-sm"
-            placeholder="代碼"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
           <input
             className="h-9 min-w-[180px] flex-1 rounded border border-slate-200 px-2 text-sm"
             placeholder="名稱"
             value={name}
             onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            className="h-9 rounded border border-slate-200 px-2 text-sm"
+            placeholder="代碼"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
           />
           <Button type="button" size="sm" variant="primary" onClick={() => void handleCreate()}>
             新增
@@ -138,9 +128,8 @@ export const AdminStoresPage: React.FC = () => {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="px-4 py-2">商家</th>
-              <th className="px-4 py-2">代碼</th>
               <th className="px-4 py-2">名稱</th>
+              <th className="px-4 py-2">代碼</th>
               <th className="px-4 py-2 font-mono text-xs">ID</th>
               <th className="px-4 py-2 w-40">操作</th>
             </tr>
@@ -150,19 +139,18 @@ export const AdminStoresPage: React.FC = () => {
               <tr key={s.id} className="border-t border-slate-100">
                 {editId === s.id ? (
                   <>
-                    <td className="px-4 py-2 text-slate-500">{merchantName(s.merchantId)}</td>
-                    <td className="px-4 py-2">
-                      <input
-                        className="w-full rounded border border-slate-200 px-1 text-sm"
-                        value={editCode}
-                        onChange={(e) => setEditCode(e.target.value)}
-                      />
-                    </td>
                     <td className="px-4 py-2">
                       <input
                         className="w-full rounded border border-slate-200 px-1 text-sm"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        className="w-full rounded border border-slate-200 px-1 text-sm"
+                        value={editCode}
+                        onChange={(e) => setEditCode(e.target.value)}
                       />
                     </td>
                     <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{s.id}</td>
@@ -183,9 +171,8 @@ export const AdminStoresPage: React.FC = () => {
                   </>
                 ) : (
                   <>
-                    <td className="px-4 py-2 text-slate-600">{merchantName(s.merchantId)}</td>
-                    <td className="px-4 py-2 font-medium">{s.code}</td>
-                    <td className="px-4 py-2">{s.name}</td>
+                    <td className="px-4 py-2 font-medium">{s.name}</td>
+                    <td className="px-4 py-2">{s.code}</td>
                     <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{s.id}</td>
                     <td className="px-4 py-2">
                       <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(s)}>

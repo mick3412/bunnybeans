@@ -78,15 +78,27 @@ export const PosOrdersListPage: React.FC = () => {
           <div className="text-sm font-semibold text-slate-900">今日訂單</div>
           <div className="text-xs text-slate-500">共 {total} 筆</div>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          data-testid="e2e-nav-pos"
-          onClick={() => navigate('/pos')}
-        >
-          回到收銀畫面
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            data-testid="e2e-nav-pos"
+            onClick={() => navigate('/pos')}
+          >
+            回到收銀畫面
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            data-testid="e2e-nav-admin-inventory"
+            onClick={() => navigate('/admin/inventory')}
+            className="border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100"
+          >
+            庫存（後台）
+          </Button>
+        </div>
       </header>
 
       <main className="min-h-0 flex-1 px-3 pb-4 pt-3 sm:px-4">

@@ -66,8 +66,15 @@ export class MerchantService {
     return { success: true };
   }
 
-  listStores() {
-    return this.repo.findAllStores();
+  async listStores() {
+    const rows = await this.repo.findAllStores();
+    return rows.map((s) => ({
+      id: s.id,
+      code: s.code,
+      name: s.name,
+      merchantId: s.merchantId,
+      warehouseIds: s.warehouses.map((w) => w.id),
+    }));
   }
 
   async getStore(id: string) {

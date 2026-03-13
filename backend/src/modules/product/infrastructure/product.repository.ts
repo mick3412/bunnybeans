@@ -2,6 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
+function toDec(v: string | number | null | undefined, fallback = '0'): Prisma.Decimal {
+  if (v === null || v === undefined || v === '') return new Prisma.Decimal(fallback);
+  return new Prisma.Decimal(String(v));
+}
+
 @Injectable()
 export class ProductRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -23,6 +28,7 @@ export class ProductRepository {
         OR: [
           { sku: { contains: term, mode: 'insensitive' } },
           { name: { contains: term, mode: 'insensitive' } },
+          { description: { contains: term, mode: 'insensitive' } },
         ],
       });
     }
@@ -51,6 +57,13 @@ export class ProductRepository {
   create(data: {
     sku: string;
     name: string;
+    description?: string | null;
+    specSize?: string | null;
+    specColor?: string | null;
+    weightGrams?: number | null;
+    listPrice?: string | number | null;
+    salePrice?: string | number | null;
+    costPrice?: string | number | null;
     categoryId?: string | null;
     brandId?: string | null;
     tags?: string[];
@@ -59,6 +72,16 @@ export class ProductRepository {
       data: {
         sku: data.sku,
         name: data.name,
+        description: data.description ?? undefined,
+        specSize: data.specSize ?? undefined,
+        specColor: data.specColor ?? undefined,
+        weightGrams: data.weightGrams ?? undefined,
+        listPrice: toDec(data.listPrice, '0'),
+        salePrice: toDec(data.salePrice, '0'),
+        costPrice:
+          data.costPrice === null || data.costPrice === undefined || data.costPrice === ''
+            ? undefined
+            : toDec(data.costPrice),
         categoryId: data.categoryId ?? undefined,
         brandId: data.brandId ?? undefined,
         tags: (data.tags ?? []) as Prisma.InputJsonValue,
@@ -71,6 +94,13 @@ export class ProductRepository {
     data: {
       sku?: string;
       name?: string;
+      description?: string | null;
+      specSize?: string | null;
+      specColor?: string | null;
+      weightGrams?: number | null;
+      listPrice?: string | number | null;
+      salePrice?: string | number | null;
+      costPrice?: string | number | null;
       categoryId?: string | null;
       brandId?: string | null;
       tags?: string[];
@@ -79,6 +109,16 @@ export class ProductRepository {
     const patch: Prisma.ProductUpdateInput = {};
     if (data.sku !== undefined) patch.sku = data.sku;
     if (data.name !== undefined) patch.name = data.name;
+    if (data.description !== undefined) patch.description = data.description ?? null;
+    if (data.specSize !== undefined) patch.specSize = data.specSize ?? null;
+    if (data.specColor !== undefined) patch.specColor = data.specColor ?? null;
+    if (data.weightGrams !== undefined) patch.weightGrams = data.weightGrams ?? null;
+    if (data.listPrice !== undefined) patch.listPrice = toDec(data.listPrice, '0');
+    if (data.salePrice !== undefined) patch.salePrice = toDec(data.salePrice, '0');
+    if (data.costPrice !== undefined) {
+      patch.costPrice =
+        data.costPrice === null || data.costPrice === '' ? null : toDec(data.costPrice);
+    }
     if (data.categoryId !== undefined) {
       patch.category = data.categoryId
         ? { connect: { id: data.categoryId } }

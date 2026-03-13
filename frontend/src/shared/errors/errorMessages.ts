@@ -4,7 +4,9 @@ export const ERROR_CODE_MAP: Record<string, string> = {
   POS_STORE_NO_WAREHOUSE: '門市尚未設定庫存倉庫',
   POS_PRODUCT_NOT_FOUND: '部分商品不存在，請重新整理',
   POS_PAYMENT_MISMATCH: '付款金額與訂單金額不一致',
-  POS_CREDIT_REQUIRES_CUSTOMER: '掛帳請選擇或輸入客戶',
+  POS_CREDIT_REQUIRES_CUSTOMER: '掛帳請選擇或輸入客戶（UUID／手機／Email）',
+  POS_CREDIT_CUSTOMER_NOT_FOUND: '查無此手機或 Email 對應的客戶，請先建立客戶或改用 UUID',
+  POS_CREDIT_CUSTOMER_LOOKUP_AMBIGUOUS: '多筆客戶同號或同 Email，請改用會員 ID（UUID）',
   POS_PAYMENT_EXCEEDS_TOTAL: '實收金額不可超過訂單總額',
   POS_PAYMENT_AMOUNT_INVALID: '請檢查付款金額',
   INVENTORY_INSUFFICIENT: '庫存不足，請調整數量或稍後再試',
@@ -21,6 +23,7 @@ export const ERROR_CODE_MAP: Record<string, string> = {
   POS_CREDIT_NO_RECEIVABLE: '無法對此單補款，請聯繫管理員',
   POS_REFUND_NO_PAYMENT: '此單無實收紀錄，無法退款（全賒帳單請走沖帳流程）',
   POS_REFUND_EXCEEDS_PAID: '退款金額超過可退餘額（實收扣除已退）',
+  CATEGORY_IN_USE: '仍有商品使用此分類，請先改商品分類後再刪除。',
   ADMIN_API_KEY_REQUIRED:
     '後台寫入需管理金鑰：請在 Vercel／本機 build 設定 VITE_ADMIN_API_KEY（與後端 ADMIN_API_KEY 相同），勿 commit。',
   POS_RETURN_ITEMS_EMPTY: '請至少選擇一項商品並填寫退貨入庫數量',

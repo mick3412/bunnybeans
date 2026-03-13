@@ -22,6 +22,8 @@ export class PosController {
       items: Array<{ productId: string; quantity: number; unitPrice: number }>;
       payments: Array<{ method: string; amount: number }>;
       customerId?: string | null;
+      customerPhone?: string | null;
+      customerEmail?: string | null;
       allowCredit?: boolean;
     },
   ) {
@@ -31,6 +33,8 @@ export class PosController {
       items: body.items,
       payments: body.payments ?? [],
       customerId: body.customerId,
+      customerPhone: body.customerPhone,
+      customerEmail: body.customerEmail,
       allowCredit: body.allowCredit,
     });
   }

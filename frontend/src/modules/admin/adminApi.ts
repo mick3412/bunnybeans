@@ -9,8 +9,12 @@ function needsAdminKey(path: string, method: string): boolean {
   const m = (method || 'GET').toUpperCase();
   const p = path.replace(/^\//, '');
   if (p === 'inventory/events' && m === 'POST') return true;
+  if (p === 'inventory/transfer' && m === 'POST') return true;
   if (p === 'products' && m === 'POST') return true;
   if (p.startsWith('products/') && (m === 'PATCH' || m === 'DELETE')) return true;
+  if (p === 'categories' && m === 'POST') return true;
+  if (/^categories\/.+/.test(p) && m === 'PATCH') return true;
+  if (/^categories\/.+/.test(p) && m === 'DELETE') return true;
   return false;
 }
 
@@ -158,10 +162,40 @@ export async function getInventoryEvents(params: {
   return out.data;
 }
 
+export interface InventoryBalanceRow {
+  id: string;
+  productId: string;
+  warehouseId: string;
+  onHandQty: number;
+  updatedAt: string;
+}
+
+export async function getInventoryBalances(params?: {
+  productId?: string;
+  warehouseId?: string;
+}): Promise<InventoryBalanceRow[] | ApiError> {
+  const q = new URLSearchParams();
+  if (params?.productId) q.set('productId', params.productId);
+  if (params?.warehouseId) q.set('warehouseId', params.warehouseId);
+  const qs = q.toString();
+  const out = await request<InventoryBalanceRow[]>(
+    qs ? `inventory/balances?${qs}` : 'inventory/balances',
+  );
+  if (!out.ok) return out.error;
+  return Array.isArray(out.data) ? out.data : [];
+}
+
 export interface ProductFullDto {
   id: string;
   sku: string;
   name: string;
+  description?: string | null;
+  specSize?: string | null;
+  specColor?: string | null;
+  weightGrams?: number | null;
+  listPrice?: string;
+  salePrice?: string;
+  costPrice?: string | null;
   categoryId?: string | null;
   brandId?: string | null;
   tags: string[];
@@ -178,6 +212,13 @@ export async function getProducts(): Promise<ProductFullDto[] | ApiError> {
 export async function createProduct(body: {
   sku: string;
   name: string;
+  description?: string | null;
+  specSize?: string | null;
+  specColor?: string | null;
+  weightGrams?: number | null;
+  listPrice?: string | number | null;
+  salePrice?: string | number | null;
+  costPrice?: string | number | null;
   categoryId?: string | null;
   brandId?: string | null;
   tags?: string[];
@@ -195,6 +236,13 @@ export async function updateProduct(
   body: {
     sku?: string;
     name?: string;
+    description?: string | null;
+    specSize?: string | null;
+    specColor?: string | null;
+    weightGrams?: number | null;
+    listPrice?: string | number | null;
+    salePrice?: string | number | null;
+    costPrice?: string | number | null;
     categoryId?: string | null;
     brandId?: string | null;
     tags?: string[];
@@ -243,6 +291,28 @@ export async function postInventoryEvent(body: {
   return out.data;
 }
 
+export async function postInventoryTransfer(body: {
+  fromWarehouseId: string;
+  toWarehouseId: string;
+  productId: string;
+  quantity: number;
+  note?: string;
+  occurredAt?: string;
+}): Promise<
+  | {
+      referenceId: string;
+      balances: { from: { warehouseId: string; onHandQty: number }; to: { warehouseId: string; onHandQty: number } };
+    }
+  | ApiError
+> {
+  const out = await request<{
+    referenceId: string;
+    balances: { from: { warehouseId: string; onHandQty: number }; to: { warehouseId: string; onHandQty: number } };
+  }>('inventory/transfer', { method: 'POST', body: JSON.stringify(body) });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
 export interface CategoryDto {
   id: string;
   code: string;
@@ -258,6 +328,80 @@ export async function getCategories(): Promise<CategoryDto[] | ApiError> {
   const out = await request<CategoryDto[]>('categories');
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
+}
+
+export interface FinanceEventRow {
+  id: string;
+  type: string;
+  partyId: string;
+  currency: string;
+  amount: number;
+  taxAmount: number | null;
+  occurredAt: string;
+  referenceId: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface PagedFinanceEvents {
+  items: FinanceEventRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+/** GET /finance/events — 公開；preset=last30d 近 30 日 */
+export async function getFinanceEvents(params?: {
+  preset?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+  type?: string;
+}): Promise<PagedFinanceEvents | ApiError> {
+  const q = new URLSearchParams();
+  if (params?.preset) q.set('preset', params.preset);
+  if (params?.from) q.set('from', params.from);
+  if (params?.to) q.set('to', params.to);
+  if (params?.page != null) q.set('page', String(params.page));
+  if (params?.pageSize != null) q.set('pageSize', String(params.pageSize));
+  if (params?.type) q.set('type', params.type);
+  const qs = q.toString();
+  const out = await request<PagedFinanceEvents>(qs ? `finance/events?${qs}` : 'finance/events');
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+export async function createCategory(body: {
+  code: string;
+  name: string;
+}): Promise<CategoryDto | ApiError> {
+  const out = await request<CategoryDto>('categories', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+export async function updateCategory(
+  id: string,
+  body: { code?: string; name?: string },
+): Promise<CategoryDto | ApiError> {
+  const out = await request<CategoryDto>(`categories/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+/** 後端若已上 DELETE /categories/:id 再使用；否則 404 */
+export async function deleteCategory(id: string): Promise<void | ApiError> {
+  const out = await request<unknown>(`categories/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (!out.ok) return out.error;
 }
 
 export async function getBrands(): Promise<BrandDto[] | ApiError> {

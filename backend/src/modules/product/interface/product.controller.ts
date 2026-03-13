@@ -51,6 +51,13 @@ export class ProductController {
     body: {
       sku: string;
       name: string;
+      description?: string | null;
+      specSize?: string | null;
+      specColor?: string | null;
+      weightGrams?: number | null;
+      listPrice?: string | number | null;
+      salePrice?: string | number | null;
+      costPrice?: string | number | null;
       categoryId?: string | null;
       brandId?: string | null;
       tags?: string[];
@@ -67,6 +74,13 @@ export class ProductController {
     body: {
       sku?: string;
       name?: string;
+      description?: string | null;
+      specSize?: string | null;
+      specColor?: string | null;
+      weightGrams?: number | null;
+      listPrice?: string | number | null;
+      salePrice?: string | number | null;
+      costPrice?: string | number | null;
       categoryId?: string | null;
       brandId?: string | null;
       tags?: string[];

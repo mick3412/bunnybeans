@@ -23,8 +23,8 @@
 |------|----------|----------|
 | 整合報告 | [integrated-progress-2026-03-13.md](integrated-progress-2026-03-13.md) | 2026-03-13 **22:12**（jest 12、E2E×5、finance/events、分類、Notion 日報） |
 | Notion 日報 | [notion-daily-2026-03-13.md](notion-daily-2026-03-13.md) | 貼 Notion 用 |
-| 後端 | [backend/backend-progress-2026-03-13.md](backend/backend-progress-2026-03-13.md) | 2026-03-13（22:12 後端紀錄同步／12 tests） |
-| 前端 | [frontend/frontend-progress-pos-2026-03-13.md](frontend/frontend-progress-pos-2026-03-13.md) | 2026-03-13 22:12（returns/stock、E2E×5、3003 維運） |
+| 後端 | [backend/backend-progress-2026-03-13.md](backend/backend-progress-2026-03-13.md) | 2026-03-14（01:13 §3.2 全包、16 tests） |
+| 前端 | [frontend/frontend-progress-pos-2026-03-13.md](frontend/frontend-progress-pos-2026-03-13.md) | 2026-03-14 01:13（報表 MVP、toast、商品倉摺疊、E2E×6） |
 
 ---
 

@@ -53,6 +53,7 @@ if ! curl -sf "http://localhost:3003/health" >/dev/null; then
   echo "後端已就緒"
 else
   echo "後端已在執行"
+  echo "（若 POS E2E 出現 POS_STORE_NO_WAREHOUSE：請重啟後端載入最新 GET /stores，或已於前端用 GET /warehouses 後備門市）"
 fi
 
 pnpm exec playwright install chromium 2>/dev/null || true

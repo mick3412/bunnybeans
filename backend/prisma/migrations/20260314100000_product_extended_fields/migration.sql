@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "Product" ADD COLUMN "description" TEXT,
+ADD COLUMN "specSize" TEXT,
+ADD COLUMN "specColor" TEXT,
+ADD COLUMN "weightGrams" INTEGER,
+ADD COLUMN "listPrice" DECIMAL(12,2) NOT NULL DEFAULT 0,
+ADD COLUMN "salePrice" DECIMAL(12,2) NOT NULL DEFAULT 0,
+ADD COLUMN "costPrice" DECIMAL(12,2);

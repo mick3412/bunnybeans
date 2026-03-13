@@ -52,3 +52,5 @@
 - **20:50 更新**：本機 **`scripts/e2e-one-click.sh`**（等同 **POS-E2E.app**）Playwright **4 passed**（約 4.4s）—後台 Admin smoke、POS 全額結帳、掛帳與補款、**POS 退款（小額退款成功）**；與 repo 現有 **e2e/*.spec.ts** 一致。
 - **21:07 更新**（§二）：**退貨入庫 UI**（`postReturnToStock`、`PosOrderDetailPage` 綠區 + testid）；**ERROR_CODE_MAP** `POS_RETURN_*`；**e2e/pos-return-stock.spec.ts**；**AdminCategoriesPage** `/admin/categories`；**LoginPage** `<details>` Tunnel／VITE_ADMIN；**e2e-pos.md**。
 - **22:12 更新**：**`posOrdersApi.postReturnToStock`** 改 **`returns/stock`**；明細成功分支強化（201 必提示、`e2e-detail-return-success`）；**pos-return-stock.spec** 等 **201**；**api-design-pos** 建議路徑；維運備註 **3003 僅一實例** 否則退貨入庫 E2E 曾 404；本機 **5 passed** 已對齊。
+- **00:39 更新**（§五 分類 CRUD）：**`adminApi`** `createCategory`／`updateCategory`／`deleteCategory`；**`needsAdminKey`** 含 `categories` POST、`categories/*` PATCH／DELETE；**`AdminCategoriesPage`** 新增／列上編輯／刪除；**`CATEGORY_IN_USE`** error map；**`admin-inventory-ui.md`** 對照。
+- **01:13 更新**（AGENT 對照計畫）：**`getFinanceEvents`** + **`/admin/reports`** 金流報表 MVP；**`AdminToastProvider`** + 分類成功 toast；商品表 **展開各倉／收合**；**e2e** `admin-categories.spec` + admin-smoke 報表；**e2e.yml** 註明 6 spec；jest 14 綠。

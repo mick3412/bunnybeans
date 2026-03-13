@@ -111,8 +111,15 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
       setErrorCode('POS_PAYMENT_EXCEEDS_TOTAL');
       return;
     }
-    if (allowCredit && !parsed.customerId) {
-      setErrorMessage('掛帳須指定客戶：請在同一欄輸入會員 ID（UUID）。僅手機或 Email 時請改全額結帳或聯繫後端支援。');
+    if (
+      allowCredit &&
+      !parsed.customerId &&
+      !parsed.customerPhone &&
+      !parsed.customerEmail
+    ) {
+      setErrorMessage(
+        '掛帳須指定客戶：請輸入會員 ID（UUID）、手機或 Email（須與後台客戶資料一致且同一商號內唯一）。',
+      );
       setErrorCode('POS_CREDIT_REQUIRES_CUSTOMER');
       return;
     }
@@ -193,7 +200,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
           <div className="border-b border-slate-200 pb-2">
             <div className="mb-1 text-[11px] font-semibold text-slate-700">關聯會員（選填）</div>
             <p className="mb-2 text-[10px] text-slate-500">
-              同一欄可輸入會員 ID（UUID）、手機或 Email，系統會自動辨識。未填則不綁定。掛帳時請輸入 UUID。
+              同一欄可輸入會員 ID（UUID）、手機或 Email。未填則不綁定。掛帳時須能對應到一筆客戶（UUID，或與後台客戶手機／Email 唯一相符）。
             </p>
             <TextInput
               label="會員識別"

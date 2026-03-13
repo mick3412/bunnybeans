@@ -14,8 +14,8 @@
 | 模組        | 說明                         | 目前狀態             |
 |-------------|------------------------------|----------------------|
 | Merchant    | 商家 / 門市 / 倉庫主檔       | **已實作 CRUD API** |
-| Category    | 商品分類主檔                 | **已實作** `GET/POST/PATCH /categories`（POST/PATCH 同 products 可選 Admin Key） |
-| Product     | 商品主檔                     | **已實作 CRUD API**（含 categoryId 篩選） |
+| Category    | 商品分類主檔                 | **已實作** `GET/POST/PATCH/DELETE /categories`（寫入同 products；DELETE 有商品引用 → `CATEGORY_IN_USE`） |
+| Product     | 商品主檔                     | **已實作 CRUD API**（含描述／規格／定價售價成本、categoryId 篩選） |
 | Inventory   | 庫存事件與匯總               | **已實作**           |
 | Finance     | 金流事件                     | **已實作**           |
 | Pos         | POS 銷售單                   | **已實作**           |
@@ -112,14 +112,14 @@ backend/src/
 - **Application 層**
   - `ProductService`
     - `listProducts(filter?: { search?, sku?, categoryId?, brandId?, tag? })`
-    - `getProduct(id)` — 回傳含 `brandId`、`tags: string[]`
-    - `createProduct` / `updateProduct` / `deleteProduct` — 可選 `brandId`、`tags`
+    - `getProduct(id)` — 回傳含描述、規格、價格、`brandId`、`tags: string[]`
+    - `createProduct` / `updateProduct` / `deleteProduct` — 可選上述欄位與 `brandId`、`tags`
 - **Interface 層**
   - `ProductController`
     - `GET /products` — 可選 query：`search`、`sku`、`categoryId`、`brandId`、`tag`（`tag` 為單一標籤，JSON 陣列 **包含** 該字串則命中；可與其他條件 **AND**）。
-    - 其餘 CRUD 同前；回傳欄位含 `categoryId`、`brandId`、`tags`。
+    - 其餘 CRUD 同前；回傳欄位含價格與 `categoryId`、`brandId`、`tags`。
 - **Infrastructure 層**
-  - `ProductRepository` — `Product` 含 `brandId`、`tags`（Json，預設 `[]`）。
+  - `ProductRepository` — `Product` 含 `description`、`specSize`、`specColor`、`weightGrams`、`listPrice`/`salePrice`/`costPrice`、`brandId`、`tags`（Json，預設 `[]`）。
 
 #### Brand / Tag（已落地）
 

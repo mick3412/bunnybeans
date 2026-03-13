@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
+import { AdminToastProvider } from './AdminToastContext';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `block rounded-lg px-3 py-2 text-sm font-medium ${
@@ -10,6 +11,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 export const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
   return (
+    <AdminToastProvider>
     <div className="flex min-h-screen bg-slate-50">
       <aside className="w-52 shrink-0 border-r border-slate-200 bg-white p-4">
         <div className="mb-6 flex items-center gap-2">
@@ -32,13 +34,10 @@ export const AdminLayout: React.FC = () => {
             分類
           </NavLink>
           <NavLink to="/admin/warehouses" className={navClass}>
-            倉庫
+            倉庫與門市
           </NavLink>
-          <NavLink to="/admin/merchants" className={navClass}>
-            商家
-          </NavLink>
-          <NavLink to="/admin/stores" className={navClass}>
-            門市
+          <NavLink to="/admin/reports" className={navClass}>
+            金流報表
           </NavLink>
         </nav>
         <div className="mt-8 border-t border-slate-100 pt-4">
@@ -51,5 +50,6 @@ export const AdminLayout: React.FC = () => {
         <Outlet />
       </div>
     </div>
+    </AdminToastProvider>
   );
 };

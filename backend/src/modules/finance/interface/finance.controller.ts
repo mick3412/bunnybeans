@@ -13,6 +13,7 @@ export class FinanceController {
     @Query('type') type?: FinanceEventType,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('preset') preset?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
@@ -22,6 +23,7 @@ export class FinanceController {
       type,
       from,
       to,
+      preset: preset?.trim() || undefined,
       page: page != null ? parseInt(page, 10) : undefined,
       pageSize: pageSize != null ? parseInt(pageSize, 10) : undefined,
     });

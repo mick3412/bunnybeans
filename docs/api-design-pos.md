@@ -53,7 +53,7 @@ interface CreatePosOrderRequest {
   customerEmail?: string | null;
   /**
    * 為 true：賒帳／部分付款。規則：
-   * - 必填 customerId（掛帳對象）
+   * - 掛帳時須能解析到一筆客戶：`customerId`（UUID），或 `customerPhone`／`customerEmail`（同 merchant 內唯一）
    * - sum(payments[].amount) <= totalAmount（可為 0 全賒）
    * - 金流：一筆 SALE_RECEIVABLE(應收總額) + 每筆實收一筆 SALE_PAYMENT
    * 未帶或 false：與先前相同，sum(payments) 須等於訂單總額
@@ -62,7 +62,7 @@ interface CreatePosOrderRequest {
 }
 
 // 若帶 customerId：須為該門市所屬商家（Merchant）底下之 Customer；通過驗證後寫入 PosOrder.customerId。
-// 賒帳 allowCredit: true 時 customerId 必填（與先前一致）。
+// 賒帳 allowCredit: true 時須帶 customerId 或可唯一對應的 customerPhone／customerEmail。
 
 // POS 銷售單摘要（列表用）
 interface PosOrderSummary {
@@ -188,8 +188,8 @@ interface PosOrderListResponse {
 
 **錯誤情境（實際回傳）**
 
-- `400 Bad Request`：`items must not be empty`（`POS_ITEMS_EMPTY`）；未開賒帳時付款須全額（`POS_PAYMENT_MISMATCH`）；賒帳未帶客戶（`POS_CREDIT_REQUIRES_CUSTOMER`）；賒帳實收超過應收（`POS_PAYMENT_EXCEEDS_TOTAL`）；付款金額非法（`POS_PAYMENT_AMOUNT_INVALID`）；`Store has no warehouse configured for inventory`（`POS_STORE_NO_WAREHOUSE`）。
-- `404 Not Found`：`Store not found`（`POS_STORE_NOT_FOUND`）、`Product not found: <id>`（`POS_PRODUCT_NOT_FOUND`）、`Order not found`（`POS_ORDER_NOT_FOUND`）、客戶不存在或不屬該門市商家（`POS_CUSTOMER_NOT_FOUND`）。
+- `400 Bad Request`：`items must not be empty`（`POS_ITEMS_EMPTY`）；未開賒帳時付款須全額（`POS_PAYMENT_MISMATCH`）；賒帳無法解析客戶（`POS_CREDIT_REQUIRES_CUSTOMER`，須 `customerId` 或同一 merchant 下唯一對應的 `customerPhone`／`customerEmail`）；多筆客戶同號（`POS_CREDIT_CUSTOMER_LOOKUP_AMBIGUOUS`）；賒帳實收超過應收（`POS_PAYMENT_EXCEEDS_TOTAL`）；付款金額非法（`POS_PAYMENT_AMOUNT_INVALID`）；`Store has no warehouse configured for inventory`（`POS_STORE_NO_WAREHOUSE`）。
+- `404 Not Found`：`Store not found`（`POS_STORE_NOT_FOUND`）、`Product not found: <id>`（`POS_PRODUCT_NOT_FOUND`）、`Order not found`（`POS_ORDER_NOT_FOUND`）、客戶不存在或不屬該門市商家（`POS_CUSTOMER_NOT_FOUND`）、賒帳依手機／Email 查無客戶（`POS_CREDIT_CUSTOMER_NOT_FOUND`）。
 - `409 Conflict`：`Insufficient inventory for product <id>: required <n>, on hand <m>`（code: `INVENTORY_INSUFFICIENT`）。
 
 > 錯誤回應由全域 `HttpExceptionFilter` 統一為 `statusCode`、`message`、`error`、`code`、`traceId`，見 `docs/backend-error-format.md`。
@@ -365,6 +365,7 @@ interface PosOrderListResponse {
 - 可依 `docs/db-seed.md` 執行 `pnpm db:seed`，會建立 M001 / S001 / W001、14 筆商品與庫存。
 - 或手動建立：至少一個 Merchant、Store（須關聯 Warehouse）、Product，且該 Product 在該 Warehouse 有庫存（`POST /inventory/events`，`type: "PURCHASE_IN"`）。
 - 取得 `storeId`、`productId`：`GET /stores`、`GET /products` 回傳的 `id` 欄位；seed 執行完成後終端也會印出部分 id。
+- **`GET /stores`** 回傳每筆含 **`warehouseIds: string[]`**（該門市底下 `storeId` 指向本門市之倉庫）。POS 前端應優先選 **至少一間倉** 的門市為預設 `storeId`，否則建單會 **400 `POS_STORE_NO_WAREHOUSE`**。
 
 **POST /pos/orders 範例**
 
@@ -435,7 +436,7 @@ curl -X POST http://localhost:3003/pos/orders \
 - DB schema：
   - `PosOrder` / `PosOrderItem` / **`PosOrderPayment`**（`method`、`amount`，與訂單一併建立）已在 `backend/prisma/schema.prisma` 中定義。
 - Backend 程式碼：
-  - `PosModule`：建單寫入 `PosOrder`、`PosOrderPayment`、`InventoryEvent`（SALE_OUT）。金流：一般 **SALE_RECEIVABLE**；**`allowCredit: true`** 時另寫 **SALE_PAYMENT**（每筆實收）。庫存仍於建單時扣減（與是否付清無關）。門市須至少一個 Warehouse。
+  - `PosModule`：建單寫入 `PosOrder`、`PosOrderPayment`、`InventoryEvent`（SALE_OUT）。金流：一般 **SALE_RECEIVABLE**；**`allowCredit: true`** 時另寫 **SALE_PAYMENT**（每筆實收）。庫存仍於建單時扣減（與是否付清無關）。門市須至少一個 Warehouse；若多倉掛同門市，後端會選**第一個能滿足整單各品項庫存**的倉扣庫（避免誤用無存量測試倉）。
 - 前端：
   - 可依本文件將 mock 切換為真實 `POST /pos/orders`、`GET /pos/orders`、`GET /pos/orders/:id`。
 

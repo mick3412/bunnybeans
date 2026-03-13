@@ -4,9 +4,19 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { InventoryEventType } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { InventoryRepository } from '../infrastructure/inventory.repository';
+
+export interface TransferInventoryInput {
+  fromWarehouseId: string;
+  toWarehouseId: string;
+  productId: string;
+  quantity: number;
+  note?: string;
+  occurredAt?: string;
+}
 
 export interface RecordInventoryEventInput {
   productId: string;
@@ -111,6 +121,128 @@ export class InventoryService {
     return { event, balance };
   }
 
+  /** 原子調撥：同一 transaction 內 TRANSFER_OUT（來源倉）+ TRANSFER_IN（目的倉），共用 referenceId。 */
+  async transferInventory(input: TransferInventoryInput) {
+    const fromId = input.fromWarehouseId?.trim();
+    const toId = input.toWarehouseId?.trim();
+    if (!fromId || !toId) {
+      throw new BadRequestException({
+        message: 'fromWarehouseId and toWarehouseId are required',
+        code: 'INVENTORY_TRANSFER_INVALID',
+      });
+    }
+    if (fromId === toId) {
+      throw new BadRequestException({
+        message: 'Source and destination warehouse must differ',
+        code: 'INVENTORY_TRANSFER_SAME_WAREHOUSE',
+      });
+    }
+    const qty = Math.abs(Number(input.quantity));
+    if (!Number.isFinite(qty) || qty < 1) {
+      throw new BadRequestException({
+        message: 'quantity must be a positive integer',
+        code: 'INVENTORY_TRANSFER_INVALID_QTY',
+      });
+    }
+    const occurredAt = this.resolveOccurredAt(input.occurredAt);
+    const referenceId = randomUUID();
+
+    const product = await this.prisma.product.findUnique({
+      where: { id: input.productId },
+    });
+    if (!product) {
+      throw new NotFoundException({
+        message: 'Product not found',
+        code: 'INVENTORY_PRODUCT_NOT_FOUND',
+      });
+    }
+    const [fromWh, toWh] = await Promise.all([
+      this.prisma.warehouse.findUnique({ where: { id: fromId } }),
+      this.prisma.warehouse.findUnique({ where: { id: toId } }),
+    ]);
+    if (!fromWh) {
+      throw new NotFoundException({
+        message: 'Source warehouse not found',
+        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
+      });
+    }
+    if (!toWh) {
+      throw new NotFoundException({
+        message: 'Destination warehouse not found',
+        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const fromBal = await tx.inventoryBalance.findUnique({
+        where: {
+          productId_warehouseId: { productId: input.productId, warehouseId: fromId },
+        },
+      });
+      const fromQty = fromBal?.onHandQty ?? 0;
+      if (fromQty < qty) {
+        throw new ConflictException({
+          message: 'Insufficient stock at source warehouse for transfer',
+          code: 'INVENTORY_INSUFFICIENT',
+        });
+      }
+
+      const outEvent = await tx.inventoryEvent.create({
+        data: {
+          productId: input.productId,
+          warehouseId: fromId,
+          type: 'TRANSFER_OUT' as InventoryEventType,
+          quantity: -qty,
+          occurredAt,
+          referenceId,
+          note: input.note ?? undefined,
+        },
+      });
+      const inEvent = await tx.inventoryEvent.create({
+        data: {
+          productId: input.productId,
+          warehouseId: toId,
+          type: 'TRANSFER_IN' as InventoryEventType,
+          quantity: qty,
+          occurredAt,
+          referenceId,
+          note: input.note ?? undefined,
+        },
+      });
+
+      await tx.inventoryBalance.upsert({
+        where: {
+          productId_warehouseId: { productId: input.productId, warehouseId: fromId },
+        },
+        create: { productId: input.productId, warehouseId: fromId, onHandQty: fromQty - qty },
+        update: { onHandQty: fromQty - qty },
+      });
+
+      const toBal = await tx.inventoryBalance.findUnique({
+        where: {
+          productId_warehouseId: { productId: input.productId, warehouseId: toId },
+        },
+      });
+      const toQty = (toBal?.onHandQty ?? 0) + qty;
+      const balanceTo = await tx.inventoryBalance.upsert({
+        where: {
+          productId_warehouseId: { productId: input.productId, warehouseId: toId },
+        },
+        create: { productId: input.productId, warehouseId: toId, onHandQty: toQty },
+        update: { onHandQty: toQty },
+      });
+
+      return {
+        referenceId,
+        events: [outEvent, inEvent],
+        balances: {
+          from: { warehouseId: fromId, onHandQty: fromQty - qty },
+          to: { warehouseId: toId, onHandQty: toQty },
+        },
+      };
+    });
+  }
+
   async getBalances(filter: InventoryBalanceFilter) {
     return this.repo.findBalances(filter);
   }
@@ -167,6 +299,48 @@ export class InventoryService {
       page,
       pageSize,
     });
+  }
+
+  private csvCell(v: string | number | null | undefined): string {
+    const s = v == null ? '' : String(v);
+    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  }
+
+  /** CSV 最多 10000 筆；與 GET events 相同 query */
+  async exportEventsCsv(filter: InventoryEventFilter): Promise<string> {
+    const rows = await this.repo.findEventsExport({
+      productId: filter.productId,
+      warehouseId: filter.warehouseId,
+      type: filter.type,
+      from: filter.from ? new Date(filter.from) : undefined,
+      to: filter.to ? new Date(filter.to) : undefined,
+    });
+    const header = [
+      'id',
+      'occurredAt',
+      'type',
+      'productId',
+      'warehouseId',
+      'quantity',
+      'referenceId',
+      'note',
+      'createdAt',
+    ].join(',');
+    const lines = rows.map((r) =>
+      [
+        this.csvCell(r.id),
+        this.csvCell(r.occurredAt.toISOString()),
+        this.csvCell(r.type),
+        this.csvCell(r.productId),
+        this.csvCell(r.warehouseId),
+        this.csvCell(r.quantity),
+        this.csvCell(r.referenceId),
+        this.csvCell(r.note),
+        this.csvCell(r.createdAt.toISOString()),
+      ].join(','),
+    );
+    return [header, ...lines].join('\n');
   }
 }
 

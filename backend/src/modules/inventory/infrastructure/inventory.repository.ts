@@ -108,5 +108,24 @@ export class InventoryRepository {
       total,
     };
   }
+
+  /** 匯出用：最多 10000 筆，同篩選條件 */
+  async findEventsExport(filter: Omit<InventoryEventFilter, 'page' | 'pageSize'>) {
+    const { productId, warehouseId, type, from, to } = filter;
+    const where = {
+      productId: productId ?? undefined,
+      warehouseId: warehouseId ?? undefined,
+      type: type ?? undefined,
+      occurredAt: {
+        gte: from,
+        lte: to,
+      },
+    };
+    return this.prisma.inventoryEvent.findMany({
+      where,
+      orderBy: { occurredAt: 'desc' },
+      take: 10_000,
+    });
+  }
 }
 

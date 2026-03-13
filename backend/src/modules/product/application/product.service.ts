@@ -1,9 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Decimal } from '@prisma/client/runtime/library';
 import { ProductRepository } from '../infrastructure/product.repository';
 
 interface CreateProductInput {
   sku: string;
   name: string;
+  description?: string | null;
+  specSize?: string | null;
+  specColor?: string | null;
+  weightGrams?: number | null;
+  listPrice?: string | number | null;
+  salePrice?: string | number | null;
+  costPrice?: string | number | null;
   categoryId?: string | null;
   brandId?: string | null;
   tags?: string[];
@@ -12,15 +20,34 @@ interface CreateProductInput {
 interface UpdateProductInput {
   sku?: string;
   name?: string;
+  description?: string | null;
+  specSize?: string | null;
+  specColor?: string | null;
+  weightGrams?: number | null;
+  listPrice?: string | number | null;
+  salePrice?: string | number | null;
+  costPrice?: string | number | null;
   categoryId?: string | null;
   brandId?: string | null;
   tags?: string[];
+}
+
+function decToStr(v: Decimal | null | undefined): string | null {
+  if (v == null) return null;
+  return v.toFixed(2);
 }
 
 function toProductResponse(p: {
   id: string;
   sku: string;
   name: string;
+  description: string | null;
+  specSize: string | null;
+  specColor: string | null;
+  weightGrams: number | null;
+  listPrice: Decimal;
+  salePrice: Decimal;
+  costPrice: Decimal | null;
   categoryId: string | null;
   brandId: string | null;
   tags: unknown;
@@ -34,6 +61,13 @@ function toProductResponse(p: {
     id: p.id,
     sku: p.sku,
     name: p.name,
+    description: p.description,
+    specSize: p.specSize,
+    specColor: p.specColor,
+    weightGrams: p.weightGrams,
+    listPrice: decToStr(p.listPrice) ?? '0.00',
+    salePrice: decToStr(p.salePrice) ?? '0.00',
+    costPrice: decToStr(p.costPrice),
     categoryId: p.categoryId,
     brandId: p.brandId,
     tags,

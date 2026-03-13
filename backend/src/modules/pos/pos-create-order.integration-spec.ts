@@ -330,6 +330,81 @@ describe('PosService (integration)', () => {
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 15000);
 
+  it('allowCredit: resolve customer by customerPhone when customerId omitted', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `TP-${Date.now()}`, name: 'Phone Credit Test' },
+    });
+    const customer = await prisma.customer.create({
+      data: {
+        merchantId: merchant.id,
+        code: 'PH-01',
+        name: '手機掛帳客戶',
+        phone: '0911222333',
+      },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SP-${Date.now()}`, name: 'Phone Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `WP-${Date.now()}`,
+        name: 'Phone WH',
+        merchantId: merchant.id,
+        storeId: store.id,
+      },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKUP-${Date.now()}`, name: 'Phone Product' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: {
+        productId_warehouseId: { productId: product.id, warehouseId: warehouse.id },
+      },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 5 },
+      update: { onHandQty: 5 },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 5,
+        occurredAt: new Date(),
+        note: 'seed',
+      },
+    });
+
+    const order = await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 50 }],
+      payments: [{ method: 'CASH', amount: 10 }],
+      customerPhone: '0911-222-333',
+      allowCredit: true,
+    });
+
+    expect(order.customerId).toBe(customer.id);
+    expect(order.credit).toBe(true);
+    expect(order.remainingAmount).toBe(40);
+
+    await prisma.posOrderItem.deleteMany({ where: { orderId: order.id } });
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: order.id } });
+    await prisma.posOrder.delete({ where: { id: order.id } });
+    await prisma.financeEvent.deleteMany({ where: { referenceId: order.id } });
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.customer.delete({ where: { id: customer.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 15000);
+
   it('appendPayment: partial then settle; then POS_ORDER_ALREADY_SETTLED', async () => {
     if (!process.env.DATABASE_URL) return;
 
