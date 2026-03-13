@@ -1,15 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '../shared/components/Button';
+import { TextInput } from '../shared/components/TextInput';
+import { getErrorMessage } from '../shared/errors/errorMessages';
 import type { CartItem } from '../modules/pos/types';
 import type { CreatePosOrderRequest } from '../modules/pos/posOrdersMockService';
 import type { CreateOrderResult } from '../modules/pos/posOrdersApi';
 import { createOrder } from '../modules/pos/posOrdersApi';
-
-/** 預留：後端補上 code 後可對應友善文案 */
-const ERROR_CODE_MAP: Record<string, string> = {
-  // INVENTORY_INSUFFICIENT: '庫存不足',
-  // STORE_NOT_FOUND: '門市不存在',
-};
 
 interface PosCheckoutModalProps {
   open: boolean;
@@ -28,11 +24,22 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
   storeId,
   onOrderCreated,
 }) => {
-  const [method, setMethod] = useState<'CASH' | 'CARD'>('CASH');
+  const [method, setMethod] = useState<'CASH' | 'CARD' | 'TRANSFER'>('CASH');
   const [receivedAmount, setReceivedAmount] = useState<number>(totalAmount);
+  const [customerId, setCustomerId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [errorTraceId, setErrorTraceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setReceivedAmount(totalAmount);
+      setErrorMessage(null);
+      setErrorCode(null);
+      setErrorTraceId(null);
+    }
+  }, [open, totalAmount]);
 
   if (!open) return null;
 
@@ -46,13 +53,46 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
     setReceivedAmount(totalAmount);
   };
 
+  const allowCredit = receivedAmount < totalAmount;
+  const paidInPayments = allowCredit ? receivedAmount : totalAmount;
+  const change = Math.max(0, receivedAmount - totalAmount);
+  const unpaidAmount = Math.max(0, totalAmount - receivedAmount);
+
   const handleSubmit = async () => {
     if (!storeId) return;
+
+    if (receivedAmount > totalAmount) {
+      setErrorMessage(getErrorMessage({ code: 'POS_PAYMENT_EXCEEDS_TOTAL' }));
+      setErrorCode('POS_PAYMENT_EXCEEDS_TOTAL');
+      return;
+    }
+    if (allowCredit && !customerId.trim()) {
+      setErrorMessage(getErrorMessage({ code: 'POS_CREDIT_REQUIRES_CUSTOMER' }));
+      setErrorCode('POS_CREDIT_REQUIRES_CUSTOMER');
+      return;
+    }
+    if (paidInPayments < 0) {
+      setErrorMessage(getErrorMessage({ code: 'POS_PAYMENT_AMOUNT_INVALID' }));
+      setErrorCode('POS_PAYMENT_AMOUNT_INVALID');
+      return;
+    }
+
     setSubmitting(true);
     setErrorMessage(null);
+    setErrorCode(null);
     setErrorTraceId(null);
     try {
       const now = new Date();
+      const payments =
+        paidInPayments > 0 ? [{ method, amount: paidInPayments }] : allowCredit ? [] : [{ method, amount: totalAmount }];
+
+      if (!allowCredit && payments.length && payments[0].amount !== totalAmount) {
+        setErrorMessage(getErrorMessage({ code: 'POS_PAYMENT_MISMATCH' }));
+        setErrorCode('POS_PAYMENT_MISMATCH');
+        setSubmitting(false);
+        return;
+      }
+
       const payload: CreatePosOrderRequest = {
         storeId,
         occurredAt: now.toISOString(),
@@ -61,23 +101,29 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
           quantity: item.quantity,
           unitPrice: item.unitPrice,
         })),
-        payments: [{ method, amount: totalAmount }],
-        customerId: null,
+        payments: allowCredit && paidInPayments === 0 ? [] : payments,
+        customerId: allowCredit ? customerId.trim() : null,
+        allowCredit: allowCredit || undefined,
       };
+
       const result = await createOrder(payload);
       onOrderCreated(result);
       if (result.statusCode >= 200 && result.statusCode < 300) {
         onClose();
       } else {
-        setErrorMessage(result.message || '結帳失敗，請稍後再試。');
+        setErrorMessage(
+          getErrorMessage({
+            code: result.code,
+            message: result.message || '結帳失敗，請稍後再試。',
+          }),
+        );
+        if (result.code) setErrorCode(result.code);
         if (result.traceId) setErrorTraceId(result.traceId);
       }
     } finally {
       setSubmitting(false);
     }
   };
-
-  const change = Math.max(0, receivedAmount - totalAmount);
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4">
@@ -101,7 +147,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
           </div>
           <div className="flex items-center justify-between">
             <span className="text-slate-600">付款方式</span>
-            <div className="inline-flex gap-1">
+            <div className="inline-flex flex-wrap gap-1">
               <Button
                 type="button"
                 size="sm"
@@ -118,11 +164,19 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
               >
                 刷卡
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={method === 'TRANSFER' ? 'primary' : 'secondary'}
+                onClick={() => setMethod('TRANSFER')}
+              >
+                轉帳
+              </Button>
             </div>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-slate-600">實收金額</span>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center justify-end gap-1">
               <input
                 type="text"
                 inputMode="numeric"
@@ -130,35 +184,57 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
                 value={receivedAmount.toString()}
                 onChange={(e) => changeReceived(e.target.value)}
               />
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={fillReceivedWithTotal}
-                disabled={submitting}
-              >
+              <Button type="button" size="sm" variant="secondary" onClick={fillReceivedWithTotal} disabled={submitting}>
                 同應收金額
               </Button>
             </div>
           </div>
-          <div className="flex items-center justify-between text-slate-600">
-            <span>找零</span>
-            <span className="font-semibold text-emerald-700">${change.toLocaleString()}</span>
-          </div>
+          {!allowCredit && (
+            <div className="flex items-center justify-between text-slate-600">
+              <span>找零</span>
+              <span className="font-semibold text-emerald-700">${change.toLocaleString()}</span>
+            </div>
+          )}
+          {allowCredit && (
+            <>
+              <TextInput
+                label="掛帳客戶 ID（必填）"
+                placeholder="客戶／會員 UUID"
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+              />
+              <div className="rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+                掛帳／部分收款：實收 ${paidInPayments.toLocaleString()}，未收 ${unpaidAmount.toLocaleString()}。將送{' '}
+                <code className="rounded bg-amber-100 px-0.5">allowCredit: true</code> 與{' '}
+                <code className="rounded bg-amber-100 px-0.5">customerId</code>。
+              </div>
+            </>
+          )}
         </div>
 
         {errorMessage ? (
           <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">
             <div>{errorMessage}</div>
-            {errorTraceId && <div className="mt-1 text-[10px] text-red-500">traceId: {errorTraceId}</div>}
+            {(errorCode || errorTraceId) && (
+              <div className="mt-1 break-all text-[10px] text-red-500">
+                {errorCode ? `code: ${errorCode}` : null}
+                {errorCode && errorTraceId ? ' · ' : null}
+                {errorTraceId ? `traceId: ${errorTraceId}` : null}
+              </div>
+            )}
           </div>
         ) : null}
 
-        <Button type="button" fullWidth variant="success" onClick={handleSubmit} disabled={submitting || !items.length || !storeId}>
+        <Button
+          type="button"
+          fullWidth
+          variant="success"
+          onClick={handleSubmit}
+          disabled={submitting || !items.length || !storeId}
+        >
           {submitting ? '送出中…' : '確認送出'}
         </Button>
       </div>
     </div>
   );
 };
-

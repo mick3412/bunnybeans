@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './shared/database/database.module';
 import { MerchantModule } from './modules/merchant/merchant.module';
 import { CategoryModule } from './modules/category/category.module';
+import { BrandModule } from './modules/brand/brand.module';
 import { ProductModule } from './modules/product/product.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { FinanceModule } from './modules/finance/finance.module';
@@ -18,6 +19,7 @@ import { PosModule } from './modules/pos/pos.module';
     DatabaseModule,
     MerchantModule,
     CategoryModule,
+    BrandModule,
     ProductModule,
     InventoryModule,
     FinanceModule,

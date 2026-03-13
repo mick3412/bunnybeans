@@ -106,7 +106,24 @@
 
 ---
 
-## 6. 規則與流程備註
+## 6. 品牌與商品主檔（stable）
+
+### 6.1 `GET /brands`（stable）
+
+- **Response**：`{ id, code, name, createdAt, updatedAt }[]`
+
+### 6.2 `GET /products`（stable）
+
+- **Query**：`search?`、`sku?`、`categoryId?`、`brandId?`、`tag?`（標籤需與 `tags` 陣列中某一元素完全相等）。
+- **Response 單筆欄位**：`id`、`sku`、`name`、`categoryId`、`brandId`、`tags[]`、`createdAt`、`updatedAt`
+
+### 6.3 `POST/PATCH /products`
+
+- **Body** 可選：`categoryId`、`brandId`、`tags`（字串陣列）。
+
+---
+
+## 7. 規則與流程備註
 
 - 新增 API 前，請先在本文件增加對應小節，標註為 `draft`。
 - API 一旦被前端或外部系統使用，請：

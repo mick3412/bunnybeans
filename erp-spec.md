@@ -377,6 +377,37 @@
   - 產生結帳報表（每日營業報表、支付方式統計）
   - 結束後鎖定該班別交易（修改需特別權限）
 
+### 5.4 賒帳與部分付款（設計草案）
+
+> **狀態（2026-03 更新）**：後端已支援 **`allowCredit`** 建單、`SALE_RECEIVABLE` + **`SALE_PAYMENT`**、明細 **`remainingAmount`**。未收補款 API 仍屬後續 phase。未開賒帳之訂單仍為單一 `SALE_RECEIVABLE` 全額付清行為。
+
+**賒帳定義**
+
+- 實收金額 < 應收金額。
+- 允許多筆付款（CASH / CARD / TRANSFER / EWALLET 等）混合；未收部分入應收餘額，供後續補款。
+
+**典型流程**
+
+1. 顧客結帳時只先付一部分（如訂單 500 元，先付 200 現金）。
+2. 系統建立一筆 POS Order（`totalAmount = 500`，`paidAmount = 200`，`remainingAmount = 300`；或依最終 schema 而定）。
+3. 產生 FinanceEvent：
+   - 一筆 `SALE_RECEIVABLE` 建立應收（500 元，`referenceId` 指向 POS Order）。
+   - 一筆或多筆 `SALE_PAYMENT`（或類似型別）記錄每次實際收款（例如 200 元 CASH），累加直至總收款 = 應收金額。
+4. 後續補款時，再建立新的 `SALE_PAYMENT` 事件，`referenceId` 指向同一 POS Order。
+
+**FinanceEvent 型別與欄位擴充草案**
+
+- 仍以 `SALE_RECEIVABLE` 表示應收建立；金額為應收總額。
+- 新增 `SALE_PAYMENT` / `SALE_SETTLEMENT`：記錄每次實際收款；`amount` 為當次收款金額；`referenceId` 指向 POS Order；可選欄位 `paymentMethod` 區分 CASH / TRANSFER 等。
+- 或使用 `SALE_RECEIVABLE` + `remainingAmount` 欄位模式（權衡：需在事件上紀錄剩餘未收，查詢時需彙總；較複雜）。
+- 與 POS Order 關聯：`referenceId` 指向 POS Order id；每次收款事件累加，直至總收款 = 應收為止。
+
+**相容現有實作的過渡策略**
+
+- 目前實作：單一 `SALE_RECEIVABLE` 事件代表已收款完畢（無賒帳）。
+- 賒帳為後續 phase，需 schema（FinanceEvent 新增 `paymentMethod`、`SALE_PAYMENT` 型別或類似）與 PosService / FinanceService 改動。
+- 本文件為設計草案，後續會在 `api-design-inventory-finance.md` 與 `backend-module-design.md` 中落實。
+
 ---
 
 ## 六、採購與庫存作業流程

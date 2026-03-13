@@ -1,6 +1,6 @@
 import type { PosProduct } from './types';
 
-// 依照 docs/api-design-pos.md 中文件層級型別草稿
+// 依照 docs/api-design-pos.md
 export interface PosOrderItemInput {
   productId: string;
   quantity: number;
@@ -14,10 +14,11 @@ export interface PosPaymentInput {
 
 export interface CreatePosOrderRequest {
   storeId: string;
-  occurredAt: string;
+  occurredAt?: string;
   items: PosOrderItemInput[];
   payments: PosPaymentInput[];
   customerId?: string | null;
+  allowCredit?: boolean;
 }
 
 export interface PosOrderSummary {
@@ -35,8 +36,17 @@ export interface PosOrderDetailItem {
   unitPrice: number;
 }
 
+export interface PosOrderDetailPayment {
+  method: string;
+  amount: number;
+}
+
 export interface PosOrderDetail extends PosOrderSummary {
   items: PosOrderDetailItem[];
+  payments: PosOrderDetailPayment[];
+  paidAmount: number;
+  remainingAmount: number;
+  credit: boolean;
 }
 
 export interface PosOrderListResponse {
@@ -46,7 +56,6 @@ export interface PosOrderListResponse {
   total: number;
 }
 
-// 簡單成功情境 mock：模擬為單門市、單門市單據編號
 let mockSequence = 1;
 
 export interface MockPosOrderContext {
@@ -74,6 +83,31 @@ export const createPosOrderMock = async (
     };
   }
 
+  const totalAmount = input.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const allowCredit = Boolean(input.allowCredit);
+  const payments: PosOrderDetailPayment[] = (input.payments ?? []).map((p) => ({
+    method: p.method,
+    amount: p.amount,
+  }));
+  const paidSum = payments.reduce((s, p) => s + p.amount, 0);
+
+  if (allowCredit) {
+    const cid = (input.customerId ?? '').trim();
+    if (!cid) {
+      return { statusCode: 400, message: '賒帳時未帶 customerId', body: undefined };
+    }
+    if (paidSum > totalAmount + 0.01) {
+      return { statusCode: 400, message: '實收超過應收', body: undefined };
+    }
+    if (payments.some((p) => p.amount < 0 || Number.isNaN(p.amount))) {
+      return { statusCode: 400, message: '付款金額非法', body: undefined };
+    }
+  } else {
+    if (Math.abs(paidSum - totalAmount) > 0.01) {
+      return { statusCode: 400, message: '付款總額須等於訂單總額', body: undefined };
+    }
+  }
+
   const now = new Date();
   const id = crypto.randomUUID();
   const orderNumber = `POS-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(
@@ -88,7 +122,9 @@ export const createPosOrderMock = async (
     unitPrice: item.unitPrice,
   }));
 
-  const totalAmount = detailItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const paidAmount = paidSum;
+  const remainingAmount = Math.max(0, totalAmount - paidAmount);
+  const credit = remainingAmount > 0;
 
   return {
     statusCode: 201,
@@ -100,6 +136,10 @@ export const createPosOrderMock = async (
       totalAmount,
       createdAt: now.toISOString(),
       items: detailItems,
+      payments,
+      paidAmount,
+      remainingAmount,
+      credit,
     },
   };
 };
@@ -125,5 +165,3 @@ export const listPosOrdersMock = async (): Promise<PosOrderListResponse> => {
     total: items.length,
   };
 };
-
-

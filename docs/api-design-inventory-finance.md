@@ -29,9 +29,11 @@
 - `InventoryEvent`
   - 主要欄位：`id`, `occurredAt`, `type`, `productId`, `warehouseId`, `quantity`, `referenceId?`, `note?`。
 - `FinanceEventType`
-  - `'SALE_RECEIVABLE' | 'SALE_REFUND' | 'PURCHASE_PAYABLE' | 'PURCHASE_REBATE' | 'PURCHASE_RETURN' | 'ADJUSTMENT'`
+  - `'SALE_RECEIVABLE' | 'SALE_PAYMENT' | 'SALE_REFUND' | 'PURCHASE_PAYABLE' | 'PURCHASE_REBATE' | 'PURCHASE_RETURN' | 'ADJUSTMENT'`
+- **`SALE_PAYMENT`**：銷售實收（POS 賒帳／部分付款時，每一筆 `payments[]` 一筆事件；`referenceId` = POS 訂單 id；`note` 可含收款方式）。與同單 `SALE_RECEIVABLE`（應收總額）並存，未收餘額 = 應收 − 各筆 `SALE_PAYMENT` 之和。
 - `FinanceEvent`
   - 主要欄位：`id`, `occurredAt`, `type`, `partyId`, `currency`, `amount`, `taxAmount?`, `referenceId?`, `note?`。
+- **已實作**：`SALE_PAYMENT` 由 POS 建單（`allowCredit: true` 時每筆初收）或 **`POST /pos/orders/:id/payments` 補款** 寫入；全額付清且未開賒帳時仍僅一筆 `SALE_RECEIVABLE`（與既有行為相容）。
 
 #### 2.2 匯總與列表型別（文件草稿）
 

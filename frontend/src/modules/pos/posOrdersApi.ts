@@ -19,6 +19,7 @@ export interface ApiError {
   statusCode: number;
   message: string;
   error?: string;
+  code?: string;
   traceId?: string;
 }
 
@@ -26,6 +27,7 @@ export interface CreateOrderResult {
   statusCode: number;
   message: string;
   body?: PosOrderDetail;
+  code?: string;
   traceId?: string;
 }
 
@@ -40,6 +42,16 @@ export interface ProductDto {
   sku: string;
   name: string;
   categoryId?: string;
+  brandId?: string;
+  tags?: string[];
+}
+
+export interface BrandDto {
+  id: string;
+  code: string;
+  name: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CategoryDto {
@@ -86,6 +98,7 @@ async function request<T>(
         statusCode: res.status,
         message: (err.message as string) ?? res.statusText,
         error: err.error as string | undefined,
+        code: err.code as string | undefined,
         traceId: (err.traceId as string) ?? traceId,
       },
     };
@@ -99,8 +112,21 @@ export async function getStores(traceId?: string): Promise<StoreDto[] | ApiError
   return Array.isArray(out.data) ? out.data : [];
 }
 
-export async function getProducts(traceId?: string): Promise<ProductDto[] | ApiError> {
-  const out = await request<ProductDto[]>('products', { traceId: traceId ?? genTraceId() });
+export async function getBrands(traceId?: string): Promise<BrandDto[] | ApiError> {
+  const out = await request<BrandDto[]>('brands', { traceId: traceId ?? genTraceId() });
+  if (!out.ok) return out.error;
+  return Array.isArray(out.data) ? out.data : [];
+}
+
+export async function getProducts(
+  params?: { categoryId?: string; brandId?: string },
+  traceId?: string,
+): Promise<ProductDto[] | ApiError> {
+  const q = new URLSearchParams();
+  if (params?.categoryId) q.set('categoryId', params.categoryId);
+  if (params?.brandId) q.set('brandId', params.brandId);
+  const path = `products${q.toString() ? `?${q.toString()}` : ''}`;
+  const out = await request<ProductDto[]>(path, { traceId: traceId ?? genTraceId() });
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
 }
@@ -125,6 +151,7 @@ export async function createOrder(
     return {
       statusCode: out.error.statusCode,
       message: out.error.message,
+      code: out.error.code,
       traceId: out.error.traceId,
     };
   }

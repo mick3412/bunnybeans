@@ -99,87 +99,191 @@ async function main() {
     create: { code: 'cat-supplies', name: '用品' },
   });
 
+  const brandHouse = await prisma.brand.upsert({
+    where: { code: 'brand-house' },
+    update: {},
+    create: { code: 'brand-house', name: '自有品牌' },
+  });
+  const brandPremium = await prisma.brand.upsert({
+    where: { code: 'brand-premium' },
+    update: {},
+    create: { code: 'brand-premium', name: '精選' },
+  });
+  const brandFeed = await prisma.brand.upsert({
+    where: { code: 'brand-feed' },
+    update: {},
+    create: { code: 'brand-feed', name: '飼料牌' },
+  });
+
   const now = new Date();
 
   const productsClothes = await Promise.all([
     prisma.product.upsert({
       where: { sku: 'SKU-CLOTH-001' },
-      update: { categoryId: catClothes.id },
-      create: { sku: 'SKU-CLOTH-001', name: '短袖 T 恤', categoryId: catClothes.id },
+      update: {
+        categoryId: catClothes.id,
+        brandId: brandHouse.id,
+        tags: ['熱銷'],
+      },
+      create: {
+        sku: 'SKU-CLOTH-001',
+        name: '短袖 T 恤',
+        categoryId: catClothes.id,
+        brandId: brandHouse.id,
+        tags: ['熱銷'],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-CLOTH-002' },
-      update: { categoryId: catClothes.id },
-      create: { sku: 'SKU-CLOTH-002', name: '長袖工作服', categoryId: catClothes.id },
+      update: { categoryId: catClothes.id, brandId: brandHouse.id, tags: [] },
+      create: {
+        sku: 'SKU-CLOTH-002',
+        name: '長袖工作服',
+        categoryId: catClothes.id,
+        brandId: brandHouse.id,
+        tags: [],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-CLOTH-003' },
-      update: { categoryId: catClothes.id },
-      create: { sku: 'SKU-CLOTH-003', name: '寵物背心', categoryId: catClothes.id },
+      update: { categoryId: catClothes.id, brandId: brandPremium.id, tags: ['清倉'] },
+      create: {
+        sku: 'SKU-CLOTH-003',
+        name: '寵物背心',
+        categoryId: catClothes.id,
+        brandId: brandPremium.id,
+        tags: ['清倉'],
+      },
     }),
   ]);
 
   const productsHay = await Promise.all([
     prisma.product.upsert({
       where: { sku: 'SKU-HAY-001' },
-      update: { categoryId: catHay.id },
-      create: { sku: 'SKU-HAY-001', name: '提摩西牧草', categoryId: catHay.id },
+      update: { categoryId: catHay.id, brandId: brandHouse.id, tags: ['熱銷', '新品'] },
+      create: {
+        sku: 'SKU-HAY-001',
+        name: '提摩西牧草',
+        categoryId: catHay.id,
+        brandId: brandHouse.id,
+        tags: ['熱銷', '新品'],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-HAY-002' },
-      update: { categoryId: catHay.id },
-      create: { sku: 'SKU-HAY-002', name: '果園草', categoryId: catHay.id },
+      update: { categoryId: catHay.id, brandId: brandHouse.id, tags: [] },
+      create: {
+        sku: 'SKU-HAY-002',
+        name: '果園草',
+        categoryId: catHay.id,
+        brandId: brandHouse.id,
+        tags: [],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-HAY-003' },
-      update: { categoryId: catHay.id },
-      create: { sku: 'SKU-HAY-003', name: '燕麥草', categoryId: catHay.id },
+      update: { categoryId: catHay.id, brandId: brandHouse.id, tags: [] },
+      create: {
+        sku: 'SKU-HAY-003',
+        name: '燕麥草',
+        categoryId: catHay.id,
+        brandId: brandHouse.id,
+        tags: [],
+      },
     }),
   ]);
 
   const productsFeed = await Promise.all([
     prisma.product.upsert({
       where: { sku: 'SKU-A001' },
-      update: { categoryId: catFeed.id },
-      create: { sku: 'SKU-A001', name: '商品 A', categoryId: catFeed.id },
+      update: { categoryId: catFeed.id, brandId: brandFeed.id, tags: [] },
+      create: {
+        sku: 'SKU-A001',
+        name: '商品 A',
+        categoryId: catFeed.id,
+        brandId: brandFeed.id,
+        tags: [],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-B002' },
-      update: { categoryId: catFeed.id },
-      create: { sku: 'SKU-B002', name: '商品 B', categoryId: catFeed.id },
+      update: { categoryId: catFeed.id, brandId: brandFeed.id, tags: [] },
+      create: {
+        sku: 'SKU-B002',
+        name: '商品 B',
+        categoryId: catFeed.id,
+        brandId: brandFeed.id,
+        tags: [],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-C003' },
-      update: { categoryId: catFeed.id },
-      create: { sku: 'SKU-C003', name: '商品 C', categoryId: catFeed.id },
+      update: { categoryId: catFeed.id, brandId: brandFeed.id, tags: [] },
+      create: {
+        sku: 'SKU-C003',
+        name: '商品 C',
+        categoryId: catFeed.id,
+        brandId: brandFeed.id,
+        tags: [],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-FEED-001' },
-      update: { categoryId: catFeed.id },
-      create: { sku: 'SKU-FEED-001', name: '成兔飼料', categoryId: catFeed.id },
+      update: { categoryId: catFeed.id, brandId: brandFeed.id, tags: ['熱銷'] },
+      create: {
+        sku: 'SKU-FEED-001',
+        name: '成兔飼料',
+        categoryId: catFeed.id,
+        brandId: brandFeed.id,
+        tags: ['熱銷'],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-FEED-002' },
-      update: { categoryId: catFeed.id },
-      create: { sku: 'SKU-FEED-002', name: '幼兔飼料', categoryId: catFeed.id },
+      update: { categoryId: catFeed.id, brandId: brandFeed.id, tags: [] },
+      create: {
+        sku: 'SKU-FEED-002',
+        name: '幼兔飼料',
+        categoryId: catFeed.id,
+        brandId: brandFeed.id,
+        tags: [],
+      },
     }),
   ]);
 
   const productsSupplies = await Promise.all([
     prisma.product.upsert({
       where: { sku: 'SKU-SUP-001' },
-      update: { categoryId: catSupplies.id },
-      create: { sku: 'SKU-SUP-001', name: '水壺', categoryId: catSupplies.id },
+      update: { categoryId: catSupplies.id, brandId: brandHouse.id, tags: [] },
+      create: {
+        sku: 'SKU-SUP-001',
+        name: '水壺',
+        categoryId: catSupplies.id,
+        brandId: brandHouse.id,
+        tags: [],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-SUP-002' },
-      update: { categoryId: catSupplies.id },
-      create: { sku: 'SKU-SUP-002', name: '食盆', categoryId: catSupplies.id },
+      update: { categoryId: catSupplies.id, brandId: brandHouse.id, tags: [] },
+      create: {
+        sku: 'SKU-SUP-002',
+        name: '食盆',
+        categoryId: catSupplies.id,
+        brandId: brandHouse.id,
+        tags: [],
+      },
     }),
     prisma.product.upsert({
       where: { sku: 'SKU-SUP-003' },
-      update: { categoryId: catSupplies.id },
-      create: { sku: 'SKU-SUP-003', name: '便盆', categoryId: catSupplies.id },
+      update: { categoryId: catSupplies.id, brandId: brandHouse.id, tags: [] },
+      create: {
+        sku: 'SKU-SUP-003',
+        name: '便盆',
+        categoryId: catSupplies.id,
+        brandId: brandHouse.id,
+        tags: [],
+      },
     }),
   ]);
 

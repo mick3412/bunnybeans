@@ -55,18 +55,32 @@ model Category {
   updatedAt DateTime  @updatedAt
 }
 
+model Brand {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
 model Product {
   id         String    @id @default(uuid())
   sku        String    @unique
   name       String
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
+  brandId    String?
+  brand      Brand?    @relation(fields: [brandId], references: [id])
+  tags       Json      @default("[]") // string[] e.g. ["熱銷","新品"]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
   inventoryEvents  InventoryEvent[]
   inventoryBalance InventoryBalance[]
   posOrderItems    PosOrderItem[]
+
+  @@index([brandId])
 }
 
 model InventoryEvent {
@@ -120,7 +134,16 @@ model PosOrder {
   totalAmount Decimal
   createdAt   DateTime      @default(now())
 
-  items PosOrderItem[]
+  items    PosOrderItem[]
+  payments PosOrderPayment[]
+}
+
+model PosOrderPayment {
+  id      String   @id @default(uuid())
+  order   PosOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
+  method  String
+  amount  Decimal
 }
 
 model PosOrderItem {
@@ -146,6 +169,7 @@ enum InventoryEventType {
 
 enum FinanceEventType {
   SALE_RECEIVABLE
+  SALE_PAYMENT // 賒帳／部分付款時，每筆實收（referenceId = POS order id）
   SALE_REFUND
   PURCHASE_PAYABLE
   PURCHASE_REBATE

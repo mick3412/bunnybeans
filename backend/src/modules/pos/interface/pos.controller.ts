@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { PosService } from '../application/pos.service';
 
 @Controller('pos/orders')
@@ -14,6 +22,7 @@ export class PosController {
       items: Array<{ productId: string; quantity: number; unitPrice: number }>;
       payments: Array<{ method: string; amount: number }>;
       customerId?: string | null;
+      allowCredit?: boolean;
     },
   ) {
     return this.service.createOrder({
@@ -22,7 +31,18 @@ export class PosController {
       items: body.items,
       payments: body.payments ?? [],
       customerId: body.customerId,
+      allowCredit: body.allowCredit,
     });
+  }
+
+  /** 須在 Get(':id') 之前註冊，避免與單段 id 混淆 */
+  @Post(':id/payments')
+  @HttpCode(201)
+  appendPayment(
+    @Param('id') id: string,
+    @Body() body: { method: string; amount: number; occurredAt?: string },
+  ) {
+    return this.service.appendPaymentToOrder(id, body);
   }
 
   @Get()

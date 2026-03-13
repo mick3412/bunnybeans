@@ -32,8 +32,8 @@ FRONTEND_PID=$!
 echo "Waiting for services (4s)..."
 sleep 4
 
-echo "Opening Chrome at http://localhost:5173"
-open -W -a "Google Chrome" "http://localhost:5173"
+echo "Opening browser at http://localhost:5173"
+open -W "http://localhost:5173"
 
 echo "Chrome closed. Stopping dev processes..."
 kill_port 3003

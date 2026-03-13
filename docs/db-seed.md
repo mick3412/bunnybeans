@@ -31,7 +31,8 @@ pnpm db:seed
 - **Store**：一筆，`code: S001`，名稱「Demo 門市」，隸屬上述 Merchant。
 - **Warehouse**：一筆，`code: W001`，名稱「Demo 門市倉」，隸屬同一 Merchant 且 `storeId` 指向上述門市（供 POS 扣庫使用）。
 - **Category**：四筆，與前端 mock 對齊 — `cat-clothes`/衣服、`cat-hay`/牧草、`cat-feed`/飼料、`cat-supplies`/用品。
-- **Product**：各分類底下多筆商品，共 14 筆（皆設 `categoryId`）：
+- **Brand**：三筆 — `brand-house`/自有品牌、`brand-premium`/精選、`brand-feed`/飼料牌；商品會掛 `brandId`。
+- **Product**：各分類底下多筆商品，共 14 筆（皆設 `categoryId`、`brandId`，部分設 `tags` 字串陣列，如「熱銷」「新品」「清倉」）：
   - **衣服**：SKU-CLOTH-001（短袖 T 恤）、SKU-CLOTH-002（長袖工作服）、SKU-CLOTH-003（寵物背心）。
   - **牧草**：SKU-HAY-001（提摩西牧草）、SKU-HAY-002（果園草）、SKU-HAY-003（燕麥草）。
   - **飼料**：SKU-A001（商品 A）、SKU-B002（商品 B）、SKU-C003（商品 C）、SKU-FEED-001（成兔飼料）、SKU-FEED-002（幼兔飼料）。

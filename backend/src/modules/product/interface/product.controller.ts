@@ -10,14 +10,19 @@ export class ProductController {
     @Query('search') search?: string,
     @Query('sku') sku?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('brandId') brandId?: string,
+    @Query('tag') tag?: string,
   ) {
-    const hasFilter = search || sku || categoryId;
+    const hasFilter =
+      search || sku || categoryId || brandId || tag;
     return this.service.listProducts(
       hasFilter
         ? {
             search: search?.trim() || undefined,
             sku: sku?.trim() || undefined,
             categoryId: categoryId?.trim() || undefined,
+            brandId: brandId?.trim() || undefined,
+            tag: tag?.trim() || undefined,
           }
         : undefined,
     );
@@ -34,6 +39,9 @@ export class ProductController {
     body: {
       sku: string;
       name: string;
+      categoryId?: string | null;
+      brandId?: string | null;
+      tags?: string[];
     },
   ) {
     return this.service.createProduct(body);
@@ -46,6 +54,9 @@ export class ProductController {
     body: {
       sku?: string;
       name?: string;
+      categoryId?: string | null;
+      brandId?: string | null;
+      tags?: string[];
     },
   ) {
     return this.service.updateProduct(id, body);
@@ -56,4 +67,3 @@ export class ProductController {
     return this.service.deleteProduct(id);
   }
 }
-

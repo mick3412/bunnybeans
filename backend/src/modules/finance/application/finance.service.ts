@@ -15,6 +15,7 @@ export interface RecordFinanceEventInput {
 
 const VALID_FINANCE_EVENT_TYPES: FinanceEventType[] = [
   'SALE_RECEIVABLE',
+  'SALE_PAYMENT',
   'SALE_REFUND',
   'PURCHASE_PAYABLE',
   'PURCHASE_REBATE',

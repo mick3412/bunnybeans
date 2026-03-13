@@ -2,7 +2,19 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '../shared/components/Button';
 import { getOrderById, getProducts, getCategories } from '../modules/pos/posOrdersApi';
+import { getErrorMessage } from '../shared/errors/errorMessages';
 import type { PosOrderDetail } from '../modules/pos/posOrdersMockService';
+
+const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  CASH: '現金',
+  CARD: '刷卡',
+  TRANSFER: '轉帳',
+  EWALLET: '電子支付',
+};
+
+function paymentMethodLabel(method: string): string {
+  return PAYMENT_METHOD_LABEL[method] ?? method;
+}
 
 export const PosOrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,8 +41,13 @@ export const PosOrderDetailPage: React.FC = () => {
         setOrder(result as PosOrderDetail);
         setError(null);
       } else {
-        const err = result as { message?: string };
-        setError(err.message ?? '無法載入訂單明細');
+        const err = result as { message?: string; code?: string };
+        setError(
+          getErrorMessage({
+            code: err.code,
+            message: err.message ?? '無法載入訂單明細',
+          }),
+        );
         setOrder(null);
       }
       setLoading(false);
@@ -66,7 +83,38 @@ export const PosOrderDetailPage: React.FC = () => {
     };
   }, [order]);
 
-  const hasMeta = useMemo(() => Object.keys(productMap).length > 0 || Object.keys(categoryMap).length > 0, [productMap, categoryMap]);
+  const { displayPaid, remainingAmount, credit, paymentMethodsText } = useMemo(() => {
+    if (!order) {
+      return {
+        displayPaid: 0,
+        remainingAmount: 0,
+        credit: false,
+        paymentMethodsText: '—',
+      };
+    }
+    const payments = order.payments ?? [];
+    const sumPay = payments.reduce((s, p) => s + p.amount, 0);
+    const paid =
+      typeof order.paidAmount === 'number' ? order.paidAmount : sumPay;
+    const remaining =
+      typeof order.remainingAmount === 'number'
+        ? order.remainingAmount
+        : Math.max(0, order.totalAmount - paid);
+    const isCredit =
+      typeof order.credit === 'boolean' ? order.credit : remaining > 0;
+    const text =
+      payments.length > 0
+        ? payments.map((p) => `${paymentMethodLabel(p.method)} $${p.amount.toLocaleString()}`).join('、')
+        : paid > 0
+          ? '—'
+          : '無紀錄';
+    return {
+      displayPaid: paid,
+      remainingAmount: remaining,
+      credit: isCredit,
+      paymentMethodsText: text,
+    };
+  }, [order]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100">
@@ -148,9 +196,28 @@ export const PosOrderDetailPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="flex justify-between border-t border-slate-200 pt-2 text-sm font-semibold">
-                <span>應收金額</span>
-                <span>${order.totalAmount.toLocaleString()}</span>
+              <div className="space-y-2 border-t border-slate-200 pt-2 text-sm">
+                <div className="flex justify-between font-semibold">
+                  <span>應收金額</span>
+                  <span className="tabular-nums">${order.totalAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between font-semibold">
+                  <span>實收合計</span>
+                  <span className="tabular-nums">${displayPaid.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-700">
+                  <span>未收餘額</span>
+                  <span className="tabular-nums font-medium">${remainingAmount.toLocaleString()}</span>
+                </div>
+                {credit && (
+                  <div className="rounded-lg bg-amber-50 px-2 py-1 text-center text-[11px] font-medium text-amber-800">
+                    掛帳（尚有未收）
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-slate-100 pt-2 text-xs font-normal">
+                  <span className="text-slate-500">收款方式</span>
+                  <span className="max-w-[70%] text-right text-slate-800">{paymentMethodsText}</span>
+                </div>
               </div>
             </div>
           ) : null}

@@ -23,6 +23,7 @@ export interface InventoryEvent {
 
 export type FinanceEventType =
   | 'SALE_RECEIVABLE'
+  | 'SALE_PAYMENT'
   | 'SALE_REFUND'
   | 'PURCHASE_PAYABLE'
   | 'PURCHASE_REBATE'

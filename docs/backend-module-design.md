@@ -101,26 +101,30 @@ backend/src/
 - **Infrastructure 層**
   - `CategoryRepository` — 基於 Prisma 操作 `Category` model。
 
-#### 2.3 ProductModule（已實作）
+#### 2.3 BrandModule（已實作）
+
+- **Application 層**：`BrandService.listBrands()`
+- **Interface 層**：`GET /brands` — 回傳 `{ id, code, name, createdAt, updatedAt }[]`（與 Category 相同排序 `code` asc）
+- **Infrastructure 層**：`BrandRepository` — Prisma `Brand`
+
+#### 2.4 ProductModule（已實作）
 
 - **Application 層**
   - `ProductService`
-    - `listProducts(filter?: { search?: string; sku?: string; categoryId?: string })`
-    - `getProduct(id: string)`
-    - `createProduct(input)`
-    - `updateProduct(id, input)`
-    - `deleteProduct(id)`
+    - `listProducts(filter?: { search?, sku?, categoryId?, brandId?, tag? })`
+    - `getProduct(id)` — 回傳含 `brandId`、`tags: string[]`
+    - `createProduct` / `updateProduct` / `deleteProduct` — 可選 `brandId`、`tags`
 - **Interface 層**
   - `ProductController`
-    - `GET /products` — 可選 query：`search`（名稱或 SKU 含關鍵字，不分大小寫）、`sku`（SKU 精確匹配）、`categoryId`（分類 UUID）；回傳含 `categoryId`，供前端 POS 篩選與搜尋。
-    - `GET /products/:id`
-    - `POST /products`
-    - `PATCH /products/:id`
-    - `DELETE /products/:id`
+    - `GET /products` — 可選 query：`search`、`sku`、`categoryId`、`brandId`、`tag`（`tag` 為單一標籤，JSON 陣列 **包含** 該字串則命中；可與其他條件 **AND**）。
+    - 其餘 CRUD 同前；回傳欄位含 `categoryId`、`brandId`、`tags`。
 - **Infrastructure 層**
-  - `ProductRepository`
-    - 基於 Prisma 操作 `Product` model；`findAll(filter?)` 支援 `search`、`sku`、`categoryId`。
-- **說明**：`GET /brands` 目前未實作；若未來需品牌主檔，再擴充 schema 與 API。
+  - `ProductRepository` — `Product` 含 `brandId`、`tags`（Json，預設 `[]`）。
+
+#### Brand / Tag（已落地）
+
+- **Brand**：`id`、`code`、`name`；`Product.brandId` 可選。
+- **Tag**：`Product.tags` 為字串陣列（JSON）；`GET /products?tag=熱銷` 篩選含該標籤之商品。
 
 ---
 
@@ -294,9 +298,10 @@ interface PosService {
 #### 5.2 跨模組協作關係
 
 - `PosService.createOrder` 在單一 transaction 中：
-  1. 透過 `PosOrderRepository` 建立 `PosOrder` 與 `PosOrderItem`。
+  1. 透過 `PosOrderRepository` 建立 `PosOrder`、`PosOrderItem` 與 **`PosOrderPayment`**（與請求 `payments[]` 對應）。
   2. 呼叫 `InventoryService.recordInventoryEvent`（`SALE_OUT`）扣減庫存。
   3. 呼叫 `FinanceService.recordFinanceEvent`（`SALE_RECEIVABLE`）記錄應收。
+- `GET /pos/orders/:id` 與建單成功回應之 **`PosOrderDetail`** 含 `payments: { method, amount }[]`（見 `docs/api-design-pos.md`）；舊訂單無列時為 `[]`。
 - POS 模組 **不得** 直接操作 Inventory / Finance 的資料表，只能透過上述服務。
 
 ---

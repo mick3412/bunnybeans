@@ -4,13 +4,26 @@
 
 ---
 
+## 開發指令（後端／前端 Agent）
+
+- **[docs/AGENT-DEV-INSTRUCTIONS.md](../AGENT-DEV-INSTRUCTIONS.md)** — 必讀順序、本輪建議任務、複製貼上全文、完成後進度紀錄規則。
+
+---
+
+## 任務指令（docs/tasks）
+
+具體任務的 Agent 指令見 `docs/tasks/`。  
+- [TASK-order-detail-payments-2026-03-13.md](../tasks/TASK-order-detail-payments-2026-03-13.md) — **已完成對齊**（後端 PosOrderPayment + 前端明細 UI）；保留供歷史與驗收步驟參考。
+
+---
+
 ## 最新檔案一覽
 
 | 類型 | 最新檔案 | 最後更新 |
 |------|----------|----------|
-| 整合報告 | [integrated-progress-2026-03-13.md](integrated-progress-2026-03-13.md) | 2026-03-13 |
+| 整合報告 | [integrated-progress-2026-03-13.md](integrated-progress-2026-03-13.md) | 2026-03-13（含 Brand／賒帳彙整） |
 | 後端 | [backend/backend-progress-2026-03-13.md](backend/backend-progress-2026-03-13.md) | 2026-03-13 |
-| 前端 | [frontend/frontend-progress-pos-2026-03-13.md](frontend/frontend-progress-pos-2026-03-13.md) | 2026-03-13 |
+| 前端 | [frontend/frontend-progress-pos-2026-03-13.md](frontend/frontend-progress-pos-2026-03-13.md) | 2026-03-13（賒帳／品牌列已接） |
 
 ---
 

@@ -8,6 +8,7 @@
 
 ## 前置
 
+- **後端**（若前端改接真實 API）：部署或本機啟動前請執行 `pnpm --filter pos-erp-backend exec prisma db push`（或 `migrate deploy`）並可選 `pnpm --filter pos-erp-backend db:seed`，使 schema 與種子資料與 repo 一致。
 - 專案已推送到 **GitHub**（或 GitLab / Bitbucket，Vercel 支援）。
 - 已註冊 [Vercel](https://vercel.com) 帳號（可用 GitHub 登入）。
 
@@ -58,6 +59,18 @@
 ## 分享給客戶
 
 將產生的網址（例如 `https://pos-erp-xxx.vercel.app`）傳給客戶或團隊，同一連結可多人、隨時開啟，無需再開會或螢幕分享即可收集反饋。
+
+---
+
+## 本機後端 + Cloudflare Tunnel（給 Vercel 前端用）
+
+若後端暫未部署，可用 **Cloudflare Quick Tunnel** 把本機 API 變成 HTTPS，再填進 Vercel 的 `VITE_API_BASE_URL`：
+
+1. 本機啟動後端（port 3003）與前端（5173）。  
+2. 雙擊 **`scripts/CloudflareTunnel.command`**，會開 **兩個 Terminal**（後端 tunnel + 前端 tunnel）並開啟瀏覽器至 **https://bunnybeans-frontend.vercel.app/**（可在腳本或環境變數 `POS_TUNNEL_BROWSER_URL` 改成本機或其他網址）。  
+3. 在「後端」那個視窗複製 `https://xxx.trycloudflare.com`，設為 Vercel 的 `VITE_API_BASE_URL` 並 Redeploy。  
+
+詳見 **[docs/cloudflare-tunnel-demo.md](cloudflare-tunnel-demo.md)**。
 
 ---
 

@@ -32,9 +32,15 @@
 | `POS_STORE_NOT_FOUND` | 404 | 門市不存在 | 找不到門市，請重新選擇 |
 | `POS_STORE_NO_WAREHOUSE` | 400 | 門市未設定倉庫 | 門市尚未設定庫存倉庫 |
 | `POS_PRODUCT_NOT_FOUND` | 404 | 商品不存在 | 部分商品不存在，請重新整理 |
-| `POS_PAYMENT_MISMATCH` | 400 | 付款總額與訂單總額不符 | 付款金額與訂單金額不一致 |
+| `POS_PAYMENT_MISMATCH` | 400 | 付款總額與訂單總額不符（未開賒帳時須全額付清） | 付款金額與訂單金額不一致 |
+| `POS_CREDIT_REQUIRES_CUSTOMER` | 400 | 賒帳時未帶 customerId | 掛帳請選擇或輸入客戶 |
+| `POS_PAYMENT_EXCEEDS_TOTAL` | 400 | 賒帳時實收超過應收 | 實收金額不可超過訂單總額 |
+| `POS_PAYMENT_AMOUNT_INVALID` | 400 | 付款列金額非法（負數或非數字） | 請檢查付款金額 |
 | `INVENTORY_INSUFFICIENT` | 409 | 庫存不足（POS 結帳時） | 庫存不足，請調整數量或稍後再試 |
 | `POS_ORDER_NOT_FOUND` | 404 | 訂單不存在 | 找不到此訂單 |
+| `POS_ORDER_ALREADY_SETTLED` | 400 | 訂單已結清，不可再補款 | 此單已收齊，無需補款 |
+| `POS_PAYMENT_EXCEEDS_REMAINING` | 400 | 補款金額超過未收餘額 | 補款金額不可超過未收金額 |
+| `POS_CREDIT_NO_RECEIVABLE` | 400 | 無對應 SALE_RECEIVABLE，無法補款（舊資料） | 無法對此單補款，請聯繫管理員 |
 | **Inventory** | | | |
 | `INVENTORY_PRODUCT_NOT_FOUND` | 404 | 商品不存在 | 商品不存在 |
 | `INVENTORY_WAREHOUSE_NOT_FOUND` | 404 | 倉庫不存在 | 倉庫不存在 |

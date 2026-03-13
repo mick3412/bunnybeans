@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-# Launcher: open Terminal and run restart-dev.sh so user sees output.
-# From Dev.app/Contents/MacOS/Dev, project root is ../../..
-ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-osascript -e "tell application \"Terminal\" to do script \"cd '$ROOT' && ./scripts/restart-dev.sh\""

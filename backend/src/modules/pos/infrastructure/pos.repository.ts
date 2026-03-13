@@ -7,6 +7,7 @@ export interface CreatePosOrderData {
   storeId: string;
   totalAmount: number;
   items: { productId: string; quantity: number; unitPrice: number }[];
+  payments: { method: string; amount: number }[];
 }
 
 @Injectable()
@@ -14,7 +15,7 @@ export class PosRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async createOrder(data: CreatePosOrderData) {
-    const { orderNumber, storeId, totalAmount, items } = data;
+    const { orderNumber, storeId, totalAmount, items, payments } = data;
     return this.prisma.posOrder.create({
       data: {
         orderNumber,
@@ -27,15 +28,38 @@ export class PosRepository {
             unitPrice: new Decimal(item.unitPrice),
           })),
         },
+        payments: {
+          create: (payments ?? []).map((p) => ({
+            method: p.method,
+            amount: new Decimal(p.amount),
+          })),
+        },
       },
-      include: { items: true },
+      include: { items: true, payments: true },
     });
   }
 
   async findById(id: string) {
     return this.prisma.posOrder.findUnique({
       where: { id },
-      include: { items: true },
+      include: { items: true, payments: true },
+    });
+  }
+
+  async appendPayment(
+    orderId: string,
+    p: { method: string; amount: number },
+  ) {
+    await this.prisma.posOrderPayment.create({
+      data: {
+        orderId,
+        method: p.method,
+        amount: new Decimal(p.amount),
+      },
+    });
+    return this.findById(orderId).then((o) => {
+      if (!o) throw new Error('Order missing after appendPayment');
+      return o;
     });
   }
 
