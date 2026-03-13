@@ -1,7 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm install && pnpm --filter pos-erp-frontend build",
-  "outputDirectory": "frontend/dist",
-  "installCommand": "pnpm install",
+  "buildCommand": "pnpm --filter pos-erp-frontend build",
+  "outputDirectory": "dist",
   "framework": null
 }
