@@ -2,6 +2,50 @@
 
 ---
 
+## 遠端客戶一條連結（完整前端 + API）
+
+客戶**不必**裝任何東西、**不必** Vercel Redeploy；你本機跑服務 + **兩條** Quick Tunnel（API + 網頁）：
+
+```bash
+bash scripts/remote-client-tunnel.sh
+```
+
+或雙擊 **`scripts/RemoteClientTunnel.command`**。
+
+| 步驟 | 說明 |
+|------|------|
+| 1 | 清掉 :3003 / :5173，啟動後端 |
+| 2 | **API Tunnel** → 取得 `https://xxx.trycloudflare.com` |
+| 3 | 以前述網址設 `VITE_API_BASE_URL` 啟動前端（僅本機） |
+| 4 | **網站 Tunnel** → 取得第二個 `https://yyy.trycloudflare.com` |
+| **給客戶** | 只傳 **網站** 那條 `https://yyy.trycloudflare.com`（含 `/admin`、`/pos`） |
+
+前置：`brew install cloudflared`。本機須能跑後端（`DATABASE_URL`、migrate／seed 依你環境）。**關 Terminal 或 Ctrl+C 即斷線**，Quick 網址每次重開都變。
+
+**仍無法連線時**：先跑 **`bash scripts/tunnel-diagnose.sh`**（可帶 Tunnel URL 測 DNS/HTTP），完整步驟與替代方案見 **[tunnel-troubleshooting.md](tunnel-troubleshooting.md)**。
+
+### 畫面顯示 Blocked request … not allowed（Vite）
+
+Tunnel 網址的 `Host` 不是 localhost，Vite 預設會擋。本 repo 已在 **`vite.config.ts`** 設 **`server.allowedHosts: true`**（僅 dev）。改完請**重啟 Vite** 再開 Tunnel。
+
+### 網站 Tunnel 出現 502、API Tunnel 卻正常
+
+代表 **cloudflared 連不到本機 5173**（常見：Vite 只綁 IPv6 `::1`，cloudflared 連的是 `127.0.0.1`）。本 repo 已將 Vite 設為 **`host: 127.0.0.1`**；請 **關掉舊 Vite 後重跑** `bash scripts/remote-client-tunnel.sh`。若仍 502，看 `/tmp/pos-frontend-remote.log` 與腳本是否在開 Tunnel 前印出「前端已可連」。
+
+---
+
+## 本機重啟（背景、方便自測）
+
+```bash
+bash scripts/restart-dev-bg.sh
+# 可選：先灌 DB 再啟動
+RUN_SEED=1 bash scripts/restart-dev-bg.sh
+```
+
+停服：`bash scripts/restart-dev-bg.sh stop`
+
+---
+
 ## 一鍵執行（推薦，免改 Vercel）
 
 每次 Quick Tunnel 網址都變，若還要改 Vercel + Redeploy 會很煩。**一鍵腳本**會：

@@ -3,6 +3,13 @@
 此文件列出在正式開始開發前，建議先確認與準備的項目。  
 你可以依照實際情況在每項目前加上狀態標註（例如：`[ ]` 未做、`[x]` 已完成）。
 
+**Agent／協作現行入口（路徑已對齊 repo）**：
+
+- [agent-collab/AGENT-COLLABORATION.md](agent-collab/AGENT-COLLABORATION.md) — 流程與整夾說明  
+- [tasks/BACKEND-INSTRUCTIONS.md](tasks/BACKEND-INSTRUCTIONS.md) · [FRONTEND-INSTRUCTIONS.md](tasks/FRONTEND-INSTRUCTIONS.md) — 每輪任務  
+- [progress/integrated-last-cycle.md](progress/integrated-last-cycle.md) — 整合摘要  
+- [README.md](README.md)（本 `docs/` 總索引）— 全索引  
+
 ---
 
 ### 一、技術堆疊與專案骨架
@@ -129,6 +136,7 @@
   - `DEVELOPMENT-GUIDELINES.md`：開發守則
   - `docs/inventory-finance-immutability.md`：庫存與金流不可變與備援設計
   - `docs/pre-development-checklist.md`：目前這份前置作業 Checklist
+  - `docs/README.md`：docs 總索引（含 Agent 流程與歸檔路徑）
 
 - [ ] **Notion 使用規則已簡單約定**
   - 每日進度（三欄）：今日完成 / 卡點 / To Do

@@ -1,13 +1,17 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
-  Query,
-  UseGuards,
   Header,
+  Post,
+  Query,
   Res,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { InventoryEventType } from '@prisma/client';
@@ -29,6 +33,35 @@ export class InventoryController {
     return this.service.transferInventory(body);
   }
 
+  /** 與 POST events/import 相同；單段 path 避免舊版／代理對 events/import 誤判 404 */
+  @Post('import')
+  @UseGuards(AdminApiKeyGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  importCsvAlias(@UploadedFile() file?: { buffer: Buffer }) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException({
+        message: 'multipart field file (CSV) required',
+        code: 'INVENTORY_IMPORT_FILE_REQUIRED',
+      });
+    }
+    return this.service.importEventsFromCsvBuffer(file.buffer);
+  }
+
+  @Post('events/import')
+  @UseGuards(AdminApiKeyGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  importEvents(
+    @UploadedFile() file?: { buffer: Buffer },
+  ) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException({
+        message: 'multipart field file (CSV) required',
+        code: 'INVENTORY_IMPORT_FILE_REQUIRED',
+      });
+    }
+    return this.service.importEventsFromCsvBuffer(file.buffer);
+  }
+
   @Post('events')
   @UseGuards(AdminApiKeyGuard)
   recordEvent(
@@ -36,6 +69,21 @@ export class InventoryController {
     body: RecordInventoryEventInput,
   ) {
     return this.service.recordInventoryEvent(body);
+  }
+
+  @Get('balances/export')
+  @UseGuards(AdminApiKeyGuard)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header(
+    'Content-Disposition',
+    'attachment; filename="inventory-balances.csv"',
+  )
+  async exportBalances(
+    @Query('warehouseId') warehouseId: string,
+    @Res({ passthrough: false }) res: Response,
+  ) {
+    const csv = await this.service.exportBalancesCsv(warehouseId);
+    res.send('\uFEFF' + csv);
   }
 
   @Get('balances/enriched')

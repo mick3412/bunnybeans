@@ -35,7 +35,8 @@ function requestLogger(
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = process.env.PORT ? Number(process.env.PORT) : 3003;
-  app.enableCors();
+  // Vercel／Tunnel 等任意來源；預覽見 docs/deploy-preview.md「CORS」
+  app.enableCors({ origin: true, credentials: true });
   app.use(requestLogger);
   app.useGlobalFilters(new HttpExceptionFilter());
   await app.listen(port);

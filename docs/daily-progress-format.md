@@ -48,9 +48,8 @@ Cursor 規則檔：[.cursor/rules/daily-progress.mdc](../.cursor/rules/daily-pro
 
 ### 檔名與位置
 
-- 後端：`docs/progress/backend/backend-progress-YYYY-MM-DD.md`
-- 前端：`docs/progress/frontend/frontend-progress-pos-YYYY-MM-DD.md`
-- 整合報告：`docs/progress/integrated-progress-YYYY-MM-DD.md`（依日一檔，彙整時新日開新檔）
+- **現行（建議）**：後端／前端每輪完成追加 **[docs/agent-collab/agent-log-backend.md](agent-collab/agent-log-backend.md)**、**[agent-log-frontend.md](agent-collab/agent-log-frontend.md)**；規格收尾覆寫 **[docs/progress/integrated-last-cycle.md](progress/integrated-last-cycle.md)**。
+- **舊制（已歸檔 2026-03）**：後端／前端／整合依日一檔曾放在 `docs/progress/backend/`、`frontend/`、根目錄 `integrated-progress-*`；現已移至 **[docs/progress/archive/2026-03/](progress/archive/2026-03/)**，僅供查歷史。
 
 ### 當日進度檔的兩區塊
 

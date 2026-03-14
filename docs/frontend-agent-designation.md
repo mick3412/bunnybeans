@@ -14,10 +14,10 @@
 
 ## 必讀文件（優先）
 
-**先讀 [docs/progress/README.md](progress/README.md)**，依其「最新檔案一覽」開啟最新整合報告與前端進度檔，再讀下列合約與協作文件。
+**先讀 [docs/progress/README.md](progress/README.md)** 與 **[docs/agent-collab/AGENT-COLLABORATION.md](agent-collab/AGENT-COLLABORATION.md)**；現行 log 在 **agent-collab**，上一輪摘要見 **integrated-last-cycle**。
 
-1. [docs/progress/README.md](progress/README.md) — 進度入口；先讀此檔再開最新整合／前端檔
-2. 最新整合報告、最新前端進度 — 路徑以 README 表列為準（例：`integrated-progress-YYYY-MM-DD.md`、`frontend/frontend-progress-pos-YYYY-MM-DD.md`）
+1. [progress/README.md](progress/README.md) — 進度目錄說明  
+2. [agent-collab/](agent-collab/AGENT-COLLABORATION.md) — 後端／前端累積 log；歷史日報見 [progress/archive/2026-03/](progress/archive/2026-03/)
 3. [docs/collaboration-rules-backend-frontend.md](collaboration-rules-backend-frontend.md) — 前後端協作規則
 4. [docs/api-design-pos.md](api-design-pos.md) — POS API 合約（Request/Response、stable 狀態）
 5. [docs/backend-error-format.md](backend-error-format.md) — 錯誤格式、業務錯誤碼、traceId
@@ -51,7 +51,7 @@
 - POS 前端已改接真實 API：結帳（POST /pos/orders）、訂單列表（GET /pos/orders）、訂單明細（GET /pos/orders/:id）；門市與商品自 GET /stores、GET /products 取得並使用 UUID。
 - 稅額相關已暫時隱藏（未稅經營）；應收金額 = 小計，與後端驗證一致。
 - 三列篩選（品項／品牌／折扣）目前為 mock；若後端提供 GET /categories、GET /brands 或商品查詢參數，可改為依 API。
-- 詳細狀態與「目前使用的 API」見最新 [docs/progress/frontend/frontend-progress-pos-YYYY-MM-DD.md](progress/frontend/frontend-progress-pos-2026-03-13.md)。
+- 歷史前端日進度（2026-03-13）：[progress/archive/2026-03/frontend-progress-pos-2026-03-13.md](progress/archive/2026-03/frontend-progress-pos-2026-03-13.md)。
 
 ---
 
@@ -74,9 +74,7 @@
 ## 協作原則
 
 - **不猜 API**：結構與欄位以文件與 shared 為準；若需新增或改動，透過 Owner 提出，由後端更新文件與型別後再改前端。
-- **進度紀錄**（必守）：
-  - 寫入 **docs/progress/frontend/frontend-progress-pos-YYYY-MM-DD.md**（當日已有檔則在同一檔內更新）。
-  - **上方**「今日完成／卡點／To Do／需要對方配合」可改寫為目前狀態。
-  - **「本日變更紀錄」**區塊僅追加、不刪不改；**HH:MM 須為實際寫入時刻**（勿臆造），見 daily-progress-format.md。
-  - 完成後**更新 [docs/progress/README.md](progress/README.md)** 中前端該列的「最後更新」欄位。
-  - 格式詳見 [docs/daily-progress-format.md](daily-progress-format.md)「docs/progress 各端檔案格式」。
+- **進度紀錄**（必守，現行）：
+  - 每輪完成追加 **[docs/agent-collab/agent-log-frontend.md](agent-collab/agent-log-frontend.md)**（僅追加；格式見該檔與 [daily-progress-format.md](daily-progress-format.md)）。
+  - **舊制**（已歸檔）：`docs/progress/frontend/*.md` 已移至 **[docs/progress/archive/2026-03/](progress/archive/2026-03/)**，不再於 `progress/frontend/` 新建日檔。
+  - 規格收尾覆寫 **[docs/progress/integrated-last-cycle.md](progress/integrated-last-cycle.md)**；流程見 **[agent-collab/AGENT-COLLABORATION.md](agent-collab/AGENT-COLLABORATION.md)**。

@@ -35,6 +35,7 @@ export interface StoreDto {
   id: string;
   code: string;
   name: string;
+  merchantId?: string;
   /** 至少一筆時 POS 建單才可扣庫；未綁倉的門市不應當作預設收銀門市 */
   warehouseIds?: string[];
 }
@@ -43,9 +44,16 @@ export interface ProductDto {
   id: string;
   sku: string;
   name: string;
+  /** 後端 Decimal 字串；POS 售價以此為準 */
+  salePrice?: string;
   categoryId?: string;
   brandId?: string;
   tags?: string[];
+}
+
+export function productDtoSalePriceNumber(p: ProductDto): number {
+  const n = Number(p.salePrice);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 export interface BrandDto {
@@ -114,6 +122,23 @@ export async function getStores(traceId?: string): Promise<StoreDto[] | ApiError
   return Array.isArray(out.data) ? out.data : [];
 }
 
+/** GET /customers?merchantId= 唯讀；POS 選客戶顯示 memberLevel（與 seed 對齊） */
+export type PosCustomerRow = {
+  id: string;
+  name: string;
+  code: string | null;
+  phone: string | null;
+  memberLevel: string | null;
+};
+export async function listCustomersForPos(merchantId: string): Promise<PosCustomerRow[] | ApiError> {
+  const qs = new URLSearchParams({ merchantId });
+  const out = await request<PosCustomerRow[]>(`customers?${qs}`, {
+    traceId: genTraceId(),
+  });
+  if (!out.ok) return out.error;
+  return Array.isArray(out.data) ? out.data : [];
+}
+
 /** 供 POS 選預設門市：有 storeId 的倉庫對應可扣庫門市（舊後端未回傳 store.warehouseIds 時後備） */
 export async function getWarehouses(traceId?: string): Promise<
   { id: string; storeId?: string | null }[] | ApiError
@@ -149,6 +174,49 @@ export async function getCategories(traceId?: string): Promise<CategoryDto[] | A
   const out = await request<CategoryDto[]>('categories', { traceId: traceId ?? genTraceId() });
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
+}
+
+export interface PosReportsSummaryDto {
+  totalRevenue: string;
+  ordersCount: number;
+  avgOrder: string;
+  refundsCount: number;
+  refundsTotal: string;
+}
+
+export async function getPosReportsSummary(
+  traceId?: string,
+): Promise<PosReportsSummaryDto | ApiError> {
+  const out = await request<PosReportsSummaryDto>('pos/reports/summary', {
+    traceId: traceId ?? genTraceId(),
+  });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+export interface PromotionPreviewResult {
+  subtotal: number;
+  discount: number;
+  total: number;
+  applied: { ruleId: string; name: string; discount: number; messages: string[] }[];
+  messages: string[];
+}
+
+export async function previewPromotions(
+  body: {
+    storeId: string;
+    customerId?: string | null;
+    items: { productId: string; quantity: number; unitPrice: number }[];
+  },
+  traceId?: string,
+): Promise<PromotionPreviewResult | ApiError> {
+  const out = await request<PromotionPreviewResult>('pos/promotions/preview', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    traceId: traceId ?? genTraceId(),
+  });
+  if (!out.ok) return out.error;
+  return out.data;
 }
 
 export async function createOrder(

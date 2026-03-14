@@ -10,6 +10,11 @@ import { ProductModule } from './modules/product/product.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { PosModule } from './modules/pos/pos.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { PromotionModule } from './modules/promotion/promotion.module';
+import { CustomerModule } from './modules/customer/customer.module';
+import { ImportsModule } from './modules/imports/imports.module';
+import { PurchaseModule } from './modules/purchase/purchase.module';
 import { AdminApiKeyGuard } from './shared/guards/admin-api-key.guard';
 
 @Module({
@@ -25,6 +30,11 @@ import { AdminApiKeyGuard } from './shared/guards/admin-api-key.guard';
     InventoryModule,
     FinanceModule,
     PosModule,
+    DashboardModule,
+    PromotionModule,
+    CustomerModule,
+    ImportsModule,
+    PurchaseModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminApiKeyGuard],

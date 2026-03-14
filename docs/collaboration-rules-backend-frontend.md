@@ -196,9 +196,9 @@
 
 ---
 
-### 9. 進度紀錄（docs/progress）
+### 9. 進度紀錄（現行：agent-collab + integrated-last-cycle）
 
-- **最新路徑**：後端／前端／整合報告的「最新」檔案路徑以 **`docs/progress/README.md`** 為準；Agent 與人請先讀該檔再開啟對應進度檔。
-- **寫入後更新索引**：後端或前端 Agent 若寫入進度至 `docs/progress/backend/` 或 `docs/progress/frontend/`，請**同時更新** `docs/progress/README.md` 中該端的「最後更新」欄位。
-- **同一天保留 log**：當日進度檔下方有「本日變更紀錄」區塊，**僅可追加、不可刪改**；每次更新當日進度時請在此追加一筆（可含時間與簡述）。上方「今日完成／卡點／To Do」可改寫為目前狀態。格式與細節見 `docs/progress/README.md` 與 `docs/daily-progress-format.md`。
+- **現行寫入**：後端 **[docs/agent-collab/agent-log-backend.md](agent-collab/agent-log-backend.md)**、前端 **[agent-log-frontend.md](agent-collab/agent-log-frontend.md)**（僅追加）；規格收尾覆寫 **[docs/progress/integrated-last-cycle.md](progress/integrated-last-cycle.md)**。流程見 **[docs/agent-collab/AGENT-COLLABORATION.md](agent-collab/AGENT-COLLABORATION.md)** 與 **[docs/progress/README.md](progress/README.md)**。
+- **歷史**：`docs/progress/backend/`、`frontend/`、根目錄 `integrated-progress-*` 之日檔已歸檔至 **[docs/progress/archive/2026-03/](progress/archive/2026-03/)**。
+- **同一天保留 log**：agent-log 與舊日檔均遵守「本日變更僅追加」；格式見 `docs/daily-progress-format.md`。
 

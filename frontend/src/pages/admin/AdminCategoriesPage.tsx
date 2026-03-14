@@ -96,8 +96,7 @@ export const AdminCategoriesPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl" data-testid="e2e-admin-categories">
-      <h1 className="mb-2 text-xl font-bold text-slate-900">分類維護</h1>
-      <p className="mb-4 text-sm text-slate-500">
+      <p className="mb-4 text-sm text-slate-600">
         POST／PATCH／DELETE <code className="rounded bg-slate-100 px-1">/categories</code>
         需與後端 <code className="rounded bg-slate-100 px-1">ADMIN_API_KEY</code> 一致時帶{' '}
         <strong>X-Admin-Key</strong>（本機設 <code className="rounded bg-slate-100 px-1">VITE_ADMIN_API_KEY</code>

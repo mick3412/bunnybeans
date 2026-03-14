@@ -54,3 +54,5 @@
 - **22:12 更新**：**`posOrdersApi.postReturnToStock`** 改 **`returns/stock`**；明細成功分支強化（201 必提示、`e2e-detail-return-success`）；**pos-return-stock.spec** 等 **201**；**api-design-pos** 建議路徑；維運備註 **3003 僅一實例** 否則退貨入庫 E2E 曾 404；本機 **5 passed** 已對齊。
 - **00:39 更新**（§五 分類 CRUD）：**`adminApi`** `createCategory`／`updateCategory`／`deleteCategory`；**`needsAdminKey`** 含 `categories` POST、`categories/*` PATCH／DELETE；**`AdminCategoriesPage`** 新增／列上編輯／刪除；**`CATEGORY_IN_USE`** error map；**`admin-inventory-ui.md`** 對照。
 - **01:13 更新**（AGENT 對照計畫）：**`getFinanceEvents`** + **`/admin/reports`** 金流報表 MVP；**`AdminToastProvider`** + 分類成功 toast；商品表 **展開各倉／收合**；**e2e** `admin-categories.spec` + admin-smoke 報表；**e2e.yml** 註明 6 spec；jest 14 綠。
+- **14:12 更新**（2026-03-14）：**今日開發紀錄同步**—後端新檔 `backend-progress-2026-03-14.md`、Notion **`notion-daily-2026-03-14.md`**；README 後端／Notion 列改指 03-14；前端快照仍以 01:13 為準，無新增功能 commit 時僅對齊進度入口。
+- **19:00 更新**（2026-03-14）：**前端進度改寫至專用日檔**—詳見 **`frontend/frontend-progress-pos-2026-03-14.md`**（與本檔相同格式：快照表／摘要／本日變更僅追加）；本檔 03-13 歷史保留；**Notion／每日紀錄**請以 **03-14 前端檔** 與 **notion-daily-2026-03-14** 為準，勿僅用自由格式長文取代表格快照。

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '../shared/components/Button';
 import { listOrders, getStores } from '../modules/pos/posOrdersApi';
+import { fetchCsvExport } from '../modules/admin/adminApi';
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import type { PosOrderSummary } from '../modules/pos/posOrdersMockService';
 import { useNavigate } from 'react-router-dom';
@@ -24,7 +25,10 @@ export const PosOrdersListPage: React.FC = () => {
   const [storeIdFilter, setStoreIdFilter] = useState<string>('');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [exporting, setExporting] = useState(false);
+  const [includeLines, setIncludeLines] = useState(false);
   const navigate = useNavigate();
+  const hasAdminKey = Boolean((import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim());
 
   const load = useCallback(
     async (pageNum: number, opts?: { resetPage?: boolean }) => {
@@ -137,7 +141,46 @@ export const PosOrdersListPage: React.FC = () => {
                 onChange={(e) => setToDate(e.target.value)}
               />
             </div>
+            <label className="flex cursor-pointer items-center gap-1 text-slate-600">
+              <input
+                type="checkbox"
+                checked={includeLines}
+                onChange={(e) => setIncludeLines(e.target.checked)}
+                className="rounded border-slate-300"
+              />
+              <span className="text-xs">含明細</span>
+            </label>
             <div className="flex flex-wrap gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                data-testid="e2e-pos-orders-export"
+                disabled={exporting || !hasAdminKey}
+                title={!hasAdminKey ? '需設定 VITE_ADMIN_API_KEY' : '下載 CSV（與門市／日期篩選一致）'}
+                onClick={async () => {
+                  if (!hasAdminKey) return;
+                  setExporting(true);
+                  const q = new URLSearchParams();
+                  if (storeIdFilter) q.set('storeId', storeIdFilter);
+                  if (fromDate) q.set('from', `${fromDate}T00:00:00.000Z`);
+                  if (toDate) q.set('to', `${toDate}T23:59:59.999Z`);
+                  if (includeLines) q.set('includeLines', '1');
+                  const qs = q.toString();
+                  const out = await fetchCsvExport(
+                    `pos/orders/export${qs ? `?${qs}` : ''}`,
+                    includeLines ? 'pos-orders-with-lines.csv' : 'pos-orders.csv',
+                  );
+                  setExporting(false);
+                  if (out !== true) {
+                    setError(out.statusCode === 401 ? '匯出需 VITE_ADMIN_API_KEY' : out.message);
+                  } else {
+                    setError(null);
+                  }
+                }}
+              >
+                {exporting ? '匯出中…' : '匯出訂單 CSV'}
+              </Button>
               <Button type="button" size="sm" variant="secondary" onClick={() => load(1, { resetPage: true })}>
                 套用篩選
               </Button>
@@ -213,15 +256,15 @@ export const PosOrdersListPage: React.FC = () => {
 
               {/* 桌機：表格 */}
               <div className="hidden overflow-x-auto md:block">
-                <table className="w-full min-w-[640px] table-fixed border-collapse text-left text-xs">
+                <table className="w-full min-w-[680px] table-fixed border-collapse text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
+                    <tr className="border-b border-slate-200 bg-slate-50 text-center text-[11px] text-slate-500">
                       <th className="w-28 px-2 py-2 lg:w-32">單號</th>
                       <th className="w-24 px-2 py-2">門市</th>
                       <th className="min-w-[72px] px-2 py-2">客戶</th>
-                      <th className="w-24 px-2 py-2 text-right">金額</th>
+                      <th className="w-24 px-2 py-2">金額</th>
                       <th className="px-2 py-2">時間</th>
-                      <th className="w-20 px-2 py-2 text-right">操作</th>
+                      <th className="w-24 whitespace-nowrap px-2 py-2">操作</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -253,11 +296,12 @@ export const PosOrdersListPage: React.FC = () => {
                             minute: '2-digit',
                           })}
                         </td>
-                        <td className="px-2 py-2 text-right">
+                        <td className="whitespace-nowrap px-2 py-2 text-right align-middle">
                           <Button
                             type="button"
                             size="sm"
                             variant="secondary"
+                            className="whitespace-nowrap"
                             data-testid={idx === 0 ? 'e2e-orders-first-detail' : undefined}
                             onClick={() => navigate(`/pos/orders/${order.id}`)}
                           >

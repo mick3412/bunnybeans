@@ -1,2 +1,42 @@
 @import "tailwindcss";
 
+/*
+ * 品牌色 + Forge 殼層（深側欄 #1a1a1a、主區淺灰、選中項近黑 + 左線為 brand-primary）
+ */
+@theme {
+  --color-brand-canvas: #fff4ea;
+  --color-brand-surface: #eddcc6;
+  --color-brand-primary: #7eacb5;
+  --color-brand-primary-hover: #6b9ba5;
+  --color-brand-danger: #bf4646;
+  --color-brand-danger-hover: #a63d3d;
+  --color-forge-sidebar: #1a1a1a;
+  --color-forge-sidebar-active: #0a0a0a;
+  --color-forge-main: #f4f4f5;
+  --color-forge-card: #ffffff;
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", "PingFang TC", "Microsoft JhengHei",
+    "Noto Sans TC", sans-serif;
+}
+
+:root {
+  --color-canvas: #fff4ea;
+  --color-surface: #eddcc6;
+  --color-primary: #7eacb5;
+  --color-primary-hover: #6b9ba5;
+  --color-danger: #bf4646;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    margin: 0;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: #262626;
+    background-color: var(--color-forge-main);
+  }
+}

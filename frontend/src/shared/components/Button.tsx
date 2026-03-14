@@ -10,20 +10,22 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 const baseClass =
-  'inline-flex items-center justify-center rounded-full font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 disabled:cursor-not-allowed disabled:opacity-50';
+  'inline-flex items-center justify-center rounded-lg font-semibold transition focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50';
 
+/** 品牌色盤：主 CTA 青綠；次按鈕米底；成功同主色 */
 const variantClass: Record<Variant, string> = {
-  primary: 'bg-sky-600 text-white shadow-sm shadow-sky-500/40 hover:bg-sky-700 focus-visible:ring-sky-400',
+  primary:
+    'bg-brand-primary text-white shadow-sm hover:bg-brand-primary-hover focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-brand-canvas',
   secondary:
-    'border border-slate-200 bg-slate-50 text-slate-800 shadow-sm hover:bg-slate-100 focus-visible:ring-slate-300',
-  ghost: 'text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-300',
+    'border border-brand-surface bg-white text-neutral-900 shadow-sm hover:bg-brand-canvas focus-visible:ring-brand-surface',
+  ghost: 'text-neutral-800 hover:bg-brand-surface/50 focus-visible:ring-brand-primary',
   success:
-    'bg-emerald-600 text-white shadow-sm shadow-emerald-500/40 hover:bg-emerald-700 focus-visible:ring-emerald-400',
+    'bg-brand-primary text-white shadow-sm hover:bg-brand-primary-hover focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-brand-canvas',
 };
 
 const sizeClass: Record<Size, string> = {
-  sm: 'px-3 py-1 text-[11px]',
-  md: 'px-4 py-2.5 text-sm',
+  sm: 'px-3 py-1.5 text-xs leading-tight',
+  md: 'px-4 py-2.5 text-sm leading-snug',
 };
 
 export const Button: React.FC<ButtonProps> = ({
@@ -41,4 +43,3 @@ export const Button: React.FC<ButtonProps> = ({
     />
   );
 };
-

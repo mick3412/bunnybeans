@@ -1,0 +1,24 @@
+---
+description: 前端品牌四色盤（米底 + 青綠主色 + 紅危險）；實作或改 UI 時遵守。
+globs:
+  - frontend/**/*.tsx
+  - frontend/**/*.css
+---
+
+# UI：品牌四色盤
+
+## 色票（Tailwind theme）
+
+1. **canvas** `#FFF4EA` — 全站主背景（`bg-brand-canvas`）。
+2. **surface** `#EDDCC6` — 區隔、邊框、表頭輔助（`bg-brand-surface`、`border-brand-surface`）。
+3. **primary** `#7EACB5` — 主按鈕、選中導覽、連結、ring（`bg-brand-primary`、`hover:bg-brand-primary-hover`）。
+4. **danger** `#BF4646` — 刪除、錯誤（勿大面積底）。
+
+## 避免
+
+- 舊 Square 藍 `#006AFF`、舊灰底 `#F5F5F5` 作為主色。
+- 多種無關亮色同屏搶眼。
+
+詳見 [docs/ui-palette-brand.md](docs/ui-palette-brand.md)。  
+**全站現用色盤點表**（含硬編碼 hex／Tailwind 分類）：[docs/ui-color-inventory.md](docs/ui-color-inventory.md)。  
+**字體字階**：[docs/ui-typography.md](docs/ui-typography.md)；新畫面對照 T1～T5，勿濫用 10px 以下內文。

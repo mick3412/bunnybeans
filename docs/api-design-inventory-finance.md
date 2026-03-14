@@ -66,17 +66,36 @@ interface PagedResult<T> {
 | Path                    | Method | 說明                             | 所屬模組   | 狀態   |
 |-------------------------|--------|----------------------------------|------------|--------|
 | `/inventory/events`     | POST   | 新增一筆庫存事件（append-only） | Inventory  | **stable** |
+| `/inventory/import` | POST | 同 **`/inventory/events/import`**（CSV 盤點；單段 path 利於閘道／舊代理） | Inventory | **stable** |
+| `/inventory/events/import` | POST | CSV 盤點調整（multipart **`file`**；**sku** + **warehouseCode** 或 **warehouseId** + **quantityDelta**；逐列 **STOCKTAKE_GAIN/LOSS**；**{ ok, failed, referenceId }**；1 萬列；Admin Key） | Inventory | **stable** |
 | `/inventory/transfer`   | POST   | **原子調撥**（來源倉 TRANSFER_OUT + 目的倉 TRANSFER_IN，同一 transaction；與 events 相同須 **X-Admin-Key** 若已設） | Inventory | **stable** |
 | `/inventory/balances`   | GET    | 查詢庫存匯總                     | Inventory  | **stable** |
 | `/inventory/balances/enriched` | GET | 查詢庫存匯總（附 sku、name，需 warehouseId） | Inventory | **stable** |
+| `/inventory/balances/export` | GET | 單倉庫存餘額 CSV（query **`warehouseId` 必填**；最多 1 萬列；UTF-8 BOM；**X-Admin-Key** 若已設；與 events/export 同 escape） | Inventory | **stable** |
 | `/inventory/events`     | GET    | 查詢庫存事件歷史（分頁）        | Inventory  | **stable** |
 | `/inventory/events/export` | GET | 庫存事件 CSV（最多 1 萬筆；**X-Admin-Key** 若已設） | Inventory | **stable** |
 | `/finance/events`       | GET    | 查詢金流事件（只讀、分頁／篩選） | Finance    | **stable** |
+| `/finance/events/export` | GET | 金流事件 CSV（query 同 GET events；最多 1 萬列；BOM；**X-Admin-Key** 若已設） | Finance | **stable** |
 | `/finance/events`       | POST   | 新增一筆金流事件（append-only） | Finance    | **stable** |
 
 ---
 
 ### 4. Inventory API 詳細規格
+
+#### 4.1b CSV 盤點匯入 `POST /inventory/events/import`（stable）
+
+- **同實作短 URL**：**`POST /inventory/import`**（推薦本機 curl；與下列契約完全相同）。
+- **Content-Type**：`multipart/form-data`；欄位 **`file`**（UTF-8，可 BOM）。
+- **保護**：與 **`POST /inventory/events`** 相同 — **X-Admin-Key**（若已設 `ADMIN_API_KEY`）。
+- **表頭（必填欄名，大小寫不拘）**：**`sku`**、**`quantityDelta`**；以及 **`warehouseCode`** 或 **`warehouseId`**（至少一欄）。
+- **quantityDelta**：非 0 數字；**>0** → 一筆 **`STOCKTAKE_GAIN`**（與手動盤盈一致）；**<0** → **`STOCKTAKE_LOSS`**（盤虧）。每列成功時內部呼叫與單筆 **POST /inventory/events** 相同之 **`recordInventoryEvent`**（先 append **InventoryEvent** 再 upsert **InventoryBalance**）；**禁止**僅 UPDATE 餘額而不寫事件。
+- **同批 referenceId**：本請求內成功列共用同一 **`referenceId`**（uuid），便於稽核；回傳體帶 **`referenceId`**。
+- **列上限**：資料列最多 **10_000**（不含表頭）。
+- **列級失敗**（不中斷後續列）：缺 sku／倉／商品不存在／delta 非法／扣庫不足等 → 列入 **`failed`**。
+- **Response** `200`：`{ "ok": number, "failed": [{ "row": number, "reason": string }], "referenceId": string }`（**row** 為檔案列號，表頭第 1 列）。
+- **錯誤**：**400** **`INVENTORY_IMPORT_HEADER`**／**`INVENTORY_IMPORT_TOO_MANY_ROWS`**；**400** **`INVENTORY_IMPORT_FILE_REQUIRED`**（未上傳 file）。
+
+---
 
 #### 4.1 新增庫存事件
 
@@ -179,6 +198,15 @@ interface PagedResult<T> {
 
 **錯誤**：`400 INVENTORY_INVALID_INPUT`（缺 warehouseId）；`404 INVENTORY_WAREHOUSE_NOT_FOUND`
 
+#### 4.2c 匯出庫存餘額 CSV `GET /inventory/balances/export`（stable）
+
+- **Query**：`warehouseId`（必填，單一倉庫 UUID）。
+- **回應**：`200` `text/csv; charset=utf-8`；**UTF-8 BOM**（`\uFEFF`）+ 本文；`Content-Disposition: attachment; filename="inventory-balances.csv"`。
+- **列上限**：該倉最多 **10_000** 筆餘額列（依 `productId` 升序）；與 `GET /inventory/events/export` 上限一致。
+- **欄位（表頭）**：`sku`,`name`,`productId`,`warehouseId`,`onHandQty`,`updatedAt`（與 enriched 語意對齊；escape 規則同 events export）。
+- **保護**：若環境變數 **`ADMIN_API_KEY`** 已設定，須 **`X-Admin-Key`**；未帶或錯誤 → `401` **`ADMIN_API_KEY_REQUIRED`**。
+- **錯誤**：`400 INVENTORY_INVALID_INPUT`（缺 warehouseId）；`404 INVENTORY_WAREHOUSE_NOT_FOUND`。
+
 ---
 
 #### 4.3 查詢庫存事件歷史
@@ -251,6 +279,13 @@ interface PagedResult<T> {
 **成功回應** `200` — `PagedResult<FinanceEvent>`（與 POST 成功單筆欄位一致；`amount`／`taxAmount` 為數字）
 
 **錯誤**：`400 FINANCE_LIST_PAGE_INVALID`（page／pageSize 非法）。
+
+#### 5.0b 金流事件 CSV 匯出 `GET /finance/events/export`（stable）
+
+- **Query**：與 §5.0 相同（`partyId`、`referenceId`、`type`、`from`、`to`、`preset=last30d`）；**不**使用 `page`／`pageSize`；列數上限 **10_000**（`occurredAt` 降序）。
+- **回應**：`200` `text/csv; charset=utf-8`；**UTF-8 BOM**；`Content-Disposition: attachment; filename="finance-events.csv"`。
+- **保護**：若 **`ADMIN_API_KEY`** 已設定，須 **X-Admin-Key**（與 inventory export 相同）；未帶或錯誤 → `401` **`ADMIN_API_KEY_REQUIRED`**。
+- **錯誤**：`400 FINANCE_LIST_PAGE_INVALID`（`from`／`to` 非法日期）。
 
 ---
 

@@ -1,61 +1,75 @@
 # 資料庫 Seed 腳本說明
 
-## 用途
+## 警告（必讀）
 
-本機或 demo 環境一鍵建立最小主檔與庫存，方便前後端開發與手動測試 POS 流程。
+**每次執行 `db:seed` 會先清空所有業務表**（訂單、庫存事件、採購、客戶、商品…），再寫入**唯一一份 DEMO 劇本**。  
+**生產環境切勿執行**；僅本機／Preview／CI demo。
 
-## 前置
-
-- 已設定 `DATABASE_URL`（例如在 `backend/.env` 或根目錄 `.env`）。
-- 已執行過 migration 或 `pnpm --filter pos-erp-backend prisma:db:push`，使資料表存在。
-
-## 執行方式
-
-在專案根目錄：
+**還原空庫 + migration + seed（推薦本機）**：
 
 ```bash
-pnpm --filter pos-erp-backend db:seed
+pnpm --filter pos-erp-backend exec prisma migrate reset
 ```
 
-或在 `backend` 目錄下：
+（會刪除整個 DB 資料並重跑 migration，再自動跑 seed。）
+
+僅已有表、想重灌資料：
 
 ```bash
 pnpm db:seed
 ```
 
-等同執行：`ts-node prisma/seed.ts`（會依 Prisma 連線寫入資料）。
+## 前置
 
-## 建立內容
+- `DATABASE_URL` 已設定。
+- 已執行過 migration（表已存在）。
 
-- **Merchant**：一筆，`code: M001`，名稱「Demo 商家」。
-- **Store**：一筆，`code: S001`，名稱「Demo 門市」，隸屬上述 Merchant。
-- **Warehouse**：一筆，`code: W001`，名稱「Demo 門市倉」，隸屬同一 Merchant 且 `storeId` 指向上述門市（供 POS 扣庫使用）。
-- **Customer（E2E）**：固定 id **`e2e00001-0000-4000-8000-00000000c001`**，`code: E2E`，每次 seed **`upsert`**，與是否已有 `C001` 無關；供 Playwright 掛帳測試與 `POST /pos/orders` 帶 `customerId` 驗證。
-- **Customer（Demo）**：若尚無 `code: C001`，則新增一筆「Demo 客戶」（id 由 DB 分配，與 E2E 列分開）。
-- **Category**：四筆，與前端 mock 對齊 — `cat-clothes`/衣服、`cat-hay`/牧草、`cat-feed`/飼料、`cat-supplies`/用品。
-- **Brand**：三筆 — `brand-house`/自有品牌、`brand-premium`/精選、`brand-feed`/飼料牌；商品會掛 `brandId`。
-- **Product**：各分類底下多筆商品，共 14 筆（皆設 `categoryId`、`brandId`，部分設 `tags` 字串陣列，如「熱銷」「新品」「清倉」）：
-  - **衣服**：SKU-CLOTH-001（短袖 T 恤）、SKU-CLOTH-002（長袖工作服）、SKU-CLOTH-003（寵物背心）。
-  - **牧草**：SKU-HAY-001（提摩西牧草）、SKU-HAY-002（果園草）、SKU-HAY-003（燕麥草）。
-  - **飼料**：SKU-A001（商品 A）、SKU-B002（商品 B）、SKU-C003（商品 C）、SKU-FEED-001（成兔飼料）、SKU-FEED-002（幼兔飼料）。
-  - **用品**：SKU-SUP-001（水壺）、SKU-SUP-002（食盆）、SKU-SUP-003（便盆）。
-- **InventoryEvent + InventoryBalance**：對上述所有商品在 W001 倉庫各建立一筆 `PURCHASE_IN` 事件（若尚無結餘），並設定 `onHandQty: 100`。
-- **極端場景**：下列兩樣商品會再被調整庫存，供測試低庫存／缺貨：
-  - **庫存 1**：**便盆**（SKU-SUP-003）
-  - **庫存 0**：**寵物背心**（SKU-CLOTH-003）
+## 執行方式
 
-執行完成後，終端會印出 Merchant / Store / Warehouse 的 code、四個分類的 code/name、商品總數、極端場景的兩樣商品，以及部分 Product 的 `id`（可供 `POST /pos/orders` 的 `storeId`、`productId` 使用）。
+```bash
+pnpm db:seed
+# 或
+pnpm --filter pos-erp-backend db:seed
+```
 
-## E2E（Playwright）前置與固定識別
+## 建立內容（摘要）
 
-- **資料庫**：設定 `DATABASE_URL`；`prisma db push`（或 `migrate deploy`）後執行 **`pnpm --filter pos-erp-backend db:seed`**，與 CI／本機一致。
-- **後端**：預設 **`PORT=3003`**（見 backend `main.ts` 或 env）；E2E 前可先打 **`GET http://localhost:3003/health`**（若專案有 health）或任一 stable GET（如 `GET /categories`）確認已起。
-- **掛帳 E2E 客戶 UUID**：一律為 **`e2e00001-0000-4000-8000-00000000c001`**（seed upsert，重跑 seed 即修復舊庫缺列問題）。
-- **固定主檔（seed 不刪時可寫死於腳本）**：
-  - **門市**：以 **`GET /stores`** 取第一筆 `id`，或 seed 後由終端輸出對應 **S001** 之 store uuid（每次 upsert 同一 `code` 時 id 穩定）。
-  - **商品**：優先使用終端印出的 **SKU-CLOTH-001**（短袖 T 恤）之 `productId`；或 **`GET /products?search=CLOTH-001`** 取第一筆。
-- **折扣列 tag**：與 `GET /products?tag=` 一致之字串見 [api-design.md §6 與下方 Seed tags](api-design.md)；前端 E2E 選 tag 時須與 seed 完全一致（例如 `熱銷`、`新品`）。
+| 區塊 | 內容 |
+|------|------|
+| **Merchant / Store / Warehouse** | M001、S001、W001 |
+| **會員／客戶** | **E2E**（固定 id，見下）、VIP／GOLD／NORMAL 多筆、無電話訪客 |
+| **Supplier** | 3 啟用 + 1 停用；含聯絡人、付款條件等 |
+| **Product** | DEMO-TEE-BLK-M、DEMO-TEE-WHT-M、DEMO-FEED-ADULT 等（與採購／POS 連動） |
+| **採購單** | DRAFT、ORDERED、PARTIALLY_RECEIVED、RECEIVED、CANCELLED |
+| **驗收單** | PENDING、IN_PROGRESS、COMPLETED（含部分合格+退回）、RETURNED |
+| **庫存** | 與「驗收合格入庫」一致；低庫存 1、零庫存 0 各一 SKU |
+| **POS** | 2 筆訂單（現金／賒帳），已 SALE_OUT |
+| **促銷** | 2 上架 + 1 草稿 |
+| **BulkImportJob** | done / failed 各 1（測 async 列表） |
+
+## 採購 → 驗收 → 庫存 → 訂單（鏈路與多樣情境）
+
+單號中年份與 seed 執行年一致（例：`DEMO-PO-2026-*`）。整體路徑：**供應商 → 採購單（含明細）→ 驗收單 → 合格量入庫（PURCHASE_IN）→ 庫存餘額 → POS 扣庫（SALE_OUT）**。
+
+| 採購單（狀態） | 供應商角色 | 驗收單／入庫 | 涵蓋情境 |
+|----------------|------------|--------------|----------|
+| `…-DRAFT` | 啟用供應商 | 無 | 草稿、未下單 |
+| `…-CANCEL` | 停用供應商 | 無 | 已取消 |
+| `…-ORDERED` | 啟用 | 無 | 可新建驗收 |
+| `…-PEND-PO` | 啟用 | RN **PENDING** | 待驗收 |
+| `…-PROGRESS` | 啟用 | RN **IN_PROGRESS** | 驗收填寫中 |
+| `…-FULL` | 啟用 | RN **COMPLETED** → 黑 T／白 T **全額 PURCHASE_IN** | 已收貨、與入庫一致 |
+| `…-PARTIAL` | 啟用 | RN **COMPLETED**（部分合格＋破損退回）→ 飼料 **15** 入庫 | 部分到貨 |
+| `…-RETURN` | 啟用 | RN **RETURNED** | 整批退、不入庫 |
+
+**與 POS 的關係**：FULL 入庫的 T 恤等與 seed 中 POS 可賣品項同一批商品；零庫存 SKU 僅出現在 RETURN 採購明細（敘述用）。其餘 SKU 另以 `SEED-BULK` 補初始庫存，方便列表／報表有量。
+
+## E2E 固定客戶
+
+- **id**：`e2e00001-0000-4000-8000-00000000c001`
+- **code**：`E2E`
+- 每 seed 重建，Playwright 掛帳測試不變。
 
 ## 重複執行
 
-Seed 使用 `upsert`（Category 依 `code`、Product 依 `sku`），重複執行不會重複新增同一主檔；庫存部分會略過已存在之 `InventoryBalance`，僅在尚無結餘時寫入初始 100 單位。
+不再使用 upsert 累積：**每次 seed = 全刪 + 全建**。若只要保留 migration 不要動資料，請勿跑 seed。

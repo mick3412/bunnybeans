@@ -3,10 +3,15 @@ import {
   Controller,
   Get,
   HttpCode,
+  Header,
   Param,
   Post,
   Query,
+  Res,
+  UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { PosService } from '../application/pos.service';
 
 @Controller('pos/orders')
@@ -100,6 +105,28 @@ export class PosController {
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
     });
+  }
+
+  /** 須在 Get(':id') 之前 */
+  @Get('export')
+  @UseGuards(AdminApiKeyGuard)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="pos-orders.csv"')
+  async export(
+    @Res({ passthrough: false }) res: Response,
+    @Query('storeId') storeId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('includeLines') includeLines?: string,
+  ) {
+    const csv = await this.service.exportOrdersCsv({
+      storeId,
+      from,
+      to,
+      includeLines:
+        includeLines === '1' || includeLines?.toLowerCase() === 'true',
+    });
+    res.send('\uFEFF' + csv);
   }
 
   @Get(':id')

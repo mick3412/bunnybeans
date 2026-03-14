@@ -8,8 +8,11 @@
 
 ## 前置
 
-- **後端**（若前端改接真實 API）：部署或本機啟動前請執行 `pnpm --filter pos-erp-backend exec prisma db push`（或 `migrate deploy`）並可選 `pnpm --filter pos-erp-backend db:seed`，使 schema 與種子資料與 repo 一致。
+- **部署順序（與前端約定）**：**後端先上線**再依賴促銷／POS 新欄位。正式或 Preview DB 請執行 **`pnpm --filter pos-erp-backend exec prisma migrate deploy`**（須含 **`20260314180000_promotion_rules_pos_discount`**、**`20260315180000_bulk_import_job`** 等之後 migration）；**勿**僅 `db push` 於已有資料的生產庫時跳過 migration。完成後可選 **`pnpm --filter pos-erp-backend db:seed`**（僅測試／Preview；**seed 會清空業務表**，見 [db-seed.md](db-seed.md)）；生產依政策。再開前端或 Redeploy Vercel。
+- **後端**（若前端改接真實 API）：本機可 `db push`；**生產建議 `migrate deploy`** + seed 政策與上項一致。
+- **單一 3003**：本機／Tunnel **僅允許一個後端 process 佔用 :3003**，多開會導致促銷 preview、Dashboard、E2E 打到舊 process → **404 或舊 schema**。
 - **E2E**：後端預設 **port 3003**；腳本需 **`DATABASE_URL` + seed** 後再起 API。固定 `storeId`／`productId` 請見 [docs/db-seed.md](db-seed.md)「E2E 前置與固定識別」。
+- **POS 路由**：登入後為 `/pos`（側欄：收銀／訂單／促銷占位／今日報表）；後台仍為 `/admin`。Tunnel 預覽時 **`VITE_API_BASE_URL`** 須指向可連線之 API（見下文「選 B」）。
 - 專案已推送到 **GitHub**（或 GitLab / Bitbucket，Vercel 支援）。
 - 已註冊 [Vercel](https://vercel.com) 帳號（可用 GitHub 登入）。
 
@@ -76,6 +79,20 @@
 
 詳見 **[docs/cloudflare-tunnel-demo.md](cloudflare-tunnel-demo.md)**。
 
+### 選 B：Vercel + Tunnel（照順序做）
+
+| 步驟 | 做什麼 |
+|------|--------|
+| 1 | 本機 **`DATABASE_URL`** 就緒後：`pnpm --filter pos-erp-backend exec prisma db push`（或 migrate）+ 可選 **`pnpm --filter pos-erp-backend db:seed`**。 |
+| 2 | 本機只開 **後端**：`cd backend && pnpm dev`（**:3003** 有在聽）。Tunnel 運作期間**不要關**這個 process。 |
+| 3 | 開 **後端 Tunnel**（Quick 或 Named 皆可）：`cloudflared tunnel --url http://localhost:3003`（或 Named 設定檔指到 3003）。複製終端機印出的 **`https://……`**（**不要**結尾 `/`）。 |
+| 4 | 登入 **Vercel** → 本專案 → **Settings → Environment Variables**：新增 **`VITE_API_BASE_URL`** = 上一步的 **https 網址**（Production / Preview 依需求勾選）。若後端有設 **`ADMIN_API_KEY`**，同頁加 **`VITE_ADMIN_API_KEY`**（同值），後台寫入才會過。 |
+| 5 | Vercel **Deployments** → 最新一筆右側 **⋯** → **Redeploy**（或任意 push 觸發建置）。**環境變數只在新 build 生效**，改完一定要 Redeploy。 |
+| 6 | 後端 **CORS** 須允許 Vercel 網域（例如 `https://你的專案.vercel.app`）。本 repo `main.ts` 若已 `origin: true` 通常可過；若仍被擋，再對照後端 CORS 設定。 |
+| 7 | 用 **Vercel 網址** 開登入頁 → **檢查後端連線**；Tunnel 視窗與後端 :3003 **都要開著**，關掉即斷線。 |
+
+**Quick Tunnel**：每次重開網址會變 → 每次變更後都要回 Vercel 改 **`VITE_API_BASE_URL`** 再 Redeploy。**Named Tunnel**：固定子網域，改一次即可長期用。
+
 ---
 
 ## 若之後要一併部署後端
@@ -92,3 +109,9 @@
 
 - **Build 失敗**：在 Vercel 專案 **Deployments** 點進該次部署，查看 **Building** 的 log，確認 `pnpm install` 與 `pnpm --filter pos-erp-frontend build` 是否成功。
 - **畫面正常但結帳／API 失敗**：多半是 `VITE_API_BASE_URL` 未設或指到錯誤網址；若目前僅需收集 UI 反饋，可先不設或留空並向客戶說明「按鈕僅供版面參考」。
+- **後台促銷列表紅字：`Cannot GET /promotion-rules?...`**  
+  代表 **`VITE_API_BASE_URL` 所指的那台後端** 仍是舊程式（尚未含 `PromotionModule`），或該網址根本不是 Nest API（例如誤填成靜態站）。請：
+  1. 在**後端專案**拉最新程式、`pnpm --filter pos-erp-backend build`（或部署平台觸發新 build）、**重啟**後端 process。  
+  2. 對該主機執行 DB migration：`pnpm --filter pos-erp-backend exec prisma migrate deploy`（或 `db push`），否則促銷表可能不存在。  
+  3. 本機自測：`curl "http://localhost:3003/promotion-rules?merchantId=<你的merchantId>&status=all"` 應回 JSON 陣列（空陣列亦可），**不可**再出現 `Cannot GET`。  
+  4. 遠端 API 更新後，無需改前端，只要 `VITE_API_BASE_URL` 已指向該 API 即可（Vercel 若曾改變數，記得 **Redeploy**）。

@@ -148,4 +148,79 @@ export class FinanceService {
       total,
     };
   }
+
+  private csvCell(v: string | number | null | undefined): string {
+    const s = v == null ? '' : String(v);
+    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  }
+
+  /**
+   * 金流 CSV：query 與 listFinanceEvents 相同（partyId、referenceId、type、from、to、preset=last30d）；最多 1 萬列
+   */
+  async exportFinanceEventsCsv(q: {
+    partyId?: string;
+    referenceId?: string;
+    type?: FinanceEventType;
+    from?: string;
+    to?: string;
+    preset?: string;
+  }): Promise<string> {
+    let from = q.from ? new Date(q.from) : undefined;
+    let to = q.to ? new Date(q.to) : undefined;
+    if (
+      q.preset === 'last30d' &&
+      !q.from?.trim() &&
+      !q.to?.trim()
+    ) {
+      to = new Date();
+      from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+    if (from && Number.isNaN(from.getTime())) {
+      throw new BadRequestException({
+        message: 'invalid from',
+        code: 'FINANCE_LIST_PAGE_INVALID',
+      });
+    }
+    if (to && Number.isNaN(to.getTime())) {
+      throw new BadRequestException({
+        message: 'invalid to',
+        code: 'FINANCE_LIST_PAGE_INVALID',
+      });
+    }
+    const rows = await this.repo.listEventsExport({
+      partyId: q.partyId,
+      referenceId: q.referenceId,
+      type: q.type,
+      from,
+      to,
+    });
+    const header = [
+      'id',
+      'type',
+      'partyId',
+      'currency',
+      'amount',
+      'taxAmount',
+      'occurredAt',
+      'referenceId',
+      'note',
+      'createdAt',
+    ].join(',');
+    const lines = rows.map((r) =>
+      [
+        this.csvCell(r.id),
+        this.csvCell(r.type),
+        this.csvCell(r.partyId),
+        this.csvCell(r.currency),
+        this.csvCell(Number(r.amount)),
+        this.csvCell(r.taxAmount != null ? Number(r.taxAmount) : ''),
+        this.csvCell(r.occurredAt.toISOString()),
+        this.csvCell(r.referenceId),
+        this.csvCell(r.note),
+        this.csvCell(r.createdAt.toISOString()),
+      ].join(','),
+    );
+    return [header, ...lines].join('\n');
+  }
 }

@@ -49,6 +49,10 @@
 | `POS_RETURN_ITEMS_EMPTY` | 400 | 退貨入庫 items 為空 | 請至少選擇一項退貨 |
 | `POS_RETURN_PRODUCT_NOT_ON_ORDER` | 400 | productId 不在該訂單明細 | 僅能退原單商品 |
 | `POS_RETURN_EXCEEDS_SOLD` | 400 | 退貨數量超過原銷量減已退 | 退貨數量不可超過原賣出量 |
+| **Promotion（促銷規則 CRUD）** | | | |
+| `PROMOTION_NOT_FOUND` | 404 | 規則不存在或 merchant 不符 | 找不到促銷規則 |
+| `PROMOTION_BODY_INVALID` | 400 | 缺少 merchantId／name 等 | 請檢查請求欄位 |
+| `PROMOTION_REORDER_EMPTY` | 400 | bulk reorder 的 ids 為空 | 請提供規則 id 列表 |
 | **Inventory** | | | |
 | `INVENTORY_PRODUCT_NOT_FOUND` | 404 | 商品不存在 | 商品不存在 |
 | `INVENTORY_WAREHOUSE_NOT_FOUND` | 404 | 倉庫不存在 | 倉庫不存在 |
@@ -64,6 +68,25 @@
 | `CATEGORY_CODE_CONFLICT` | 409 | code 已存在 | 請使用其他代碼 |
 | `CATEGORY_NOT_FOUND` | 404 | 分類不存在 | id 無效 |
 | `CATEGORY_IN_USE` | 409 | 分類下仍有商品 | 先改商品分類或刪除商品後再刪 |
+| **採購 Supplier** | | | |
+| `SUPPLIER_NOT_FOUND` | 404 | 供應商不存在或 merchant 不符 | 找不到供應商 |
+| `SUPPLIER_MERCHANT_REQUIRED` | 400 | 未帶 merchantId | 請帶 merchantId |
+| `SUPPLIER_CODE_CONFLICT` | 409 | 同商家 code 已存在 | 請換供應商代碼 |
+| `SUPPLIER_IN_USE` | 409 | 有進行中採購／驗收 | 無法刪除 |
+| `PURCHASE_PAYABLE` | （金流） | 驗收 **complete** 後寫入；見 api-design-purchase §5 | 後台應付／報表 |
+| **採購 PO** | | | |
+| `PO_NOT_FOUND` | 404 | 採購單不存在 | 找不到採購單 |
+| `PO_MERCHANT_REQUIRED` | 400 | 未帶 merchantId | 請帶 merchantId |
+| `PO_NOT_DRAFT` | 400 | 非草稿不可改明細 | 僅草稿可編輯 |
+| `PO_INVALID_STATUS` | 400 | 狀態不允許（建立驗收／送出等） | 請檢查單據狀態 |
+| `PO_LINES_REQUIRED` | 400 | 無明細 | 請至少一筆明細 |
+| `PO_ORDER_NUMBER_CONFLICT` | 409 | 同商家單號已存在 | 請換採購單號 |
+| **進貨驗收 RN** | | | |
+| `RN_NOT_FOUND` | 404 | 驗收單不存在 | 找不到驗收單 |
+| `RN_MERCHANT_REQUIRED` | 400 | 未帶 merchantId | 請帶 merchantId |
+| `RN_NOT_EDITABLE` | 400 | 已完成／已退回不可改 | 單據已結案 |
+| `RN_COMPLETE_INVALID` | 400 | 合格數大於實收或可收上限 | 請檢查數量 |
+| `PO_LINE_NOT_FOUND` | 400 | 驗收明細列不屬於本單 | 明細錯誤 |
 
 ## Request Log
 

@@ -316,6 +316,35 @@ export const PosOrderDetailPage: React.FC = () => {
                 <span className="text-slate-500">建立時間</span>
                 <span className="text-slate-800">{new Date(order.createdAt).toLocaleString('zh-TW')}</span>
               </div>
+              {(typeof order.subtotalAmount === 'number' ||
+                typeof order.discountAmount === 'number' ||
+                order.promotionApplied != null) && (
+                <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-2">
+                  <div className="text-[10px] font-semibold uppercase text-emerald-800">金額明細（促銷）</div>
+                  {typeof order.subtotalAmount === 'number' && (
+                    <div className="mt-1 flex justify-between text-slate-700">
+                      <span>小計</span>
+                      <span className="tabular-nums font-medium">${order.subtotalAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
+                    <div className="flex justify-between text-[#28A745]">
+                      <span>折讓</span>
+                      <span className="tabular-nums">-${order.discountAmount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {order.promotionApplied != null && (
+                    <div className="mt-1 text-[10px] text-slate-600">
+                      <span className="text-slate-500">套用促銷</span>{' '}
+                      <span className="break-all font-mono">
+                        {typeof order.promotionApplied === 'string'
+                          ? order.promotionApplied
+                          : JSON.stringify(order.promotionApplied)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {remainingAmount > 0 && (
                 <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">

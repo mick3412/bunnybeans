@@ -1,0 +1,11 @@
+---
+description: 規格與守則 Agent — 開新對話只 @ 本流程檔或整夾 agent-collab 即可開跑
+globs: docs/agent-collab/AGENT-COLLABORATION.md
+alwaysApply: false
+---
+
+# 規格與守則 Agent（AGENT-COLLABORATION）
+
+使用者 @ **`docs/agent-collab/`** 整夾或 **`AGENT-COLLABORATION.md`** 時，預設執行 **步驟 1**（覆寫 `docs/tasks/BACKEND-INSTRUCTIONS.md` + `FRONTEND-INSTRUCTIONS.md`）或使用者明說的 **步驟 3**（讀 **`docs/agent-collab/agent-log-backend.md`** + **`agent-log-frontend.md`** 最新條目 → 覆寫 `integrated-last-cycle.md` → 再步驟 1）。
+
+收尾（步驟 3）若已帶入 **agent-collab** 兩份 log，先讀最新條目再寫整合檔。

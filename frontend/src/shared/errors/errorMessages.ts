@@ -1,7 +1,8 @@
 export const ERROR_CODE_MAP: Record<string, string> = {
   POS_ITEMS_EMPTY: '請至少加入一項商品',
   POS_STORE_NOT_FOUND: '找不到門市，請重新選擇',
-  POS_STORE_NO_WAREHOUSE: '門市尚未設定庫存倉庫',
+  /** 結帳／退貨入庫皆可能回傳 */
+  POS_STORE_NO_WAREHOUSE: '門市尚未設定庫存倉庫，請於後台綁定倉庫或執行 seed',
   POS_PRODUCT_NOT_FOUND: '部分商品不存在，請重新整理',
   POS_PAYMENT_MISMATCH: '付款金額與訂單金額不一致',
   POS_CREDIT_REQUIRES_CUSTOMER: '掛帳請選擇或輸入客戶（UUID／手機／Email）',
@@ -29,7 +30,6 @@ export const ERROR_CODE_MAP: Record<string, string> = {
   POS_RETURN_ITEMS_EMPTY: '請至少選擇一項商品並填寫退貨入庫數量',
   POS_RETURN_PRODUCT_NOT_ON_ORDER: '該商品不在此訂單明細內',
   POS_RETURN_EXCEEDS_SOLD: '退貨入庫數量不可超過原銷售數量',
-  POS_STORE_NO_WAREHOUSE: '門市未綁倉庫，無法退貨入庫（請 seed 或後台建立倉庫）',
 };
 
 export function getErrorMessage(input: { code?: string; message?: string }): string {

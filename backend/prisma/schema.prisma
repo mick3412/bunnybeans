@@ -14,26 +14,64 @@ model Merchant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  stores     Store[]
-  warehouses Warehouse[]
-  customers  Customer[]
+  stores          Store[]
+  warehouses      Warehouse[]
+  customers       Customer[]
+  promotionRules  PromotionRule[]
+  suppliers        Supplier[]
+  purchaseOrders   PurchaseOrder[]
+  receivingNotes   ReceivingNote[]
 }
 
 model Customer {
-  id         String   @id @default(uuid())
-  merchant   Merchant @relation(fields: [merchantId], references: [id])
-  merchantId String
-  code       String?
-  name       String
-  phone      String?
-  email      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  posOrders  PosOrder[]
+  id          String   @id @default(uuid())
+  merchant    Merchant @relation(fields: [merchantId], references: [id])
+  merchantId  String
+  code        String?
+  name        String
+  phone       String?
+  email       String?
+  memberLevel String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posOrders   PosOrder[]
 
   @@index([merchantId])
   @@index([merchantId, phone])
   @@index([merchantId, email])
+}
+
+/// 非同步大量匯入（單 process 內 setImmediate；多 instance 時每 pod 各自佇列）
+model BulkImportJob {
+  id         String   @id @default(uuid())
+  kind       String
+  status     String
+  resultJson String?
+  error      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+/// 促銷規則（Admin 設定；POS 依 merchant + 時間窗 + draft=false 套用）
+model PromotionRule {
+  id                 String   @id @default(uuid())
+  merchant           Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId         String
+  name               String
+  priority           Int      @default(100)
+  draft              Boolean  @default(true)
+  startsAt           DateTime?
+  endsAt             DateTime?
+  exclusive          Boolean  @default(false)
+  firstPurchaseOnly  Boolean  @default(false)
+  memberLevels       Json     @default("[]")
+  conditions         Json     @default("[]")
+  actions            Json     @default("[]")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([merchantId])
+  @@index([merchantId, priority])
 }
 
 model Store {
@@ -62,6 +100,7 @@ model Warehouse {
 
   inventoryEvents  InventoryEvent[]
   inventoryBalance InventoryBalance[]
+  purchaseOrders   PurchaseOrder[]
 }
 
 model Category {
@@ -103,7 +142,8 @@ model Product {
 
   inventoryEvents  InventoryEvent[]
   inventoryBalance InventoryBalance[]
-  posOrderItems    PosOrderItem[]
+  posOrderItems         PosOrderItem[]
+  purchaseOrderLines    PurchaseOrderLine[]
 
   @@index([brandId])
 }
@@ -152,14 +192,17 @@ model FinanceEvent {
 }
 
 model PosOrder {
-  id          String        @id @default(uuid())
-  orderNumber String        @unique
-  store       Store         @relation(fields: [storeId], references: [id])
-  storeId     String
-  customer    Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  customerId  String?
-  totalAmount Decimal
-  createdAt   DateTime      @default(now())
+  id                String        @id @default(uuid())
+  orderNumber       String        @unique
+  store             Store         @relation(fields: [storeId], references: [id])
+  storeId           String
+  customer          Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerId        String?
+  subtotalAmount    Decimal       @db.Decimal(12, 2)
+  discountAmount    Decimal       @default(0) @db.Decimal(12, 2)
+  totalAmount       Decimal       @db.Decimal(12, 2)
+  promotionApplied  Json?
+  createdAt         DateTime      @default(now())
 
   items    PosOrderItem[]
   payments PosOrderPayment[]
@@ -204,5 +247,118 @@ enum FinanceEventType {
   PURCHASE_REBATE
   PURCHASE_RETURN
   ADJUSTMENT
+}
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum ReceivingNoteStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  RETURNED
+}
+
+model Supplier {
+  id             String         @id @default(uuid())
+  merchant       Merchant       @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId     String
+  code           String
+  name           String
+  contactPerson  String?
+  phone          String?
+  paymentTerms   String?
+  status         SupplierStatus @default(ACTIVE)
+  email          String?
+  address        String?
+  taxId          String?
+  bankAccount    String?
+  note           String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([merchantId, code])
+  @@index([merchantId])
+}
+
+model PurchaseOrder {
+  id           String              @id @default(uuid())
+  merchant     Merchant            @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId   String
+  supplier     Supplier            @relation(fields: [supplierId], references: [id])
+  supplierId   String
+  warehouse    Warehouse           @relation(fields: [warehouseId], references: [id])
+  warehouseId  String
+  orderNumber  String
+  expectedDate DateTime?
+  orderDate    DateTime?
+  status       PurchaseOrderStatus @default(DRAFT)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  lines        PurchaseOrderLine[]
+  receivingNotes ReceivingNote[]
+
+  @@unique([merchantId, orderNumber])
+  @@index([merchantId])
+  @@index([supplierId])
+}
+
+model PurchaseOrderLine {
+  id           String        @id @default(uuid())
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  poId         String
+  product      Product       @relation(fields: [productId], references: [id])
+  productId    String
+  qtyOrdered   Int
+  qtyReceived  Int           @default(0)
+  unitCost     Decimal       @db.Decimal(12, 2)
+  receivingNoteLines ReceivingNoteLine[]
+
+  @@index([poId])
+}
+
+model ReceivingNote {
+  id               String               @id @default(uuid())
+  merchant         Merchant             @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId       String
+  receiptNumber    String               @unique
+  purchaseOrder    PurchaseOrder        @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId  String
+  inspectorName    String?
+  remark           String?
+  inspectionDate   DateTime?
+  status           ReceivingNoteStatus  @default(PENDING)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  lines            ReceivingNoteLine[]
+
+  @@index([merchantId])
+  @@index([purchaseOrderId])
+}
+
+model ReceivingNoteLine {
+  id                 String            @id @default(uuid())
+  receivingNote      ReceivingNote     @relation(fields: [receivingNoteId], references: [id], onDelete: Cascade)
+  receivingNoteId    String
+  purchaseOrderLine  PurchaseOrderLine @relation(fields: [purchaseOrderLineId], references: [id])
+  purchaseOrderLineId String
+  orderedQty         Int
+  receivedQty        Int               @default(0)
+  qualifiedQty       Int               @default(0)
+  returnedQty        Int               @default(0)
+  returnReason       String?
+
+  @@index([receivingNoteId])
 }
 

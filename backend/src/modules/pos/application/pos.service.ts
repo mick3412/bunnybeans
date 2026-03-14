@@ -8,6 +8,7 @@ import { PrismaService } from '../../../shared/database/prisma.service';
 import { InventoryService } from '../../inventory/application/inventory.service';
 import { FinanceService } from '../../finance/application/finance.service';
 import { PosRepository } from '../infrastructure/pos.repository';
+import { PromotionService } from '../../promotion/application/promotion.service';
 
 export interface PosOrderItemInput {
   productId: string;
@@ -40,6 +41,7 @@ export class PosService {
     private readonly posRepo: PosRepository,
     private readonly inventoryService: InventoryService,
     private readonly financeService: FinanceService,
+    private readonly promotionService: PromotionService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -211,10 +213,19 @@ export class PosService {
       });
     }
 
-    const totalAmount = input.items.reduce(
-      (sum, i) => sum + i.quantity * i.unitPrice,
-      0,
-    );
+    const promo = await this.promotionService.preview({
+      storeId: input.storeId,
+      customerId: resolvedCustomerId,
+      items: input.items,
+      at: input.occurredAt ? new Date(input.occurredAt) : new Date(),
+    });
+    const subtotalAmount = promo.subtotal;
+    const discountAmount = promo.discount;
+    const totalAmount = promo.total;
+    const promotionApplied = {
+      applied: promo.applied,
+      messages: promo.messages,
+    };
     const rawPayments = input.payments ?? [];
     for (const p of rawPayments) {
       if (typeof p.amount !== 'number' || p.amount < 0 || Number.isNaN(p.amount)) {
@@ -253,7 +264,10 @@ export class PosService {
       orderNumber,
       storeId: input.storeId,
       customerId: resolvedCustomerId,
+      subtotalAmount,
+      discountAmount,
       totalAmount,
+      promotionApplied,
       items: input.items,
       payments: paymentsToStore,
     });
@@ -611,12 +625,128 @@ export class PosService {
     };
   }
 
+  private csvCell(v: string | number | null | undefined): string {
+    const s = v == null ? '' : String(v);
+    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  }
+
+  /**
+   * 訂單 CSV；includeLines=1 時每列一筆明細（同訂單欄位重複），最多 1 萬**明細列**
+   */
+  async exportOrdersCsv(filter: {
+    storeId?: string;
+    from?: string;
+    to?: string;
+    includeLines?: boolean;
+  }): Promise<string> {
+    const from = filter.from?.trim() ? new Date(filter.from) : undefined;
+    const to = filter.to?.trim() ? new Date(filter.to) : undefined;
+    if (from && Number.isNaN(from.getTime())) {
+      throw new BadRequestException({
+        message: 'invalid from',
+        code: 'POS_EXPORT_INVALID_RANGE',
+      });
+    }
+    if (to && Number.isNaN(to.getTime())) {
+      throw new BadRequestException({
+        message: 'invalid to',
+        code: 'POS_EXPORT_INVALID_RANGE',
+      });
+    }
+    const num = (d: { toNumber: () => number }) => d.toNumber();
+    if (filter.includeLines) {
+      const lineRows = await this.posRepo.findLineRowsForExport(
+        {
+          storeId: filter.storeId?.trim() || undefined,
+          from,
+          to,
+        },
+        10_000,
+      );
+      const header = [
+        'id',
+        'orderNumber',
+        'storeId',
+        'customerId',
+        'customerName',
+        'subtotalAmount',
+        'discountAmount',
+        'totalAmount',
+        'createdAt',
+        'lineItemId',
+        'lineProductId',
+        'lineQuantity',
+        'lineUnitPrice',
+        'lineAmount',
+      ].join(',');
+      const lines = lineRows.map(({ order: o, item }) => {
+        const up = item
+          ? num(item.unitPrice as { toNumber: () => number })
+          : 0;
+        const qty = item?.quantity ?? 0;
+        const amt =
+          item != null ? Math.round(qty * up * 100) / 100 : '';
+        return [
+          this.csvCell(o.id),
+          this.csvCell(o.orderNumber),
+          this.csvCell(o.storeId),
+          this.csvCell(o.customerId),
+          this.csvCell(o.customer?.name ?? ''),
+          this.csvCell(num(o.subtotalAmount as { toNumber: () => number })),
+          this.csvCell(num(o.discountAmount as { toNumber: () => number })),
+          this.csvCell(num(o.totalAmount as { toNumber: () => number })),
+          this.csvCell(o.createdAt.toISOString()),
+          this.csvCell(item?.id ?? ''),
+          this.csvCell(item?.productId ?? ''),
+          this.csvCell(qty),
+          this.csvCell(up),
+          this.csvCell(amt),
+        ].join(',');
+      });
+      return [header, ...lines].join('\n');
+    }
+    const rows = await this.posRepo.findManyForExport({
+      storeId: filter.storeId?.trim() || undefined,
+      from,
+      to,
+    });
+    const header = [
+      'id',
+      'orderNumber',
+      'storeId',
+      'customerId',
+      'customerName',
+      'subtotalAmount',
+      'discountAmount',
+      'totalAmount',
+      'createdAt',
+    ].join(',');
+    const lines = rows.map((o) =>
+      [
+        this.csvCell(o.id),
+        this.csvCell(o.orderNumber),
+        this.csvCell(o.storeId),
+        this.csvCell(o.customerId),
+        this.csvCell(o.customer?.name ?? ''),
+        this.csvCell(num(o.subtotalAmount as { toNumber: () => number })),
+        this.csvCell(num(o.discountAmount as { toNumber: () => number })),
+        this.csvCell(num(o.totalAmount as { toNumber: () => number })),
+        this.csvCell(o.createdAt.toISOString()),
+      ].join(','),
+    );
+    return [header, ...lines].join('\n');
+  }
+
   private toOrderDetail(order: {
     id: string;
     orderNumber: string;
     storeId: string;
     customerId?: string | null;
     customer?: { id: string; name: string; code: string | null } | null;
+    subtotalAmount?: { toNumber: () => number } | number;
+    discountAmount?: { toNumber: () => number } | number;
+    promotionApplied?: unknown;
     totalAmount: { toNumber: () => number };
     createdAt: Date;
     items: Array<{
@@ -637,10 +767,13 @@ export class PosService {
           ? (p.amount as { toNumber: () => number }).toNumber()
           : Number(p.amount),
     }));
-    const total =
-      typeof order.totalAmount === 'object' && 'toNumber' in order.totalAmount
-        ? (order.totalAmount as { toNumber: () => number }).toNumber()
-        : Number(order.totalAmount);
+    const num = (v: unknown) =>
+      typeof v === 'object' && v != null && 'toNumber' in v
+        ? (v as { toNumber: () => number }).toNumber()
+        : Number(v ?? 0);
+    const total = num(order.totalAmount);
+    const subtotal = num(order.subtotalAmount ?? total);
+    const discount = num(order.discountAmount ?? 0);
     const paidAmount = payments.reduce((s, p) => s + p.amount, 0);
     const remainingAmount = Math.round((total - paidAmount) * 100) / 100;
     return {
@@ -650,6 +783,9 @@ export class PosService {
       customerId: order.customerId ?? null,
       customerName: order.customer?.name ?? null,
       customerCode: order.customer?.code ?? null,
+      subtotalAmount: subtotal,
+      discountAmount: discount,
+      promotionApplied: order.promotionApplied ?? null,
       totalAmount: total,
       createdAt: order.createdAt.toISOString(),
       items: order.items.map((i) => ({

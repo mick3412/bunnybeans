@@ -77,8 +77,7 @@ export const AdminMerchantsPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="mb-2 text-xl font-bold text-slate-900">商家主檔</h1>
-      <p className="mb-4 text-sm text-slate-500">CRUD；代碼須唯一。</p>
+      <p className="mb-4 text-sm text-slate-600">CRUD；代碼須唯一。</p>
       {err && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {err}

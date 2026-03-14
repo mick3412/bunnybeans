@@ -99,6 +99,27 @@ describe('FinanceService (integration)', () => {
     await prisma.financeEvent.deleteMany({ where: { referenceId: ref } });
   }, 10000);
 
+  it('exportFinanceEventsCsv includes rows for referenceId filter', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const ref = `fin-csv-${Date.now()}`;
+    await financeService.recordFinanceEvent({
+      type: 'SALE_RECEIVABLE',
+      partyId: 'party-csv',
+      currency: 'TWD',
+      amount: 99,
+      referenceId: ref,
+      note: 'csv row',
+    });
+    const csv = await financeService.exportFinanceEventsCsv({ referenceId: ref });
+    expect(csv).toContain('id,type,partyId,currency,amount,taxAmount,occurredAt,referenceId,note,createdAt');
+    expect(csv).toContain(ref);
+    expect(csv).toContain('SALE_RECEIVABLE');
+    expect(csv).toContain('99');
+
+    await prisma.financeEvent.deleteMany({ where: { referenceId: ref } });
+  }, 10000);
+
   it('listFinanceEvents preset=last30d filters date range', async () => {
     if (!process.env.DATABASE_URL) return;
     const old = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();

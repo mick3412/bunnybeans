@@ -1,0 +1,18 @@
+---
+description: 編輯或執行本輪任務指令檔時，先對齊協作流程步驟 2
+globs: docs/tasks/BACKEND-INSTRUCTIONS.md, docs/tasks/FRONTEND-INSTRUCTIONS.md
+alwaysApply: false
+---
+
+# 任務指令檔（BACKEND / FRONTEND INSTRUCTIONS）
+
+凡讀寫、覆寫或依本檔執行開發前，**先讀** [docs/agent-collab/AGENT-COLLABORATION.md](docs/agent-collab/AGENT-COLLABORATION.md) **步驟 2**（後端／前端 Agent）或 **步驟 1／3**（規格 Agent 覆寫本檔時）。
+
+並讀 [docs/AGENT-RULES.md](docs/AGENT-RULES.md)。
+
+- **後端**完成本輪後：追加 [docs/agent-collab/agent-log-backend.md](docs/agent-collab/agent-log-backend.md)。
+- **前端**完成本輪後：追加 [docs/agent-collab/agent-log-frontend.md](docs/agent-collab/agent-log-frontend.md)。
+
+Owner 可只把本檔 **@ 進對話**（等同拖檔），不必重述長指令。
+
+**前端**：完成定義須含 **frontend/src 內程式變更**；**不得**只改 `docs/**/*.md` 當交付。見 FRONTEND-INSTRUCTIONS「硬性規定」。

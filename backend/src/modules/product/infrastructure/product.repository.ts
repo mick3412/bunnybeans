@@ -54,6 +54,10 @@ export class ProductRepository {
     return this.prisma.product.findUnique({ where: { id } });
   }
 
+  findBySku(sku: string) {
+    return this.prisma.product.findUnique({ where: { sku } });
+  }
+
   create(data: {
     sku: string;
     name: string;

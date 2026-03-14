@@ -3,11 +3,16 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  HttpException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { InventoryEventType } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { InventoryRepository } from '../infrastructure/inventory.repository';
+import {
+  parseInventoryCsvRows,
+  INVENTORY_IMPORT_MAX_ROWS,
+} from './inventory-csv-import.util';
 
 export interface TransferInventoryInput {
   fromWarehouseId: string;
@@ -341,6 +346,179 @@ export class InventoryService {
       ].join(','),
     );
     return [header, ...lines].join('\n');
+  }
+
+  /**
+   * 單倉庫存餘額 CSV（與 GET balances/enriched 同語意；最多 1 萬列；escape 同 exportEventsCsv）
+   */
+  async exportBalancesCsv(warehouseId: string): Promise<string> {
+    if (!warehouseId?.trim()) {
+      throw new BadRequestException({
+        message: 'warehouseId is required',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+    const whId = warehouseId.trim();
+    const wh = await this.prisma.warehouse.findUnique({ where: { id: whId } });
+    if (!wh) {
+      throw new NotFoundException({
+        message: 'Warehouse not found',
+        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
+      });
+    }
+    const balances = await this.repo.findBalancesForExport(whId);
+    const productIds = [...new Set(balances.map((b) => b.productId))];
+    const products =
+      productIds.length === 0
+        ? []
+        : await this.prisma.product.findMany({
+            where: { id: { in: productIds } },
+            select: { id: true, sku: true, name: true },
+          });
+    const map = new Map(products.map((p) => [p.id, p]));
+    const header = [
+      'sku',
+      'name',
+      'productId',
+      'warehouseId',
+      'onHandQty',
+      'updatedAt',
+    ].join(',');
+    const lines = balances.map((b) =>
+      [
+        this.csvCell(map.get(b.productId)?.sku ?? ''),
+        this.csvCell(map.get(b.productId)?.name ?? ''),
+        this.csvCell(b.productId),
+        this.csvCell(b.warehouseId),
+        this.csvCell(b.onHandQty),
+        this.csvCell(b.updatedAt.toISOString()),
+      ].join(','),
+    );
+    return [header, ...lines].join('\n');
+  }
+
+  /**
+   * CSV 盤點調整：每列一筆 STOCKTAKE_GAIN（quantityDelta>0）或 STOCKTAKE_LOSS（<0）；
+   * 與 POST /inventory/events 同一套 recordInventoryEvent（不直接改 Balance 表而不寫事件）。
+   */
+  async importEventsFromCsvBuffer(buf: Buffer): Promise<{
+    ok: number;
+    failed: { row: number; reason: string }[];
+    referenceId: string;
+  }> {
+    const text = buf.toString('utf8');
+    const table = parseInventoryCsvRows(text);
+    if (table.length === 0) {
+      return {
+        ok: 0,
+        failed: [{ row: 0, reason: 'empty csv' }],
+        referenceId: '',
+      };
+    }
+    const header = table[0].map((h) => h.trim().toLowerCase());
+    const skuIdx = header.indexOf('sku');
+    const whCodeIdx = header.indexOf('warehousecode');
+    const whIdIdx = header.indexOf('warehouseid');
+    const deltaIdx = header.indexOf('quantitydelta');
+    if (skuIdx < 0 || deltaIdx < 0) {
+      throw new BadRequestException({
+        message: 'CSV header must include sku and quantityDelta',
+        code: 'INVENTORY_IMPORT_HEADER',
+      });
+    }
+    if (whCodeIdx < 0 && whIdIdx < 0) {
+      throw new BadRequestException({
+        message: 'CSV header must include warehouseCode or warehouseId',
+        code: 'INVENTORY_IMPORT_HEADER',
+      });
+    }
+    const dataRows = table.slice(1);
+    if (dataRows.length > INVENTORY_IMPORT_MAX_ROWS) {
+      throw new BadRequestException({
+        message: `at most ${INVENTORY_IMPORT_MAX_ROWS} data rows`,
+        code: 'INVENTORY_IMPORT_TOO_MANY_ROWS',
+      });
+    }
+    const batchRef = randomUUID();
+    let ok = 0;
+    const failed: { row: number; reason: string }[] = [];
+    const errMsg = (e: unknown): string => {
+      if (e instanceof HttpException) {
+        const r = e.getResponse();
+        if (typeof r === 'object' && r && 'message' in r) {
+          const m = (r as { message?: string }).message;
+          if (typeof m === 'string') return m;
+        }
+        return e.message;
+      }
+      if (e instanceof Error) return e.message;
+      return String(e);
+    };
+    for (let r = 0; r < dataRows.length; r++) {
+      const cells = dataRows[r];
+      const rowNum = r + 2;
+      const sku = (cells[skuIdx] ?? '').trim();
+      const whCode =
+        whCodeIdx >= 0 ? (cells[whCodeIdx] ?? '').trim() : '';
+      const whId =
+        whIdIdx >= 0 ? (cells[whIdIdx] ?? '').trim() : '';
+      const deltaStr = (cells[deltaIdx] ?? '').trim();
+      if (!sku) {
+        failed.push({ row: rowNum, reason: 'sku required' });
+        continue;
+      }
+      if (!whCode && !whId) {
+        failed.push({ row: rowNum, reason: 'warehouseCode or warehouseId required' });
+        continue;
+      }
+      const delta = Number(deltaStr);
+      if (deltaStr === '' || Number.isNaN(delta) || delta === 0) {
+        failed.push({ row: rowNum, reason: 'quantityDelta must be non-zero number' });
+        continue;
+      }
+      const product = await this.prisma.product.findUnique({
+        where: { sku },
+      });
+      if (!product) {
+        failed.push({ row: rowNum, reason: `product sku not found: ${sku}` });
+        continue;
+      }
+      let warehouseId: string | null = null;
+      if (whId) {
+        const w = await this.prisma.warehouse.findUnique({
+          where: { id: whId },
+        });
+        warehouseId = w?.id ?? null;
+      } else if (whCode) {
+        const w = await this.prisma.warehouse.findUnique({
+          where: { code: whCode },
+        });
+        warehouseId = w?.id ?? null;
+      }
+      if (!warehouseId) {
+        failed.push({
+          row: rowNum,
+          reason: whId
+            ? `warehouse id not found: ${whId}`
+            : `warehouse code not found: ${whCode}`,
+        });
+        continue;
+      }
+      try {
+        await this.recordInventoryEvent({
+          productId: product.id,
+          warehouseId,
+          type: delta > 0 ? 'STOCKTAKE_GAIN' : 'STOCKTAKE_LOSS',
+          quantity: Math.abs(delta),
+          referenceId: batchRef,
+          note: 'csv-import',
+        });
+        ok++;
+      } catch (e) {
+        failed.push({ row: rowNum, reason: errMsg(e) });
+      }
+    }
+    return { ok, failed, referenceId: batchRef };
   }
 }
 

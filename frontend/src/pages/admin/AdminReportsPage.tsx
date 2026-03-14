@@ -1,7 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { getFinanceEvents, type ApiError, type FinanceEventRow } from '../../modules/admin/adminApi';
+import {
+  getFinanceEvents,
+  fetchCsvExport,
+  type ApiError,
+  type FinanceEventRow,
+} from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
+
+function toYmd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 export const AdminReportsPage: React.FC = () => {
   const [rows, setRows] = useState<FinanceEventRow[]>([]);
@@ -9,14 +21,23 @@ export const AdminReportsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(50);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [preset, setPreset] = useState<'last30d' | 'all'>('last30d');
+  const [preset, setPreset] = useState<'last30d' | 'all' | 'custom'>('last30d');
+  const [from, setFrom] = useState(() => {
+    const t = new Date();
+    t.setDate(t.getDate() - 30);
+    return toYmd(t);
+  });
+  const [to, setTo] = useState(() => toYmd(new Date()));
 
   const load = useCallback(async () => {
     setLoading(true);
     setErr(null);
     const r = await getFinanceEvents({
       preset: preset === 'last30d' ? 'last30d' : undefined,
+      from: preset === 'custom' && from.trim() ? `${from.trim()}T00:00:00.000Z` : undefined,
+      to: preset === 'custom' && to.trim() ? `${to.trim()}T23:59:59.999Z` : undefined,
       page,
       pageSize,
     });
@@ -29,7 +50,7 @@ export const AdminReportsPage: React.FC = () => {
       setTotal(r.total);
     }
     setLoading(false);
-  }, [page, pageSize, preset]);
+  }, [page, pageSize, preset, from, to]);
 
   useEffect(() => {
     void load();
@@ -39,27 +60,77 @@ export const AdminReportsPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl" data-testid="e2e-admin-reports">
-      <h1 className="mb-2 text-xl font-bold text-slate-900">金流報表（MVP）</h1>
-      <p className="mb-4 text-sm text-slate-500">
+      <p className="mb-4 text-sm text-slate-600">
         資料來源 <code className="rounded bg-slate-100 px-1">GET /finance/events</code>
-        ；預設近 30 日。僅列表，不含匯出。
+        ；可近 30 日、全部或自訂起訖。可匯出 CSV（與下列區間一致，需 VITE_ADMIN_API_KEY）。
       </p>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <label className="text-sm text-slate-600">區間</label>
-        <select
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-          value={preset}
-          onChange={(e) => {
-            setPreset(e.target.value as 'last30d' | 'all');
-            setPage(1);
-          }}
-        >
-          <option value="last30d">近 30 日</option>
-          <option value="all">全部（未篩日期）</option>
-        </select>
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="mb-1 block text-sm text-slate-600">區間</label>
+          <select
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+            value={preset}
+            onChange={(e) => {
+              setPreset(e.target.value as 'last30d' | 'all' | 'custom');
+              setPage(1);
+            }}
+          >
+            <option value="last30d">近 30 日</option>
+            <option value="all">全部（未篩日期）</option>
+            <option value="custom">自訂 from / to</option>
+          </select>
+        </div>
+        {preset === 'custom' && (
+          <>
+            <div>
+              <label className="mb-1 block text-sm text-slate-600">from</label>
+              <input
+                type="date"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                value={from}
+                onChange={(e) => {
+                  setFrom(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-slate-600">to</label>
+              <input
+                type="date"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                value={to}
+                onChange={(e) => {
+                  setTo(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </>
+        )}
         <Button type="button" size="sm" variant="secondary" onClick={() => void load()}>
           重新載入
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={exporting}
+          onClick={async () => {
+            setExporting(true);
+            setErr(null);
+            const params = new URLSearchParams();
+            if (preset === 'last30d') params.set('preset', 'last30d');
+            if (preset === 'custom' && from.trim()) params.set('from', `${from.trim()}T00:00:00.000Z`);
+            if (preset === 'custom' && to.trim()) params.set('to', `${to.trim()}T23:59:59.999Z`);
+            const q = `finance/events/export?${params.toString()}`;
+            const out = await fetchCsvExport(q, 'finance-events.csv');
+            setExporting(false);
+            if (out !== true) setErr(getErrorMessage(out as ApiError));
+          }}
+        >
+          {exporting ? '匯出中…' : '匯出 CSV'}
         </Button>
       </div>
 

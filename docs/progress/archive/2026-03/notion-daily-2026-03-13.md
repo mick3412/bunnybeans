@@ -62,7 +62,7 @@
 
 ## 本日變更時間軸（精簡）
 
-（詳見 repo：`docs/progress/backend/backend-progress-2026-03-13.md`、`frontend/frontend-progress-pos-2026-03-13.md` 本日變更區—**須以實際寫入 HH:MM 為準**。）
+（詳見本歸檔夾：[backend-progress-2026-03-13.md](backend-progress-2026-03-13.md)、[frontend-progress-pos-2026-03-13.md](frontend-progress-pos-2026-03-13.md) 本日變更區—**須以實際寫入 HH:MM 為準**。）
 
 - 後端末筆紀錄：**22:12**—12 tests、GET finance/events、Category POST/PATCH。
 - 前端末筆紀錄：**22:12**—returns/stock、5 passed、3003 單實例備註。
@@ -71,6 +71,6 @@
 
 ## 相關文件（Repo）
 
-- 整合報告：`docs/progress/integrated-progress-2026-03-13.md`
+- 整合報告（本歸檔夾）：[integrated-progress-2026-03-13.md](integrated-progress-2026-03-13.md)
 - Agent 指令：`docs/AGENT-DEV-INSTRUCTIONS.md`
 - api-design-pos（含 returns/stock）、api-design-inventory-finance、e2e-pos.md

@@ -55,6 +55,10 @@ export interface PosOrderDetail extends PosOrderSummary {
   remainingAmount: number;
   credit: boolean;
   customerCode?: string | null;
+  /** 後端促銷／明細擴充 */
+  subtotalAmount?: number;
+  discountAmount?: number;
+  promotionApplied?: unknown;
 }
 
 export interface PosOrderListResponse {

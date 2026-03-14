@@ -1,10 +1,48 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  UseGuards,
+  Header,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import { FinanceEventType } from '@prisma/client';
+import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { FinanceService, RecordFinanceEventInput } from '../application/finance.service';
 
 @Controller('finance')
 export class FinanceController {
   constructor(private readonly service: FinanceService) {}
+
+  @Get('events/export')
+  @UseGuards(AdminApiKeyGuard)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header(
+    'Content-Disposition',
+    'attachment; filename="finance-events.csv"',
+  )
+  async exportEvents(
+    @Res({ passthrough: false }) res: Response,
+    @Query('partyId') partyId?: string,
+    @Query('referenceId') referenceId?: string,
+    @Query('type') type?: FinanceEventType,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('preset') preset?: string,
+  ) {
+    const csv = await this.service.exportFinanceEventsCsv({
+      partyId: partyId === '' ? undefined : partyId,
+      referenceId: referenceId === '' ? undefined : referenceId,
+      type,
+      from,
+      to,
+      preset: preset?.trim() || undefined,
+    });
+    res.send('\uFEFF' + csv);
+  }
 
   @Get('events')
   listEvents(

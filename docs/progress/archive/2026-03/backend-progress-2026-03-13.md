@@ -1,6 +1,6 @@
 # 後端進度紀錄 2026-03-13
 
-> 後端進度回報以本目錄（`docs/progress/backend/`）為準，與前端 `docs/progress/frontend/` 對應，供前後端同步使用。
+> **歷史**：本檔已歸檔至 `docs/progress/archive/2026-03/`。現行後端進度請追加 **docs/agent-collab/agent-log-backend.md**；前後端流程見 **docs/agent-collab/AGENT-COLLABORATION.md**。
 
 ---
 

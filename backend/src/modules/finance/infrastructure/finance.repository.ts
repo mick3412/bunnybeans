@@ -64,4 +64,28 @@ export class FinanceRepository {
     ]);
     return { items: rows, total };
   }
+
+  /** 與 listEvents 相同篩選；最多 1 萬筆；匯出用 */
+  async listEventsExport(params: {
+    partyId?: string;
+    referenceId?: string;
+    type?: FinanceEventType;
+    from?: Date;
+    to?: Date;
+  }) {
+    const where: Prisma.FinanceEventWhereInput = {};
+    if (params.partyId !== undefined) where.partyId = params.partyId;
+    if (params.referenceId !== undefined) where.referenceId = params.referenceId;
+    if (params.type) where.type = params.type;
+    if (params.from || params.to) {
+      where.occurredAt = {};
+      if (params.from) where.occurredAt.gte = params.from;
+      if (params.to) where.occurredAt.lte = params.to;
+    }
+    return this.prisma.financeEvent.findMany({
+      where,
+      orderBy: { occurredAt: 'desc' },
+      take: 10_000,
+    });
+  }
 }

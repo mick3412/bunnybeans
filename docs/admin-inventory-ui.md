@@ -28,6 +28,7 @@
 | `/admin/warehouses` | **倉庫與門市**（同頁：門市 CRUD + 倉庫 CRUD；`/admin/stores` 會導向此頁） |
 | `/admin/categories` | 分類維護（新增、編輯、刪除；需 X-Admin-Key） |
 | `/admin/reports` | 金流報表 MVP（GET /finance/events，近 30 日／全部） |
+| `/admin/promotions` | 促銷規則列表／編輯（GET/POST/PATCH `promotion-rules`） |
 
 ## API 對照（Admin）
 

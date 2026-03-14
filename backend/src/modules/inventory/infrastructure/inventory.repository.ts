@@ -79,6 +79,15 @@ export class InventoryRepository {
     });
   }
 
+  /** 單倉餘額匯出：最多 1 萬列，與 events/export 上限一致 */
+  async findBalancesForExport(warehouseId: string) {
+    return this.prisma.inventoryBalance.findMany({
+      where: { warehouseId },
+      orderBy: { productId: 'asc' },
+      take: 10_000,
+    });
+  }
+
   async findEvents(filter: InventoryEventFilter) {
     const { productId, warehouseId, type, from, to, page, pageSize } = filter;
     const where = {

@@ -19,6 +19,7 @@
 | Inventory   | 庫存事件與匯總               | **已實作**           |
 | Finance     | 金流事件                     | **已實作**           |
 | Pos         | POS 銷售單                   | **已實作**           |
+| Promotion   | 促銷規則、POS 試算            | **已實作** `promotion-rules`、`POST /pos/promotions/preview` |
 
 檔案結構（簡化）：
 

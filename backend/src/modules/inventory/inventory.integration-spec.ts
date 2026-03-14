@@ -139,6 +139,46 @@ describe('InventoryService (integration)', () => {
     await prisma.merchant.delete({ where: { id: warehouse.merchantId } });
   }, 15000);
 
+  it('exportBalancesCsv returns header and row with sku,name,onHandQty', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const product = await prisma.product.create({
+      data: { sku: `SKU-CSV-${Date.now()}`, name: 'CSV Balance Product' },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `W-CSV-${Date.now()}`,
+        name: 'CSV Warehouse',
+        merchantId: (
+          await prisma.merchant.create({
+            data: { code: `M-CSV-${Date.now()}`, name: 'CSV Merchant' },
+          })
+        ).id,
+      },
+    });
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 7,
+    });
+    const csv = await inventoryService.exportBalancesCsv(warehouse.id);
+    expect(csv).toContain('sku,name,productId,warehouseId,onHandQty,updatedAt');
+    expect(csv).toContain(product.sku);
+    expect(csv).toContain('CSV Balance Product');
+    expect(csv).toContain(',7,');
+
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.merchant.delete({ where: { id: warehouse.merchantId } });
+  }, 15000);
+
   it('transferInventory moves qty atomically between warehouses', async () => {
     if (!process.env.DATABASE_URL) return;
 
@@ -189,4 +229,69 @@ describe('InventoryService (integration)', () => {
     await prisma.warehouse.delete({ where: { id: wB.id } });
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 20000);
+
+  it('importEventsFromCsvBuffer: 2 gains + 1 bad sku; balance += 3', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-CIMP-${Date.now()}`, name: 'Csv Import Merchant' },
+    });
+    const whCode = `W-CIMP-${Date.now()}`;
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: whCode,
+        name: 'Csv Import WH',
+        merchantId: merchant.id,
+      },
+    });
+    const skuOk = `SKU-CIMP-${Date.now()}`;
+    const product = await prisma.product.create({
+      data: { sku: skuOk, name: 'Csv Import Product' },
+    });
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 10,
+      note: 'seed for import test',
+    });
+
+    const csv = [
+      'sku,warehouseCode,quantityDelta',
+      `${skuOk},${whCode},2`,
+      `${skuOk},${whCode},1`,
+      `NO-SUCH-SKU,${whCode},1`,
+    ].join('\n');
+
+    const out = await inventoryService.importEventsFromCsvBuffer(
+      Buffer.from(csv, 'utf8'),
+    );
+    expect(out.ok).toBe(2);
+    expect(out.failed).toHaveLength(1);
+    expect(out.failed[0].row).toBe(4);
+    expect(out.failed[0].reason).toContain('not found');
+
+    const bal = await prisma.inventoryBalance.findUnique({
+      where: {
+        productId_warehouseId: {
+          productId: product.id,
+          warehouseId: warehouse.id,
+        },
+      },
+    });
+    expect(bal?.onHandQty).toBe(13);
+
+    await prisma.inventoryEvent.deleteMany({
+      where: { referenceId: out.referenceId },
+    });
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 25000);
 });

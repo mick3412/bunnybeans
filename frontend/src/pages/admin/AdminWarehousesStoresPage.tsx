@@ -6,8 +6,7 @@ import { AdminWarehousesPage } from './AdminWarehousesPage';
 export const AdminWarehousesStoresPage: React.FC = () => {
   return (
     <div className="max-w-7xl space-y-2" data-testid="e2e-admin-warehouses-stores">
-      <h1 className="text-xl font-bold text-slate-900">倉庫與門市</h1>
-      <p className="mb-6 text-sm text-slate-500">
+      <p className="mb-6 text-sm text-slate-600">
         同頁維護門市與倉庫；新增倉庫時可選擇所屬門市（storeId）。寬螢幕左右並排，窄螢幕上下。
       </p>
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-8">

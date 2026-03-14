@@ -43,10 +43,10 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white px-7 py-6 shadow-2xl shadow-slate-900/20">
-        <div className="mb-1 text-sm font-semibold tracking-wide text-slate-500">Local POS ERP</div>
-        <h1 className="mb-2 text-lg font-semibold text-slate-900">登入控制台</h1>
+    <div className="flex min-h-screen items-center justify-center bg-forge-main px-4">
+      <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-forge-card px-7 py-8 shadow-lg shadow-neutral-900/5">
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">POS ERP</div>
+        <h1 className="mb-2 text-xl font-semibold tracking-tight text-neutral-900">登入</h1>
         <p className="mb-6 text-xs text-slate-500">
           之後會在這裡接上實際的帳號 / 權限，目前先以一鍵登入快速進入 POS 介面。
         </p>

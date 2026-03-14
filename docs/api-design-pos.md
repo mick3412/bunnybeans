@@ -13,6 +13,16 @@
 - **與其他文件關係**
   - 庫存與金流細節請參考 `docs/api-design-inventory-finance.md` 與 `docs/inventory-finance-immutability.md`。
   - 資料分層與模組邊界請參考 `docs/backend-module-design.md` 與 `DEVELOPMENT-GUIDELINES.md`。
+  - 促銷規則與試算見 [`api-promotion-rules.md`](api-promotion-rules.md)。
+
+#### 1.1 金額約定（促銷與建單，**硬性**）
+
+| 欄位／行為 | 定義 |
+|------------|------|
+| **折前小計** | `sum(items[].quantity * unitPrice)`，與 **`POST /pos/promotions/preview`** 之 **`subtotal`** 同口徑。 |
+| **建單 `totalAmount`** | **折後應收**＝折前小計 − 促銷折讓（與 preview 之 **`total`** 必須相等；後端建單時會重算並持久化 `subtotalAmount` / `discountAmount` / `totalAmount`）。 |
+| **非賒帳** | **`sum(payments[].amount)` 必須等於 `totalAmount`**（亦即等於 preview 的 **`total`**）。可先打 preview 再帶相同金額建單，避免 `POS_PAYMENT_MISMATCH`。 |
+| **賒帳 `allowCredit: true`** | 不變：`sum(payments) <= totalAmount`；`totalAmount` 仍為折後應收。 |
 
 ---
 
@@ -79,6 +89,11 @@ interface PosOrderSummary {
 
 // POS 銷售單明細（單筆查詢用；POST 建單成功回應亦同結構）
 interface PosOrderDetail extends PosOrderSummary {
+  /** 折前小計 */
+  subtotalAmount?: number;
+  /** 促銷折讓合計 */
+  discountAmount?: number;
+  promotionApplied?: unknown;
   items: {
     id: string;
     productId: string;
@@ -113,22 +128,38 @@ interface PosOrderListResponse {
 |--------------------|--------|---------------------------------|--------|
 | `/pos/orders`      | POST   | 建立一筆 POS 銷售單             | **stable** |
 | `/pos/orders`      | GET    | 取得 POS 銷售單列表（分頁）     | **stable** |
+| `/pos/orders/export` | GET | 訂單 CSV；**`includeLines=1`** 時每明細一列（最多 1 萬**明細列**）；否則訂單層級最多 1 萬列；BOM；Admin Key | **stable** |
 | `/pos/orders/:id`  | GET    | 取得單筆 POS 銷售單明細         | **stable** |
 | `/pos/orders/:id/payments` | POST | 對既有訂單追加一筆收款（補款） | **stable** |
 | `/pos/orders/:id/refunds` | POST | 對既有訂單登記一筆退款（`SALE_REFUND`） | **stable** |
 | `/pos/orders/:id/returns/stock` | POST | 依訂單明細沖銷入庫（`RETURN_FROM_CUSTOMER`） | **stable** |
 | `/pos/orders/:id/return-to-stock` | POST | 同上（相容舊路徑） | **stable** |
+| `/pos/promotions/preview` | POST | 促銷試算（subtotal / discount / total） | **stable** |
 
 ---
 
 ### 4. Endpoint 詳細規格
+
+#### 4.0b 匯出訂單 CSV `GET /pos/orders/export`（stable）
+
+- **Query**（皆選填，與 `GET /pos/orders` 列表篩選一致）：`storeId`、`from`、`to`（ISO，`createdAt` 區間）。
+- **未帶日期**：匯出全部符合 `storeId` 之訂單（仍受列數上限限制）。
+- **列上限**：訂單層級模式最多 **10_000 訂單列**；**`includeLines=1`** 時最多 **10_000 明細列**（同一訂單多列時訂單欄位重複）。`createdAt` **降序**。
+- **回應**：`200` `text/csv; charset=utf-8`；**UTF-8 BOM**；`Content-Disposition: attachment; filename="pos-orders.csv"`。
+- **表頭（訂單層級）**：`id`,`orderNumber`,`storeId`,`customerId`,`customerName`,`subtotalAmount`,`discountAmount`,`totalAmount`,`createdAt`。
+- **表頭（含明細）**：上述 + `lineItemId`,`lineProductId`,`lineQuantity`,`lineUnitPrice`,`lineAmount`。
+- **保護**：若 **`ADMIN_API_KEY`** 已設定，須 **X-Admin-Key**（與 inventory／finance export 相同）。
+- **錯誤**：`400` **`POS_EXPORT_INVALID_RANGE`**（`from`／`to` 非法日期）；`401` **`ADMIN_API_KEY_REQUIRED`**（已設 Admin Key 未帶或錯誤）。
+
+---
 
 #### 4.1 建立 POS 銷售單
 
 - **Method**：`POST`
 - **Path**：`/pos/orders`
 - **用途**：建立一筆銷售單，並在 Application 層觸發：
-  - 建立 `PosOrder`（可選 **`customerId`**，與門市同 Merchant 之 Customer）/ `PosOrderItem` / `PosOrderPayment`（持久化 `payments[]`）。
+  - 依該門市商家之促銷規則試算折讓；**應收總額**＝折前小計 − 促銷折讓；未開賒帳時 **`payments` 合計須等於該應收**（可先呼叫 `POST /pos/promotions/preview` 對齊金額）。
+  - 建立 `PosOrder`（`subtotalAmount` / `discountAmount` / `totalAmount` / `promotionApplied`；可選 **`customerId`**）/ `PosOrderItem` / `PosOrderPayment`。
   - 透過 `InventoryService` 寫入 `SALE_OUT` 類型的 `InventoryEvent`，更新 `InventoryBalance`。
   - 透過 `FinanceService` 寫入金流：一般單一筆 `SALE_RECEIVABLE`；**賒帳**（`allowCredit: true`）時再加多筆 `SALE_PAYMENT`（每筆實收）。
 - **狀態**：**stable**（已實作）。

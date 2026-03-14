@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,8 +8,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { ProductService } from '../application/product.service';
 
@@ -42,6 +46,19 @@ export class ProductController {
   @Get(':id')
   get(@Param('id') id: string) {
     return this.service.getProduct(id);
+  }
+
+  @Post('import')
+  @UseGuards(AdminApiKeyGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  importCsv(@UploadedFile() file?: { buffer: Buffer }) {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException({
+        message: 'multipart field file (CSV) required',
+        code: 'PRODUCT_IMPORT_FILE_REQUIRED',
+      });
+    }
+    return this.service.importFromCsvBuffer(file.buffer);
   }
 
   @Post()
