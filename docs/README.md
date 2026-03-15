@@ -45,3 +45,5 @@
 |------|------|
 | 開發前置 Checklist | [pre-development-checklist.md](pre-development-checklist.md) |
 | 日報格式 | [daily-progress-format.md](daily-progress-format.md) |
+| **會員／CRM 全計畫** | [crm-member-roadmap.md](crm-member-roadmap.md) |
+| **Loyalty CRM 範本對齊** | [crm-loyalty-ui-plan.md](crm-loyalty-ui-plan.md) |

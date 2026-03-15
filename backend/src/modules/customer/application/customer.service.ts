@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { parseCsvRows } from '../../product/application/csv-import.util';
 
@@ -85,7 +86,7 @@ export class CustomerService {
         code: 'CUSTOMER_LIST_MERCHANT_REQUIRED',
       });
     }
-    return this.prisma.customer.findMany({
+    const rows = await this.prisma.customer.findMany({
       where: { merchantId: m },
       select: {
         id: true,
@@ -93,9 +94,40 @@ export class CustomerService {
         code: true,
         phone: true,
         memberLevel: true,
+        memberCode: true,
+        joinDate: true,
       },
       orderBy: [{ code: 'asc' }, { name: 'asc' }],
     });
+    const ids = rows.map((r) => r.id);
+    if (!ids.length) return [];
+    const balances = await this.prisma.$queryRaw<
+      { customerId: string; balanceAfter: number }[]
+    >(Prisma.sql`
+      SELECT pl."customerId", pl."balanceAfter"
+      FROM "PointLedger" pl
+      INNER JOIN (
+        SELECT "customerId", MAX("createdAt") AS mx
+        FROM "PointLedger"
+        WHERE "merchantId" = ${m}
+          AND "customerId" IN (${Prisma.join(ids)})
+        GROUP BY "customerId"
+      ) t ON pl."customerId" = t."customerId" AND pl."createdAt" = t.mx
+      WHERE pl."merchantId" = ${m}
+    `);
+    const balMap = new Map(balances.map((b) => [b.customerId, b.balanceAfter]));
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      code: r.code,
+      phone: r.phone,
+      memberLevel: r.memberLevel,
+      memberCode: r.memberCode,
+      joinDate: r.joinDate?.toISOString() ?? null,
+      pointBalance: balMap.get(r.id) ?? 0,
+      expiringSoon: false,
+      expiringAt: null as string | null,
+    }));
   }
 
   /**

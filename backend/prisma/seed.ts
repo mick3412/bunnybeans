@@ -23,6 +23,9 @@ async function wipeAll() {
   await prisma.inventoryBalance.deleteMany();
   await prisma.financeEvent.deleteMany();
   await prisma.bulkImportJob.deleteMany();
+  await prisma.pointLedger.deleteMany();
+  await prisma.loyaltyCoupon.deleteMany();
+  await prisma.loyaltySettings.deleteMany();
   await prisma.promotionRule.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.product.deleteMany();
@@ -142,7 +145,8 @@ async function main() {
     },
   });
 
-  /** 會員／客戶 dummy：E2E + 多級會員 + 無電話訪客 */
+  /** 會員／客戶：E2E 固定 id + 多樣等級／入會日／有無訂單／點數情境（見 db-seed.md） */
+  const join = (yOff: number, m: number, d: number) => new Date(y - yOff, m, d);
   await prisma.customer.create({
     data: {
       id: E2E_CUSTOMER_ID,
@@ -152,6 +156,8 @@ async function main() {
       phone: '0900000001',
       email: 'e2e@test.local',
       memberLevel: 'NORMAL',
+      memberCode: 'M000',
+      joinDate: join(2, 0, 15),
     },
   });
   await prisma.customer.create({
@@ -162,6 +168,8 @@ async function main() {
       phone: '0911111111',
       email: 'vip@demo.local',
       memberLevel: 'VIP',
+      memberCode: 'M001',
+      joinDate: join(3, 2, 1),
     },
   });
   await prisma.customer.create({
@@ -171,6 +179,8 @@ async function main() {
       name: '陳金卡',
       phone: '0922222222',
       memberLevel: 'GOLD',
+      memberCode: 'M002',
+      joinDate: join(2, 5, 10),
     },
   });
   await prisma.customer.create({
@@ -180,6 +190,8 @@ async function main() {
       name: '王一般',
       phone: '0933333333',
       memberLevel: 'NORMAL',
+      memberCode: 'M003',
+      joinDate: join(1, 8, 20),
     },
   });
   await prisma.customer.create({
@@ -190,6 +202,52 @@ async function main() {
       phone: '0944444444',
       email: 'zhang@demo.local',
       memberLevel: 'NORMAL',
+      memberCode: 'M004',
+      joinDate: join(1, 3, 5),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM003',
+      name: '劉新客（本週入會）',
+      phone: '0955555555',
+      memberLevel: 'NORMAL',
+      memberCode: 'M005',
+      joinDate: new Date(now.getTime() - 5 * 86400000),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM004',
+      name: '黃零點（尚無消費）',
+      phone: '0966666666',
+      memberLevel: 'NORMAL',
+      memberCode: 'M006',
+      joinDate: join(1, 0, 1),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM005',
+      name: '吳多筆（三筆訂單）',
+      phone: '0977777777',
+      memberLevel: 'VIP',
+      memberCode: 'M007',
+      joinDate: join(1, 6, 1),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM006',
+      name: '鄭折抵（曾兌點）',
+      phone: '0988888888',
+      memberLevel: 'GOLD',
+      memberCode: 'M008',
+      joinDate: join(0, 9, 1),
     },
   });
   await prisma.customer.create({
@@ -199,6 +257,8 @@ async function main() {
       name: '路過客（無電話）',
       phone: null,
       memberLevel: null,
+      memberCode: null,
+      joinDate: null,
     },
   });
 
@@ -451,6 +511,21 @@ async function main() {
   const tFull = new Date(y, 1, 20, 10, 0);
   await addBalance(pTee.id, 100, rnFull.lines[0].id, '驗收 DEMO-RN-FULL 合格入庫', tFull);
   await addBalance(pTeeW.id, 80, rnFull.lines[1].id, '驗收 DEMO-RN-FULL 合格入庫', tFull);
+  /** 與驗收 complete 相同：一筆可對帳 PURCHASE_PAYABLE（referenceId = RN id） */
+  const payableFull =
+    Math.round((100 * 80 + 80 * 80) * 100) / 100;
+  await prisma.financeEvent.create({
+    data: {
+      type: 'PURCHASE_PAYABLE',
+      partyId: supActive1.id,
+      currency: 'TWD',
+      amount: payableFull,
+      taxAmount: 0,
+      occurredAt: tFull,
+      referenceId: rnFull.id,
+      note: `PURCHASE_PAYABLE RN ${rnFull.receiptNumber} (seed)`,
+    },
+  });
 
   /** 7) PARTIALLY_RECEIVED：飼料訂 40，先收 15 合格入庫 */
   const poPartial = await prisma.purchaseOrder.create({
@@ -533,8 +608,8 @@ async function main() {
 
   /** 其餘商品初始庫存（無採購鏈的補滿） */
   const t0 = new Date(y, 0, 1);
-  await addBalance(pHay.id, 60, 'SEED-BULK', '初始補貨', t0);
-  await addBalance(pBowl.id, 80, 'SEED-BULK', '初始補貨', t0);
+  await addBalance(pHay.id, 120, 'SEED-BULK', '初始補貨（含多筆 POS 扣庫）', t0);
+  await addBalance(pBowl.id, 120, 'SEED-BULK', '初始補貨（含多筆 POS 扣庫）', t0);
   await addBalance(pLowStock.id, 1, 'SEED-EDGE', '低庫存', t0);
   await prisma.inventoryBalance.create({
     data: { productId: pZeroStock.id, warehouseId: warehouse.id, onHandQty: 0 },
@@ -578,40 +653,365 @@ async function main() {
     },
     data: { onHandQty: { decrement: 2 } },
   });
+  await prisma.loyaltySettings.create({ data: { merchantId: merchant.id } });
+  await prisma.loyaltyCoupon.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'WELCOME10',
+      name: '新會員折 10 元',
+      discountType: 'FIXED',
+      value: 10,
+      active: true,
+    },
+  });
 
-  const order2 = await prisma.posOrder.create({
-    data: {
-      orderNumber: `DEMO-POS-${y}-002`,
-      storeId: store.id,
-      customerId: E2E_CUSTOMER_ID,
-      subtotalAmount: 280,
-      discountAmount: 0,
-      totalAmount: 280,
-      items: {
-        create: [{ productId: pFeed.id, quantity: 1, unitPrice: 280 }],
+  const c = async (code: string) =>
+    prisma.customer.findFirstOrThrow({ where: { merchantId: merchant.id, code } });
+  async function posSale(args: {
+    orderNumber: string;
+    customerId: string;
+    subtotal: number;
+    discount: number;
+    total: number;
+    method: string;
+    occurredAt: Date;
+    lines: { productId: string; qty: number; unitPrice: number }[];
+    note: string;
+  }) {
+    const order = await prisma.posOrder.create({
+      data: {
+        orderNumber: args.orderNumber,
+        storeId: store.id,
+        customerId: args.customerId,
+        subtotalAmount: args.subtotal,
+        discountAmount: args.discount,
+        totalAmount: args.total,
+        items: {
+          create: args.lines.map((l) => ({
+            productId: l.productId,
+            quantity: l.qty,
+            unitPrice: l.unitPrice,
+          })),
+        },
       },
+    });
+    await prisma.posOrderPayment.create({
+      data: { orderId: order.id, method: args.method, amount: args.total },
+    });
+    for (const l of args.lines) {
+      await prisma.inventoryEvent.create({
+        data: {
+          productId: l.productId,
+          warehouseId: warehouse.id,
+          type: 'SALE_OUT',
+          quantity: -l.qty,
+          occurredAt: args.occurredAt,
+          referenceId: order.id,
+          note: args.note,
+        },
+      });
+      await prisma.inventoryBalance.update({
+        where: {
+          productId_warehouseId: { productId: l.productId, warehouseId: warehouse.id },
+        },
+        data: { onHandQty: { decrement: l.qty } },
+      });
+    }
+    return order;
+  }
+  const custGold = await c('VIP002');
+  const custMem1 = await c('MEM001');
+  const custMem2 = await c('MEM002');
+  const custMem3 = await c('MEM003');
+  const custMem5 = await c('MEM005');
+  const custMem6 = await c('MEM006');
+  const order1b = await posSale({
+    orderNumber: `DEMO-POS-${y}-003`,
+    customerId: custVip!.id,
+    subtotal: 450,
+    discount: 0,
+    total: 450,
+    method: 'CASH',
+    occurredAt: new Date(y, 2, 10, 14, 30),
+    lines: [{ productId: pTeeW.id, qty: 3, unitPrice: 150 }],
+    note: 'POS DEMO-POS-003 林大戶第二筆',
+  });
+  const orderGold = await posSale({
+    orderNumber: `DEMO-POS-${y}-004`,
+    customerId: custGold.id,
+    subtotal: 300,
+    discount: 0,
+    total: 300,
+    method: 'CASH',
+    occurredAt: new Date(y, 2, 3, 10, 0),
+    lines: [{ productId: pTee.id, qty: 2, unitPrice: 150 }],
+    note: 'POS DEMO-POS-004 陳金卡',
+  });
+  const orderMem1a = await posSale({
+    orderNumber: `DEMO-POS-${y}-005`,
+    customerId: custMem1.id,
+    subtotal: 198,
+    discount: 0,
+    total: 198,
+    method: 'CASH',
+    occurredAt: new Date(y, 2, 4, 9, 0),
+    lines: [{ productId: pBowl.id, qty: 2, unitPrice: 99 }],
+    note: 'POS DEMO-POS-005 王一般',
+  });
+  const orderMem1b = await posSale({
+    orderNumber: `DEMO-POS-${y}-006`,
+    customerId: custMem1.id,
+    subtotal: 150,
+    discount: 0,
+    total: 150,
+    method: 'CASH',
+    occurredAt: new Date(y, 2, 5, 16, 0),
+    lines: [{ productId: pTee.id, qty: 1, unitPrice: 150 }],
+    note: 'POS DEMO-POS-006 王一般',
+  });
+  const orderMem2 = await posSale({
+    orderNumber: `DEMO-POS-${y}-007`,
+    customerId: custMem2.id,
+    subtotal: 300,
+    discount: 0,
+    total: 300,
+    method: 'CASH',
+    occurredAt: new Date(y, 2, 6, 12, 0),
+    lines: [{ productId: pTeeW.id, qty: 2, unitPrice: 150 }],
+    note: 'POS DEMO-POS-007 張小白',
+  });
+  const orderMem3 = await posSale({
+    orderNumber: `DEMO-POS-${y}-008`,
+    customerId: custMem3.id,
+    subtotal: 280,
+    discount: 0,
+    total: 280,
+    method: 'CASH',
+    occurredAt: new Date(y, 2, 7, 13, 0),
+    lines: [{ productId: pFeed.id, qty: 1, unitPrice: 280 }],
+    note: 'POS DEMO-POS-008 劉新客',
+  });
+  const orderMem5a = await posSale({
+    orderNumber: `DEMO-POS-${y}-009`,
+    customerId: custMem5.id,
+    subtotal: 150,
+    discount: 0,
+    total: 150,
+    method: 'CASH',
+    occurredAt: new Date(y, 1, 5, 10, 0),
+    lines: [{ productId: pTee.id, qty: 1, unitPrice: 150 }],
+    note: 'POS DEMO-POS-009 吳多筆',
+  });
+  const orderMem5b = await posSale({
+    orderNumber: `DEMO-POS-${y}-010`,
+    customerId: custMem5.id,
+    subtotal: 199,
+    discount: 0,
+    total: 199,
+    method: 'CASH',
+    occurredAt: new Date(y, 1, 12, 11, 0),
+    lines: [
+      { productId: pHay.id, qty: 1, unitPrice: 150 },
+      { productId: pBowl.id, qty: 1, unitPrice: 49 },
+    ],
+    note: 'POS DEMO-POS-010 吳多筆',
+  });
+  const orderMem5c = await posSale({
+    orderNumber: `DEMO-POS-${y}-011`,
+    customerId: custMem5.id,
+    subtotal: 320,
+    discount: 20,
+    total: 300,
+    method: 'CASH',
+    occurredAt: new Date(y, 2, 8, 15, 0),
+    lines: [{ productId: pFeed.id, qty: 1, unitPrice: 320 }],
+    note: 'POS DEMO-POS-011 吳多筆',
+  });
+  const orderMem6 = await posSale({
+    orderNumber: `DEMO-POS-${y}-012`,
+    customerId: custMem6.id,
+    subtotal: 400,
+    discount: 0,
+    total: 400,
+    method: 'CASH',
+    occurredAt: new Date(y, 2, 9, 10, 0),
+    lines: [
+      { productId: pTee.id, qty: 2, unitPrice: 150 },
+      { productId: pBowl.id, qty: 1, unitPrice: 100 },
+    ],
+    note: 'POS DEMO-POS-012 鄭折抵',
+  });
+  const order2 = await posSale({
+    orderNumber: `DEMO-POS-${y}-002`,
+    customerId: E2E_CUSTOMER_ID,
+    subtotal: 280,
+    discount: 0,
+    total: 280,
+    method: 'CREDIT',
+    occurredAt: new Date(y, 2, 2, 17, 0),
+    lines: [{ productId: pFeed.id, qty: 1, unitPrice: 280 }],
+    note: 'POS DEMO-POS-002 E2E 賒帳',
+  });
+  const ledgerRows: {
+    customerId: string;
+    type: 'EARNED' | 'BURNED' | 'EXPIRED';
+    amount: number;
+    balanceAfter: number;
+    referenceId: string | null;
+    note: string;
+    createdAt: Date;
+  }[] = [
+    {
+      customerId: custVip!.id,
+      type: 'EARNED',
+      amount: 2,
+      balanceAfter: 2,
+      referenceId: order1.id,
+      note: `贈點 ${order1.orderNumber}`,
+      createdAt: new Date(y, 2, 1, 11, 1),
     },
-  });
-  await prisma.posOrderPayment.create({
-    data: { orderId: order2.id, method: 'CREDIT', amount: 280 },
-  });
-  await prisma.inventoryEvent.create({
-    data: {
-      productId: pFeed.id,
-      warehouseId: warehouse.id,
-      type: 'SALE_OUT',
-      quantity: -1,
-      occurredAt: new Date(y, 2, 2),
+    {
+      customerId: custVip!.id,
+      type: 'EARNED',
+      amount: 4,
+      balanceAfter: 6,
+      referenceId: order1b.id,
+      note: `贈點 ${order1b.orderNumber}`,
+      createdAt: new Date(y, 2, 10, 14, 31),
+    },
+    {
+      customerId: custGold.id,
+      type: 'EARNED',
+      amount: 3,
+      balanceAfter: 3,
+      referenceId: orderGold.id,
+      note: `贈點 ${orderGold.orderNumber}`,
+      createdAt: new Date(y, 2, 3, 10, 1),
+    },
+    {
+      customerId: custGold.id,
+      type: 'BURNED',
+      amount: 2,
+      balanceAfter: 1,
+      referenceId: null,
+      note: '結帳折抵 2 點（seed）',
+      createdAt: new Date(y, 2, 4, 9, 0),
+    },
+    {
+      customerId: custMem1.id,
+      type: 'EARNED',
+      amount: 1,
+      balanceAfter: 1,
+      referenceId: orderMem1a.id,
+      note: `贈點 ${orderMem1a.orderNumber}`,
+      createdAt: new Date(y, 2, 4, 9, 1),
+    },
+    {
+      customerId: custMem1.id,
+      type: 'EARNED',
+      amount: 1,
+      balanceAfter: 2,
+      referenceId: orderMem1b.id,
+      note: `贈點 ${orderMem1b.orderNumber}`,
+      createdAt: new Date(y, 2, 5, 16, 1),
+    },
+    {
+      customerId: custMem2.id,
+      type: 'EARNED',
+      amount: 3,
+      balanceAfter: 3,
+      referenceId: orderMem2.id,
+      note: `贈點 ${orderMem2.orderNumber}`,
+      createdAt: new Date(y, 2, 6, 12, 1),
+    },
+    {
+      customerId: custMem3.id,
+      type: 'EARNED',
+      amount: 2,
+      balanceAfter: 2,
+      referenceId: orderMem3.id,
+      note: `贈點 ${orderMem3.orderNumber}`,
+      createdAt: new Date(y, 2, 7, 13, 1),
+    },
+    {
+      customerId: custMem5.id,
+      type: 'EARNED',
+      amount: 1,
+      balanceAfter: 1,
+      referenceId: orderMem5a.id,
+      note: `贈點 ${orderMem5a.orderNumber}`,
+      createdAt: new Date(y, 1, 5, 10, 1),
+    },
+    {
+      customerId: custMem5.id,
+      type: 'EARNED',
+      amount: 1,
+      balanceAfter: 2,
+      referenceId: orderMem5b.id,
+      note: `贈點 ${orderMem5b.orderNumber}`,
+      createdAt: new Date(y, 1, 12, 11, 1),
+    },
+    {
+      customerId: custMem5.id,
+      type: 'EARNED',
+      amount: 3,
+      balanceAfter: 5,
+      referenceId: orderMem5c.id,
+      note: `贈點 ${orderMem5c.orderNumber}`,
+      createdAt: new Date(y, 2, 8, 15, 1),
+    },
+    {
+      customerId: custMem5.id,
+      type: 'EXPIRED',
+      amount: 1,
+      balanceAfter: 4,
+      referenceId: null,
+      note: '效期到期沖銷 1 點（seed 示範）',
+      createdAt: new Date(y, 2, 9, 8, 0),
+    },
+    {
+      customerId: custMem6.id,
+      type: 'EARNED',
+      amount: 4,
+      balanceAfter: 4,
+      referenceId: orderMem6.id,
+      note: `贈點 ${orderMem6.orderNumber}`,
+      createdAt: new Date(y, 2, 9, 10, 1),
+    },
+    {
+      customerId: custMem6.id,
+      type: 'BURNED',
+      amount: 3,
+      balanceAfter: 1,
+      referenceId: null,
+      note: '兌換折 3 點（seed）',
+      createdAt: new Date(y, 2, 9, 11, 0),
+    },
+    {
+      customerId: E2E_CUSTOMER_ID,
+      type: 'EARNED',
+      amount: 2,
+      balanceAfter: 2,
       referenceId: order2.id,
-      note: 'POS 賒帳',
+      note: `贈點 ${order2.orderNumber}`,
+      createdAt: new Date(y, 2, 2, 17, 1),
     },
-  });
-  await prisma.inventoryBalance.update({
-    where: {
-      productId_warehouseId: { productId: pFeed.id, warehouseId: warehouse.id },
-    },
-    data: { onHandQty: { decrement: 1 } },
-  });
+  ];
+  for (const row of ledgerRows) {
+    await prisma.pointLedger.create({
+      data: {
+        merchantId: merchant.id,
+        customerId: row.customerId,
+        type: row.type,
+        amount: row.amount,
+        balanceAfter: row.balanceAfter,
+        txnCode: row.type === 'EARNED' ? 'SALE' : row.type,
+        referenceId: row.referenceId,
+        note: row.note,
+        createdAt: row.createdAt,
+      },
+    });
+  }
 
   const yearStart = new Date(y, 0, 1);
   const yearEnd = new Date(y, 11, 31, 23, 59, 59);

@@ -13,8 +13,12 @@ export default defineConfig({
     allowedHosts: true,
     /** 本機未設 VITE_API_BASE_URL 時，可設為 http://localhost:3003 並用相對路徑打 API；或仍用完整 URL 直連後端 */
     proxy: {
-      '/promotion-rules': { target: 'http://localhost:3003', changeOrigin: true },
-      '/pos/promotions': { target: 'http://localhost:3003', changeOrigin: true },
+      '/promotion-rules': { target: 'http://127.0.0.1:3003', changeOrigin: true },
+      '/pos/promotions': { target: 'http://127.0.0.1:3003', changeOrigin: true },
+      /** Loyalty／客戶／商家：未設 BASE_URL 時相對路徑仍轉到 Nest */
+      '/loyalty': { target: 'http://127.0.0.1:3003', changeOrigin: true },
+      '/customers': { target: 'http://127.0.0.1:3003', changeOrigin: true },
+      '/merchants': { target: 'http://127.0.0.1:3003', changeOrigin: true },
     },
   },
 });

@@ -59,3 +59,23 @@
 ### 2026-03-14 22:28（FRONTEND-INSTRUCTIONS 更新版：維護 seed DB + POS memberLevel）
 - 做了：**未執行 db:seed**（避免清空既有完整 seed DB）。**未跑會寫入後端之 E2E**（遵守常駐清理／不髒資料）。**build** 綠。**選配** — 後端 **GET /customers?merchantId=** 唯讀列表；POS **促銷試算** 下拉選客戶並顯示 **memberLevel**（VIP／GOLD 等，與 seed 一致）；仍能手填 UUID。
 - 檔案：`backend/.../customer.controller.ts`、`customer.service.ts`、`posOrdersApi.ts`、`PosPage.tsx`。
+
+### 2026-03-14 23:45（商品主檔 UX + 採購列表穩定 + POS 會員說明）
+- 做了：**商品主檔** — 表頭增 **分類／品牌**（`categoryName`／`brandName`）、欄寬持久化鍵改 **v2**。**新增／編輯** 改 **右側懸浮抽屜**：預設 `translate-x-full` 收起、右緣 **「新增商品」** 直條點擊向左展開（max-w 440px）；列 **編輯** 自動 `setPanelOpen(true)`；標題列 **收起**、儲存成功關閉；行動版遮罩關閉。**採購三頁** — 搜尋 debounce 改 **`loadRef.current`**，避免 merchant 閉包延遲請求把列表洗空；**purchaseApi** 正規化 PO/RN（`lines`、`_count` 防呆）；表格 `(p.lines || [])`。**POS** — 釐清：促銷試算需 **customerId** 試算折扣；結帳 Modal **關聯會員** 寫入訂單；Modal 開啟時 **`setMemberInput('')`** 故易覺重填，後續可 **預填試算 UUID** 減少重複輸入。
+- 檔案：`AdminProductsPage.tsx`、`purchaseApi.ts`、`AdminSuppliersPage.tsx`、`AdminPurchaseOrdersPage.tsx`、`AdminReceivingNotesPage.tsx`、`PosCheckoutModal.tsx`（行為說明）、後端 PO/RN list 補 **lines**／**_count**（白屏根因）。
+
+### 2026-03-17 15:40（Loyalty 儀表板對齊範本 + 全店存摺 + E2E smoke）
+- 做了：**後端** — `GET /loyalty/dashboard` 擴充四 KPI（流通點數、本月新會員、累計 BURNED、進行中促銷數）+ **recentLedger** + **activePromotions**；**GET point-ledger** 僅 **merchantId** 時全店最近流水（含 **customerName**）。**前端** — **LoyaltyDashboardPage** 四卡 + 最近異動表 + 進行中活動；**點數存摺** 預設全店 + 可選會員 + 搜尋；設定頁業務摘要、**e2e-admin-loyalty**／**e2e-loyalty-settings**。**E2E** — `e2e/admin-loyalty-smoke.spec.ts`；**e2e-pos.md** 列檔。**api-design-loyalty §3** 補擴充欄位。**build** 綠；**backend jest 45** 綠。
+- 檔案：`loyalty.service.ts`、`loyalty.controller.ts`、`loyaltyApi.ts`、`LoyaltyDashboardPage.tsx`、`LoyaltyPointLedgerPage.tsx`、`LoyaltySettingsPage.tsx`、`LoyaltyLayout.tsx`、`admin-loyalty-smoke.spec.ts`、`api-design-loyalty.md`、`e2e-pos.md`。
+
+### 2026-03-17 14:05（Loyalty Cannot GET：dev 預設 API 基底 + Vite proxy）
+- 做了：**根因** — `VITE_API_BASE_URL` 空時 `fetch('/loyalty/...')` 打到 **Vite:5173** → **Cannot GET**。**修正** — **adminApi／loyaltyApi／posOrdersApi／purchaseApi** 在 **`import.meta.env.DEV`** 時預設 **`http://127.0.0.1:3003`**（正式 build 仍須設 env）。**vite.config** 增 proxy **`/loyalty`、`/customers`、`/merchants`** → 3003 作備援。**build** 綠。
+- 檔案：`adminApi.ts`、`loyaltyApi.ts`、`posOrdersApi.ts`、`purchaseApi.ts`、`vite.config.ts`。
+
+### 2026-03-17 12:50（FRONTEND-INSTRUCTIONS：Loyalty CRM F0–F6 對齊後端 B1–B6）
+- 做了：**F0** — `/admin/loyalty` 子路由 + **深藍側欄** 六連結（儀表板、點數存摺、促銷、會員、優惠券、設定）；商家下拉 + **OutletContext merchantId**。**F1** — **GET/PATCH loyalty/settings**、三區塊表單、Admin Key toast。**F2** — **GET point-ledger**（需選會員 customerId）+ Tab 篩選類型 + 表。**F3** — **GET /customers** 擴充欄位表 + 搜尋。**F4** — **GET loyalty/dashboard** 三 KPI 卡。**F5** — 促銷頁連結 **`/admin/promotions?merchantId=`**。**F6** — **GET/POST/PATCH loyalty/coupons** 列表 + 新增 + 啟停。**adminApi needsAdminKey**：`loyalty/settings` PATCH、`loyalty/coupons` POST/PATCH。**AdminLayout** 側欄 **Loyalty CRM**。**build** 綠。
+- 檔案：`loyaltyApi.ts`、`LoyaltyLayout.tsx`、`LoyaltyDashboardPage.tsx`、`LoyaltyPointLedgerPage.tsx`、`LoyaltyPromotionsPage.tsx`、`LoyaltyMembersPage.tsx`、`LoyaltyCouponsPage.tsx`、`LoyaltySettingsPage.tsx`、`App.tsx`、`AdminLayout.tsx`、`adminApi.ts`（needsAdminKey）。
+
+### 2026-03-18 11:30（FRONTEND-INSTRUCTIONS 迴歸 + 會員架構側欄扁平化）
+- 做了：**會員／集點** 分頁改為與採購相同：主側欄直接列出 **儀表板、點數存摺、會員管理、優惠券、系統設定**（無內層 Loyalty 側欄）；**移除促銷活動**（與促銷規則重複，`/admin/loyalty/promotions` 改 **Navigate → /admin/promotions**）。**LoyaltyLayout** 僅保留商家選擇器 + 內容區（**data-testid="e2e-admin-loyalty"** 保留）。**build** 綠。E2E 本機埠占用未跑；採購三連結未拆。
+- 檔案：`AdminLayout.tsx`、`LoyaltyLayout.tsx`、`App.tsx`（移除 LoyaltyPromotionsPage、promotions 改 Navigate）、刪除 `LoyaltyPromotionsPage.tsx`。

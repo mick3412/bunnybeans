@@ -9,6 +9,7 @@ import { InventoryService } from '../../inventory/application/inventory.service'
 import { FinanceService } from '../../finance/application/finance.service';
 import { PosRepository } from '../infrastructure/pos.repository';
 import { PromotionService } from '../../promotion/application/promotion.service';
+import { LoyaltyService } from '../../loyalty/application/loyalty.service';
 
 export interface PosOrderItemInput {
   productId: string;
@@ -42,6 +43,7 @@ export class PosService {
     private readonly inventoryService: InventoryService,
     private readonly financeService: FinanceService,
     private readonly promotionService: PromotionService,
+    private readonly loyaltyService: LoyaltyService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -311,6 +313,20 @@ export class PosService {
           note: `POS ${orderNumber} ${p.method}`,
         });
       }
+    }
+
+    const ruleIds = (promotionApplied.applied ?? [])
+      .filter((a: { discount?: number }) => (a.discount ?? 0) > 0)
+      .map((a: { ruleId: string }) => a.ruleId);
+    await this.loyaltyService.incrementRuleUsage(ruleIds);
+
+    if (resolvedCustomerId) {
+      await this.loyaltyService.recordEarnedFromOrder({
+        merchantId: store.merchantId,
+        customerId: resolvedCustomerId,
+        orderId: order.id,
+        totalAmount,
+      });
     }
 
     return this.toOrderDetail(order);

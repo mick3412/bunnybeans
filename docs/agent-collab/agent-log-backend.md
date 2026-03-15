@@ -73,3 +73,15 @@
 ### 2026-03-17 11:20（BACKEND-INSTRUCTIONS 本輪：維護 seed、迴歸）
 - 做了：**jest 45 passed**；**未執行 `pnpm db:seed`**（避免 wipe 既有完整 seed DB，見 **db-seed.md**）。**未改 seed.ts**（complete 已寫 PURCHASE_PAYABLE，報表可沿用 RN complete 路徑）。**API-DECISIONS-bulk §5** 補 **POST /imports/jobs rate limit 未實作**建議；**api-design-purchase §5.1** **RETURN_TO_SUPPLIER**／**PURCHASE_RETURN** 草案。
 - 檔案：`API-DECISIONS-bulk.md`、`api-design-purchase.md`。**purchase.integration-spec** 仍須 teardown，不殘留測試列。
+
+### 2026-03-17 15:40（Loyalty dashboard 擴充 + point-ledger 全店）
+- 做了：**GET /loyalty/dashboard** 增 **circulatingPointsTotal**（各客戶最新 balanceAfter&gt;0 合計）、**newMembersThisMonth**、**totalPointsBurnedLifetime**、**ongoingPromotionsCount**、**recentLedger**（15 筆含會員名）、**activePromotions**（draft=false 檔期內）；舊三欄位保留。**GET point-ledger** 僅 **merchantId** 時 **listLedgerMerchantWide**（含 **customerName**）。**jest 45** 綠。
+- 檔案：`loyalty.service.ts`、`loyalty.controller.ts`、`docs/api-design-loyalty.md`。
+
+### 2026-03-17 12:30（Loyalty CRM B1–B6 + imports 限流 + seed 對帳）
+- 做了：**migration `20260317120000_loyalty_crm`**（LoyaltySettings、PointLedger、LoyaltyCoupon、Customer memberCode/joinDate、PromotionRule.usageCount）。**LoyaltyModule**：settings／ledger／dashboard／coupons CRUD（Admin）；**POS createOrder** 贈 **EARNED** + 促銷 **usageCount**；**GET /customers** 擴充 pointBalance 等；**POST /imports/jobs** **10/分** **429 IMPORT_JOB_RATE_LIMIT**。**seed** wipe 補刪 loyalty 表；**DEMO-RN-FULL** 後補一筆 **PURCHASE_PAYABLE**；LoyaltySettings + 示範 PointLedger + WELCOME10 coupon。**api-design-loyalty**、**API-DECISIONS-bulk**、**backend-error-format**。**jest 45** 綠（需已 migrate）。
+- 檔案：`schema.prisma`、`loyalty/*`、`pos.service.ts`、`customer.service.ts`、`imports.controller.ts`、`import-job-rate-limit.ts`、`seed.ts`、`docs/*`。
+
+### 2026-03-17 16:05（BACKEND-INSTRUCTIONS §1 迴歸、未跑 seed）
+- 做了：**jest 45 passed**（9 suites）；**未執行 db:seed**，以保留既有完整 seed 資料庫。**purchase.integration-spec** teardown 已確認清理測試自建資料。本輪依 **BACKEND-INSTRUCTIONS** §1 必做執行。
+- 檔案：`docs/agent-collab/agent-log-backend.md`。

@@ -30,18 +30,19 @@ echo ">>> 停止舊程序 3003 / 5173"
 kill_port 3003
 kill_port 5173
 
-if [[ "${RUN_SEED:-}" == "1" ]] && [[ -f backend/.env ]]; then
-  echo ">>> migrate deploy + seed（RUN_SEED=1）"
+if [[ -f backend/.env ]]; then
   set -a
   # shellcheck source=/dev/null
   source backend/.env 2>/dev/null || true
   set +a
-  if [[ -n "${DATABASE_URL:-}" ]]; then
-    pnpm --filter pos-erp-backend exec prisma migrate deploy
-    pnpm db:seed || true
-  else
-    echo "    略過 seed（無 DATABASE_URL）"
-  fi
+fi
+if [[ "${RUN_MIGRATE:-}" == "1" ]] && [[ -n "${DATABASE_URL:-}" ]]; then
+  echo ">>> prisma migrate deploy（RUN_MIGRATE=1，Loyalty 等 migration）"
+  pnpm --filter pos-erp-backend exec prisma migrate deploy
+fi
+if [[ "${RUN_SEED:-}" == "1" ]] && [[ -n "${DATABASE_URL:-}" ]]; then
+  echo ">>> db:seed（RUN_SEED=1）"
+  pnpm db:seed || true
 fi
 
 echo ">>> 啟動後端 → /tmp/pos-backend.log"

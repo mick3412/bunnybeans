@@ -15,6 +15,7 @@ import { PromotionModule } from './modules/promotion/promotion.module';
 import { CustomerModule } from './modules/customer/customer.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { PurchaseModule } from './modules/purchase/purchase.module';
+import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { AdminApiKeyGuard } from './shared/guards/admin-api-key.guard';
 
 @Module({
@@ -35,6 +36,7 @@ import { AdminApiKeyGuard } from './shared/guards/admin-api-key.guard';
     CustomerModule,
     ImportsModule,
     PurchaseModule,
+    LoyaltyModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminApiKeyGuard],

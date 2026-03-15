@@ -1,0 +1,92 @@
+# Job1：後端測試（同 backend-ci）→ Job2：Playwright E2E（CI=1 自起 Vite）
+name: E2E
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: pos
+          POSTGRES_DB: pos_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pos:pos@localhost:5432/pos_e2e
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter pos-erp-backend exec prisma db push
+      - run: pnpm --filter pos-erp-backend db:seed
+      - run: pnpm --filter pos-erp-backend test
+
+  playwright:
+    needs: backend-test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: pos
+          POSTGRES_DB: pos_e2e_pw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pos:pos@localhost:5432/pos_e2e_pw
+      CI: '1'
+      E2E_BASE_URL: http://localhost:5173
+      VITE_API_BASE_URL: http://localhost:3003
+      VITE_ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter pos-erp-backend exec prisma db push
+      - run: pnpm --filter pos-erp-backend db:seed
+      - run: pnpm exec playwright install chromium --with-deps
+      - name: Backend :3003
+        run: |
+          pnpm --filter pos-erp-backend dev &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3003/health && break
+            sleep 1
+          done
+          curl -sf http://localhost:3003/health
+      - name: E2E
+        run: pnpm e2e

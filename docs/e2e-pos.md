@@ -59,6 +59,7 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 | `e2e/admin-categories.spec.ts` | 登入 → **分類維護**頁可見 |
 | `e2e/admin-bulk.spec.ts` | **批量 smoke**：商品匯入區塊、庫存匯出餘額（200，需 **VITE_ADMIN_API_KEY**）、盤點上傳區塊、POS 訂單列表「匯出」按鈕 |
 | `e2e/admin-customers-import.spec.ts` | 登入 → **`/admin/customers/import`** 可進入；**預覽** 則需 **VITE_ADMIN_API_KEY**（無 Key 時該則 **test.skip**） |
+| `e2e/admin-loyalty-smoke.spec.ts` | 登入 → **`/admin/loyalty`** 側欄可見 **`e2e-admin-loyalty`**；**`/admin/loyalty/settings`** 有 **`e2e-loyalty-settings`**（需後端 :3003 儀表板／設定才完整） |
 
 掛帳用客戶 UUID 固定為 **`e2e00001-0000-4000-8000-00000000c001`**（seed 每次 **`upsert`** 之 `code: E2E` 客戶）。請執行 **`pnpm --filter pos-erp-backend db:seed`** 後再跑掛帳 E2E，無需清空舊 C001。
 

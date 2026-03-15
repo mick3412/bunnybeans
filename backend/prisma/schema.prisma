@@ -21,6 +21,9 @@ model Merchant {
   suppliers        Supplier[]
   purchaseOrders   PurchaseOrder[]
   receivingNotes   ReceivingNote[]
+  loyaltySettings  LoyaltySettings?
+  loyaltyCoupons   LoyaltyCoupon[]
+  pointLedgers     PointLedger[]
 }
 
 model Customer {
@@ -32,9 +35,12 @@ model Customer {
   phone       String?
   email       String?
   memberLevel String?
+  memberCode  String?
+  joinDate    DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   posOrders   PosOrder[]
+  pointLedgers PointLedger[]
 
   @@index([merchantId])
   @@index([merchantId, phone])
@@ -67,11 +73,70 @@ model PromotionRule {
   memberLevels       Json     @default("[]")
   conditions         Json     @default("[]")
   actions            Json     @default("[]")
+  usageCount         Int      @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
   @@index([merchantId])
   @@index([merchantId, priority])
+}
+
+model LoyaltySettings {
+  id                   String   @id @default(uuid())
+  merchant             Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId           String   @unique
+  earnPerNT            Decimal  @default(100) @db.Decimal(12, 2)
+  pointValueNT         Decimal  @default(1) @db.Decimal(12, 4)
+  birthdayMultiplier   Decimal  @default(1) @db.Decimal(6, 2)
+  rollingDays          Int      @default(365)
+  notifyDaysBefore     Int      @default(30)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model PointLedger {
+  id           String          @id @default(uuid())
+  merchant     Merchant        @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId   String
+  customer     Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId   String
+  type         PointLedgerType
+  amount       Int
+  balanceAfter Int
+  txnCode      String?
+  referenceId  String?
+  note         String?
+  createdAt    DateTime        @default(now())
+
+  @@index([merchantId, customerId, createdAt])
+  @@index([merchantId, type])
+}
+
+model LoyaltyCoupon {
+  id          String    @id @default(uuid())
+  merchant    Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId  String
+  code        String
+  name        String
+  discountType String
+  value       Decimal   @db.Decimal(12, 2)
+  validFrom   DateTime?
+  validTo     DateTime?
+  maxUses     Int?
+  usedCount   Int       @default(0)
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([merchantId, code])
+  @@index([merchantId])
+}
+
+enum PointLedgerType {
+  EARNED
+  BURNED
+  LOCKED
+  EXPIRED
 }
 
 model Store {

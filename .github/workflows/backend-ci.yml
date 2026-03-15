@@ -1,0 +1,44 @@
+# Postgres → prisma db push → seed → Jest（與 docs/e2e-pos.md 一致）
+name: Backend CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: pos
+          POSTGRES_DB: pos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pos:pos@localhost:5432/pos_test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter pos-erp-backend exec prisma db push
+      - run: pnpm --filter pos-erp-backend db:seed
+      - run: pnpm --filter pos-erp-backend test

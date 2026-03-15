@@ -51,7 +51,7 @@
 - **Redis / SQS worker**：多 instance 共用佇列  
 - **超過 N 列強制 async**：目前由客戶端選同步或 job  
 - **job 保留天數**：目前未自動刪除（可定時清 `BulkImportJob`）  
-- **Rate limit**：**POST /imports/jobs** 目前**未實作**（無 429）；建議單一使用者 **≤10 job／分** 或於 API Gateway 節流；實作時建議 **`IMPORT_JOB_RATE_LIMIT`** + **429**。  
+- **Rate limit**：**POST /imports/jobs** 已實作 **每客戶端 ≤10 次／分**（依 IP / `X-Forwarded-For` 首段）；超過回 **429**，body **`code: IMPORT_JOB_RATE_LIMIT`**。  
 
 ---
 

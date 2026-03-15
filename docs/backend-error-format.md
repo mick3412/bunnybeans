@@ -87,6 +87,9 @@
 | `RN_NOT_EDITABLE` | 400 | 已完成／已退回不可改 | 單據已結案 |
 | `RN_COMPLETE_INVALID` | 400 | 合格數大於實收或可收上限 | 請檢查數量 |
 | `PO_LINE_NOT_FOUND` | 400 | 驗收明細列不屬於本單 | 明細錯誤 |
+| **Loyalty / Import** | | | |
+| `LOYALTY_COUPON_DUPLICATE` | 400 | 同商家 coupon code 已存在 | 請換代碼 |
+| `IMPORT_JOB_RATE_LIMIT` | 429 | POST /imports/jobs 超過每分鐘次數 | 請稍後再試 |
 
 ## Request Log
 

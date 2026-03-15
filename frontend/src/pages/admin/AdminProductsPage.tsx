@@ -20,10 +20,12 @@ import { Button } from '../../shared/components/Button';
 import { TextInput } from '../../shared/components/TextInput';
 import { useAdminToast } from './AdminToastContext';
 
-const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths';
+const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v2';
 const PRODUCTS_TABLE_COL_DEFAULTS = {
   sku: 120,
-  name: 200,
+  name: 180,
+  category: 100,
+  brand: 100,
   salePrice: 80,
   stock: 104,
   spec: 120,
@@ -65,6 +67,8 @@ export const AdminProductsPage: React.FC = () => {
     null,
   );
   const [jobSubmitting, setJobSubmitting] = useState(false);
+  /** 右側商品表單抽屜：預設收起，點右緣或編輯時展開 */
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const [form, setForm] = useState({
     sku: '',
@@ -148,6 +152,7 @@ export const AdminProductsPage: React.FC = () => {
   const openEdit = (row: ProductFullDto) => {
     setEditing(row);
     setCreating(false);
+    setPanelOpen(true);
     setForm({
       sku: row.sku,
       name: row.name,
@@ -208,6 +213,7 @@ export const AdminProductsPage: React.FC = () => {
     }
     await load();
     openCreate();
+    setPanelOpen(false);
   };
 
   const { widths: colW, onResizeStart } = usePersistentTableColumnWidths(
@@ -225,11 +231,18 @@ export const AdminProductsPage: React.FC = () => {
   const tableMinWidth =
     colW.sku +
     colW.name +
+    colW.category +
+    colW.brand +
     colW.salePrice +
     colW.stock +
     whColsSum +
     colW.spec +
     colW.actions;
+
+  const categoryName = (id: string | null | undefined) =>
+    id ? categories.find((c) => c.id === id)?.name ?? '—' : '—';
+  const brandName = (id: string | null | undefined) =>
+    id ? brands.find((b) => b.id === id)?.name ?? '—' : '—';
 
   const onDelete = async (id: string) => {
     if (!confirm('確定刪除此商品？（若有庫存事件請先確認）')) return;
@@ -393,9 +406,33 @@ export const AdminProductsPage: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
-        {/* 左：表格 */}
-        <div className="min-w-0 flex-1 overflow-hidden">
+      {/* 行動版：展開時遮罩 */}
+      {panelOpen && (
+        <button
+          type="button"
+          aria-label="關閉表單"
+          className="fixed inset-0 z-[90] bg-black/25 lg:hidden"
+          onClick={() => setPanelOpen(false)}
+        />
+      )}
+
+      {/* 右緣懸浮：收起時可點開（向左展開表單） */}
+      {!panelOpen && (
+        <button
+          type="button"
+          className="fixed right-0 top-1/2 z-[95] flex -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-[#7EACB5] bg-[#7EACB5] px-2.5 py-6 text-xs font-semibold text-white shadow-lg transition hover:bg-[#6d9ba4]"
+          onClick={() => {
+            openCreate();
+            setPanelOpen(true);
+          }}
+        >
+          <span className="[writing-mode:vertical-rl] tracking-widest">新增商品</span>
+        </button>
+      )}
+
+      <div className="min-w-0 w-full">
+        {/* 表格全寬 */}
+        <div className="min-w-0 overflow-hidden">
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
             <table
               className="table-fixed text-left text-sm"
@@ -404,6 +441,8 @@ export const AdminProductsPage: React.FC = () => {
               <colgroup>
                 <col style={{ width: colW.sku }} />
                 <col style={{ width: colW.name }} />
+                <col style={{ width: colW.category }} />
+                <col style={{ width: colW.brand }} />
                 <col style={{ width: colW.salePrice }} />
                 <col style={{ width: colW.stock }} />
                 {showWhDetail &&
@@ -419,6 +458,8 @@ export const AdminProductsPage: React.FC = () => {
                     [
                       ['sku', 'SKU'],
                       ['name', '名稱'],
+                      ['category', '分類'],
+                      ['brand', '品牌'],
                       ['salePrice', '售價'],
                     ] as const
                   ).map(([key, label]) => (
@@ -507,6 +548,12 @@ export const AdminProductsPage: React.FC = () => {
                     >
                       {p.name}
                     </td>
+                    <td className="px-3 py-2 truncate text-xs text-slate-700" title={categoryName(p.categoryId)}>
+                      {categoryName(p.categoryId)}
+                    </td>
+                    <td className="px-3 py-2 truncate text-xs text-slate-700" title={brandName(p.brandId)}>
+                      {brandName(p.brandId)}
+                    </td>
                     <td className="px-3 py-2 font-mono text-xs">{p.salePrice ?? '0'}</td>
                     <td
                       className="px-3 py-2 text-right font-mono text-xs"
@@ -551,25 +598,38 @@ export const AdminProductsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 右：常駐新增／編輯 */}
+        {/* 右側懸浮抽屜：向左展開 */}
         <aside
-          className="w-full shrink-0 rounded-xl border border-neutral-200 bg-white shadow-sm lg:sticky lg:top-4 lg:w-[400px] xl:w-[440px] lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto"
+          className={`fixed right-0 top-0 z-[100] flex h-full max-h-screen w-full max-w-[440px] flex-col border-l border-neutral-200 bg-white shadow-[-8px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out ${
+            panelOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
+          }`}
           aria-label="商品表單"
+          aria-hidden={!panelOpen}
         >
-          <form onSubmit={submit} className="space-y-3 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 pb-2">
-              <span className="text-sm font-semibold text-neutral-900">
+          <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto p-4 pt-14">
+            <div className="absolute left-0 right-0 top-0 flex items-center justify-between gap-2 border-b border-neutral-100 bg-white px-3 py-2.5">
+              <span className="truncate text-sm font-semibold text-neutral-900">
                 {editing && !creating ? `編輯：${editing.sku}` : '新增商品'}
               </span>
-              {editing && !creating && (
+              <div className="flex shrink-0 items-center gap-2">
+                {editing && !creating && (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-[#7EACB5] hover:underline"
+                    onClick={openCreate}
+                  >
+                    改為新增
+                  </button>
+                )}
                 <button
                   type="button"
-                  className="text-xs font-medium text-[#7EACB5] hover:underline"
-                  onClick={openCreate}
+                  className="rounded-lg border border-neutral-200 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+                  onClick={() => setPanelOpen(false)}
+                  aria-label="收起表單"
                 >
-                  改為新增
+                  收起
                 </button>
-              )}
+              </div>
             </div>
               <div className="space-y-4">
                 <div>
@@ -704,7 +764,7 @@ export const AdminProductsPage: React.FC = () => {
                 </Button>
               </div>
             </form>
-          </aside>
+        </aside>
       </div>
     </div>
   );

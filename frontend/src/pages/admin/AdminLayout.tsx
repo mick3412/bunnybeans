@@ -26,6 +26,11 @@ function headerTitle(pathname: string): string {
   if (pathname.startsWith('/admin/suppliers')) return '供應商管理';
   if (pathname.startsWith('/admin/purchase-orders')) return '採購單管理';
   if (pathname.startsWith('/admin/receiving-notes')) return '進貨驗收';
+  if (pathname.startsWith('/admin/loyalty/settings')) return '系統設定';
+  if (pathname.startsWith('/admin/loyalty/point-ledger')) return '點數存摺';
+  if (pathname.startsWith('/admin/loyalty/members')) return '會員管理';
+  if (pathname.startsWith('/admin/loyalty/coupons')) return '優惠券';
+  if (pathname.startsWith('/admin/loyalty')) return '儀表板';
   if (pathname.startsWith('/admin/merchants')) return '商家主檔';
   return '後台';
 }
@@ -83,6 +88,53 @@ export const AdminLayout: React.FC = () => {
             </NavLink>
             <NavLink to="/admin/customers/import" className={navClass}>
               客戶 CSV
+            </NavLink>
+            <div className="flex items-center gap-2 px-3 pt-3 pb-1 text-[11px] font-semibold text-neutral-400">
+              <svg className="h-4 w-4 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              會員／集點
+            </div>
+            <NavLink to="/admin/loyalty" className={navClass} end>
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                儀表板
+              </span>
+            </NavLink>
+            <NavLink to="/admin/loyalty/point-ledger" className={navClass}>
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                點數存摺
+              </span>
+            </NavLink>
+            <NavLink to="/admin/loyalty/members" className={navClass}>
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                會員管理
+              </span>
+            </NavLink>
+            <NavLink to="/admin/loyalty/coupons" className={navClass}>
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 010-4V7a2 2 0 00-2-2H5z" />
+                </svg>
+                優惠券
+              </span>
+            </NavLink>
+            <NavLink to="/admin/loyalty/settings" className={navClass}>
+              <span className="flex items-center gap-2">
+                <svg className="h-4 w-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                系統設定
+              </span>
             </NavLink>
             <div className="flex items-center gap-2 px-3 pt-3 pb-1 text-[11px] font-semibold text-neutral-400">
               <svg className="h-4 w-4 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">

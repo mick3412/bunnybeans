@@ -21,6 +21,12 @@ import { AdminCustomerImportPage } from './pages/admin/AdminCustomerImportPage';
 import { AdminSuppliersPage } from './pages/admin/AdminSuppliersPage';
 import { AdminPurchaseOrdersPage } from './pages/admin/AdminPurchaseOrdersPage';
 import { AdminReceivingNotesPage } from './pages/admin/AdminReceivingNotesPage';
+import { LoyaltyLayout } from './pages/admin/loyalty/LoyaltyLayout';
+import { LoyaltyDashboardPage } from './pages/admin/loyalty/LoyaltyDashboardPage';
+import { LoyaltyPointLedgerPage } from './pages/admin/loyalty/LoyaltyPointLedgerPage';
+import { LoyaltyMembersPage } from './pages/admin/loyalty/LoyaltyMembersPage';
+import { LoyaltyCouponsPage } from './pages/admin/loyalty/LoyaltyCouponsPage';
+import { LoyaltySettingsPage } from './pages/admin/loyalty/LoyaltySettingsPage';
 
 export const App: React.FC = () => {
   return (
@@ -49,6 +55,14 @@ export const App: React.FC = () => {
         <Route path="suppliers" element={<AdminSuppliersPage />} />
         <Route path="purchase-orders" element={<AdminPurchaseOrdersPage />} />
         <Route path="receiving-notes" element={<AdminReceivingNotesPage />} />
+        <Route path="loyalty" element={<LoyaltyLayout />}>
+          <Route index element={<LoyaltyDashboardPage />} />
+          <Route path="point-ledger" element={<LoyaltyPointLedgerPage />} />
+          <Route path="promotions" element={<Navigate to="/admin/promotions" replace />} />
+          <Route path="members" element={<LoyaltyMembersPage />} />
+          <Route path="coupons" element={<LoyaltyCouponsPage />} />
+          <Route path="settings" element={<LoyaltySettingsPage />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

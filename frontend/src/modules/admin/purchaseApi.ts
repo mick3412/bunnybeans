@@ -2,7 +2,10 @@
  * 採購 API — docs/api-design-purchase.md
  * BASE_URL 空時不 throw，回 mock 供 UI 展示。
  */
-const BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+const BASE = (
+  String(import.meta.env.VITE_API_BASE_URL ?? '').trim() ||
+  (import.meta.env.DEV ? 'http://127.0.0.1:3003' : '')
+).replace(/\/$/, '');
 
 export interface ApiError {
   statusCode: number;

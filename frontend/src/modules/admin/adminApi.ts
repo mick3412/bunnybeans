@@ -1,7 +1,10 @@
 /**
  * Admin 後台 API — 依 docs/admin-inventory-ui.md、api-design-inventory-finance.md
  */
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+/** 未設 VITE_API_BASE_URL 時，dev 預設打本機後端，避免 fetch 打到 Vite:5173 出現 Cannot GET */
+const BASE_URL =
+  String(import.meta.env.VITE_API_BASE_URL ?? '').trim() ||
+  (import.meta.env.DEV ? 'http://127.0.0.1:3003' : '');
 const ADMIN_API_KEY = (import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim() ?? '';
 
 /** 與後端 AdminApiKeyGuard 一致：僅受保護的寫入需帶 X-Admin-Key */
@@ -30,6 +33,9 @@ function needsAdminKey(path: string, method: string): boolean {
   if (pathOnly === 'customers/import/apply' && m === 'POST') return true;
   if (m === 'POST' && /^imports\/jobs\/(products_csv|inventory_csv)$/.test(pathOnly)) return true;
   if (m === 'GET' && /^imports\/jobs\/.+/.test(pathOnly)) return true;
+  if (pathOnly === 'loyalty/settings' && m === 'PATCH') return true;
+  if (pathOnly === 'loyalty/coupons' && m === 'POST') return true;
+  if (m === 'PATCH' && /^loyalty\/coupons\/.+/.test(pathOnly)) return true;
   return false;
 }
 
