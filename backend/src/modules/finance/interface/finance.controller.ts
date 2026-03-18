@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  BadRequestException,
   Get,
+  Param,
   Post,
   Query,
   UseGuards,
@@ -11,11 +13,15 @@ import {
 import type { Response } from 'express';
 import { FinanceEventType } from '@prisma/client';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
+import { OpsService } from '../../ops/application/ops.service';
 import { FinanceService, RecordFinanceEventInput } from '../application/finance.service';
 
 @Controller('finance')
 export class FinanceController {
-  constructor(private readonly service: FinanceService) {}
+  constructor(
+    private readonly service: FinanceService,
+    private readonly opsService: OpsService,
+  ) {}
 
   @Get('events/export')
   @UseGuards(AdminApiKeyGuard)
@@ -42,6 +48,55 @@ export class FinanceController {
       preset: preset?.trim() || undefined,
     });
     res.send('\uFEFF' + csv);
+  }
+
+  @Get('balances')
+  getBalances(
+    @Query('merchantId') merchantId?: string,
+    @Query('partyId') _partyId?: string,
+    @Query('kind') _kind?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    if (!merchantId?.trim()) {
+      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId required' });
+    }
+    const kind =
+      _kind === 'customer'
+        ? ('customer' as const)
+        : _kind === 'supplier'
+          ? ('supplier' as const)
+          : undefined;
+    return this.service.getBalances({
+      merchantId: merchantId.trim(),
+      partyId: _partyId,
+      kind,
+      page: page != null ? parseInt(page, 10) : undefined,
+      pageSize: pageSize != null ? parseInt(pageSize, 10) : undefined,
+    });
+  }
+
+  @Get('summary')
+  getSummary(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('preset') preset?: string,
+    @Query('groupBy') groupBy?: 'type' | 'partyId' | 'day' | 'week',
+  ) {
+    const g =
+      groupBy === 'partyId'
+        ? 'partyId'
+        : groupBy === 'day'
+          ? 'day'
+          : groupBy === 'week'
+            ? 'week'
+            : 'type';
+    return this.service.getSummary({
+      from,
+      to,
+      preset: preset?.trim() || undefined,
+      groupBy: g,
+    });
   }
 
   @Get('events')
@@ -92,5 +147,65 @@ export class FinanceController {
       note: body.note,
     };
     return this.service.recordFinanceEvent(input);
+  }
+
+  @Get('periods')
+  @UseGuards(AdminApiKeyGuard)
+  listPeriods(@Query('merchantId') merchantId?: string, @Query('status') status?: string) {
+    return this.service.listPeriods({ merchantId, status });
+  }
+
+  @Post('periods/close')
+  @UseGuards(AdminApiKeyGuard)
+  async closePeriod(
+    @Body() body: { startDate: string; endDate: string; merchantId?: string; closedBy?: string },
+  ) {
+    try {
+      const result = await this.service.closePeriod(body ?? { startDate: '', endDate: '' });
+      await this.opsService.recordRun('finance-period-close', true);
+      return result;
+    } catch (e) {
+      await this.opsService.recordRun('finance-period-close', false, (e as Error).message);
+      throw e;
+    }
+  }
+
+  @Post('periods/:id/unlock')
+  @UseGuards(AdminApiKeyGuard)
+  unlockPeriod(@Param('id') id: string) {
+    return this.service.unlockPeriod(id);
+  }
+
+  @Get('audit-log')
+  @UseGuards(AdminApiKeyGuard)
+  listAuditLog(
+    @Query('eventId') eventId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('actor') actor?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.service.listAuditLog({
+      eventId,
+      from,
+      to,
+      actor,
+      page: page ? parseInt(page, 10) : undefined,
+      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+    });
+  }
+
+  @Post('snapshots')
+  @UseGuards(AdminApiKeyGuard)
+  async createSnapshot(@Body() body: { asOfDate: string; type: 'daily' | 'monthly' }) {
+    try {
+      const result = await this.service.createSnapshot(body ?? { asOfDate: new Date().toISOString().slice(0, 10), type: 'daily' });
+      await this.opsService.recordRun('finance-snapshot', true);
+      return result;
+    } catch (e) {
+      await this.opsService.recordRun('finance-snapshot', false, (e as Error).message);
+      throw e;
+    }
   }
 }

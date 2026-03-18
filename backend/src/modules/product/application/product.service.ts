@@ -13,11 +13,16 @@ import {
 
 interface CreateProductInput {
   sku: string;
+  barcode?: string | null;
   name: string;
   description?: string | null;
   specSize?: string | null;
   specColor?: string | null;
   weightGrams?: number | null;
+  specCapacity?: string | null;
+  specStyle?: string | null;
+  specWeight?: string | null;
+  expiryDescription?: string | null;
   listPrice?: string | number | null;
   salePrice?: string | number | null;
   costPrice?: string | number | null;
@@ -28,11 +33,16 @@ interface CreateProductInput {
 
 interface UpdateProductInput {
   sku?: string;
+  barcode?: string | null;
   name?: string;
   description?: string | null;
   specSize?: string | null;
   specColor?: string | null;
   weightGrams?: number | null;
+  specCapacity?: string | null;
+  specStyle?: string | null;
+  specWeight?: string | null;
+  expiryDescription?: string | null;
   listPrice?: string | number | null;
   salePrice?: string | number | null;
   costPrice?: string | number | null;
@@ -49,11 +59,14 @@ function decToStr(v: Decimal | null | undefined): string | null {
 function toProductResponse(p: {
   id: string;
   sku: string;
+  barcode: string | null;
   name: string;
   description: string | null;
   specSize: string | null;
-  specColor: string | null;
-  weightGrams: number | null;
+  specCapacity: string | null;
+  specStyle: string | null;
+  specWeight: string | null;
+  expiryDescription: string | null;
   listPrice: Decimal;
   salePrice: Decimal;
   costPrice: Decimal | null;
@@ -69,11 +82,14 @@ function toProductResponse(p: {
   return {
     id: p.id,
     sku: p.sku,
+    barcode: p.barcode,
     name: p.name,
     description: p.description,
     specSize: p.specSize,
-    specColor: p.specColor,
-    weightGrams: p.weightGrams,
+    specCapacity: p.specCapacity,
+    specStyle: p.specStyle,
+    specWeight: p.specWeight,
+    expiryDescription: p.expiryDescription,
     listPrice: decToStr(p.listPrice) ?? '0.00',
     salePrice: decToStr(p.salePrice) ?? '0.00',
     costPrice: decToStr(p.costPrice),
@@ -103,12 +119,38 @@ export class ProductService {
     return rows.map(toProductResponse);
   }
 
-  async getProduct(id: string) {
+  /**
+   * GET /products/search-barcode?q=
+   * 專用條碼查詢：以 barcode 精確查找（不做模糊 contains，避免誤命中）
+   */
+  async searchBarcode(q: string, limit = 20) {
+    const term = q?.trim() ?? '';
+    if (!term) return { items: [] as ReturnType<typeof toProductResponse>[] };
+    const rows = await this.repo.searchByBarcode(term, limit);
+    return { items: rows.map(toProductResponse) };
+  }
+
+  async getProduct(id: string, options?: { includeBalances?: boolean }) {
     const product = await this.repo.findById(id);
     if (!product) {
       throw new NotFoundException('Product not found');
     }
-    return toProductResponse(product);
+    const out = toProductResponse(product) as Record<string, unknown>;
+    if (options?.includeBalances) {
+      const balances = await this.prisma.inventoryBalance.findMany({
+        where: { productId: id },
+        include: {
+          warehouse: { select: { id: true, code: true, name: true } },
+        },
+      });
+      out.balances = balances.map((b) => ({
+        warehouseId: b.warehouseId,
+        warehouseCode: b.warehouse.code,
+        warehouseName: b.warehouse.name,
+        onHandQty: b.onHandQty,
+      }));
+    }
+    return out;
   }
 
   async createProduct(input: CreateProductInput) {
@@ -120,6 +162,37 @@ export class ProductService {
     await this.getProduct(id);
     const p = await this.repo.update(id, input);
     return toProductResponse(p);
+  }
+
+  /** 批次改價：將多個商品的 salePrice 設為同一值 */
+  async batchUpdatePrice(
+    productIds: string[],
+    salePrice: string | number,
+  ): Promise<{ updated: number }> {
+    const ids = Array.isArray(productIds)
+      ? productIds.filter((id) => typeof id === 'string' && id.trim())
+      : [];
+    if (ids.length === 0) {
+      throw new BadRequestException({
+        message: 'productIds required and must be non-empty',
+        code: 'PRODUCT_BATCH_EMPTY',
+      });
+    }
+    const val =
+      typeof salePrice === 'number'
+        ? salePrice
+        : parseFloat(String(salePrice ?? ''));
+    if (Number.isNaN(val) || val < 0) {
+      throw new BadRequestException({
+        message: 'salePrice must be a non-negative number',
+        code: 'PRODUCT_BATCH_INVALID',
+      });
+    }
+    const result = await this.prisma.product.updateMany({
+      where: { id: { in: ids } },
+      data: { salePrice: val },
+    });
+    return { updated: result.count };
   }
 
   async deleteProduct(id: string) {
@@ -174,6 +247,10 @@ export class ProductService {
       const description = col('description', cells) || null;
       const specSize = col('specsize', cells) || col('spec_size', cells) || null;
       const specColor = col('speccolor', cells) || col('spec_color', cells) || null;
+      const specCapacity = col('speccapacity', cells) || col('spec_capacity', cells) || null;
+      const specStyle = col('specstyle', cells) || col('spec_style', cells) || null;
+      const specWeight = col('specweight', cells) || col('spec_weight', cells) || null;
+      const expiryDescription = col('expirydescription', cells) || col('expiry_description', cells) || null;
       const weightStr = col('weightgrams', cells) || col('weight_grams', cells);
       let weightGrams: number | null = null;
       if (weightStr) {
@@ -230,6 +307,10 @@ export class ProductService {
             ...(specSize !== null ? { specSize } : {}),
             ...(specColor !== null ? { specColor } : {}),
             ...(weightGrams !== null ? { weightGrams } : {}),
+            ...(specCapacity !== null ? { specCapacity } : {}),
+            ...(specStyle !== null ? { specStyle } : {}),
+            ...(specWeight !== null ? { specWeight } : {}),
+            ...(expiryDescription !== null ? { expiryDescription } : {}),
             ...(listPrice !== '' ? { listPrice } : {}),
             ...(salePrice !== '' ? { salePrice } : {}),
             ...(costPrice !== '' ? { costPrice } : {}),
@@ -246,6 +327,10 @@ export class ProductService {
             specSize: specSize ?? undefined,
             specColor: specColor ?? undefined,
             weightGrams: weightGrams ?? undefined,
+            specCapacity: specCapacity ?? undefined,
+            specStyle: specStyle ?? undefined,
+            specWeight: specWeight ?? undefined,
+            expiryDescription: expiryDescription ?? undefined,
             listPrice: listPrice || '0',
             salePrice: salePrice || '0',
             costPrice: costPrice || undefined,

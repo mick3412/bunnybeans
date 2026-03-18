@@ -12,6 +12,7 @@ export interface CreatePosOrderData {
   orderNumber: string;
   storeId: string;
   customerId?: string | null;
+  exchangeFromOrderId?: string | null;
   subtotalAmount: number;
   discountAmount: number;
   totalAmount: number;
@@ -29,6 +30,7 @@ export class PosRepository {
       orderNumber,
       storeId,
       customerId,
+      exchangeFromOrderId,
       subtotalAmount,
       discountAmount,
       totalAmount,
@@ -41,6 +43,7 @@ export class PosRepository {
         orderNumber,
         storeId,
         customerId: customerId ?? null,
+        exchangeFromOrderId: exchangeFromOrderId ?? null,
         subtotalAmount: new Decimal(subtotalAmount),
         discountAmount: new Decimal(discountAmount),
         totalAmount: new Decimal(totalAmount),

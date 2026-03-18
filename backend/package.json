@@ -11,7 +11,9 @@
     "test:integration": "jest --testPathPattern=integration",
     "prisma:generate": "prisma generate",
     "prisma:db:push": "prisma db push",
-    "db:seed": "ts-node prisma/seed.ts"
+    "prisma:check:migrations": "bash scripts/prisma-check-migrations.sh",
+    "db:seed": "ts-node prisma/seed.ts",
+    "e2e:seed": "ts-node scripts/e2e-seed.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

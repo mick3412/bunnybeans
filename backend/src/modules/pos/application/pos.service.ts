@@ -28,11 +28,15 @@ export interface CreatePosOrderInput {
   items: PosOrderItemInput[];
   payments: PosPaymentInput[];
   customerId?: string | null;
+  /** 若此單為「換貨後的新單」，帶入原單 PosOrder.id 以供追蹤／對帳 */
+  exchangeFromOrderId?: string | null;
   /** 掛帳且未帶 customerId 時，後端依手機／Email 在同一 merchant 下唯一解析客戶 */
   customerPhone?: string | null;
   customerEmail?: string | null;
   /** 為 true 時允許實收 &lt; 應收（賒帳）；須帶 customerId 或可唯一解析的 phone/email；金流寫入 SALE_RECEIVABLE + SALE_PAYMENT */
   allowCredit?: boolean;
+  /** 折抵點數（須有客戶）；寫入 PointLedger BURNED，餘額不足時 400 */
+  pointsToRedeem?: number;
 }
 
 @Injectable()
@@ -49,7 +53,8 @@ export class PosService {
   private generateOrderNumber(): string {
     const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const seq = String(Date.now()).slice(-6);
-    return `POS-${datePart}-${seq}`;
+    const rnd = Math.random().toString(36).slice(-4);
+    return `POS-${datePart}-${seq}-${rnd}`;
   }
 
   /** 比對手機：僅數字，忽略 +886 / 0 前綴差異（末 9 碼相同視為同號） */
@@ -227,6 +232,7 @@ export class PosService {
     const promotionApplied = {
       applied: promo.applied,
       messages: promo.messages,
+      pointsMultiplier: promo.pointsMultiplier ?? 1,
     };
     const rawPayments = input.payments ?? [];
     for (const p of rawPayments) {
@@ -256,6 +262,21 @@ export class PosService {
 
     const paymentsToStore = rawPayments.filter((p) => p.amount > 0.0001);
 
+    const pointsToRedeem = Math.floor(Number(input.pointsToRedeem));
+    if (
+      resolvedCustomerId &&
+      Number.isFinite(pointsToRedeem) &&
+      pointsToRedeem > 0
+    ) {
+      const balance = await this.loyaltyService.getBalance(resolvedCustomerId);
+      if (balance < pointsToRedeem) {
+        throw new BadRequestException({
+          message: 'Points balance insufficient for redemption',
+          code: 'LOYALTY_INSUFFICIENT_POINTS',
+        });
+      }
+    }
+
     const occurredAt = input.occurredAt
       ? new Date(input.occurredAt)
       : new Date();
@@ -266,6 +287,7 @@ export class PosService {
       orderNumber,
       storeId: input.storeId,
       customerId: resolvedCustomerId,
+      exchangeFromOrderId: input.exchangeFromOrderId?.trim() || null,
       subtotalAmount,
       discountAmount,
       totalAmount,
@@ -286,7 +308,7 @@ export class PosService {
       });
     }
 
-    const partyId = resolvedCustomerId;
+    const partyId = resolvedCustomerId ? `customer:${resolvedCustomerId}` : '';
     await this.financeService.recordFinanceEvent({
       type: 'SALE_RECEIVABLE',
       partyId,
@@ -326,7 +348,16 @@ export class PosService {
         customerId: resolvedCustomerId,
         orderId: order.id,
         totalAmount,
+        pointsMultiplier: promo.pointsMultiplier ?? 1,
       });
+      if (pointsToRedeem > 0) {
+        await this.loyaltyService.recordBurnedFromOrder({
+          merchantId: store.merchantId,
+          customerId: resolvedCustomerId,
+          orderId: order.id,
+          points: pointsToRedeem,
+        });
+      }
     }
 
     return this.toOrderDetail(order);
@@ -759,6 +790,7 @@ export class PosService {
     orderNumber: string;
     storeId: string;
     customerId?: string | null;
+    exchangeFromOrderId?: string | null;
     customer?: { id: string; name: string; code: string | null } | null;
     subtotalAmount?: { toNumber: () => number } | number;
     discountAmount?: { toNumber: () => number } | number;
@@ -797,6 +829,7 @@ export class PosService {
       orderNumber: order.orderNumber,
       storeId: order.storeId,
       customerId: order.customerId ?? null,
+      exchangeFromOrderId: order.exchangeFromOrderId ?? null,
       customerName: order.customer?.name ?? null,
       customerCode: order.customer?.code ?? null,
       subtotalAmount: subtotal,

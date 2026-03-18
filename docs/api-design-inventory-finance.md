@@ -66,6 +66,8 @@ interface PagedResult<T> {
 | Path                    | Method | 說明                             | 所屬模組   | 狀態   |
 |-------------------------|--------|----------------------------------|------------|--------|
 | `/inventory/events`     | POST   | 新增一筆庫存事件（append-only） | Inventory  | **stable** |
+| `/inventory/events/batch-stocktake` | POST | 多品多倉盤點（body warehouseId、lines[{ productId, actualQty }]；自動算差異寫 STOCKTAKE_GAIN/LOSS；Admin Key） | Inventory | **stable** |
+| `/inventory/events/scan-stocktake` | POST | 掃碼盤點輸入流（先以 sku；後續可擴充 barcode）：body warehouseId、lines[{ sku, actualQty }]；後端解析 sku→productId 後走 batch-stocktake；Admin Key | Inventory | **stable** |
 | `/inventory/import` | POST | 同 **`/inventory/events/import`**（CSV 盤點；單段 path 利於閘道／舊代理） | Inventory | **stable** |
 | `/inventory/events/import` | POST | CSV 盤點調整（multipart **`file`**；**sku** + **warehouseCode** 或 **warehouseId** + **quantityDelta**；逐列 **STOCKTAKE_GAIN/LOSS**；**{ ok, failed, referenceId }**；1 萬列；Admin Key） | Inventory | **stable** |
 | `/inventory/transfer`   | POST   | **原子調撥**（來源倉 TRANSFER_OUT + 目的倉 TRANSFER_IN，同一 transaction；與 events 相同須 **X-Admin-Key** 若已設） | Inventory | **stable** |
@@ -74,9 +76,30 @@ interface PagedResult<T> {
 | `/inventory/balances/export` | GET | 單倉庫存餘額 CSV（query **`warehouseId` 必填**；最多 1 萬列；UTF-8 BOM；**X-Admin-Key** 若已設；與 events/export 同 escape） | Inventory | **stable** |
 | `/inventory/events`     | GET    | 查詢庫存事件歷史（分頁）        | Inventory  | **stable** |
 | `/inventory/events/export` | GET | 庫存事件 CSV（最多 1 萬筆；**X-Admin-Key** 若已設） | Inventory | **stable** |
+| `/inventory/slow-moving` | GET | 滯銷品（近 N 天銷量＜門檻且庫存＞門檻；query merchantId、warehouseId?、lookbackDays?、salesThreshold?、onHandThreshold?） | Inventory | **stable** |
 | `/finance/events`       | GET    | 查詢金流事件（只讀、分頁／篩選） | Finance    | **stable** |
 | `/finance/events/export` | GET | 金流事件 CSV（query 同 GET events；最多 1 萬列；BOM；**X-Admin-Key** 若已設） | Finance | **stable** |
 | `/finance/events`       | POST   | 新增一筆金流事件（append-only） | Finance    | **stable** |
+| `/finance/summary`     | GET    | 金流彙總（query：from、to、preset=last30d、**groupBy=type｜partyId｜day｜week**；回應 byType / byParty / trend） | Finance | **stable** |
+| `/finance/balances`   | GET    | 應收／應付餘額（Phase 4；query 可選 partyId、**kind**；回傳 partyId、receivable、payable、**displayName?**、**kind?**；依 partyId 前綴或 Customer/Supplier 解析 kind；kind 篩選：`customer`｜`supplier`） | Finance | **stable** |
+
+金流報表（GET /finance/events、GET /finance/summary）若未來對 `from`／`to` 做區間驗證，將與 POS 報表一致回傳 **`REPORT_INVALID_RANGE`**／**`REPORT_RANGE_TOO_LARGE`**，見 [backend-error-format.md](backend-error-format.md)。
+
+#### 報表穿透（referenceId 跨模組連結）
+
+- **FinanceEvent.referenceId**（報表穿透用）可對應：
+  - **POS 訂單**：`SALE_RECEIVABLE`、`SALE_PAYMENT`、`SALE_REFUND` 之 referenceId = PosOrder.id；可依 `GET /finance/events?referenceId={orderId}` 查詢後，以該 id 打 `GET /pos/orders/:id` 取得訂單明細。
+  - **驗收單**：`PURCHASE_PAYABLE`、`PURCHASE_RETURN` 之 referenceId = ReceivingNote.id；可連至採購驗收單詳情。
+- **GET /finance/events**、**GET /finance/events/export** 皆回傳 `referenceId`，前端報表可依此提供「點擊穿透」至 POS 訂單或驗收單。
+
+> **來源保證（stable）**：
+> - `FinanceEvent.referenceId` **僅**會是 `PosOrder.id` 或 `ReceivingNote.id`（皆為 UUID）；不會回傳非 UUID 的 referenceId（若未來擴充其他來源，需在本段補規則或新增 resolve 端點）。
+
+> **統一規則（stable）**：
+> - referenceId 若為 **UUID**：
+>   - 優先視為 **PosOrder.id**（可用 `GET /pos/orders/:id` 驗證；存在即 POS 訂單）
+>   - 否則視為 **ReceivingNote.id**（可用 `GET /receiving-notes/:id` 驗證；存在即採購驗收單）
+> - 目前系統內 **FinanceEvent.referenceId** 僅使用上述兩種 UUID；若未來引入其他來源，需在本段補上辨識規則或新增 resolve 端點。
 
 ---
 
@@ -94,6 +117,30 @@ interface PagedResult<T> {
 - **列級失敗**（不中斷後續列）：缺 sku／倉／商品不存在／delta 非法／扣庫不足等 → 列入 **`failed`**。
 - **Response** `200`：`{ "ok": number, "failed": [{ "row": number, "reason": string }], "referenceId": string }`（**row** 為檔案列號，表頭第 1 列）。
 - **錯誤**：**400** **`INVENTORY_IMPORT_HEADER`**／**`INVENTORY_IMPORT_TOO_MANY_ROWS`**；**400** **`INVENTORY_IMPORT_FILE_REQUIRED`**（未上傳 file）。
+
+#### 4.1c 多品多倉盤點 `POST /inventory/events/batch-stocktake`（stable）
+
+- **Method**：`POST`
+- **Path**：`/inventory/events/batch-stocktake`
+- **用途**：庫存頁支援多品多倉盤點；依 `actualQty` 與 `onHandQty` 差異，一鍵提交 STOCKTAKE_GAIN／STOCKTAKE_LOSS。
+- **Body**：`{ warehouseId: string, lines: [{ productId: string, actualQty: number }] }`
+- **邏輯**：依 `InventoryBalance` 取得各 productId+warehouseId 的 `onHandQty`；`delta = actualQty - onHandQty`；`delta > 0` → STOCKTAKE_GAIN(quantity=delta)；`delta < 0` → STOCKTAKE_LOSS(quantity=Math.abs(delta))；`delta === 0` 不寫入事件。
+- **Response** `200`：`{ ok: number, failed: [{ lineIndex: number, reason: string }], referenceId: string }`
+- **錯誤**：**400** **`INVENTORY_INVALID_INPUT`**（warehouseId 空、lines 空）；**404** **`INVENTORY_WAREHOUSE_NOT_FOUND`**
+- **保護**：需 **X-Admin-Key**（同 POST /inventory/events）
+
+#### 4.1d 掃碼盤點 `POST /inventory/events/scan-stocktake`（stable）
+
+- **Method**：`POST`
+- **Path**：`/inventory/events/scan-stocktake`
+- **用途**：支援掃碼/輸入 sku 或 barcode 的盤點流程；後端會先解析 `sku`（欄位名保留，但可填 barcode）→productId，再以 batch-stocktake 的方式寫入 STOCKTAKE_GAIN／STOCKTAKE_LOSS。
+- **Body**：`{ warehouseId: string, lines: [{ sku: string, actualQty: number }] }`（`sku` 欄位可填 barcode）
+- **解析規則（stable）**
+  - 先以 `Product.sku` 精確比對；找不到再以 `Product.barcode` 精確比對
+  - 單筆無法解析時不會整體失敗，會回 `failed[]`：`{ lineIndex, reason: "unknown sku: <value>" }`
+- **Response** `200`：`{ ok: number, failed: [{ lineIndex: number, reason: string }], referenceId: string }`
+- **錯誤**：**400** **`INVENTORY_INVALID_INPUT`**（warehouseId 空、lines 空）；**404** **`INVENTORY_WAREHOUSE_NOT_FOUND`**
+- **保護**：需 **X-Admin-Key**（同 POST /inventory/events）
 
 ---
 
@@ -116,7 +163,7 @@ interface PagedResult<T> {
   "type": "SALE_OUT",
   "quantity": 2,
   "occurredAt": "2026-03-13T10:00:00Z",
-  "referenceId": "POS-20260313-0001",
+  "referenceId": "uuid-of-pos-order",
   "note": "POS sale"
 }
 ```
@@ -132,7 +179,7 @@ interface PagedResult<T> {
     "type": "SALE_OUT",
     "quantity": 2,
     "occurredAt": "2026-03-13T10:00:00Z",
-    "referenceId": "POS-20260313-0001",
+    "referenceId": "uuid-of-pos-order",
     "note": "POS sale",
     "createdAt": "2026-03-13T10:00:01Z"
   },
@@ -207,6 +254,54 @@ interface PagedResult<T> {
 - **保護**：若環境變數 **`ADMIN_API_KEY`** 已設定，須 **`X-Admin-Key`**；未帶或錯誤 → `401` **`ADMIN_API_KEY_REQUIRED`**。
 - **錯誤**：`400 INVENTORY_INVALID_INPUT`（缺 warehouseId）；`404 INVENTORY_WAREHOUSE_NOT_FOUND`。
 
+#### 4.2d 即將到期批次查詢 `GET /inventory/expiring`（draft）
+
+- **Method**：`GET`
+- **Path**：`/inventory/expiring`
+- **用途**：查詢「即將到期且仍有庫存」之批次清單，供飼料／生鮮等商品做效期管理與報表。
+- **狀態**：`draft`（本輪實作後可標記為 stable）。
+
+**Query 參數**
+
+- `warehouseId?`：單一倉庫 UUID；未帶時代表所有倉。
+- `productId?`：單一商品 UUID；未帶時代表所有商品。
+- `from?` / `to?`：效期區間（ISO 日期或 DateTime）；若未帶，則預設以「今天」為起點。
+- `daysAhead?`：整數天數，用來指定「從今天起往後 N 天內到期」；僅在未帶 `to` 時生效；預設 `30`，上限建議 `365`。
+- `page?`（預設 `1`）、`pageSize?`（預設 `50`，上限 `200`）。
+
+> 決策：以 **ReceivingNoteLine** 做為批次與效期的來源（`batchCode`／`expiryDate`），`POST /receiving-notes/:id/complete` complete 時會寫入對應含批次／效期的 `InventoryEvent`。  
+> `GET /inventory/expiring` 以 **InventoryBalance.onHandQty>0** 配合事件上的 `batchCode`／`expiryDate` 聚合為批次餘額。
+
+**成功回應（草案）**
+
+```json
+{
+  "items": [
+    {
+      "productId": "uuid-of-product",
+      "warehouseId": "uuid-of-warehouse",
+      "sku": "FEED-001",
+      "productName": "狗飼料 10kg",
+      "batchCode": "B202603",
+      "expiryDate": "2026-04-15T00:00:00.000Z",
+      "onHandQty": 120
+    }
+  ],
+  "page": 1,
+  "pageSize": 50,
+  "total": 1
+}
+```
+
+- `batchCode`：批次代碼；若來源無提供則為 `null`。
+- `expiryDate`：效期日；以 ISO 字串回傳。
+- `onHandQty`：該批次目前庫存量（與 `InventoryBalance` 對齊）。
+
+**錯誤情境（草案）**
+
+- `400 INVENTORY_INVALID_INPUT`：`daysAhead` 非正整數或超過上限、`from`／`to` 解析失敗或 `from > to`。
+- `404 INVENTORY_WAREHOUSE_NOT_FOUND`：帶入的 `warehouseId` 不存在。
+
 ---
 
 #### 4.3 查詢庫存事件歷史
@@ -258,6 +353,103 @@ interface PagedResult<T> {
 
 ---
 
+#### 4.3e 滯銷品 `GET /inventory/slow-moving`（stable）
+
+- **Method**：`GET`
+- **Path**：`/inventory/slow-moving`
+- **用途**：查詢近 N 天銷量小於門檻且庫存大於門檻之商品，供報表與清倉決策。
+- **狀態**：**stable**。
+
+**Query 參數**
+
+- `merchantId`（必填）：商家 UUID。
+- `warehouseId?`：單一倉庫 UUID；未帶時代表該商家所有倉庫合併評估。
+- `lookbackDays?`：回溯天數，預設 `30`。
+- `salesThreshold?`：銷量門檻，銷量**小於**此值視為滯銷，預設 `0`。
+- `onHandThreshold?`：庫存門檻，庫存**大於**此值才列入（排除已無庫存），預設 `1`。
+
+**成功回應**
+
+```json
+{
+  "items": [
+    {
+      "productId": "uuid",
+      "sku": "SKU-001",
+      "name": "商品名稱",
+      "soldQty": 2,
+      "onHandQty": 50,
+      "warehouseId": "uuid"
+    }
+  ],
+  "from": "2025-02-15",
+  "to": "2025-03-17"
+}
+```
+
+- `soldQty`：區間內 SALE_OUT 彙總數量。
+- 篩選條件：`soldQty < salesThreshold` 且 `onHandQty > onHandThreshold`。
+
+---
+
+#### 4.4 補貨建議 `GET /inventory/replenishment-suggestions`（draft）
+
+- **Method**：`GET`
+- **Path**：`/inventory/replenishment-suggestions`
+- **用途**：根據最近一段時間的實際銷售量與目前庫存，給出各商品的「建議補貨數量」，供後台產生採購單草稿或人工調整。
+- **狀態**：`draft`（本輪實作後可標記為 stable）。
+
+**Query 參數**
+
+- `merchantId`（必填）：商家 UUID。
+- `warehouseId?`：單一倉庫 UUID；未帶時代表該商家所有倉庫合併評估。
+- `daysLookback?`：計算平均銷售量的回溯天數，預設 `30`，建議範圍 `7～90`。
+- `daysAhead?`：預計要準備的未來天數，預設 `30`。
+- `safetyDays?`：安全天數緩衝，預設 `7`；實作時先採用預設值，未來可改成 per-merchant 設定或 query 覆寫。
+- `minSuggestedQty?`：最低建議補貨量（例如 `1`）；小於此值可視為不建議補貨，預設 `0`。
+- `page?`（預設 `1`）、`pageSize?`（預設 `50`，上限 `200`）。
+
+**計算概念（供實作參考）**
+
+- 期間內總銷量：`totalSold`（可依 `SALE_OUT` 或 POS 訂單推算）。
+- 平均日銷量：`avgDailySales = totalSold / daysLookback`。
+- 安全庫存目標：`targetStock = avgDailySales * (daysAhead + safetyDays)`。
+- 目前庫存：來自 `InventoryBalance.onHandQty`。
+- 建議補貨量：`suggestedQty = max(0, ceil(targetStock - onHandQty))`。
+
+**成功回應（草案）**
+
+```json
+{
+  "config": {
+    "daysLookback": 30,
+    "daysAhead": 30,
+    "safetyDays": 7
+  },
+  "items": [
+    {
+      "productId": "uuid-of-product",
+      "warehouseId": "uuid-of-warehouse",
+      "sku": "FEED-001",
+      "productName": "狗飼料 10kg",
+      "onHandQty": 20,
+      "avgDailySales": 3.5,
+      "targetStock": 133,
+      "suggestedQty": 113,
+      "reason": "onHand below targetStock"
+    }
+  ],
+  "page": 1,
+  "pageSize": 50,
+  "total": 1
+}
+```
+
+- `config`：實際採用的 `daysLookback`／`daysAhead`／`safetyDays`（即使未在 query 明傳也會回報，方便前端與之後改成設定）。
+- `reason`：文字說明（例如 `onHand below targetStock`、`no recent sales` 等；初版可選填）。
+
+---
+
 ### 5. Finance API 詳細規格
 
 #### 5.0 查詢金流事件（只讀）
@@ -279,6 +471,45 @@ interface PagedResult<T> {
 **成功回應** `200` — `PagedResult<FinanceEvent>`（與 POST 成功單筆欄位一致；`amount`／`taxAmount` 為數字）
 
 **錯誤**：`400 FINANCE_LIST_PAGE_INVALID`（page／pageSize 非法）。
+
+#### 5.0c Party（多方關係）抽象（B12，draft）
+
+本專案的 `FinanceEvent.partyId` 代表「金流對象（Party）」的抽象識別，用來支援：
+
+- **單一訂單對多方**：同一筆訂單，同時對「客戶」「電商平台」「客印廠商」「門市／內部」產生不同的應收／應付／費用事件。
+- **應收應付彙總**：`GET /finance/balances`／`GET /finance/summary groupBy=partyId` 可依 party 彙總。
+
+#### 5.0d 應收應付餘額 `GET /finance/balances`（stable）
+
+- **Query**：
+  - `merchantId`（必填）：商家 UUID（用於多商家資料隔離）
+  - `partyId`（可選，精確比對）
+  - **`kind`**（可選）：`customer`｜`supplier`，依 partyId 前綴或 Customer/Supplier 表解析後篩選
+  - `page`（預設 `1`）、`pageSize`（預設 `50`，上限 `200`）
+- **回應**：`{ items, page, pageSize, total, totals }`
+  - `items`: `[{ partyId, receivable, payable, displayName?, kind? }]`
+  - `totals`: `{ receivable, payable }`（為**篩選後**全集合的加總）
+  - `displayName`：依 partyId 對照 Customer.name 或 Supplier.name，無則省略。
+  - `kind`：依 partyId 前綴（`customer:`、`supplier:`）解析；無前綴時查 Customer／Supplier 推論，無法推論則省略。
+
+**Party 的概念（設計草案）**
+
+- **PartyKind**（建議）：`CUSTOMER`｜`SUPPLIER`｜`PLATFORM`｜`VENDOR`｜`STORE`｜`MERCHANT`｜`OTHER`
+- **PartyRef（建議格式）**：`{ kind, refId, displayName? }`
+
+**落地方式（兩種方案，先採用 A；B 為後續演進）**
+
+- **A（先採用，無需新增表）**：`partyId` 使用字串前綴形成穩定 key  
+  - 格式：`${kind}:${refId}`  
+  - 例：`CUSTOMER:uuid`、`SUPPLIER:uuid`、`PLATFORM:shopee`、`VENDOR:print-001`
+  - 優點：不需 schema 變更即可表達多方；缺點：顯示名稱需另外對照或由 `note` 帶入。
+- **B（後續）**：新增 `Party` 表（或 `FinanceParty`）  
+  - 欄位：`id`、`merchantId`、`kind`、`refId?`、`name`、`metaJson?`  
+  - `FinanceEvent.partyId` 改為 FK（或新增 `partyRefId`），並提供後台對照與查詢。
+
+> **統一規則（Phase 2，stable）**：
+> - `FinanceEvent.partyId` 以 **小寫前綴**作為穩定 key：`customer:{customerId}`、`supplier:{supplierId}`（其他 kind 後續擴充）
+> - 舊資料若仍為純 UUID（無前綴）仍允許查詢，但新寫入請一律使用前綴格式，以避免不同 kind 撞值與讓前端可穩定顯示 kind。
 
 #### 5.0b 金流事件 CSV 匯出 `GET /finance/events/export`（stable）
 
@@ -333,6 +564,37 @@ interface PagedResult<T> {
 
 - `400 FINANCE_INVALID_INPUT`：欄位錯誤。
 - `400 FINANCE_UNSUPPORTED_TYPE`：未支援的 `FinanceEventType`。
+
+#### 5.2 多方應收應付：由單一訂單產生多筆 FinanceEvent（B12，draft）
+
+以下示例說明「同一筆訂單」如何拆成多筆 `FinanceEvent`（append-only），以支援電商平台與外部廠商的多方關係。
+
+**情境 A：電商平台代收（平台＋門市＋客戶）**
+
+- 訂單：客戶下單 \(total=1000\)，平台抽成 10%（100），平台代收後 T+7 結算給門市 900。
+- 建議事件：
+  - `SALE_RECEIVABLE`：party=`CUSTOMER:{customerId}` amount=1000 referenceId=orderId
+  - `SALE_PAYMENT`：party=`PLATFORM:shopee` amount=1000 referenceId=orderId note=「平台代收」
+  - `ADJUSTMENT`（或新增型別如 `SALE_PLATFORM_FEE`，後續再擴）：
+    - party=`PLATFORM:shopee` amount=100 referenceId=orderId note=「平台抽成」
+  - `SALE_PAYMENT`（或 `ADJUSTMENT`，視模型）：
+    - party=`STORE:{storeId}` amount=900 referenceId=orderId note=「平台結算入帳」
+
+> 若要更精準地表達「費用」與「結算」，建議後續擴充 `FinanceEventType`（例如 `SALE_COMMISSION`／`SALE_SETTLEMENT`），但本輪先以設計草案為主。
+
+**情境 B：客印／代工（客戶＋外部廠商＋門市）**
+
+- 訂單：客戶付款 1500，其中 800 需支付給外部印刷廠，門市毛利 700。
+- 建議事件：
+  - `SALE_RECEIVABLE`：party=`CUSTOMER:{customerId}` amount=1500 referenceId=orderId
+  - `SALE_PAYMENT`：party=`CUSTOMER:{customerId}` amount=1500 referenceId=orderId
+  - `PURCHASE_PAYABLE`（或新增型別 `VENDOR_PAYABLE`，後續再擴）：
+    - party=`VENDOR:print-001` amount=800 referenceId=orderId note=「客印代工成本」
+
+**查詢與彙總建議**
+
+- `GET /finance/events?partyId=PLATFORM:shopee` 可查平台相關收付與費用。
+- `GET /finance/summary?groupBy=partyId` 可得到各 party 的應收／應付維度（需後端彙總邏輯以 type 分組）。
 
 ---
 

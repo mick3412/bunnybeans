@@ -65,4 +65,85 @@ describe('ProductService importFromCsvBuffer (integration)', () => {
 
     await prisma.product.deleteMany({ where: { sku: { in: [skuNew, skuUp] } } });
   }, 15000);
+
+  it('batchUpdatePrice updates salePrice for multiple products', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const p1 = await prisma.product.create({
+      data: { sku: `BATCH-P1-${Date.now()}`, name: 'Batch P1', salePrice: 10 },
+    });
+    const p2 = await prisma.product.create({
+      data: { sku: `BATCH-P2-${Date.now()}`, name: 'Batch P2', salePrice: 20 },
+    });
+
+    const out = await productService.batchUpdatePrice([p1.id, p2.id], 88);
+    expect(out.updated).toBe(2);
+
+    const a1 = await prisma.product.findUnique({ where: { id: p1.id } });
+    const a2 = await prisma.product.findUnique({ where: { id: p2.id } });
+    expect(Number(a1?.salePrice)).toBe(88);
+    expect(Number(a2?.salePrice)).toBe(88);
+
+    await prisma.product.deleteMany({ where: { id: { in: [p1.id, p2.id] } } });
+  }, 15000);
+
+  it('searchBarcode returns matched product by exact barcode', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const barcode = `BC-${Date.now()}`;
+    const p = await prisma.product.create({
+      data: { sku: `BC-SKU-${Date.now()}`, barcode, name: 'Barcode Product' },
+    });
+    try {
+      const out = await productService.searchBarcode(barcode);
+      expect(Array.isArray(out.items)).toBe(true);
+      expect(out.items.some((x) => x.id === p.id)).toBe(true);
+    } finally {
+      await prisma.product.delete({ where: { id: p.id } });
+    }
+  }, 10000);
+
+  it('searchBarcode empty q returns empty items', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const out = await productService.searchBarcode('   ');
+    expect(out.items).toEqual([]);
+  });
+
+  it('getProduct with includeBalances returns balances', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-BAL-${Date.now()}`, name: 'Balances Merchant' },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: { code: `W-BAL-${Date.now()}`, name: 'Balances WH', merchantId: merchant.id },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-BAL-${Date.now()}`, name: 'Balances Product' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: {
+        productId_warehouseId: { productId: product.id, warehouseId: warehouse.id },
+      },
+      create: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        onHandQty: 15,
+      },
+      update: { onHandQty: 15 },
+    });
+
+    const out = await productService.getProduct(product.id, { includeBalances: true });
+    expect((out as { balances?: unknown }).balances).toBeDefined();
+    const balances = (out as { balances?: { warehouseId: string; onHandQty: number }[] }).balances;
+    expect(balances).toHaveLength(1);
+    expect(balances![0].warehouseId).toBe(warehouse.id);
+    expect(balances![0].onHandQty).toBe(15);
+
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 20000);
 });

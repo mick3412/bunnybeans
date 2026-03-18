@@ -24,27 +24,78 @@ model Merchant {
   loyaltySettings  LoyaltySettings?
   loyaltyCoupons   LoyaltyCoupon[]
   pointLedgers     PointLedger[]
+  segments        Segment[]
+  tierRules       TierRule[]
+  productTags     ProductTag[]
 }
 
 model Customer {
-  id          String   @id @default(uuid())
-  merchant    Merchant @relation(fields: [merchantId], references: [id])
-  merchantId  String
-  code        String?
-  name        String
-  phone       String?
-  email       String?
-  memberLevel String?
-  memberCode  String?
-  joinDate    DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  posOrders   PosOrder[]
-  pointLedgers PointLedger[]
+  id           String   @id @default(uuid())
+  merchant     Merchant @relation(fields: [merchantId], references: [id])
+  merchantId   String
+  code         String?
+  name         String
+  phone        String?
+  email        String?
+  memberLevel  String?
+  memberCode   String?
+  joinDate     DateTime?
+  status       String   @default("ACTIVE") // ACTIVE | BLOCKED
+  blockReason  String?
+  tags         Json     @default("[]") // string[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  posOrders    PosOrder[]
+  pointLedgers     PointLedger[]
+  contactLogs      CustomerContactLog[]
+  couponIssues     LoyaltyCouponIssue[]
 
   @@index([merchantId])
   @@index([merchantId, phone])
   @@index([merchantId, email])
+  @@index([merchantId, status])
+}
+
+model CustomerContactLog {
+  id             String   @id @default(uuid())
+  customer       Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId     String
+  type           String   // e.g. CALL, VISIT, NOTE
+  note           String?
+  nextFollowUpAt DateTime?
+  createdBy     String?
+  createdAt      DateTime @default(now())
+
+  @@index([customerId])
+}
+
+/// 分群（階段 E）：JSON 條件可後續擴充 tag／memberLevel／消費區間等
+model Segment {
+  id         String   @id @default(uuid())
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId String
+  name       String
+  conditions Json?    // e.g. { tag?: string, memberLevel?: string }; empty = all
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([merchantId])
+}
+
+/// 分級規則（階段 E）：累積消費／筆數等達門檻則升級為 targetLevel
+model TierRule {
+  id           String   @id @default(uuid())
+  merchant     Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId   String
+  name         String
+  ruleType     String   // SPEND_SUM | ORDER_COUNT（先實作 SPEND_SUM）
+  threshold    Decimal  @db.Decimal(12, 2) // 累積金額或筆數門檻
+  targetLevel  String   // 達標後設為此 memberLevel，如 VIP
+  lookbackDays Int      @default(365)     // 統計區間（天）
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([merchantId])
 }
 
 /// 非同步大量匯入（單 process 內 setImmediate；多 instance 時每 pod 各自佇列）
@@ -56,6 +107,78 @@ model BulkImportJob {
   error      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+/// 階段 G：CRM 分群發券 job
+model CrmMarketingJob {
+  id          String   @id @default(uuid())
+  merchantId  String
+  kind        String
+  segmentId   String
+  couponId    String
+  status      String
+  resultJson  String?
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([merchantId])
+  @@index([status])
+}
+
+/// 階段 G：會員發券紀錄
+model LoyaltyCouponIssue {
+  id         String       @id @default(uuid())
+  customer   Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  coupon     LoyaltyCoupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  couponId   String
+  issuedAt   DateTime     @default(now())
+  @@unique([customerId, couponId])
+  @@index([couponId])
+}
+
+/// 階段 G：行銷發券規則常駐
+model CrmCouponDispatchRule {
+  id           String   @id @default(uuid())
+  merchantId   String
+  name         String
+  segmentId    String
+  couponId     String
+  enabled      Boolean  @default(true)
+  scheduleType String
+  cronExpr     String?
+  nextRunAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@index([merchantId])
+  @@index([merchantId, enabled])
+}
+
+/// 關帳期間（§7.1）
+model FinancePeriodClose {
+  id         String   @id @default(uuid())
+  merchantId String?
+  startDate  DateTime @db.Date
+  endDate    DateTime @db.Date
+  closedAt   DateTime @default(now())
+  closedBy   String?
+  status     String   @default("CLOSED")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@index([merchantId, startDate, endDate])
+}
+
+/// 金流 Audit Log（§7.2）
+model FinanceAuditLog {
+  id        String   @id @default(uuid())
+  eventId   String
+  actor     String?
+  source    String?
+  amount    Decimal? @db.Decimal(12, 2)
+  eventType String?
+  createdAt DateTime @default(now())
+  @@index([eventId])
+  @@index([createdAt])
 }
 
 /// 促銷規則（Admin 設定；POS 依 merchant + 時間窗 + draft=false 套用）
@@ -124,9 +247,10 @@ model LoyaltyCoupon {
   validTo     DateTime?
   maxUses     Int?
   usedCount   Int       @default(0)
-  active      Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  couponIssues LoyaltyCouponIssue[]
 
   @@unique([merchantId, code])
   @@index([merchantId])
@@ -177,6 +301,19 @@ model Category {
   updatedAt DateTime  @updatedAt
 }
 
+model ProductTag {
+  id         String   @id @default(uuid())
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  merchantId String
+  name       String
+  code       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([merchantId, code])
+  @@index([merchantId])
+}
+
 model Brand {
   id        String    @id @default(uuid())
   code      String    @unique
@@ -189,11 +326,20 @@ model Brand {
 model Product {
   id          String    @id @default(uuid())
   sku         String    @unique
+  barcode     String?   @unique
   name        String
   description String?
   specSize    String?
-  specColor   String?
-  weightGrams Int?
+  specColor   String?   // deprecated: use specStyle
+  weightGrams Int?      // deprecated: use specWeight
+  /// 容量（如「500ml」）
+  specCapacity     String?
+  /// 款式（取代 specColor 語意）
+  specStyle        String?
+  /// 重量含單位（如「200g」「1kg」）
+  specWeight       String?
+  /// 有效期限描述（如「常溫 1 年」）
+  expiryDescription String?
   listPrice   Decimal   @default(0) @db.Decimal(12, 2)
   salePrice   Decimal   @default(0) @db.Decimal(12, 2)
   costPrice   Decimal?  @db.Decimal(12, 2)
@@ -211,6 +357,7 @@ model Product {
   purchaseOrderLines    PurchaseOrderLine[]
 
   @@index([brandId])
+  @@index([categoryId])
 }
 
 model InventoryEvent {
@@ -222,6 +369,12 @@ model InventoryEvent {
   warehouse   Warehouse        @relation(fields: [warehouseId], references: [id])
   warehouseId String
   quantity    Int
+  /// 批號（由進貨驗收等流程帶入；選填）
+  batchCode   String?
+  /// 效期（由進貨驗收等流程帶入；選填）
+  expiryDate  DateTime?
+  /// 重量單位（例如 KG, G；選填）
+  weightUnit  String?
   referenceId String?
   note        String?
   createdAt   DateTime         @default(now())
@@ -263,6 +416,8 @@ model PosOrder {
   storeId           String
   customer          Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerId        String?
+  /// 換貨關聯：若此單為換貨後的新單，指向「原單」PosOrder.id
+  exchangeFromOrderId String?
   subtotalAmount    Decimal       @db.Decimal(12, 2)
   discountAmount    Decimal       @default(0) @db.Decimal(12, 2)
   totalAmount       Decimal       @db.Decimal(12, 2)
@@ -273,6 +428,8 @@ model PosOrder {
   payments PosOrderPayment[]
 
   @@index([customerId])
+  @@index([customerId, createdAt])
+  @@index([exchangeFromOrderId])
 }
 
 model PosOrderPayment {
@@ -291,6 +448,9 @@ model PosOrderItem {
   productId String
   quantity  Int
   unitPrice Decimal
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 enum InventoryEventType {
@@ -423,7 +583,41 @@ model ReceivingNoteLine {
   qualifiedQty       Int               @default(0)
   returnedQty        Int               @default(0)
   returnReason       String?
+  /// 進貨批號（選填，用於庫存批次／效期管理）
+  batchCode          String?
+  /// 進貨效期日（選填，用於庫存批次／效期管理）
+  expiryDate         DateTime?
+  /// 重量單位（例如 KG, G；選填，用於飼料等商品）
+  weightUnit         String?
 
   @@index([receivingNoteId])
+}
+
+/// 運維：定時 job 最近一次執行紀錄（發券排程／關帳／快照）
+model OpsJobRunLog {
+  id        String   @id @default(uuid())
+  jobType   String   // e.g. crm-run-scheduled, finance-period-close, finance-snapshot
+  lastRunAt DateTime @default(now())
+  success   Boolean
+  message   String?  // error summary when success=false
+  createdAt DateTime @default(now())
+  @@index([jobType])
+}
+
+/// 報表穿透審計（ReportClickAudit）：記錄使用者點擊 referenceId 的解析結果與成功率
+model ReportClickAudit {
+  id           String   @id @default(uuid())
+  merchantId   String?
+  source       String   // e.g. finance-events, loyalty-ledger, pos-reports
+  field        String   // e.g. referenceId
+  referenceId  String
+  resolvedKind String   // posOrder | receivingNote | unknown（先以字串存，避免未來擴充需 migration）
+  success      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([merchantId])
+  @@index([source])
+  @@index([resolvedKind])
+  @@index([createdAt])
 }
 

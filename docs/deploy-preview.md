@@ -12,6 +12,17 @@
 - **後端**（若前端改接真實 API）：本機可 `db push`；**生產建議 `migrate deploy`** + seed 政策與上項一致。
 - **單一 3003**：本機／Tunnel **僅允許一個後端 process 佔用 :3003**，多開會導致促銷 preview、Dashboard、E2E 打到舊 process → **404 或舊 schema**。
 - **E2E**：後端預設 **port 3003**；腳本需 **`DATABASE_URL` + seed** 後再起 API。固定 `storeId`／`productId` 請見 [docs/db-seed.md](db-seed.md)「E2E 前置與固定識別」。
+- **有 DB 時 CI 一鍵綠**：**建議在已設定 `DATABASE_URL` 且目標為測試／Preview 的環境中，改用一條指令**：  
+  **`pnpm ci:backend-with-db`**  
+  其內部步驟等同：**`pnpm --filter pos-erp-backend exec prisma migrate deploy`** → **`pnpm db:seed`**（會清空業務表，僅限測試／Preview，見 [db-seed.md](db-seed.md)）→ **`pnpm --filter pos-erp-backend test`**。  
+  若需保留現有資料庫、**不想執行 seed**，請改以上方三步驟分開下指令；jest 全綠即後端通過。Guard／E2E 流程見各 INSTRUCTIONS。  
+  **ci:backend-with-db 仍受 P3009 限制**：在 clean DB 上可跑時優先使用；若目標 DB 曾有 failed migration 或 migrate 無法從零建表，請改用下方「常見錯誤與排除」中的**從零建庫替代流程**（`db push` → `db:seed` → `test`）。
+- **CI/Preview 健檢：schema drift / migrations 一致性**：新增一條做「migrations 與 schema 一致性」檢查的指令（需要一個可拋棄的 shadow DB）：  
+  **`pnpm ci:schema-migration-check`**  
+  其內部會執行 `prisma validate` 與 `prisma migrate diff --from-migrations --to-schema-datamodel --shadow-database-url --exit-code`。  
+  - **必要環境變數**：`SHADOW_DATABASE_URL`（指向可拋棄的 Postgres DB；CI/Preview 專用，勿用生產 DB）  
+  - **成功條件**：exit code = 0（schema 與 migrations 一致）  
+  - **常見失敗**：exit code = 2（代表 migrations 與 schema 有差異，常見於手動改 schema 卻沒產生 migration、或 migration/sql 與 schema 不一致）
 - **POS 路由**：登入後為 `/pos`（側欄：收銀／訂單／促銷占位／今日報表）；後台仍為 `/admin`。Tunnel 預覽時 **`VITE_API_BASE_URL`** 須指向可連線之 API（見下文「選 B」）。
 - 專案已推送到 **GitHub**（或 GitLab / Bitbucket，Vercel 支援）。
 - 已註冊 [Vercel](https://vercel.com) 帳號（可用 GitHub 登入）。
@@ -95,6 +106,51 @@
 
 ---
 
+## 後端定時工作與排程（發券／關帳／快照）
+
+> 下列為「程式端已實作，仍需 infra 排程」的定時工作建議。實際 cron／排程設定由 DevOps／Infra 決定，可用平臺排程 HTTP 呼叫或自建 worker。
+
+- **發券規則排程（CrmCouponDispatchRule）**
+  - 目的：依 **CrmCouponDispatchRule** 對符合分群的會員發券，維護 `CrmMarketingJob`／`LoyaltyCouponIssue` 狀態。
+  - 執行端點：**`POST /crm/jobs/run-scheduled`**（Admin；需 `X-Admin-Key`）。
+  - 建議頻率：每 **5–15 分鐘** 一次即可（視實際會員量與 SLA 調整）。
+  - 行為：掃描 `enabled=true`、`nextRunAt <= now` 的 dispatch-rules，為每筆建立對應 **crm job** 並更新 `nextRunAt`。
+
+- **關帳與財務期間（FinancePeriodClose / FinanceAuditLog）**
+  - 目的：限制已關帳區間寫入，並將後續金流異動寫入 **FinanceAuditLog** 供查核。
+  - 關帳端點：**`POST /finance/periods/close`**（Admin；body 含 `asOfDate`、`type: daily｜monthly` 等，詳見 `api-design-inventory-finance.md`）。  
+  - 解鎖端點（必要時人工操作）：**`POST /finance/periods/:id/unlock`**。
+  - 建議頻率：依實務流程，一般為 **每日收盤後一次**（daily），或每月結帳時計畫呼叫 monthly。
+  - 注意：`recordFinanceEvent` 會檢查目標日期是否落在已關帳期間，若是則拋出 `FINANCE_PERIOD_CLOSED`。
+
+- **財務快照生成（Finance snapshots）**
+  - 目的：將特定日期的財務彙總輸出為檔案快照，供外部報表或備查。
+  - 端點：**`POST /finance/snapshots`**（Admin；body `asOfDate` + `type: daily｜monthly`，回傳 `path`、`generatedAt`、`summary`）。
+  - 建議頻率：視報表需求安排，例如：
+    - 每日 01:00 產生前一日 **daily snapshot**。
+    - 每月第 1 天 02:00 產生上一個月份的 **monthly snapshot**。
+
+- **監控建議**
+  - 上述端點皆為同步 HTTP 呼叫：建議在排程系統中記錄 **HTTP status / latency / response body**，失敗時通知維運（Slack / Email 等）。
+  - 若排程失敗，可人工重送同一日期的 `POST /crm/jobs/run-scheduled` 或 `POST /finance/snapshots`（實作已避免重複寫入造成錯誤，細節見實際回傳訊息與 `backend-error-format.md`）。
+
+### 如何查看 job 狀態
+
+- **`GET /ops/jobs/status`**（已實作）：回傳各定時 job 類型之**最近一次執行時間**（`lastRunAt`）、**成功與否**（`success`）、**錯誤摘要**（`message`，失敗時）。`jobType` 含：`crm-run-scheduled`、`finance-period-close`、`finance-snapshot`。需先執行 migration **20260320100000_ops_job_run_log** 建立 **OpsJobRunLog** 表。
+- **`GET /ops/jobs`**（已實作）：OpsJobRunLog 列表，支援分頁與 kind 篩選。Query：`page`（預設 1）、`pageSize`（預設 20）、`kind`（jobType 篩選）。回應：`{ items: OpsJobRunLog[], total }`，依 `lastRunAt` 降序。
+- **關帳**：**`GET /finance/periods`** 可查既有關帳區間（startDate／endDate／closedAt）；即為「關帳 job」的執行結果。
+- **快照**：**`GET /ops/jobs/status`** 中 `finance-snapshot` 一筆即為最近一次 **`POST /finance/snapshots`** 的執行紀錄。
+
+### 如何手動補跑
+
+| 項目 | 做法 |
+|------|------|
+| 發券排程 | 呼叫 **`POST /crm/jobs/run-scheduled`**（Header **X-Admin-Key**）。會掃描 `nextRunAt <= now` 的 enabled 規則並觸發對應 segment-coupon job；可重複呼叫，已跑過的規則會更新 nextRunAt 至下一週期。 |
+| 關帳 | 呼叫 **`POST /finance/periods/close`**（body 含 `startDate`、`endDate`、`merchantId` 等，見 api-design-inventory-finance）。若該區間已關帳會回 **FINANCE_PERIOD_ALREADY_CLOSED**。 |
+| 快照 | 呼叫 **`POST /finance/snapshots`**（body `asOfDate`、`type: daily｜monthly`）。同一 asOfDate + type 可重複呼叫，回傳當次產生的 path／summary。 |
+
+---
+
 ## 若之後要一併部署後端
 
 可將後端部署到 Railway、Render、Fly.io 等，取得一個 https 網址後：
@@ -105,7 +161,22 @@
 
 ---
 
-## 疑難排解
+## 常見錯誤與排除（後端／CI／Seed）
+
+以下為執行 **migrate deploy**、**db:seed**、**ci:backend-with-db** 或本機後端時常見錯誤與建議解法。
+
+| 情境 | 可能原因 | 建議解法 |
+|------|----------|----------|
+| **Seed 失敗**（例如 FK 違反、必填欄位缺漏） | migration 與 schema 不同步、或 seed 劇本與現行 schema 不符 | 先執行 **`pnpm --filter pos-erp-backend exec prisma migrate deploy`** 確保表結構為最新；再跑 **`pnpm db:seed`**。若仍失敗，檢查 [db-seed.md](db-seed.md) 與 `backend/prisma/seed.ts` 是否與 Prisma schema 一致。 |
+| **連線逾時**（Connection timeout / ECONNREFUSED） | `DATABASE_URL` 未設、DB 未啟動、或網路／防火牆阻擋 | 確認環境變數 **`DATABASE_URL`** 已設定且可連（本機可 `psql $DATABASE_URL` 測試）。若為 CI，確認 CI 環境可連到該 DB（白名單 IP、VPN 等）。 |
+| **權限不足**（permission denied、role 無法 create table） | DB 使用者無 CREATE / ALTER 權限 | 以具足夠權限的 role 設定 **`DATABASE_URL`**；或於 DB 手動授權該 role 對 schema 的權限。 |
+| **Migration 失敗**（P3009：migrate found failed migrations） | 先前某次 migration 在目標 DB 上執行失敗，Prisma 標記為 failed | 依 [Prisma 文件](https://www.prisma.io/docs/guides/database/production-troubleshooting#resolve-failed-migrations) 處理：可 **resolve** 該 migration 為 rolled back 後重跑，或修復資料後標記為 applied。**勿**在生產庫隨意刪除 migration 紀錄。 |
+| **從零建庫或 P3009 無法 resolve** | `migrate deploy` 無法從零建表（如 PosOrder 無 baseline migration）、或 P3009 無法依文件 resolve | **替代流程**：`prisma db push`（依 schema 建表）→ `pnpm db:seed` → `pnpm --filter pos-erp-backend test`。`db push` 不產生 migration 紀錄，正式環境仍建議 `migrate deploy`；此流程適用本機／Preview 或需快速還原時。 |
+| **Jest 整合測試失敗**（Unique constraint、FK 錯誤） | 測試資料未清理、或並行執行導致同表衝突 | 確認各 integration-spec 的 **teardown**（afterAll／手動 DELETE）有執行；必要時以 **`jest --runInBand`** 改為單執行緒跑整合測試。 |
+
+---
+
+## 疑難排解（Vercel／前端）
 
 - **Build 失敗**：在 Vercel 專案 **Deployments** 點進該次部署，查看 **Building** 的 log，確認 `pnpm install` 與 `pnpm --filter pos-erp-frontend build` 是否成功。
 - **畫面正常但結帳／API 失敗**：多半是 `VITE_API_BASE_URL` 未設或指到錯誤網址；若目前僅需收集 UI 反饋，可先不設或留空並向客戶說明「按鈕僅供版面參考」。

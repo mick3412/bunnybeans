@@ -11,6 +11,7 @@ import { FinanceModule } from '../finance/finance.module';
 import { PosModule } from './pos.module';
 import { PosService } from './application/pos.service';
 import { PromotionService } from '../promotion/application/promotion.service';
+import { Prisma } from '@prisma/client';
 
 describe('PosService (integration)', () => {
   let app: TestingModule;
@@ -122,6 +123,7 @@ describe('PosService (integration)', () => {
     expect(financeEvents.length).toBeGreaterThanOrEqual(1);
     expect(Number(financeEvents[0].amount)).toBe(100);
 
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: order.id } });
     await prisma.posOrderItem.deleteMany({ where: { orderId: order.id } });
     await prisma.posOrder.delete({ where: { id: order.id } });
     await prisma.financeEvent.deleteMany({ where: { referenceId: order.id } });
@@ -134,6 +136,7 @@ describe('PosService (integration)', () => {
     await prisma.product.delete({ where: { id: product.id } });
     await prisma.warehouse.delete({ where: { id: warehouse.id } });
     await prisma.store.delete({ where: { id: store.id } });
+    await prisma.customer.deleteMany({ where: { merchantId: merchant.id } });
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 15000);
 
@@ -395,7 +398,7 @@ describe('PosService (integration)', () => {
       },
     });
     const store = await prisma.store.create({
-      data: { code: `SC-${Date.now()}`, name: 'Credit Store', merchantId: merchant.id },
+      data: { code: `SC-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: 'Credit Store', merchantId: merchant.id },
     });
     const warehouse = await prisma.warehouse.create({
       data: {
@@ -905,7 +908,7 @@ describe('PosService (integration)', () => {
     });
 
     const now = new Date();
-    await prisma.promotionRule.create({
+    const rule = await prisma.promotionRule.create({
       data: {
         merchantId: merchant.id,
         name: '滿百折十',
@@ -939,6 +942,12 @@ describe('PosService (integration)', () => {
     expect(order.subtotalAmount).toBe(100);
     expect(order.discountAmount).toBe(10);
 
+    const ruleAfter = await prisma.promotionRule.findUnique({
+      where: { id: rule.id },
+    });
+    expect(ruleAfter).toBeTruthy();
+    expect(ruleAfter!.usageCount).toBeGreaterThanOrEqual(1);
+
     await prisma.posOrderItem.deleteMany({ where: { orderId: order.id } });
     await prisma.posOrderPayment.deleteMany({ where: { orderId: order.id } });
     await prisma.posOrder.delete({ where: { id: order.id } });
@@ -955,4 +964,182 @@ describe('PosService (integration)', () => {
     await prisma.store.delete({ where: { id: store.id } });
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 20000);
+
+  it('promotion POINTS_MULTIPLIER applies to earned points for matching memberLevel', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `PMP-${Date.now()}`, name: 'Promo Points Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `PMP-S-${Date.now()}`, name: 'Promo Points Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `PMP-W-${Date.now()}`,
+        name: 'Promo Points WH',
+        merchantId: merchant.id,
+        storeId: store.id,
+      },
+    });
+    const customerVip = await prisma.customer.create({
+      data: { merchantId: merchant.id, name: 'VIP', status: 'ACTIVE', memberLevel: 'VIP' },
+    });
+    // earnPerNT default 100; set explicitly for deterministic points
+    await prisma.loyaltySettings.create({
+      data: {
+        merchantId: merchant.id,
+        earnPerNT: new Prisma.Decimal(100),
+        pointValueNT: new Prisma.Decimal(1),
+        birthdayMultiplier: new Prisma.Decimal(1),
+        rollingDays: 365,
+        notifyDaysBefore: 30,
+      },
+    });
+
+    const product = await prisma.product.create({
+      data: { sku: `PMP-SKU-${Date.now()}`, name: 'Promo Points Product' },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 10,
+        occurredAt: new Date(),
+        note: 'stock',
+      },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 10 },
+      update: { onHandQty: 10 },
+    });
+
+    const rule = await prisma.promotionRule.create({
+      data: {
+        merchantId: merchant.id,
+        name: 'VIP 2x points',
+        priority: 1,
+        draft: false,
+        startsAt: new Date('2026-01-01'),
+        endsAt: new Date('2026-12-31'),
+        exclusive: false,
+        firstPurchaseOnly: false,
+        memberLevels: ['VIP'],
+        conditions: [{ type: 'SPEND', op: '>=', value: 0 }] as any,
+        actions: [{ type: 'POINTS_MULTIPLIER', pointsMultiplier: 2 }] as any,
+      },
+    });
+
+    const preview = await promotionService.preview({
+      storeId: store.id,
+      customerId: customerVip.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 200 }],
+      at: new Date('2026-06-01T12:00:00Z'),
+    });
+    expect(preview.pointsMultiplier).toBe(2);
+
+    const order = await posService.createOrder({
+      storeId: store.id,
+      customerId: customerVip.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 200 }],
+      payments: [{ method: 'CASH', amount: 200 }],
+      occurredAt: new Date('2026-06-01T12:00:00Z').toISOString(),
+    });
+
+    const earned = await prisma.pointLedger.findFirst({
+      where: {
+        merchantId: merchant.id,
+        customerId: customerVip.id,
+        referenceId: order.id,
+        type: 'EARNED',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    // base points = floor(200/100)=2; multiplier 2 => 4
+    expect(earned?.amount).toBe(4);
+
+    await prisma.pointLedger.deleteMany({
+      where: { merchantId: merchant.id, customerId: customerVip.id },
+    });
+    await prisma.financeEvent.deleteMany({ where: { referenceId: order.id } });
+    await prisma.posOrderItem.deleteMany({ where: { orderId: order.id } });
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: order.id } });
+    await prisma.posOrder.delete({ where: { id: order.id } });
+    await prisma.promotionRule.delete({ where: { id: rule.id } });
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.loyaltySettings.delete({ where: { merchantId: merchant.id } });
+    await prisma.customer.delete({ where: { id: customerVip.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 30000);
+
+  it('exchange traceability: new order records exchangeFromOrderId', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `EX-${Date.now()}`, name: 'Exchange Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `EX-S-${Date.now()}`, name: 'Exchange Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: { code: `EX-W-${Date.now()}`, name: 'Exchange WH', merchantId: merchant.id, storeId: store.id },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `EX-SKU-${Date.now()}`, name: 'Exchange Product' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 10 },
+      update: { onHandQty: 10 },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 10,
+        occurredAt: new Date(),
+        note: 'exchange seed',
+      },
+    });
+
+    const original = await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 100 }],
+      payments: [{ method: 'CASH', amount: 100 }],
+    });
+    await posService.returnToStock(original.id, { items: [{ productId: product.id, quantity: 1 }] });
+
+    const exchanged = await posService.createOrder({
+      storeId: store.id,
+      exchangeFromOrderId: original.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 100 }],
+      payments: [{ method: 'CASH', amount: 100 }],
+    });
+
+    const fetched = await posService.getOrderById(exchanged.id);
+    expect(fetched.exchangeFromOrderId).toBe(original.id);
+
+    await prisma.financeEvent.deleteMany({ where: { referenceId: { in: [original.id, exchanged.id] } } });
+    await prisma.posOrderItem.deleteMany({ where: { orderId: { in: [original.id, exchanged.id] } } });
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: { in: [original.id, exchanged.id] } } });
+    await prisma.posOrder.deleteMany({ where: { id: { in: [original.id, exchanged.id] } } });
+    await prisma.inventoryEvent.deleteMany({ where: { referenceId: original.id } });
+    await prisma.inventoryEvent.deleteMany({ where: { productId: product.id, warehouseId: warehouse.id } });
+    await prisma.inventoryBalance.deleteMany({ where: { productId: product.id, warehouseId: warehouse.id } });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 30000);
 });

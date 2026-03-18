@@ -27,6 +27,7 @@ export class ProductRepository {
       and.push({
         OR: [
           { sku: { contains: term, mode: 'insensitive' } },
+          { barcode: { contains: term, mode: 'insensitive' } },
           { name: { contains: term, mode: 'insensitive' } },
           { description: { contains: term, mode: 'insensitive' } },
         ],
@@ -58,13 +59,28 @@ export class ProductRepository {
     return this.prisma.product.findUnique({ where: { sku } });
   }
 
+  searchByBarcode(barcode: string, limit = 20) {
+    const term = barcode.trim();
+    if (!term) return Promise.resolve([]);
+    return this.prisma.product.findMany({
+      where: { barcode: { equals: term, mode: 'insensitive' } },
+      take: Math.min(50, Math.max(1, limit)),
+      orderBy: { sku: 'asc' },
+    });
+  }
+
   create(data: {
     sku: string;
+    barcode?: string | null;
     name: string;
     description?: string | null;
     specSize?: string | null;
     specColor?: string | null;
     weightGrams?: number | null;
+    specCapacity?: string | null;
+    specStyle?: string | null;
+    specWeight?: string | null;
+    expiryDescription?: string | null;
     listPrice?: string | number | null;
     salePrice?: string | number | null;
     costPrice?: string | number | null;
@@ -75,11 +91,16 @@ export class ProductRepository {
     return this.prisma.product.create({
       data: {
         sku: data.sku,
+        barcode: data.barcode?.trim() || null,
         name: data.name,
         description: data.description ?? undefined,
         specSize: data.specSize ?? undefined,
         specColor: data.specColor ?? undefined,
         weightGrams: data.weightGrams ?? undefined,
+        specCapacity: data.specCapacity ?? undefined,
+        specStyle: data.specStyle ?? undefined,
+        specWeight: data.specWeight ?? undefined,
+        expiryDescription: data.expiryDescription ?? undefined,
         listPrice: toDec(data.listPrice, '0'),
         salePrice: toDec(data.salePrice, '0'),
         costPrice:
@@ -97,11 +118,16 @@ export class ProductRepository {
     id: string,
     data: {
       sku?: string;
+      barcode?: string | null;
       name?: string;
       description?: string | null;
       specSize?: string | null;
       specColor?: string | null;
       weightGrams?: number | null;
+      specCapacity?: string | null;
+      specStyle?: string | null;
+      specWeight?: string | null;
+      expiryDescription?: string | null;
       listPrice?: string | number | null;
       salePrice?: string | number | null;
       costPrice?: string | number | null;
@@ -112,11 +138,16 @@ export class ProductRepository {
   ) {
     const patch: Prisma.ProductUpdateInput = {};
     if (data.sku !== undefined) patch.sku = data.sku;
+    if (data.barcode !== undefined) patch.barcode = data.barcode?.trim() || null;
     if (data.name !== undefined) patch.name = data.name;
     if (data.description !== undefined) patch.description = data.description ?? null;
     if (data.specSize !== undefined) patch.specSize = data.specSize ?? null;
     if (data.specColor !== undefined) patch.specColor = data.specColor ?? null;
     if (data.weightGrams !== undefined) patch.weightGrams = data.weightGrams ?? null;
+    if (data.specCapacity !== undefined) patch.specCapacity = data.specCapacity ?? null;
+    if (data.specStyle !== undefined) patch.specStyle = data.specStyle ?? null;
+    if (data.specWeight !== undefined) patch.specWeight = data.specWeight ?? null;
+    if (data.expiryDescription !== undefined) patch.expiryDescription = data.expiryDescription ?? null;
     if (data.listPrice !== undefined) patch.listPrice = toDec(data.listPrice, '0');
     if (data.salePrice !== undefined) patch.salePrice = toDec(data.salePrice, '0');
     if (data.costPrice !== undefined) {

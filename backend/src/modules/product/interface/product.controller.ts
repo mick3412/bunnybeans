@@ -43,9 +43,24 @@ export class ProductController {
     );
   }
 
+  /** 條碼專用查詢（精確比對）；需放在 :id 之前避免路由衝突 */
+  @Get('search-barcode')
+  searchBarcode(
+    @Query('q') q?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const lim = limit ? parseInt(limit, 10) : undefined;
+    return this.service.searchBarcode(q ?? '', lim);
+  }
+
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.service.getProduct(id);
+  get(
+    @Param('id') id: string,
+    @Query('includeBalances') includeBalances?: string,
+  ) {
+    return this.service.getProduct(id, {
+      includeBalances: includeBalances === 'true' || includeBalances === '1',
+    });
   }
 
   @Post('import')
@@ -72,6 +87,10 @@ export class ProductController {
       specSize?: string | null;
       specColor?: string | null;
       weightGrams?: number | null;
+      specCapacity?: string | null;
+      specStyle?: string | null;
+      specWeight?: string | null;
+      expiryDescription?: string | null;
       listPrice?: string | number | null;
       salePrice?: string | number | null;
       costPrice?: string | number | null;
@@ -81,6 +100,18 @@ export class ProductController {
     },
   ) {
     return this.service.createProduct(body);
+  }
+
+  @Patch('batch-price')
+  @UseGuards(AdminApiKeyGuard)
+  batchPrice(
+    @Body()
+    body: { productIds: string[]; salePrice: string | number },
+  ) {
+    return this.service.batchUpdatePrice(
+      body.productIds ?? [],
+      body.salePrice ?? 0,
+    );
   }
 
   @Patch(':id')
@@ -95,6 +126,10 @@ export class ProductController {
       specSize?: string | null;
       specColor?: string | null;
       weightGrams?: number | null;
+      specCapacity?: string | null;
+      specStyle?: string | null;
+      specWeight?: string | null;
+      expiryDescription?: string | null;
       listPrice?: string | number | null;
       salePrice?: string | number | null;
       costPrice?: string | number | null;
