@@ -54,6 +54,9 @@ jobs:
         run: |
           echo "E2E full profile gate: this job must FAIL if fixtures/env are not ready."
           echo "Required: DATABASE_URL, VITE_ADMIN_API_KEY(secret), migrated DB, db:seed, e2e:seed(full)"
+          echo "Expected fixture keys:"
+          echo "- Dispatch rules: E2E-SEGMENT-NORMAL-0001 / E2E-COUPON-0001 / E2E-RULE-ENABLED-0001"
+          echo "- Dispatch rules negative: E2E-RULE-DISABLED-0001 / E2E-RULE-FUTURE-0001"
           pnpm --filter pos-erp-backend db:seed
           pnpm --filter pos-erp-backend e2e:seed
 
@@ -76,7 +79,15 @@ jobs:
             # Fixed gate suite: barcode multi-match + exchange settlement + click-audit visualization + finance reports
             pnpm e2e -- \
               e2e/admin-smoke.spec.ts \
+              e2e/admin-barcode-min.spec.ts \
               e2e/admin-barcode-multi-match.spec.ts \
               e2e/pos-exchange-settlement-journey.spec.ts \
-              e2e/admin-ops-report-clicks-full.spec.ts
+              e2e/admin-ops-report-clicks-full.spec.ts \
+              e2e/admin-dispatch-rules.spec.ts \
+              e2e/admin-pos-reports.spec.ts \
+              e2e/admin-journey-exchange-loyalty.spec.ts \
+              e2e/admin-loyalty-smoke.spec.ts \
+              e2e/admin-balances.spec.ts \
+              e2e/admin-receiving-notes-smoke.spec.ts \
+              e2e/admin-expiring-inventory-smoke.spec.ts
           fi

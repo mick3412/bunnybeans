@@ -13,7 +13,17 @@ export class DispatchRuleRunnerService {
    * 掃描 enabled=true 且 nextRunAt <= now（或 null）的發券規則，依序觸發 segment-coupon job 並更新 nextRunAt。
    * 可由 cron 或 POST /crm/jobs/run-scheduled 呼叫。
    */
-  async runScheduled(): Promise<{ triggered: number; errors: string[] }> {
+  async runScheduled(): Promise<{
+    triggered: number;
+    errors: string[];
+    updatedRules: Array<{
+      ruleId: string;
+      ruleName: string;
+      lastRunCode: 'SENT' | 'SKIPPED' | 'FAILED';
+      lastRunNote: string | null;
+    }>;
+    message: string | null;
+  }> {
     const now = new Date();
     const rules = await this.prisma.crmCouponDispatchRule.findMany({
       where: {
@@ -26,6 +36,12 @@ export class DispatchRuleRunnerService {
 
     let triggered = 0;
     const errors: string[] = [];
+    const updatedRules: Array<{
+      ruleId: string;
+      ruleName: string;
+      lastRunCode: 'SENT' | 'SKIPPED' | 'FAILED';
+      lastRunNote: string | null;
+    }> = [];
 
     for (const rule of rules) {
       try {
@@ -41,6 +57,12 @@ export class DispatchRuleRunnerService {
               lastRunNote: 'duplicate-protection: already ran in this period',
             },
           });
+          updatedRules.push({
+            ruleId: rule.id,
+            ruleName: rule.name,
+            lastRunCode: 'SKIPPED',
+            lastRunNote: 'duplicate-protection: already ran in this period',
+          });
           continue;
         }
 
@@ -52,18 +74,26 @@ export class DispatchRuleRunnerService {
         triggered += 1;
 
         const next = this.computeNextRunAt(now, rule.scheduleType);
+        const note = `jobId=${job.jobId}`;
         await this.prisma.crmCouponDispatchRule.update({
           where: { id: rule.id },
           data: {
             nextRunAt: next,
             lastRunAt: now,
             lastRunCode: 'SENT',
-            lastRunNote: `jobId=${job.jobId}`,
+            lastRunNote: note,
           },
+        });
+        updatedRules.push({
+          ruleId: rule.id,
+          ruleName: rule.name,
+          lastRunCode: 'SENT',
+          lastRunNote: note,
         });
       } catch (e) {
         const err = this.formatError(e);
         errors.push(`${rule.id}: ${err}`);
+        const note = err.slice(0, 500);
         const retryAt = new Date(now.getTime() + 30 * 60 * 1000);
         // Be tolerant: rule might be deleted concurrently (tests/ops), don't fail the whole runner.
         await this.prisma.crmCouponDispatchRule.updateMany({
@@ -72,13 +102,28 @@ export class DispatchRuleRunnerService {
             nextRunAt: retryAt,
             lastRunAt: now,
             lastRunCode: 'FAILED',
-            lastRunNote: err.slice(0, 500),
+            lastRunNote: note,
           },
+        });
+        updatedRules.push({
+          ruleId: rule.id,
+          ruleName: rule.name,
+          lastRunCode: 'FAILED',
+          lastRunNote: note,
         });
       }
     }
 
-    return { triggered, errors };
+    const failedCount = updatedRules.filter((r) => r.lastRunCode === 'FAILED').length;
+    const skippedCount = updatedRules.filter((r) => r.lastRunCode === 'SKIPPED').length;
+    const sentCount = updatedRules.filter((r) => r.lastRunCode === 'SENT').length;
+    const preview = updatedRules
+      .slice(0, 8)
+      .map((r) => `${r.ruleName}[${r.lastRunCode}]:${r.lastRunNote ?? ''}`.slice(0, 180));
+    const message =
+      preview.length > 0 ? `dispatch-rules updated: triggered=${sentCount}, skipped=${skippedCount}, failed=${failedCount}; ${preview.join(' | ')}` : null;
+
+    return { triggered, errors, updatedRules, message };
   }
 
   private formatError(e: unknown): string {

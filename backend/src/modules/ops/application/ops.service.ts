@@ -472,7 +472,7 @@ export class OpsService {
     if (kind === 'crm-run-scheduled') {
       try {
         const result = await this.dispatchRuleRunner.runScheduled();
-        const runLog = await this.recordRun(kind, result.errors.length === 0, result.errors.length ? result.errors.join('; ') : undefined);
+        const runLog = await this.recordRun(kind, result.errors.length === 0, result.message);
         return { ok: true, kind, runLogId: runLog.id, result };
       } catch (e) {
         const runLog = await this.recordRun(kind, false, (e as Error).message);

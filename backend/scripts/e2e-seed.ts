@@ -4,7 +4,7 @@
  *
  * 用法：pnpm --filter pos-erp-backend e2e:seed
  */
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 export const prisma = new PrismaClient();
 
@@ -17,6 +17,23 @@ const E2E_BARCODE_MULTI = 'E2E-BC-0002';
 
 const E2E_EX_SOURCE_ORDER_ID = 'e2e00005-0000-4000-8000-00000000x001';
 const E2E_EX_DERIVED_ORDER_ID = 'e2e00006-0000-4000-8000-00000000x002';
+
+// ---- CRM dispatch-rules fixtures (full profile only) ----
+const E2E_DISPATCH_SEGMENT_ID = 'e2e00007-0000-4000-8000-00000000s001';
+const E2E_DISPATCH_COUPON_ID = 'e2e00008-0000-4000-8000-00000000c001';
+const E2E_DISPATCH_RULE_ENABLED_ID = 'e2e00009-0000-4000-8000-00000000r001';
+const E2E_DISPATCH_RULE_DISABLED_ID = 'e2e00010-0000-4000-8000-00000000r002';
+const E2E_DISPATCH_RULE_FUTURE_ID = 'e2e00011-0000-4000-8000-00000000r003';
+
+const E2E_DISPATCH_SEGMENT_NAME = 'E2E-SEGMENT-NORMAL-0001';
+const E2E_DISPATCH_COUPON_CODE = 'E2E-COUPON-0001';
+const E2E_DISPATCH_RULE_ENABLED_NAME = 'E2E-RULE-ENABLED-0001';
+const E2E_DISPATCH_RULE_DISABLED_NAME = 'E2E-RULE-DISABLED-0001';
+const E2E_DISPATCH_RULE_FUTURE_NAME = 'E2E-RULE-FUTURE-0001';
+
+// ---- Expiring inventory fixture (full profile only) ----
+const E2E_EXPIRING_INVENTORY_REF = 'E2E-EXPIRING-INVENTORY-FIXTURE';
+const E2E_EXPIRING_INVENTORY_BATCH = 'E2E-EXP-BATCH-0001';
 
 export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClient }) {
   const client = opts?.client ?? prisma;
@@ -231,6 +248,103 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
 
   // ---- Full profile: Exchange settlement + finance events fixtures ----
   if (isFull) {
+    // ---- Dispatch-rules fixtures for runner acceptance (E2E) ----
+    // teardown (must be replayable)
+    await client.crmCouponDispatchRule.deleteMany({
+      where: { merchantId: merchant.id, name: { in: [E2E_DISPATCH_RULE_ENABLED_NAME, E2E_DISPATCH_RULE_DISABLED_NAME, E2E_DISPATCH_RULE_FUTURE_NAME] } },
+    });
+    await client.loyaltyCouponIssue.deleteMany({ where: { couponId: E2E_DISPATCH_COUPON_ID } });
+    await client.loyaltyCoupon.deleteMany({ where: { merchantId: merchant.id, id: E2E_DISPATCH_COUPON_ID } });
+    await client.segment.deleteMany({ where: { merchantId: merchant.id, id: E2E_DISPATCH_SEGMENT_ID } });
+
+    // create segment (memberLevel=NORMAL so it can target E2E customer)
+    await client.segment.create({
+      data: {
+        id: E2E_DISPATCH_SEGMENT_ID,
+        merchantId: merchant.id,
+        name: E2E_DISPATCH_SEGMENT_NAME,
+        conditions: { memberLevel: 'NORMAL' },
+      },
+    });
+
+    // create coupon
+    await client.loyaltyCoupon.create({
+      data: {
+        id: E2E_DISPATCH_COUPON_ID,
+        merchantId: merchant.id,
+        code: E2E_DISPATCH_COUPON_CODE,
+        name: 'E2E Dispatch Coupon',
+        discountType: 'FIXED',
+        value: new Prisma.Decimal(10),
+        active: true,
+      },
+    });
+
+    const now = Date.now();
+    const futureNextRunAt = new Date(now + 2 * 60 * 60 * 1000); // +2 hours, should not be picked by runner
+
+    await client.crmCouponDispatchRule.createMany({
+      data: [
+        {
+          id: E2E_DISPATCH_RULE_ENABLED_ID,
+          merchantId: merchant.id,
+          name: E2E_DISPATCH_RULE_ENABLED_NAME,
+          segmentId: E2E_DISPATCH_SEGMENT_ID,
+          couponId: E2E_DISPATCH_COUPON_ID,
+          enabled: true,
+          scheduleType: 'daily',
+          cronExpr: '0 9 * * *',
+          nextRunAt: new Date(0),
+        },
+        {
+          id: E2E_DISPATCH_RULE_DISABLED_ID,
+          merchantId: merchant.id,
+          name: E2E_DISPATCH_RULE_DISABLED_NAME,
+          segmentId: E2E_DISPATCH_SEGMENT_ID,
+          couponId: E2E_DISPATCH_COUPON_ID,
+          enabled: false,
+          scheduleType: 'daily',
+          cronExpr: '0 9 * * *',
+          nextRunAt: new Date(0),
+        },
+        {
+          id: E2E_DISPATCH_RULE_FUTURE_ID,
+          merchantId: merchant.id,
+          name: E2E_DISPATCH_RULE_FUTURE_NAME,
+          segmentId: E2E_DISPATCH_SEGMENT_ID,
+          couponId: E2E_DISPATCH_COUPON_ID,
+          enabled: true,
+          scheduleType: 'daily',
+          cronExpr: '0 9 * * *',
+          nextRunAt: futureNextRunAt,
+        },
+      ],
+    });
+
+    // Create a deterministic expiring inventory batch (expiryDate within 30 days by default).
+    // Admin expiring inventory page uses InventoryEvent.expiryDate and SUM(quantity) > 0.
+    await client.inventoryEvent.deleteMany({
+      where: { referenceId: E2E_EXPIRING_INVENTORY_REF },
+    });
+    const baseFrom = new Date(new Date().toISOString().slice(0, 10)); // YYYY-MM-DD
+    const expiryDate = new Date(baseFrom);
+    expiryDate.setDate(expiryDate.getDate() + 14);
+    expiryDate.setHours(12, 0, 0, 0); // avoid edge issues around midnight/timezones
+
+    await client.inventoryEvent.create({
+      data: {
+        occurredAt: new Date(),
+        type: 'PURCHASE_IN',
+        productId: product.id,
+        warehouseId: warehouse.id,
+        quantity: 5,
+        batchCode: E2E_EXPIRING_INVENTORY_BATCH,
+        expiryDate,
+        referenceId: E2E_EXPIRING_INVENTORY_REF,
+        note: 'E2E expiring inventory fixture',
+      },
+    });
+
     // teardown (orders & finance events)
     await client.financeEvent.deleteMany({ where: { referenceId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
     await client.posOrderPayment.deleteMany({ where: { orderId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
@@ -389,6 +503,34 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     const reportPurCount = await client.financeEvent.count({ where: { referenceId: 'E2E-REPORT-PUR-001' } });
     if (reportPurCount < 2) {
       throw new Error(`E2E fixture invalid: report purchase events count=${reportPurCount} (expected >=2)`);
+    }
+
+    // Dispatch-rules fixtures sanity checks (full profile)
+    const shouldRunCount = await client.crmCouponDispatchRule.count({
+      where: {
+        merchantId: merchant.id,
+        enabled: true,
+        scheduleType: 'daily',
+        nextRunAt: { lte: new Date() },
+        name: E2E_DISPATCH_RULE_ENABLED_NAME,
+      },
+    });
+    if (shouldRunCount < 1) {
+      throw new Error('E2E dispatch fixture invalid: enabled rule should be runnable');
+    }
+
+    const disabledCount = await client.crmCouponDispatchRule.count({
+      where: { merchantId: merchant.id, name: E2E_DISPATCH_RULE_DISABLED_NAME, enabled: false },
+    });
+    if (disabledCount < 1) {
+      throw new Error('E2E dispatch fixture invalid: disabled rule missing');
+    }
+
+    const futureCount = await client.crmCouponDispatchRule.count({
+      where: { merchantId: merchant.id, name: E2E_DISPATCH_RULE_FUTURE_NAME, enabled: true, nextRunAt: { gt: new Date() } },
+    });
+    if (futureCount < 1) {
+      throw new Error('E2E dispatch fixture invalid: future rule should not be runnable');
     }
   }
 

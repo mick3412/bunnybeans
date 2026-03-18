@@ -7,6 +7,7 @@ import { SegmentService } from './application/segment.service';
 import { TierRuleService } from './application/tier-rule.service';
 import { CrmJobService } from './application/crm-job.service';
 import { DispatchRuleRunnerService } from './application/dispatch-rule-runner.service';
+import { DispatchRuleService } from './application/dispatch-rule.service';
 import { OpsService } from '../ops/application/ops.service';
 import { Prisma } from '@prisma/client';
 
@@ -17,6 +18,7 @@ describe('SegmentService (integration)', () => {
   let tierRuleService: TierRuleService;
   let crmJobService: CrmJobService;
   let runner: DispatchRuleRunnerService;
+  let dispatchRuleService: DispatchRuleService;
   let ops: OpsService;
 
   beforeAll(async () => {
@@ -33,6 +35,7 @@ describe('SegmentService (integration)', () => {
     tierRuleService = app.get(TierRuleService);
     crmJobService = app.get(CrmJobService);
     runner = app.get(DispatchRuleRunnerService);
+    dispatchRuleService = app.get(DispatchRuleService);
     ops = app.get(OpsService);
   });
   afterAll(async () => {
@@ -358,9 +361,37 @@ describe('SegmentService (integration)', () => {
         lastRunNote: 'seed last run',
       },
     });
+
+    const disabledRule = await prisma.crmCouponDispatchRule.create({
+      data: {
+        merchantId: m.id,
+        name: 'Disabled Rule (not enabled)',
+        segmentId: seg.id,
+        couponId: coupon.id,
+        enabled: false,
+        scheduleType: 'daily',
+        cronExpr: '0 9 * * *',
+        nextRunAt: new Date(0),
+      },
+    });
+
+    const futureNextRunAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // +2 hours, should not trigger
+    const futureRule = await prisma.crmCouponDispatchRule.create({
+      data: {
+        merchantId: m.id,
+        name: 'Future Rule (not yet due)',
+        segmentId: seg.id,
+        couponId: coupon.id,
+        enabled: true,
+        scheduleType: 'daily',
+        cronExpr: '0 9 * * *',
+        nextRunAt: futureNextRunAt,
+      },
+    });
     try {
+      const beforeMs = Date.now();
       const result = await runner.runScheduled();
-      await ops.recordRun('crm-run-scheduled', result.errors.length === 0, result.errors.length ? result.errors.join('; ') : undefined);
+      await ops.recordRun('crm-run-scheduled', result.errors.length === 0, result.message);
 
       expect(result.triggered).toBeGreaterThanOrEqual(1);
       expect(result.errors.length).toBeGreaterThanOrEqual(1);
@@ -380,6 +411,22 @@ describe('SegmentService (integration)', () => {
       const updatedBad = await prisma.crmCouponDispatchRule.findUnique({ where: { id: badRule.id } });
       expect(updatedBad?.lastRunCode).toBe('FAILED');
       expect(updatedBad?.lastRunNote ?? '').toContain('CRM_JOB_COUPON_REQUIRED');
+      const retryAtMs = updatedBad?.nextRunAt?.getTime() ?? 0;
+      const retryDeltaMin = (retryAtMs - beforeMs) / 60000;
+      expect(retryDeltaMin).toBeGreaterThanOrEqual(25);
+      expect(retryDeltaMin).toBeLessThanOrEqual(35);
+
+      const updatedDisabled = await prisma.crmCouponDispatchRule.findUnique({ where: { id: disabledRule.id } });
+      expect(updatedDisabled?.lastRunAt).toBeNull();
+      expect(updatedDisabled?.lastRunCode).toBeNull();
+      expect(updatedDisabled?.lastRunNote).toBeNull();
+      expect(updatedDisabled?.nextRunAt?.getTime() ?? 0).toBe(disabledRule.nextRunAt?.getTime() ?? 0);
+
+      const updatedFuture = await prisma.crmCouponDispatchRule.findUnique({ where: { id: futureRule.id } });
+      expect(updatedFuture?.lastRunAt).toBeNull();
+      expect(updatedFuture?.lastRunCode).toBeNull();
+      expect(updatedFuture?.lastRunNote).toBeNull();
+      expect(updatedFuture?.nextRunAt?.getTime() ?? 0).toBe(futureNextRunAt.getTime());
 
       const updatedDupe = await prisma.crmCouponDispatchRule.findUnique({ where: { id: dupeRule.id } });
       expect(updatedDupe?.lastRunCode).toBe('SKIPPED');
@@ -392,9 +439,27 @@ describe('SegmentService (integration)', () => {
       expect(runLog).toBeDefined();
       expect(runLog?.success).toBe(false);
       expect(runLog?.message ?? '').toContain('CRM_JOB_COUPON_REQUIRED');
+      expect(runLog?.message ?? '').toContain('Daily Rule');
+      expect(runLog?.message ?? '').toContain('jobId=');
 
       const list = await ops.listJobs({ kind: 'crm-run-scheduled', page: 1, pageSize: 20 });
       expect(list.items.some((x) => x.id === runLog?.id)).toBe(true);
+
+      // API contract: list returns lastRun* fields even when null
+      const dispatchList = await dispatchRuleService.list(m.id, undefined);
+      const disabledRow = dispatchList.find((x) => x.id === disabledRule.id);
+      expect(disabledRow).toBeDefined();
+      expect(Object.prototype.hasOwnProperty.call(disabledRow, 'lastRunAt')).toBe(true);
+      expect(disabledRow?.lastRunAt).toBeNull();
+      expect(disabledRow?.lastRunCode).toBeNull();
+      expect(disabledRow?.lastRunNote).toBeNull();
+
+      const futureRow = dispatchList.find((x) => x.id === futureRule.id);
+      expect(futureRow).toBeDefined();
+      expect(Object.prototype.hasOwnProperty.call(futureRow!, 'lastRunAt')).toBe(true);
+      expect(futureRow?.lastRunAt).toBeNull();
+      expect(futureRow?.lastRunCode).toBeNull();
+      expect(futureRow?.lastRunNote).toBeNull();
     } finally {
       await prisma.opsJobRunLog.deleteMany({ where: { jobType: 'crm-run-scheduled' } });
       await prisma.crmMarketingJob.deleteMany({ where: { merchantId: m.id } });

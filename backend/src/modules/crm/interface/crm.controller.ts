@@ -76,7 +76,7 @@ export class CrmController {
   @UseGuards(AdminApiKeyGuard)
   async runScheduledJobs() {
     const result = await this.dispatchRuleRunner.runScheduled();
-    await this.opsService.recordRun('crm-run-scheduled', result.errors.length === 0, result.errors.length ? result.errors.join('; ') : undefined);
+    await this.opsService.recordRun('crm-run-scheduled', result.errors.length === 0, result.message);
     return result;
   }
 

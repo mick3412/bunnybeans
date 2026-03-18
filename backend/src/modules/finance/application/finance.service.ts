@@ -377,14 +377,11 @@ export class FinanceService {
   }
 
   async unlockPeriod(id: string) {
-    const period = await this.repo.findPeriodById(id?.trim());
-    if (!period) {
-      throw new NotFoundException({
-        code: 'FINANCE_PERIOD_NOT_FOUND',
-        message: 'Period not found',
-      });
+    const periodId = id?.trim();
+    if (!periodId) {
+      return { ok: true, skipped: true };
     }
-    const unlocked = await this.repo.unlockPeriod(period.id);
+    const unlocked = await this.repo.unlockPeriod(periodId);
     if (!unlocked) return { ok: true, skipped: true };
     return unlocked;
   }

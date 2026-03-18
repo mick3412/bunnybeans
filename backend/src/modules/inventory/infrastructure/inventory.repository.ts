@@ -183,7 +183,17 @@ export class InventoryRepository {
     try {
       const whClause = warehouseId ? `AND e."warehouseId" = $3` : '';
       const prodClause = productId ? `AND e."productId" = $4` : '';
-      const params: any[] = [from, to, warehouseId, productId, pageSize, (page - 1) * pageSize];
+      // 如果 warehouseId / productId 未提供（undefined），Prisma 仍會嘗試綁定對應參數 $3/$4，
+      // 可能導致「could not determine data type」並被 catch 回空結果。
+      // 用可辨識的型別（空字串）取代 undefined，可讓未帶 filter 的情境也能正常查詢。
+      const params: any[] = [
+        from,
+        to,
+        warehouseId ?? '',
+        productId ?? '',
+        pageSize,
+        (page - 1) * pageSize,
+      ];
 
       const rows = await this.prisma.$queryRawUnsafe<
         Array<{
@@ -270,7 +280,14 @@ export class InventoryRepository {
     try {
       const whClause = warehouseId ? `AND e."warehouseId" = $3` : '';
       const prodClause = productId ? `AND e."productId" = $4` : '';
-      const params: any[] = [from, to, warehouseId, productId, pageSize, (page - 1) * pageSize];
+      const params: any[] = [
+        from,
+        to,
+        warehouseId ?? '',
+        productId ?? '',
+        pageSize,
+        (page - 1) * pageSize,
+      ];
 
       const rows = await this.prisma.$queryRawUnsafe<
         Array<{
