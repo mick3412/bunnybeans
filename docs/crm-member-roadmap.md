@@ -142,7 +142,7 @@
 |------|------|
 | **Job 狀態** | **B** — 新增 **GET /crm/jobs/:id**，crm 專用 job 表（如 `CrmMarketingJob`）；response 含 status、result（sent/skipped/errors）、error。 |
 | **生日券／回購券** | **B2 + R3** — 皆改為**依分群發券**。Request body：merchantId、**segmentId**、couponId｜couponCode。不新增 Customer 生日欄位；「生日」可由營運建分群或名單。 |
-| **發券規則常駐（選配）** | 可新增「行銷發券規則」實體（啟用／停用、排程如每日／每週／每月），類似促銷活動設定；cron 掃啟用規則並執行發券。並記錄最近執行結果欄位：`lastRunAt/lastRunCode/lastRunNote`（例如 SENT/FAILED + 錯誤碼），供前端顯示。 |
+| **發券規則常駐（選配）** | 可新增「行銷發券規則」實體（啟用／停用、排程如每日／每週／每月），類似促銷活動設定；cron 掃啟用規則並執行發券。並記錄最近執行結果欄位：`lastRunAt/lastRunCode/lastRunNote`（例如 SENT/FAILED/SKIPPED + 摘要），供前端顯示。\n\n最小正式化保護（若要上線）：\n- **重複發券防護（同期間）**：同一規則在同一 period（daily/weekly/monthly）已跑過則標記 `SKIPPED`，避免重複觸發。\n- **失敗重試策略**：規則觸發失敗時，將 `nextRunAt` 往後延（例如 +30min）以便自動重試，並寫入 `FAILED` + lastRunNote。 |
 | **報表** | 活動參與筆數、用券數、點數成本；候選 GET /loyalty/reports/activity，見 api-design §6.8.2。 |
 
 ### 前端

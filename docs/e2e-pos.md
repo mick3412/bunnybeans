@@ -119,12 +119,17 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 - derived 訂單 id：`e2e00006-0000-4000-8000-00000000x002`
 - source 會寫入 `SALE_REFUND`（delta=50）供 `exchangeSettlement.refund.events[]` 驗收
 
+金流報表 fixtures（`E2E_PROFILE=full`，供後台金流報表段落 fail-fast 不 skip）：
+
+- 銷售：`referenceId=E2E-REPORT-SALE-001`（`SALE_RECEIVABLE` + `SALE_PAYMENT`；partyId=`customer:<E2E_CUSTOMER_ID>`）
+- 採購：`referenceId=E2E-REPORT-PUR-001`（`PURCHASE_PAYABLE` + `PURCHASE_REBATE`；partyId=`supplier:<supplierId>`）
+
 ## CI（GitHub Actions）
 
 | 檔案 | 行為 |
 |------|------|
 | [`.github/workflows/backend-ci.yml`](../.github/workflows/backend-ci.yml) | Postgres 15 → `ci:schema-migration-check` → `migrate deploy` → seed → **`pnpm --filter pos-erp-backend test`** |
 | [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) | **Job1 `backend-test`**（Postgres → db push → seed → **jest**）→ **Job2 `playwright`（needs job1）** → 獨立 DB → 後端 **:3003** → Playwright **`pnpm e2e`** |
-| [`.github/workflows/e2e-full.yml`](../.github/workflows/e2e-full.yml) | **手動/排程**：`migrate deploy` → `db:seed` → `E2E_PROFILE=full e2e:seed`（缺 fixture 直接 fail-fast）→ Playwright `pnpm e2e` |
+| [`.github/workflows/e2e-full.yml`](../.github/workflows/e2e-full.yml) | **手動/排程 gate**：`migrate deploy` → `db:seed` → `E2E_PROFILE=full e2e:seed`（缺 fixture 直接 fail-fast）→ Playwright **固定 specs 清單**（barcode multi / 換貨 settlement / click-audit / 金流報表） |
 
 觸發：`push` / `pull_request` 至 `main` 或 `master`。E2E job 內 **`CI=1`** 時 Playwright 會自起 Vite（見 `playwright.config.ts`）。本機勿設 `CI=1` 若已佔用 5173。

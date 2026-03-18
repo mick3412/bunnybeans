@@ -103,6 +103,15 @@
   - `topSources[]`：`{ source, notFound, multiMatch, total }`（以 `NOT_FOUND/MULTI_MATCH` 聚合排行）
   - `trendByDay[]`：`{ day: "YYYY-MM-DD", total, failed }`
   - `topReferenceIds[]`：`{ field, referenceId, count }`（僅統計 `success=false`）
+  - `health`：健康分數與門檻判定（視覺化用）
+    - `notFoundRate` / `multiMatchRate` / `navigatedRate`
+    - `status`：`OK | WARN | ALERT`
+    - `thresholds`：前端顯示用門檻（warn/alert）
+  - `fixHints[]`：`{ fixHint, count }`（將 `resultCode` 映射成「下一步」分類）
+    - `DATA_MISSING`（多為 NOT_FOUND）
+    - `NEEDS_DISAMBIGUATION`（多為 MULTI_MATCH）
+    - `PERMISSION`
+    - `OK`（多為 NAVIGATED）
 
 ### 3.2 Job 列表：from/to 篩選 `GET /ops/jobs`（stable）
 
