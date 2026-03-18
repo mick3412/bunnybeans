@@ -7,6 +7,7 @@ export const StandardListLayout: React.FC<{
   description?: React.ReactNode;
   actions?: React.ReactNode;
   filters?: React.ReactNode;
+  aboveContent?: React.ReactNode;
   loading?: boolean;
   error?: string | null;
   empty?: boolean;
@@ -20,6 +21,7 @@ export const StandardListLayout: React.FC<{
   description,
   actions,
   filters,
+  aboveContent,
   loading,
   error,
   empty,
@@ -44,6 +46,8 @@ export const StandardListLayout: React.FC<{
         </div>
         {filters ? <div className="mt-4">{filters}</div> : null}
       </div>
+
+      {aboveContent ? <div className="mt-4">{aboveContent}</div> : null}
 
       {error ? (
         <div className="mt-4">
