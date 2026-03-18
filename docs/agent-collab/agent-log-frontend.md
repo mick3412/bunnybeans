@@ -15,6 +15,11 @@
 
 ---
 
+### INSTRUCTIONS 007（條碼多筆命中閉環＋click-audit resultCode 上報＋退供 UI 補全）
+- 做了：① **條碼多筆命中 UX**：POS/庫存掃碼在多筆命中時提供選擇列表（顯示 SKU/name；庫存頁額外顯示在庫摘要），並新增最小 E2E 覆蓋多筆命中（依 seed fixture 可 skip）。② **採購退供應商完整 UI**：進貨驗收（COMPLETED）退供區塊補逐列原因輸入（前端備註）與送出後明細回顯，並補手測清單。③ **ReportClickAudit resultCode**：referenceId 穿透點擊補 `resultCode` 上報（NAVIGATED/NOT_FOUND），click-audit 後台頁補 resultCode 欄位與 filter（後端支援時可彙總/篩選）。④ **促銷拖曳排序驗收**：補拖曳排序手測清單（維持 optimistic/回滾/toast）。RBAC 依 roadmap 長期 skip 未做。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts e2e/admin-barcode-min.spec.ts e2e/admin-barcode-multi-match.spec.ts` ✅（1 pass / 3 skip：條碼需 DB fixture（含 multi-match）、金流報表需資料/後端可連）。
+- commits：`11f46a5` feat(barcode): improve multi-match selection UX；`61704eb` feat(purchase): enrich return-to-supplier input and result；`85ef83d` feat(ops): add click-audit resultCode reporting；`a9622b5` docs: add promotions drag reorder testplan。
+
 ### INSTRUCTIONS 006（將 INSTRUCTIONS 005 變更提交成可驗收 commits + E2E）
 - 做了：① 將 INSTRUCTIONS 005 的前端成果拆成 6 個 atomic commits（見下方）。② 條碼 E2E 改為預設固定 fixture `E2E-BC-0001`（後端可連 + seed 就緒時必跑；不就緒時 skip 需輸出可操作提示）。③ Finance snapshots 補 `POST /finance/snapshots` 並在 `/admin/finance/snapshots` 加「手動補跑」輸入（asOfDate/type）。④ 補「換貨 Phase2 差額/對帳」最小端對端驗收腳本（依 fixture 狀況可 skip）。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts e2e/admin-barcode-min.spec.ts` ✅（1 pass / 2 skip：條碼需 DB fixture、金流報表需資料/後端可連）。
