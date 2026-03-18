@@ -67,6 +67,7 @@ function needsAdminKey(path: string, method: string): boolean {
   if (m === 'DELETE' && /^product-tags\/[^/]+$/.test(pathOnly)) return true;
   if (pathOnly === 'purchase-orders/from-replenishment' && m === 'POST') return true;
   if (pathOnly === 'ops/jobs/run' && m === 'POST') return true;
+  if (pathOnly === 'ops/reports/click-audit' && m === 'POST') return true;
   if (pathOnly === 'ops/reports/click-audit' && m === 'GET') return true;
   if (pathOnly === 'ops/reports/click-audit/summary' && m === 'GET') return true;
   return false;
