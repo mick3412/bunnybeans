@@ -378,6 +378,37 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
       },
     });
 
+    // ---- Full profile: Replenishment suggestions must not be empty (E2E smoke) ----
+    // Admin replenishment suggestions require:
+    // - inventoryBalance.onHandQty (current stock)
+    // - inventoryEvent of type SALE_OUT within daysLookback (default 30)
+    // to compute suggestedQty > 0.
+    const E2E_REPLENISH_SALE_REF = 'E2E-REPL-SALE-001';
+    const e2eNow = new Date();
+    const occurredAt = new Date(e2eNow.getTime() - 10 * 24 * 3600 * 1000); // within default lookback=30
+    const soldQty = 50;
+
+    await client.inventoryEvent.deleteMany({ where: { referenceId: E2E_REPLENISH_SALE_REF } });
+
+    // Make sure there is a stable low stock baseline for the selected product/warehouse.
+    await client.inventoryBalance.upsert({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      update: { onHandQty: 0 },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 0 },
+    });
+
+    await client.inventoryEvent.create({
+      data: {
+        occurredAt,
+        type: 'SALE_OUT',
+        productId: product.id,
+        warehouseId: warehouse.id,
+        quantity: soldQty,
+        referenceId: E2E_REPLENISH_SALE_REF,
+        note: 'E2E replenishment-suggestions fixture',
+      },
+    });
+
     // teardown (orders & finance events)
     {
       // teardown must handle referenceId changes across releases:
@@ -536,6 +567,46 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     assertUuidLike('E2E_RN_ID', E2E_RN_ID);
     assertUuidLike('E2E_EX_SOURCE_ORDER_ID', E2E_EX_SOURCE_ORDER_ID);
     assertUuidLike('E2E_EX_DERIVED_ORDER_ID', E2E_EX_DERIVED_ORDER_ID);
+
+    // Replenishment suggestions sanity check (avoid long-term empty list on full profile)
+    const lookbackDays = 30;
+    const daysAhead = 30;
+    const safetyDays = 7;
+    const balance = await client.inventoryBalance.findUnique({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      select: { onHandQty: true },
+    });
+    if (!balance) {
+      throw new Error('E2E fixture invalid: inventoryBalance missing for replenishment suggestions fixture');
+    }
+    // UI defaults expect onHand low enough so suggestedQty > 0.
+    if (balance.onHandQty > 0) {
+      throw new Error(`E2E fixture invalid: replenishment fixture onHandQty must be 0, got ${balance.onHandQty}`);
+    }
+    const replSales = await client.inventoryEvent.findMany({
+      where: { referenceId: E2E_REPLENISH_SALE_REF, type: 'SALE_OUT' },
+      select: { quantity: true, occurredAt: true },
+    });
+    if (replSales.length < 1) {
+      throw new Error('E2E fixture invalid: replenishment suggestions SALE_OUT fixture missing');
+    }
+    const totalSold = replSales.reduce((s, r) => s + Math.abs(r.quantity), 0);
+    if (totalSold <= 0) {
+      throw new Error('E2E fixture invalid: replenishment suggestions fixture totalSold must be > 0');
+    }
+    const minOccuredAt = new Date(Date.now() - lookbackDays * 24 * 3600 * 1000);
+    if (replSales.some((r) => r.occurredAt < minOccuredAt)) {
+      throw new Error('E2E fixture invalid: replenishment suggestions fixture occurredAt out of lookback window');
+    }
+
+    const avgDailySales = totalSold / lookbackDays;
+    const targetStockRaw = avgDailySales * (daysAhead + safetyDays);
+    const targetStock = Math.max(0, Math.round(targetStockRaw * 100) / 100);
+    const delta = targetStock - balance.onHandQty;
+    const suggestedQty = Math.max(0, Math.ceil(delta));
+    if (suggestedQty <= 0) {
+      throw new Error(`E2E fixture invalid: replenishment suggestions suggestedQty must be > 0, got ${suggestedQty}`);
+    }
 
     const singleCount = await client.product.count({ where: { barcode: E2E_BARCODE_SINGLE } });
     if (singleCount !== 1) {
