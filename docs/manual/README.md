@@ -52,6 +52,7 @@ pnpm manual:build
 - [08 POS 訂單（開單/付款/退款作廢）](08-pos-orders.md)
 - [09 報表與稽核](09-reports-and-audit.md)
 - [10 常見問題與排錯](10-troubleshooting.md)
+- [附錄（門市維運 / 支援）](appendix/README.md)
 
 ---
 
