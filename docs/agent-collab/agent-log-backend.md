@@ -15,6 +15,19 @@
 
 ---
 
+### INSTRUCTIONS-009（click-audit 可觀測性彙總 + E2E full fixtures/CI + CRM runner 監控欄位）
+- 做了：依 `BACKEND-INSTRUCTIONS 009.md` §1 完成 #1～#8（RBAC 長期 skip）。
+  - **#1 Regression**：修正 purchase integration-spec 會被殘留關帳資料污染的問題（測試前清 `FinancePeriodClose`），`prisma migrate deploy` 可跑通，後端 jest 全綠。
+  - **#2 Click-audit 進階彙總**：`GET /ops/reports/click-audit/summary` 新增 `topSources`（NOT_FOUND/MULTI_MATCH 排行）、`trendByDay`、`topReferenceIds`；補 ops integration-spec（含至少 2 組 filter 組合）。
+  - **#3 Click-audit drill-down 強化**：`GET /ops/reports/click-audit` 新增 `resultCode` filter；補整合測試。
+  - **#4 E2E_PROFILE=full**：`pnpm --filter pos-erp-backend e2e:seed` 支援 `E2E_PROFILE=full`，一次產出 barcode single/multi-match、換貨 settlement（含 SALE_REFUND event）、報表用 finance events；並加入 fail-fast 驗證（缺 fixture 直接 throw）。
+  - **#5 CI E2E（手動/排程）**：新增 `.github/workflows/e2e-full.yml`：`migrate deploy → db:seed → e2e:seed(full) → playwright`。
+  - **#6 Runner 驗收補齊**：runner 失敗時錯誤訊息包含 error code（例如 `CRM_JOB_COUPON_REQUIRED`），並可由 ops/jobs 查到 run log。
+  - **#7 Runner 最低監控指標**：`CrmCouponDispatchRule` 新增 `lastRunAt/lastRunCode/lastRunNote`（SENT/FAILED + 摘要），runner 執行時寫入；補最小整合測試。
+  - **#8 文件對齊**：更新 `docs/e2e-pos.md`（full fixtures keys、e2e-full workflow）、`docs/ops-roadmap.md`（click-audit list/summary 欄位）、`docs/crm-member-roadmap.md`（dispatch-rules lastRun 欄位）。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`E2E_PROFILE=full pnpm --filter pos-erp-backend e2e:seed` 可重複執行且 fail-fast 驗證通過。
+- commits：78a5909 feat(ops,crm): extend click-audit analytics and runner status；d349f08 docs: align e2e and ops/crm fixtures；54d30ac chore(backend): sync migrations, tests, and CI；5706a2a docs: refresh instructions and agent logs；fee3d9d feat(frontend,e2e): expand admin pages and E2E coverage；7072b09 chore(frontend-v2): add Vite scaffold (no build artifacts)
+
 ### INSTRUCTIONS-007（click-audit resultCode + barcode/seed/E2E 契約補齊 + 閉環驗收）
 - 做了：依 `BACKEND-INSTRUCTIONS 007.md` §1 完成 #1～#10（RBAC 依文件前言長期 skip）。\n+  - **#1 Regression**：`prisma migrate deploy`、`db:seed`、後端 jest 全綠。\n+  - **#2 Snapshots 閉環**：補/驗證 `POST /finance/snapshots` 與 list/get/download 欄位一致，新增整合測試覆蓋 POST→list→download。\n+  - **#3 換貨 Phase2 驗收支援**：`exchangeSettlement` 補 `refund.events[]`（SALE_REFUND 摘要）與 topup/refund needed/refunded；整合測試覆蓋「需退款→退款後 SETTLED」。\n+  - **#4 Barcode 契約**：`GET /products/search-barcode` 明確允許多筆命中（回 `items[]`），並補 `limit` 行為整合測試。\n+  - **#5 E2E fixture**：`pnpm e2e:seed` 固定條碼 `E2E-BC-0001` 可重複生成；文件補充 fixture key。\n+  - **#6 Promotion reorder**：完整驗證重複/遺漏/跨 merchant（`PROMOTION_REORDER_INVALID`），integration-spec 覆蓋。\n+  - **#7 Purchase 退供再驗收**：integration-spec 覆蓋 return-to-supplier 的庫存/金流事件與 receiving-note 欄位。\n+  - **#8 Click-audit 可觀測性**：`ReportClickAudit` 新增 `resultCode`（string）+ migration；`POST /ops/reports/click-audit` 支援 `resultCode?` 並在未提供時推導 `NOT_FOUND/NAVIGATED`；summary 新增 `byResultCode` 聚合；補整合測試至少 3 種結果。\n+  - **#9 E2E 文件化**：更新 `docs/e2e-pos.md` 加入 migrate deploy → db:seed → e2e:seed → e2e 一鍵順序、barcode fixture、CI 步驟對齊。\n+  - **#10 文件對齊**：更新 `ops-roadmap.md` 補 `resultCode` 欄位說明。\n+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`prisma migrate deploy` 套用新增 migration；`prisma generate` 更新 client。\n+- commits：無（本輪未要求 commit）。\n+\n 
 ### INSTRUCTIONS-006（換貨差額驗收補強 + barcode 文件對齊；RBAC 仍跳過）
