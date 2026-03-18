@@ -15,6 +15,11 @@
 
 ---
 
+### INSTRUCTIONS-015（補貨建議 full gate：擴 suite、seed deterministic、補 contract）
+- 做了：`.github/workflows/e2e-full.yml` 固定清單加入 `e2e/admin-categories.spec.ts`、`e2e/admin-customers-import.spec.ts`、`e2e/admin-bulk.spec.ts`、`e2e/admin-replenishment.spec.ts`；`backend/scripts/e2e-seed.ts` 在 `E2E_PROFILE=full` 補足補貨建議所需 deterministic inventory 資料（`inventoryBalance.onHandQty=0` + `SALE_OUT` fixture）並 fail-fast 驗證 `suggestedQty > 0`；新增 `AdminApiKeyGuard` 錯誤碼 schema 測試（`ADMIN_API_KEY_REQUIRED`）；更新 `docs/e2e-pos.md` 補 `e2e-full` 指令範例與四個 spec 的驗收摘要。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
+- commits：fac529c5 feat(e2e-seed): guarantee replenishment suggestions for full profile；43035a2f chore(e2e-full): add categories/customers/bulk/replenishment specs gate；6f99cb27 test(guard): add AdminApiKeyGuard 401 error schema coverage；77641776 docs(e2e-pos): add e2e-full example + spec acceptance rows
+
 ### INSTRUCTIONS-014（referenceId UUID-like 修復 + 報表穿透穩定性）
 - 做了：`backend/scripts/e2e-seed.ts` 調整 POS order / receivingNote / exchange referenceId 為 UUID-like（純 hex）並加入 deterministic occurredAt；擴充 seed fail-fast 驗證（UUID-like 格式 + 至少 1 筆 finance referenceId 可解析為 posOrder/receivingNote）；補 `OpsService.resolveReference` integration 邊界測試，並更新 `docs/e2e-pos.md` referenceId UUID-like 契約與 full gate 驗收要點（避免 `ReferenceIdLink` 長期非可點狀態）。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（含 `e2e:seed` fail-fast 驗證）；Playwright/E2E smoke 未於本機執行（依 seed/排序與前端 UUID-like contract 預期 full profile 不再 skip）。
