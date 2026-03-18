@@ -12,3 +12,8 @@ playwright-report
 # generated docs/manual outputs
 docs/manual/dist
 
+# frontend-v2 sandbox artifacts
+frontend-v2/node_modules
+frontend-v2/dist
+frontend-v2/tsconfig.tsbuildinfo
+

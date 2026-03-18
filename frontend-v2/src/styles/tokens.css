@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+/* 儀表板／數據感：低飽和、簡潔、善用空間。側欄深色、主區淺灰、主色藍。 */
+@theme {
+  --color-canvas: #f1f5f9;
+  --color-sidebar: #1e293b;
+  --color-sidebar-text: #e2e8f0;
+  --color-sidebar-muted: #94a3b8;
+  --color-primary: #0ea5e9;
+  --color-primary-hover: #0284c7;
+  --color-success: #16a34a;
+  --color-warning: #ea580c;
+  --color-danger: #dc2626;
+  --color-border: #e2e8f0;
+  --color-table-head: #f8fafc;
+  --color-content: #1e293b;
+  --color-muted: #64748b;
+  --color-card: #ffffff;
+  --font-sans: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --kpi-accent-1: #0ea5e9;
+  --kpi-accent-2: #16a34a;
+  --kpi-accent-3: #ea580c;
+  --kpi-accent-4: #64748b;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--color-content);
+    background-color: var(--color-canvas);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    z-index: 999;
+    padding: 0.5rem 1rem;
+    background: var(--color-primary);
+    color: white;
+    font-size: 0.875rem;
+  }
+  .skip-link:focus {
+    left: 0.5rem;
+    top: 0.5rem;
+  }
+
+  .section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-content);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .input-base {
+    width: 100%;
+    border-radius: 0.375rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+    color: var(--color-content);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  .input-base::placeholder {
+    color: var(--color-muted);
+  }
+  .input-base:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+  }
+
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+}
