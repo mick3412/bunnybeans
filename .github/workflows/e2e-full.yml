@@ -84,6 +84,10 @@ jobs:
               e2e/pos-exchange-settlement-journey.spec.ts \
               e2e/admin-ops-report-clicks-full.spec.ts \
               e2e/admin-dispatch-rules.spec.ts \
+              e2e/admin-categories.spec.ts \
+              e2e/admin-customers-import.spec.ts \
+              e2e/admin-bulk.spec.ts \
+              e2e/admin-replenishment.spec.ts \
               e2e/admin-pos-reports.spec.ts \
               e2e/admin-journey-exchange-loyalty.spec.ts \
               e2e/admin-loyalty-smoke.spec.ts \
