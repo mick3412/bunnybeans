@@ -9,14 +9,17 @@ import { PrismaClient, Prisma } from '@prisma/client';
 export const prisma = new PrismaClient();
 
 const E2E_CUSTOMER_ID = 'e2e00001-0000-4000-8000-00000000c001';
-const E2E_ORDER_ID = 'e2e00002-0000-4000-8000-00000000o001';
-const E2E_RN_ID = 'e2e00003-0000-4000-8000-00000000rn01';
+// NOTE: `ReferenceIdLink` only treats UUID-like (pure hex) referenceId as clickable.
+// Keep these IDs stable and strictly match the UUID-like regex:
+// ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+const E2E_ORDER_ID = 'e2e00002-0000-4000-8000-00000000a001';
+const E2E_RN_ID = 'e2e00003-0000-4000-8000-00000000b001';
 const E2E_PO_ID = 'e2e00004-0000-4000-8000-00000000po01';
 const E2E_BARCODE_SINGLE = 'E2E-BC-0001';
 const E2E_BARCODE_MULTI = 'E2E-BC-0002';
 
-const E2E_EX_SOURCE_ORDER_ID = 'e2e00005-0000-4000-8000-00000000x001';
-const E2E_EX_DERIVED_ORDER_ID = 'e2e00006-0000-4000-8000-00000000x002';
+const E2E_EX_SOURCE_ORDER_ID = 'e2e00005-0000-4000-8000-00000000d001';
+const E2E_EX_DERIVED_ORDER_ID = 'e2e00006-0000-4000-8000-00000000e002';
 
 // ---- CRM dispatch-rules fixtures (full profile only) ----
 const E2E_DISPATCH_SEGMENT_ID = 'e2e00007-0000-4000-8000-00000000s001';
@@ -99,6 +102,14 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
   const profile = (opts?.profile ?? process.env.E2E_PROFILE ?? '').trim().toLowerCase();
   const isFull = profile === 'full';
 
+  // Deterministic finance `occurredAt` for E2E: ensure the first clickable `ReferenceIdLink`
+  // in `/admin/reports` is a `posOrder` (not `receivingNote`).
+  // All are still within `last30d`, so the list page won't be empty.
+  const nowMs = Date.now();
+  const tDrilldownOrderFinance = new Date(nowMs - 20_000);
+  const tDrilldownReceivingNoteFinance = new Date(nowMs - 10_000);
+  const tExchangeFinance = new Date(nowMs);
+
   // ---- Barcode fixtures ----
   // single: ensure exactly one product has barcode
   await client.product.updateMany({
@@ -138,11 +149,22 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
   }
 
   // POS order + FinanceEvent + PointLedger
-  await client.financeEvent.deleteMany({ where: { referenceId: E2E_ORDER_ID } });
-  await client.pointLedger.deleteMany({ where: { referenceId: E2E_ORDER_ID } });
-  await client.posOrderPayment.deleteMany({ where: { orderId: E2E_ORDER_ID } });
-  await client.posOrderItem.deleteMany({ where: { orderId: E2E_ORDER_ID } });
-  await client.posOrder.deleteMany({ where: { id: E2E_ORDER_ID } });
+  // teardown must handle referenceId changes across releases:
+  // old runs might have left rows with the same `orderNumber` but different `id`.
+  {
+    const existingOrderIds = await client.posOrder.findMany({
+      where: { orderNumber: 'E2E-ORDER-0001' },
+      select: { id: true },
+    });
+    const orderIdsToDelete = Array.from(new Set([...existingOrderIds.map((r) => r.id), E2E_ORDER_ID]));
+    if (orderIdsToDelete.length) {
+      await client.financeEvent.deleteMany({ where: { referenceId: { in: orderIdsToDelete } } });
+      await client.pointLedger.deleteMany({ where: { referenceId: { in: orderIdsToDelete } } });
+      await client.posOrderPayment.deleteMany({ where: { orderId: { in: orderIdsToDelete } } });
+      await client.posOrderItem.deleteMany({ where: { orderId: { in: orderIdsToDelete } } });
+      await client.posOrder.deleteMany({ where: { id: { in: orderIdsToDelete } } });
+    }
+  }
 
   await client.posOrder.create({
     data: {
@@ -160,7 +182,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
   await client.financeEvent.createMany({
     data: [
       {
-        occurredAt: new Date(),
+        occurredAt: tDrilldownOrderFinance,
         type: 'SALE_RECEIVABLE',
         partyId: `customer:${E2E_CUSTOMER_ID}`,
         currency: 'TWD',
@@ -170,7 +192,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
         note: 'E2E sale receivable',
       },
       {
-        occurredAt: new Date(),
+        occurredAt: tDrilldownOrderFinance,
         type: 'SALE_PAYMENT',
         partyId: `customer:${E2E_CUSTOMER_ID}`,
         currency: 'TWD',
@@ -195,9 +217,20 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
   });
 
   // ReceivingNote + FinanceEvent(PURCHASE_PAYABLE) to validate receivingNote drilldown
-  await client.financeEvent.deleteMany({ where: { referenceId: E2E_RN_ID } });
-  await client.receivingNoteLine.deleteMany({ where: { receivingNoteId: E2E_RN_ID } });
-  await client.receivingNote.deleteMany({ where: { id: E2E_RN_ID } });
+  // teardown must handle referenceId changes across releases:
+  // old runs might have left rows with the same `receiptNumber` but different `id`.
+  {
+    const existingRnIds = await client.receivingNote.findMany({
+      where: { receiptNumber: 'E2E-RN-0001' },
+      select: { id: true },
+    });
+    const rnIdsToDelete = Array.from(new Set([...existingRnIds.map((r) => r.id), E2E_RN_ID]));
+    if (rnIdsToDelete.length) {
+      await client.financeEvent.deleteMany({ where: { referenceId: { in: rnIdsToDelete } } });
+      await client.receivingNoteLine.deleteMany({ where: { receivingNoteId: { in: rnIdsToDelete } } });
+      await client.receivingNote.deleteMany({ where: { id: { in: rnIdsToDelete } } });
+    }
+  }
   await client.purchaseOrderLine.deleteMany({ where: { poId: E2E_PO_ID } });
   await client.purchaseOrder.deleteMany({ where: { id: E2E_PO_ID } });
 
@@ -235,7 +268,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
   });
   await client.financeEvent.create({
     data: {
-      occurredAt: new Date(),
+      occurredAt: tDrilldownReceivingNoteFinance,
       type: 'PURCHASE_PAYABLE',
       partyId: `supplier:${supplier.id}`,
       currency: 'TWD',
@@ -346,10 +379,27 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     });
 
     // teardown (orders & finance events)
-    await client.financeEvent.deleteMany({ where: { referenceId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
-    await client.posOrderPayment.deleteMany({ where: { orderId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
-    await client.posOrderItem.deleteMany({ where: { orderId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
-    await client.posOrder.deleteMany({ where: { id: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
+    {
+      // teardown must handle referenceId changes across releases:
+      // old runs might have left rows with the same `orderNumber` but different `id`.
+      const existingExchangeOrderIds = await client.posOrder.findMany({
+        where: { orderNumber: { in: ['E2E-EX-SOURCE-0001', 'E2E-EX-DERIVED-0001'] } },
+        select: { id: true },
+      });
+      const exchangeOrderIdsToDelete = Array.from(
+        new Set([
+          ...existingExchangeOrderIds.map((r) => r.id),
+          E2E_EX_SOURCE_ORDER_ID,
+          E2E_EX_DERIVED_ORDER_ID,
+        ]),
+      );
+      if (exchangeOrderIdsToDelete.length) {
+        await client.financeEvent.deleteMany({ where: { referenceId: { in: exchangeOrderIdsToDelete } } });
+        await client.posOrderPayment.deleteMany({ where: { orderId: { in: exchangeOrderIdsToDelete } } });
+        await client.posOrderItem.deleteMany({ where: { orderId: { in: exchangeOrderIdsToDelete } } });
+        await client.posOrder.deleteMany({ where: { id: { in: exchangeOrderIdsToDelete } } });
+      }
+    }
 
     // source order: paid 200
     await client.posOrder.create({
@@ -386,7 +436,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     await client.financeEvent.createMany({
       data: [
         {
-          occurredAt: new Date(),
+          occurredAt: tExchangeFinance,
           type: 'SALE_RECEIVABLE',
           partyId: `customer:${E2E_CUSTOMER_ID}`,
           currency: 'TWD',
@@ -396,7 +446,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
           note: 'E2E exchange source receivable',
         },
         {
-          occurredAt: new Date(),
+          occurredAt: tExchangeFinance,
           type: 'SALE_PAYMENT',
           partyId: `customer:${E2E_CUSTOMER_ID}`,
           currency: 'TWD',
@@ -406,7 +456,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
           note: 'E2E exchange source payment',
         },
         {
-          occurredAt: new Date(),
+          occurredAt: tExchangeFinance,
           type: 'SALE_REFUND',
           partyId: `customer:${E2E_CUSTOMER_ID}`,
           currency: 'TWD',
@@ -475,6 +525,18 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     });
 
     // ---- fail-fast verification (for CI) ----
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const assertUuidLike = (name: string, value: string) => {
+      if (!UUID_RE.test(value.trim())) {
+        throw new Error(`E2E fixture invalid: ${name} is not UUID-like: "${value}"`);
+      }
+    };
+
+    assertUuidLike('E2E_ORDER_ID', E2E_ORDER_ID);
+    assertUuidLike('E2E_RN_ID', E2E_RN_ID);
+    assertUuidLike('E2E_EX_SOURCE_ORDER_ID', E2E_EX_SOURCE_ORDER_ID);
+    assertUuidLike('E2E_EX_DERIVED_ORDER_ID', E2E_EX_DERIVED_ORDER_ID);
+
     const singleCount = await client.product.count({ where: { barcode: E2E_BARCODE_SINGLE } });
     if (singleCount !== 1) {
       throw new Error(`E2E fixture invalid: barcode single count=${singleCount} (expected 1)`);
@@ -496,6 +558,59 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     if (refundCount < 1) {
       throw new Error('E2E fixture invalid: SALE_REFUND missing for exchange source order');
     }
+
+    // Ensure `/admin/reports` has at least 1 clickable `ReferenceIdLink` in full profile.
+    // Those links must resolve to `posOrder` or `receivingNote` on the backend.
+    const financeRefs = await client.financeEvent.findMany({
+      where: {
+        referenceId: { in: [E2E_ORDER_ID, E2E_RN_ID, E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] },
+      },
+      select: { referenceId: true, occurredAt: true },
+    });
+    const distinctRefIds = Array.from(
+      new Set(financeRefs.map((r) => (r.referenceId ?? '').trim()).filter((x) => x)),
+    );
+
+    if (distinctRefIds.length < 1) {
+      throw new Error('E2E fixture invalid: finance referenceId candidates missing');
+    }
+
+    const [posOrders, receivingNotes] = await Promise.all([
+      client.posOrder.findMany({
+        where: { id: { in: distinctRefIds } },
+        select: { id: true },
+      }),
+      client.receivingNote.findMany({
+        where: { id: { in: distinctRefIds } },
+        select: { id: true },
+      }),
+    ]);
+
+    const posSet = new Set(posOrders.map((o) => o.id));
+    const rnSet = new Set(receivingNotes.map((n) => n.id));
+    if (posSet.size < 1 && rnSet.size < 1) {
+      throw new Error('E2E fixture invalid: no finance referenceId resolvable to posOrder/receivingNote');
+    }
+
+    // Make `posOrder` referenceId appear before `receivingNote` on `/admin/reports`,
+    // because E2E smoke specs click the first `訂單` button.
+    const latestPos = await client.financeEvent.findFirst({
+      where: { referenceId: { in: [E2E_ORDER_ID, E2E_EX_SOURCE_ORDER_ID] } },
+      orderBy: { occurredAt: 'desc' },
+      select: { occurredAt: true, referenceId: true },
+    });
+    const latestRn = await client.financeEvent.findFirst({
+      where: { referenceId: E2E_RN_ID },
+      orderBy: { occurredAt: 'desc' },
+      select: { occurredAt: true },
+    });
+    if (!latestPos) {
+      throw new Error('E2E fixture invalid: missing latest posOrder finance event');
+    }
+    if (latestRn && latestPos.occurredAt <= latestRn.occurredAt) {
+      throw new Error('E2E fixture invalid: posOrder finance event must be newer than receivingNote');
+    }
+
     const reportEventCount = await client.financeEvent.count({ where: { referenceId: 'E2E-REPORT-SALE-001' } });
     if (reportEventCount < 2) {
       throw new Error(`E2E fixture invalid: report finance events count=${reportEventCount} (expected >=2)`);

@@ -220,6 +220,129 @@ describe('OpsService listJobs (integration)', () => {
     await prisma.merchant.deleteMany({ where: { id: merchant.id } });
   }, 30000);
 
+  it('resolveReference resolves UUID-like E2E seed referenceIds (posOrder/receivingNote)', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    // Keep in sync with `backend/scripts/e2e-seed.ts` UUID-like referenceId contract.
+    const E2E_ORDER_ID = 'e2e00002-0000-4000-8000-00000000a001';
+    const E2E_RN_ID = 'e2e00003-0000-4000-8000-00000000b001';
+    const E2E_EX_SOURCE_ORDER_ID = 'e2e00005-0000-4000-8000-00000000d001';
+
+    // The jest suite may run `src/scripts/e2e-seed.integration-spec.ts` before this test,
+    // leaving the fixed ids in the shared test DB.
+    // Clean them up first to keep the test order-independent.
+    await prisma.posOrderPayment.deleteMany({
+      where: { orderId: { in: [E2E_ORDER_ID, E2E_EX_SOURCE_ORDER_ID] } },
+    });
+    await prisma.posOrderItem.deleteMany({
+      where: { orderId: { in: [E2E_ORDER_ID, E2E_EX_SOURCE_ORDER_ID] } },
+    });
+    await prisma.posOrder.deleteMany({
+      where: { id: { in: [E2E_ORDER_ID, E2E_EX_SOURCE_ORDER_ID] } },
+    });
+    await prisma.receivingNoteLine.deleteMany({ where: { receivingNoteId: E2E_RN_ID } });
+    await prisma.receivingNote.deleteMany({ where: { id: E2E_RN_ID } });
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `OPS-E2E-M-${Date.now()}`, name: 'Ops E2E M' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `OPS-E2E-S-${Date.now()}`, name: 'Ops E2E S', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: { code: `OPS-E2E-W-${Date.now()}`, name: 'Ops E2E W', merchantId: merchant.id, storeId: store.id },
+    });
+    const supplier = await prisma.supplier.create({
+      data: { merchantId: merchant.id, code: `OPS-E2E-SUP-${Date.now()}`, name: 'Ops E2E SUP', status: 'ACTIVE' },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `OPS-E2E-P-${Date.now()}`, name: 'Ops E2E P' },
+    });
+
+    const orderA = await prisma.posOrder.create({
+      data: {
+        id: E2E_ORDER_ID,
+        orderNumber: `OPS-E2E-O-A-${Date.now()}`,
+        storeId: store.id,
+        subtotalAmount: 100,
+        discountAmount: 0,
+        totalAmount: 100,
+        items: { create: [{ productId: product.id, quantity: 1, unitPrice: 100 }] },
+        payments: { create: [{ method: 'CASH', amount: 100 }] },
+      },
+    });
+
+    const orderB = await prisma.posOrder.create({
+      data: {
+        id: E2E_EX_SOURCE_ORDER_ID,
+        orderNumber: `OPS-E2E-O-B-${Date.now()}`,
+        storeId: store.id,
+        exchangeFromOrderId: E2E_ORDER_ID,
+        subtotalAmount: 100,
+        discountAmount: 0,
+        totalAmount: 100,
+        items: { create: [{ productId: product.id, quantity: 1, unitPrice: 100 }] },
+        payments: { create: [{ method: 'CASH', amount: 100 }] },
+      },
+    });
+
+    const po = await prisma.purchaseOrder.create({
+      data: {
+        merchantId: merchant.id,
+        supplierId: supplier.id,
+        warehouseId: warehouse.id,
+        orderNumber: `OPS-E2E-PO-${Date.now()}`,
+        status: 'ORDERED',
+        lines: { create: [{ productId: product.id, qtyOrdered: 1, unitCost: 10 }] },
+      },
+      include: { lines: true },
+    });
+
+    const rn = await prisma.receivingNote.create({
+      data: {
+        id: E2E_RN_ID,
+        merchantId: merchant.id,
+        receiptNumber: `RN-OPS-E2E-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        purchaseOrderId: po.id,
+        status: 'PENDING',
+        lines: {
+          create: [
+            {
+              purchaseOrderLineId: po.lines[0].id,
+              orderedQty: 1,
+              receivedQty: 0,
+              qualifiedQty: 0,
+              returnedQty: 0,
+            },
+          ],
+        },
+      },
+    });
+
+    const r1 = await opsService.resolveReference(orderA.id);
+    expect(r1.kind).toBe('posOrder');
+    const r2 = await opsService.resolveReference(orderB.id);
+    expect(r2.kind).toBe('posOrder');
+    const r3 = await opsService.resolveReference(rn.id);
+    expect(r3.kind).toBe('receivingNote');
+
+    // teardown
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: { in: [orderA.id, orderB.id] } } });
+    await prisma.posOrderItem.deleteMany({ where: { orderId: { in: [orderA.id, orderB.id] } } });
+    await prisma.posOrder.deleteMany({ where: { id: { in: [orderA.id, orderB.id] } } });
+
+    await prisma.receivingNoteLine.deleteMany({ where: { receivingNoteId: rn.id } });
+    await prisma.receivingNote.deleteMany({ where: { id: rn.id } });
+    await prisma.purchaseOrderLine.deleteMany({ where: { poId: po.id } });
+    await prisma.purchaseOrder.deleteMany({ where: { id: po.id } });
+
+    await prisma.product.deleteMany({ where: { id: product.id } });
+    await prisma.supplier.deleteMany({ where: { id: supplier.id } });
+    await prisma.warehouse.deleteMany({ where: { id: warehouse.id } });
+    await prisma.store.deleteMany({ where: { id: store.id } });
+    await prisma.merchant.deleteMany({ where: { id: merchant.id } });
+  }, 30000);
+
   it('runJob records OpsJobRunLog (integration)', async () => {
     if (!process.env.DATABASE_URL) return;
     const before = await prisma.opsJobRunLog.count();
