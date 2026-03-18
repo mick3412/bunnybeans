@@ -31,7 +31,7 @@ test.describe('後台 客戶 CSV 匯入頁', () => {
     await loginAdmin(page);
     await page.goto('/admin/customers/import');
     await expect(page.getByTestId('e2e-admin-customers-import')).toBeVisible({ timeout: 15_000 });
-    const fileInput = page.getByTestId('e2e-admin-customers-import-preview').locator('input[type="file"]');
+    const fileInput = page.getByTestId('e2e-admin-customers-import-file');
     await fileInput.setInputFiles({
       name: 'e2e-customers.csv',
       mimeType: 'text/csv',
@@ -44,8 +44,10 @@ test.describe('後台 客戶 CSV 匯入頁', () => {
         r.ok(),
       { timeout: 20_000 },
     );
-    await page.getByRole('button', { name: '預覽' }).click();
+    await page.getByTestId('e2e-admin-customers-import-run-preview-btn').click();
     await respPromise;
-    await expect(page.getByText(/預覽|套用寫入|fileHash/)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByTestId('e2e-admin-customers-import-filehash-preview')).toBeVisible({
+      timeout: 5_000,
+    });
   });
 });

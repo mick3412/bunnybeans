@@ -50,6 +50,7 @@ export const AdminCustomerImportPage: React.FC = () => {
   const [parseErrors, setParseErrors] = useState<{ row: number; reason: string }[]>([]);
   const [decisions, setDecisions] = useState<Map<number, CustomerImportApplyDecision>>(new Map());
   const hasAdminKey = Boolean((import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim());
+  const adminKeyRequiredMsg = getErrorMessage({ statusCode: 401 });
 
   const resetPreview = () => {
     setFileHash(null);
@@ -71,7 +72,7 @@ export const AdminCustomerImportPage: React.FC = () => {
       return;
     }
     if (!hasAdminKey) {
-      showToast('需 VITE_ADMIN_API_KEY', 'err');
+      showToast(adminKeyRequiredMsg, 'err');
       return;
     }
     setPreviewLoading(true);
@@ -79,7 +80,12 @@ export const AdminCustomerImportPage: React.FC = () => {
     const out = await previewCustomersImport(f, merchantId);
     setPreviewLoading(false);
     if ('statusCode' in out) {
-      setErr(out.statusCode === 401 ? '需 VITE_ADMIN_API_KEY' : getErrorMessage(out));
+      if (out.statusCode === 401) {
+        setErr(adminKeyRequiredMsg);
+        showToast(adminKeyRequiredMsg, 'err');
+      } else {
+        setErr(getErrorMessage(out));
+      }
       return;
     }
     setFileHash(out.fileHash);
@@ -149,7 +155,7 @@ export const AdminCustomerImportPage: React.FC = () => {
         out.code === 'CUSTOMER_IMPORT_FILE_HASH_MISMATCH'
           ? '檔案與預覽不一致，請勿換檔；可再預覽一次'
           : out.statusCode === 401
-            ? '需 VITE_ADMIN_API_KEY'
+            ? adminKeyRequiredMsg
             : getErrorMessage(out as ApiError);
       setErr(msg);
       showToast(msg, 'err');
@@ -185,7 +191,7 @@ export const AdminCustomerImportPage: React.FC = () => {
           className="hidden"
           aria-label="選擇 CSV 檔案"
           data-testid="e2e-admin-customers-import-file"
-          title={!hasAdminKey ? '需 VITE_ADMIN_API_KEY' : undefined}
+          title={!hasAdminKey ? adminKeyRequiredMsg : undefined}
           onChange={(e) => {
             const f = e.target.files?.[0] ?? null;
             onPickFile(f);
@@ -197,6 +203,7 @@ export const AdminCustomerImportPage: React.FC = () => {
           size="sm"
           variant="primary"
           disabled={!hasAdminKey}
+          data-testid="e2e-admin-customers-import-preview-btn"
           onClick={() => fileInputRef.current?.click()}
         >
           {fileName ? `已選：${fileName}` : '選擇 CSV 檔案'}
@@ -208,6 +215,7 @@ export const AdminCustomerImportPage: React.FC = () => {
               size="sm"
               variant="secondary"
               disabled={previewLoading || !merchantId || !hasAdminKey}
+              data-testid="e2e-admin-customers-import-run-preview-btn"
               onClick={runPreview}
             >
               {previewLoading ? '預覽中…' : '預覽'}
@@ -233,6 +241,7 @@ export const AdminCustomerImportPage: React.FC = () => {
             size="sm"
             variant="primary"
             disabled={applyLoading || !hasAdminKey}
+              data-testid="e2e-admin-customers-import-run-apply-btn"
             onClick={runApply}
           >
             {applyLoading ? '套用中…' : '套用寫入'}
@@ -324,7 +333,10 @@ export const AdminCustomerImportPage: React.FC = () => {
             </table>
           </div>
           <p className="mt-2 text-[11px] text-[#64748b]">
-            fileHash（預覽）: {fileHash?.slice(0, 16)}… · 套用時會比對同檔
+            <span data-testid="e2e-admin-customers-import-filehash-preview">
+              fileHash（預覽）: {fileHash?.slice(0, 16)}…
+            </span>{' '}
+            · 套用時會比對同檔
           </p>
         </>
       )}

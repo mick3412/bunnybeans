@@ -22,7 +22,7 @@ test.describe('後台 補貨建議頁', () => {
     await expect(container).toBeVisible({ timeout: 15_000 });
     await expect(container.getByRole('heading', { name: '補貨建議' })).toBeVisible();
     // 倉庫選單
-    await expect(container.locator('select').first()).toBeVisible();
+    await expect(container.getByTestId('e2e-admin-replenishment-warehouse-select')).toBeVisible();
   });
 
   test('建議列表或空態區塊存在', async ({ page }) => {
@@ -42,13 +42,13 @@ test.describe('後台 補貨建議頁', () => {
     await page.goto('/admin/replenishment');
     const container = page.getByTestId('e2e-admin-replenishment');
     await expect(container).toBeVisible({ timeout: 15_000 });
-    const firstRowCheckbox = container.locator('tbody input[type="checkbox"]').first();
-    const hasRows = await firstRowCheckbox.isVisible().catch(() => false);
+    const suggestionCheckbox = container.getByTestId('e2e-admin-replenishment-suggestion-checkbox').first();
+    const hasRows = await suggestionCheckbox.isVisible().catch(() => false);
     test.skip(!hasRows, '無補貨建議資料，跳過端對端流程');
-    await firstRowCheckbox.check();
-    const supplierSelect = container.locator('select').nth(1); // 第二個為供應商
+    await suggestionCheckbox.check();
+    const supplierSelect = container.getByTestId('e2e-admin-replenishment-supplier-select');
     await supplierSelect.selectOption({ index: 1 });
-    await container.getByRole('button', { name: '建立採購草稿' }).click();
+    await container.getByTestId('e2e-admin-replenishment-create-draft-btn').click();
     await Promise.race([
       page.waitForURL(/\/admin\/purchase-orders/, { timeout: 10_000 }),
       page.getByText('建立採購草稿 API 即將上線').waitFor({ state: 'visible', timeout: 10_000 }),

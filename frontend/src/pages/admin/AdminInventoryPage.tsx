@@ -93,6 +93,7 @@ export const AdminInventoryPage: React.FC = () => {
   const [expiringBatchRows, setExpiringBatchRows] = useState<ExpiringBatchRow[]>([]);
   const pageSize = 20;
   const hasAdminKey = Boolean((import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim());
+  const adminKeyRequiredMsg = getErrorMessage({ statusCode: 401 });
 
   // 使用 scoped URL param 讓 Hub tab 與此頁 view 同步（同元件切換避免串台）
   useEffect(() => {
@@ -360,7 +361,7 @@ export const AdminInventoryPage: React.FC = () => {
         <div
           className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3"
           data-testid="e2e-admin-inventory-import"
-          title="表頭：sku、warehouseCode、quantity；需 VITE_ADMIN_API_KEY。一般同步、大檔非同步。"
+          title={`表頭：sku、warehouseCode、quantity；${adminKeyRequiredMsg}。一般同步、大檔非同步。`}
         >
           <span className="text-[11px] font-medium text-muted">匯入</span>
           <span className="flex items-center gap-2">
@@ -370,7 +371,7 @@ export const AdminInventoryPage: React.FC = () => {
                 accept=".csv,text/csv"
                 disabled={importSubmitting || !hasAdminKey}
                 className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-[#e2e8f0] file:px-2 file:py-0.5 file:text-xs"
-                title={!hasAdminKey ? '需 VITE_ADMIN_API_KEY' : undefined}
+                title={!hasAdminKey ? adminKeyRequiredMsg : undefined}
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
                   e.target.value = '';
@@ -381,7 +382,9 @@ export const AdminInventoryPage: React.FC = () => {
                   setImportSubmitting(false);
                   if ('statusCode' in out) {
                     if (out.statusCode === 401) {
-                      setErr('需 VITE_ADMIN_API_KEY');
+                      const msg = getErrorMessage(out as ApiError);
+                      setErr(msg);
+                      showToast(msg, 'err');
                     } else {
                       const msg = getErrorMessage(out);
                       setErr(msg);
@@ -416,7 +419,7 @@ export const AdminInventoryPage: React.FC = () => {
                 accept=".csv,text/csv"
                 disabled={jobSubmitting || !hasAdminKey}
                 className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-[#e2e8f0] file:px-2 file:py-0.5 file:text-xs"
-                title={!hasAdminKey ? '需 VITE_ADMIN_API_KEY' : undefined}
+                title={!hasAdminKey ? adminKeyRequiredMsg : undefined}
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
                   e.target.value = '';

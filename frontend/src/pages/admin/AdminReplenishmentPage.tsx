@@ -156,6 +156,7 @@ export const AdminReplenishmentPage: React.FC = () => {
               className="min-w-[160px] rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
+              data-testid="e2e-admin-replenishment-warehouse-select"
             >
               {warehouses.map((w) => (
                 <option key={w.id} value={w.id}>
@@ -208,12 +209,18 @@ export const AdminReplenishmentPage: React.FC = () => {
         </div>
       </div>
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <div
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+          data-testid="e2e-admin-replenishment-error"
+        >
           {error}
         </div>
       )}
       {createPoNotReady && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <div
+          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          data-testid="e2e-admin-replenishment-po-not-ready"
+        >
           建立採購草稿 API 即將上線，請稍後再試。
         </div>
       )}
@@ -229,6 +236,7 @@ export const AdminReplenishmentPage: React.FC = () => {
                 className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
                 value={supplierId}
                 onChange={(e) => setSupplierId(e.target.value)}
+                data-testid="e2e-admin-replenishment-supplier-select"
               >
                 <option value="">— 請選擇 —</option>
                 {suppliers.map((s) => (
@@ -246,6 +254,7 @@ export const AdminReplenishmentPage: React.FC = () => {
             variant="secondary"
             disabled={selectedRows.length === 0}
             onClick={() => setShowPoDraft(true)}
+            data-testid="e2e-admin-replenishment-preview-draft-btn"
           >
             產生採購草稿（預覽）
           </Button>
@@ -254,6 +263,7 @@ export const AdminReplenishmentPage: React.FC = () => {
             variant="primary"
             disabled={selectedRows.length === 0 || !supplierId || createPoSubmitting}
             onClick={() => void handleCreatePoDraft()}
+            data-testid="e2e-admin-replenishment-create-draft-btn"
           >
             {createPoSubmitting ? '建立中…' : '建立採購草稿'}
           </Button>
@@ -291,6 +301,7 @@ export const AdminReplenishmentPage: React.FC = () => {
                       checked={allSelected}
                       aria-label="全選 / 全不選"
                       onChange={toggleAll}
+                      data-testid="e2e-admin-replenishment-toggle-all-checkbox"
                     />
                   </th>
                   <th className="px-3 py-2">商品</th>
@@ -314,6 +325,7 @@ export const AdminReplenishmentPage: React.FC = () => {
                         className="h-4 w-4 rounded border-[#cbd5e1] text-brand-primary focus:ring-1 focus:ring-[#0ea5e9]"
                         checked={selectedKeys.has(`${r.productId}-${r.warehouseId}`)}
                         onChange={() => toggleRow(`${r.productId}-${r.warehouseId}`)}
+                        data-testid="e2e-admin-replenishment-suggestion-checkbox"
                       />
                     </td>
                     <td className="px-3 py-2">
