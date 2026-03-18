@@ -63,7 +63,11 @@ export const AdminReceivingNotesPage: React.FC = () => {
   const [detail, setDetail] = useState<ReceivingNoteDto | null>(null);
   const [detailPo, setDetailPo] = useState<PurchaseOrderDto | null>(null);
   const [returnQty, setReturnQty] = useState<Record<string, number>>({});
+  const [returnReason, setReturnReason] = useState<Record<string, string>>({});
   const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnLastSubmitted, setReturnLastSubmitted] = useState<
+    Array<{ lineId: string; qty: number; reason: string }> | null
+  >(null);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [expiringDetail, setExpiringDetail] = useState<ExpiringBatchRow[] | null>(null);
@@ -114,6 +118,9 @@ export const AdminReceivingNotesPage: React.FC = () => {
 
   useEffect(() => {
     if (detail?.id) setReturnQty({});
+  }, [detail?.id]);
+  useEffect(() => {
+    if (detail?.id) setReturnReason({});
   }, [detail?.id]);
 
   useEffect(() => {
@@ -951,7 +958,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                 })()}
                 <div className="mb-3 space-y-2">
                   {(detail.lines ?? []).map((ln) => (
-                    <div key={ln.id} className="flex items-center gap-2 text-sm">
+                    <div key={ln.id} className="flex flex-wrap items-center gap-2 text-sm">
                       <label className="w-32 truncate font-mono text-muted">列 {ln.id.slice(0, 8)}</label>
                       <span className="text-muted">合格 {ln.qualifiedQty}</span>
                       <input
@@ -965,6 +972,12 @@ export const AdminReceivingNotesPage: React.FC = () => {
                         }
                       />
                       <span className="text-muted">件</span>
+                      <input
+                        className="h-8 min-w-[180px] flex-1 rounded border border-amber-300 px-2 text-xs"
+                        placeholder="原因（例：瑕疵/規格不符/效期問題…）"
+                        value={returnReason[ln.id] ?? ''}
+                        onChange={(e) => setReturnReason((prev) => ({ ...prev, [ln.id]: e.target.value }))}
+                      />
                     </div>
                   ))}
                 </div>
@@ -978,6 +991,15 @@ export const AdminReceivingNotesPage: React.FC = () => {
                       .filter((ln) => (returnQty[ln.id] ?? 0) > 0)
                       .map((ln) => ({ receivingNoteLineId: ln.id, quantity: returnQty[ln.id] ?? 0 }));
                     if (!lines.length) return;
+                    setReturnLastSubmitted(
+                      (detail.lines ?? [])
+                        .filter((ln) => (returnQty[ln.id] ?? 0) > 0)
+                        .map((ln) => ({
+                          lineId: ln.id,
+                          qty: returnQty[ln.id] ?? 0,
+                          reason: (returnReason[ln.id] ?? '').trim(),
+                        })),
+                    );
                     setReturnSubmitting(true);
                     const out = await returnToSupplier(detail.id, { lines });
                     setReturnSubmitting(false);
@@ -987,12 +1009,42 @@ export const AdminReceivingNotesPage: React.FC = () => {
                     }
                     showToast('已送出退回供應商', 'ok');
                     setReturnQty({});
+                    setReturnReason({});
                     setDetail(out);
                     load();
                   }}
                 >
                   {returnSubmitting ? '送出中…' : '送出退回供應商'}
                 </Button>
+                {returnLastSubmitted && returnLastSubmitted.length > 0 ? (
+                  <div className="mt-3 rounded-lg border border-amber-200 bg-white/70 p-3 text-xs text-amber-900">
+                    <div className="mb-2 font-semibold">本次送出明細</div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[520px] text-left text-[11px]">
+                        <thead className="border-b border-amber-200 text-amber-800">
+                          <tr>
+                            <th className="px-2 py-1">列</th>
+                            <th className="px-2 py-1 text-right">數量</th>
+                            <th className="px-2 py-1">原因（前端備註）</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {returnLastSubmitted.map((x) => (
+                            <tr key={x.lineId} className="border-t border-amber-100">
+                              <td className="px-2 py-1 font-mono text-amber-900">{x.lineId.slice(0, 8)}</td>
+                              <td className="px-2 py-1 text-right font-mono text-amber-900">{x.qty}</td>
+                              <td className="px-2 py-1 text-amber-900">{x.reason || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-2 text-[11px] text-amber-800">
+                      注意：原因目前僅作前端備註展示；後端事件仍會寫入庫存 <span className="font-mono">RETURN_TO_SUPPLIER</span> 與金流{' '}
+                      <span className="font-mono">PURCHASE_RETURN</span>。
+                    </div>
+                  </div>
+                ) : null}
                 {detail.purchaseOrderId && (
                   <Button
                     type="button"
