@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import { getFinanceBalances, type ApiError, type FinanceBalanceItem } from '../../modules/admin/adminApi';
 import { listLoyaltyCustomers } from '../../modules/admin/loyaltyApi';
 import { listSuppliers } from '../../modules/admin/purchaseApi';
@@ -10,7 +10,7 @@ import { PartyViewSegmented, type PartyView } from '../../shared/components/Part
 
 export const AdminFinanceBalancesPage: React.FC = () => {
   const merchantId = useDefaultMerchantId();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useScopedSearchParams('finance.balances');
   const [items, setItems] = useState<FinanceBalanceItem[]>([]);
   const viewFromUrl = (searchParams.get('view') as PartyView | null) ?? 'all';
   const partyIdFromUrl = searchParams.get('partyId') ?? '';

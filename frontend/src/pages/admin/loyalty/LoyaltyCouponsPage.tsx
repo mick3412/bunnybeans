@@ -7,7 +7,8 @@ import {
   type LoyaltyCouponDto,
 } from '../../../modules/admin/loyaltyApi';
 import type { ApiError } from '../../../modules/admin/adminApi';
-import { useLoyaltyOutletContext } from './LoyaltyLayout';
+import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
+import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
 import { Button } from '../../../shared/components/Button';
 import { TextInput } from '../../../shared/components/TextInput';
 import { useAdminToast } from '../AdminToastContext';
@@ -16,9 +17,10 @@ import { useAdminToast } from '../AdminToastContext';
 type CouponStatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE' | 'FULL';
 
 export const LoyaltyCouponsPage: React.FC = () => {
-  const { merchantId } = useLoyaltyOutletContext();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const qFromUrl = searchParams.get('q') ?? '';
+  const merchantId = useDefaultMerchantId();
+  const [globalSearchParams] = useSearchParams();
+  const [scopedParams, setScopedSearchParams] = useScopedSearchParams('member.coupons');
+  const qFromUrl = scopedParams.get('q') ?? globalSearchParams.get('q') ?? '';
   const showToast = useAdminToast();
   const [items, setItems] = useState<LoyaltyCouponDto[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -44,11 +46,10 @@ export const LoyaltyCouponsPage: React.FC = () => {
   }, [merchantId]);
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    if (searchCode.trim()) params.set('q', searchCode.trim());
-    else params.delete('q');
-    setSearchParams(params, { replace: true });
-  }, [searchCode, searchParams, setSearchParams]);
+    const next = new URLSearchParams();
+    if (searchCode.trim()) next.set('q', searchCode.trim());
+    setScopedSearchParams(next, { replace: true });
+  }, [searchCode, setScopedSearchParams]);
 
   const filteredItems = useMemo(() => {
     let list = items;

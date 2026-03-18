@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import { listFinanceAuditLog, type ApiError, type FinanceAuditLogRow } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
@@ -10,7 +10,7 @@ const PAGE_SIZES = [50, 100, 200];
 
 export const AdminFinanceAuditPage: React.FC = () => {
   const { showToast } = useAdminToast();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useScopedSearchParams('finance.audit');
 
   const [eventId, setEventId] = useState(searchParams.get('eventId') ?? '');
   const [from, setFrom] = useState(searchParams.get('from') ?? '');

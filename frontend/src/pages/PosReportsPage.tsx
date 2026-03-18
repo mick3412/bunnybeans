@@ -15,6 +15,7 @@ import {
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import { MiniBarChart } from '../shared/components/MiniBarChart';
 import { MiniLineChart } from '../shared/components/MiniLineChart';
+import { useDefaultMerchantId } from '../shared/hooks/useDefaultMerchantId';
 
 function money(s: string) {
   const n = Number(s);
@@ -28,6 +29,7 @@ export const PosReportsPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const presetFromQuery = searchParams.get('preset') as PosReportsPreset | null;
+  const merchantId = useDefaultMerchantId();
   const [data, setData] = useState<PosReportsSummaryDto | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState<boolean>(false);
@@ -69,8 +71,9 @@ export const PosReportsPage: React.FC = () => {
   useEffect(() => {
     let c = false;
     (async () => {
+      if (!merchantId) return;
       setSummaryLoading(true);
-      const r = await getPosReportsSummary({ preset });
+      const r = await getPosReportsSummary({ preset, merchantId });
       if (c) return;
       if ('statusCode' in r) {
         setErr(getErrorMessage(r as ApiError));
@@ -84,7 +87,7 @@ export const PosReportsPage: React.FC = () => {
     return () => {
       c = true;
     };
-  }, [preset]);
+  }, [preset, merchantId]);
 
   useEffect(() => {
     if (!data?.period) return;
@@ -102,7 +105,7 @@ export const PosReportsPage: React.FC = () => {
         setOrdersErr(null);
         setOrders(ordersRes);
       }
-      const top = await getPosTopItems({ from, to, limit: 10, sortBy: 'revenue' });
+      const top = await getPosTopItems({ from, to, limit: 10, sortBy: 'revenue', merchantId });
       if (!cancelled) {
         if (Array.isArray(top)) {
           setTopItemsErr(null);
@@ -113,7 +116,7 @@ export const PosReportsPage: React.FC = () => {
         }
         setTopItemsLoading(false);
       }
-      const d = await getPosDaily({ from, to });
+      const d = await getPosDaily({ from, to, merchantId });
       if (!cancelled) {
         if (Array.isArray(d)) {
           setDailyErr(null);
@@ -128,7 +131,7 @@ export const PosReportsPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [data]);
+  }, [data, merchantId]);
 
   return (
     <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-pos-reports">

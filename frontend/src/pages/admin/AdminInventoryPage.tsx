@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import {
   getWarehouses,
   getBalancesEnriched,
@@ -33,9 +34,14 @@ export const AdminInventoryPage: React.FC = () => {
   const merchantIdDefault = useDefaultMerchantId();
   const merchantIdFromUrl = (searchParams.get('merchantId') ?? '').trim();
   const merchantId = merchantIdFromUrl || merchantIdDefault;
+  const [invParams, setInvParams] = useScopedSearchParams('inventory.query');
+  const invViewParam = invParams.get('invView') ?? searchParams.get('invView');
+  const [, setInvHubTabParams] = useScopedSearchParams('inventory.query.hub');
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [warehouseId, setWarehouseId] = useState('');
-  const [view, setView] = useState<'balances' | 'slowMoving'>('balances');
+  const [view, setView] = useState<'balances' | 'slowMoving'>(
+    invViewParam === 'slowMoving' ? 'slowMoving' : 'balances',
+  );
   const [balances, setBalances] = useState<BalanceEnrichedRow[]>([]);
   const [events, setEvents] = useState<{
     items: {
@@ -87,6 +93,24 @@ export const AdminInventoryPage: React.FC = () => {
   const [expiringBatchRows, setExpiringBatchRows] = useState<ExpiringBatchRow[]>([]);
   const pageSize = 20;
   const hasAdminKey = Boolean((import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim());
+
+  // 使用 scoped URL param 讓 Hub tab 與此頁 view 同步（同元件切換避免串台）
+  useEffect(() => {
+    const next = invViewParam === 'slowMoving' ? 'slowMoving' : 'balances';
+    setView((prev) => (prev === next ? prev : next));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invViewParam]);
+
+  useEffect(() => {
+    const desired = view === 'slowMoving' ? 'slowMoving' : 'balances';
+    const invNext = new URLSearchParams();
+    invNext.set('invView', desired);
+    setInvParams(invNext, { replace: true });
+
+    const hubNext = new URLSearchParams();
+    hubNext.set('tab', desired);
+    setInvHubTabParams(hubNext, { replace: true });
+  }, [view, setInvParams, setInvHubTabParams]);
 
   const skuToBalanceRow = useMemo(() => {
     const m = new Map<string, BalanceEnrichedRow>();
@@ -733,68 +757,69 @@ export const AdminInventoryPage: React.FC = () => {
           </section>
 
           {expiringOpen ? (
-            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-              <div className="w-full max-w-4xl rounded-2xl border border-brand-surface bg-white p-4 shadow-xl">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-content">即期庫存監控</div>
-                    <div className="mt-0.5 text-xs text-muted">
-                      warehouseId：<span className="font-mono">{warehouseId || '—'}</span>
-                    </div>
+            <div className="mt-4 w-full rounded-2xl border border-brand-surface bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-content">即期庫存監控</div>
+                  <div className="mt-0.5 text-xs text-muted">
+                    warehouseId：<span className="font-mono">{warehouseId || '—'}</span>
                   </div>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-lg border border-brand-surface px-2 py-1 text-xs text-muted hover:bg-table-head"
+                  onClick={() => setExpiringOpen(false)}
+                >
+                  關閉
+                </button>
+              </div>
+
+              <div className="mb-3 flex flex-wrap items-end gap-2">
+                <div className="flex items-center gap-2 rounded-full bg-table-head px-2 py-1">
                   <button
                     type="button"
-                    className="rounded-lg border border-brand-surface px-2 py-1 text-xs text-muted hover:bg-table-head"
-                    onClick={() => setExpiringOpen(false)}
+                    className={[
+                      'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+                      expiringTab === 'product'
+                        ? 'bg-forge-sidebar text-white shadow-sm'
+                        : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
+                    ].join(' ')}
+                    onClick={() => setExpiringTab('product')}
                   >
-                    關閉
+                    依商品彙總
+                  </button>
+                  <button
+                    type="button"
+                    className={[
+                      'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+                      expiringTab === 'batch'
+                        ? 'bg-forge-sidebar text-white shadow-sm'
+                        : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
+                    ].join(' ')}
+                    onClick={() => setExpiringTab('batch')}
+                  >
+                    依批次明細
                   </button>
                 </div>
-
-                <div className="mb-3 flex flex-wrap items-end gap-2">
-                  <div className="flex items-center gap-2 rounded-full bg-table-head px-2 py-1">
-                    <button
-                      type="button"
-                      className={[
-                        'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-                        expiringTab === 'product'
-                          ? 'bg-forge-sidebar text-white shadow-sm'
-                          : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
-                      ].join(' ')}
-                      onClick={() => setExpiringTab('product')}
-                    >
-                      依商品彙總
-                    </button>
-                    <button
-                      type="button"
-                      className={[
-                        'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-                        expiringTab === 'batch'
-                          ? 'bg-forge-sidebar text-white shadow-sm'
-                          : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
-                      ].join(' ')}
-                      onClick={() => setExpiringTab('batch')}
-                    >
-                      依批次明細
-                    </button>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-muted">daysAhead</label>
-                    <input
-                      type="number"
-                      min={1}
-                      className="h-9 w-28 rounded-lg border border-brand-surface bg-white px-3 text-sm text-right tabular-nums focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                      value={expiringDaysAhead}
-                      onChange={(e) => setExpiringDaysAhead(Math.max(1, Number(e.target.value || 1)))}
-                    />
-                  </div>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => void loadExpiring()} disabled={expiringLoading}>
-                    {expiringLoading ? '載入中…' : '重新整理'}
-                  </Button>
-                  {expiringErr ? <div className="text-xs text-brand-danger">{expiringErr}</div> : null}
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-muted">daysAhead</label>
+                  <input
+                    type="number"
+                    min={1}
+                    className="h-9 w-28 rounded-lg border border-brand-surface bg-white px-3 text-sm text-right tabular-nums focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                    value={expiringDaysAhead}
+                    onChange={(e) => setExpiringDaysAhead(Math.max(1, Number(e.target.value || 1)))}
+                  />
                 </div>
+                <Button type="button" size="sm" variant="secondary" onClick={() => void loadExpiring()} disabled={expiringLoading}>
+                  {expiringLoading ? '載入中…' : '重新整理'}
+                </Button>
+                {expiringErr ? <div className="text-xs text-brand-danger">{expiringErr}</div> : null}
+              </div>
 
-                <div className="overflow-hidden rounded-xl border border-brand-surface">
+              <div className="rounded-xl border border-brand-surface">
+                {/* 控制列固定（上方），表格區可捲動 */}
+                <div className="max-h-[60vh] overflow-y-auto">
                   {expiringLoading ? (
                     <div className="px-4 py-8 text-center text-sm text-muted">載入中…</div>
                   ) : expiringTab === 'product' ? (

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   getFinanceEvents,
   getFinanceSummary,
@@ -16,6 +16,7 @@ import { MiniBarChart } from '../../shared/components/MiniBarChart';
 import { ReferenceIdLink } from '../../shared/components/ReferenceIdLink';
 import { PartyViewSegmented } from '../../shared/components/PartyViewSegmented';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 
 function toYmd(d: Date): string {
   const y = d.getFullYear();
@@ -43,7 +44,7 @@ function financeTypeLabel(type: string): string {
 
 export const AdminReportsPage: React.FC = () => {
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useScopedSearchParams('finance.reports');
   const presetFromUrl = (searchParams.get('preset') as 'last30d' | 'all' | 'custom' | null) ?? 'last30d';
   const fromFromUrl = searchParams.get('from') ?? '';
   const toFromUrl = searchParams.get('to') ?? '';

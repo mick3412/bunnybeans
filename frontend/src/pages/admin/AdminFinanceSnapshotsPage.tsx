@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import {
   createFinanceSnapshot,
   listFinanceSnapshots,
@@ -18,7 +19,7 @@ const PAGE_SIZES = [20, 50, 100];
 export const AdminFinanceSnapshotsPage: React.FC = () => {
   const { showToast } = useAdminToast();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useScopedSearchParams('finance.snapshots');
 
   const [type, setType] = useState<'daily' | 'monthly' | ''>((searchParams.get('type') as 'daily' | 'monthly' | null) ?? '');
   const [page, setPage] = useState(Number(searchParams.get('page') ?? '1') || 1);

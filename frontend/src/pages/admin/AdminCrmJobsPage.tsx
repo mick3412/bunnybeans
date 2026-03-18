@@ -4,6 +4,7 @@ import { Button } from '../../shared/components/Button';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import { useAdminToast } from './AdminToastContext';
 import {
   getCrmJob,
@@ -32,17 +33,20 @@ function statusLabel(s: string) {
 
 export const AdminCrmJobsPage: React.FC = () => {
   const { showToast } = useAdminToast();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [globalSearchParams] = useSearchParams();
+  const [scopedParams, setScopedSearchParams] = useScopedSearchParams('marketing.jobs');
   const merchantIdDefault = useDefaultMerchantId();
-  const merchantIdFromUrl = (searchParams.get('merchantId') ?? '').trim();
+  const merchantIdFromUrl = (globalSearchParams.get('merchantId') ?? '').trim();
   const merchantId = merchantIdFromUrl || merchantIdDefault;
 
-  const kindFromUrl = searchParams.get('kind') ?? '';
-  const fromFromUrl = searchParams.get('from') ?? '';
-  const toFromUrl = searchParams.get('to') ?? '';
-  const jobIdFromUrl = searchParams.get('jobId') ?? '';
-  const pageFromUrl = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
-  const pageSizeFromUrl = Math.max(1, parseInt(searchParams.get('pageSize') ?? '20', 10) || 20);
+  const kindFromUrl = scopedParams.get('kind') ?? globalSearchParams.get('kind') ?? '';
+  const fromFromUrl = scopedParams.get('from') ?? globalSearchParams.get('from') ?? '';
+  const toFromUrl = scopedParams.get('to') ?? globalSearchParams.get('to') ?? '';
+  const jobIdFromUrl = scopedParams.get('jobId') ?? globalSearchParams.get('jobId') ?? '';
+  const pageFromUrlRaw = scopedParams.get('page') ?? globalSearchParams.get('page') ?? '1';
+  const pageSizeFromUrlRaw = scopedParams.get('pageSize') ?? globalSearchParams.get('pageSize') ?? '20';
+  const pageFromUrl = Math.max(1, parseInt(pageFromUrlRaw || '1', 10) || 1);
+  const pageSizeFromUrl = Math.max(1, parseInt(pageSizeFromUrlRaw || '20', 10) || 20);
 
   const [kind, setKind] = useState(kindFromUrl);
   const [from, setFrom] = useState(fromFromUrl);
@@ -103,11 +107,8 @@ export const AdminCrmJobsPage: React.FC = () => {
       setDrawerJobId(jobId);
       setDrawerJob(null);
       setDrawerErr(null);
-      const next = new URLSearchParams(searchParams);
-      next.set('jobId', jobId);
-      setSearchParams(next, { replace: true });
     },
-    [searchParams, setSearchParams],
+    [],
   );
 
   const closeDrawer = useCallback(() => {
@@ -115,10 +116,7 @@ export const AdminCrmJobsPage: React.FC = () => {
     setDrawerJobId(null);
     setDrawerJob(null);
     setDrawerErr(null);
-    const next = new URLSearchParams(searchParams);
-    next.delete('jobId');
-    setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, []);
 
   const loadDrawer = useCallback(
     async (jobId: string) => {
@@ -141,23 +139,19 @@ export const AdminCrmJobsPage: React.FC = () => {
   }, [load]);
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
+    const next = new URLSearchParams();
     const setOrDel = (k: string, v: string) => {
-      if (v.trim()) params.set(k, v.trim());
-      else params.delete(k);
+      if (v.trim()) next.set(k, v.trim());
     };
     setOrDel('kind', kind);
     setOrDel('from', from);
     setOrDel('to', to);
-    if (page !== 1) params.set('page', String(page));
-    else params.delete('page');
-    if (pageSize !== 20) params.set('pageSize', String(pageSize));
-    else params.delete('pageSize');
-    if (drawerJobId) params.set('jobId', drawerJobId);
-    else params.delete('jobId');
-    // 保留 merchantId（由 AdminLayout 管理/寫入）
-    setSearchParams(params, { replace: true });
-  }, [kind, from, to, page, pageSize, drawerJobId, searchParams, setSearchParams]);
+    if (page !== 1) next.set('page', String(page));
+    if (pageSize !== 20) next.set('pageSize', String(pageSize));
+    if (drawerJobId) next.set('jobId', drawerJobId);
+
+    setScopedSearchParams(next, { replace: true });
+  }, [kind, from, to, page, pageSize, drawerJobId, setScopedSearchParams]);
 
   useEffect(() => {
     if (!jobIdFromUrl) return;

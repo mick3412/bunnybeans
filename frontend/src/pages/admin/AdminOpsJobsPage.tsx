@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import { listOpsJobs, runOpsJob, type ApiError } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
@@ -18,7 +18,7 @@ const PAGE_SIZES = [10, 20, 50];
 export const AdminOpsJobsPage: React.FC = () => {
   const { showToast } = useAdminToast();
   const canWrite = hasAdminApiKey();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useScopedSearchParams('ops.jobs');
   const kindFromUrl = searchParams.get('kind') ?? '';
   const fromFromUrl = searchParams.get('from') ?? '';
   const toFromUrl = searchParams.get('to') ?? '';
@@ -254,7 +254,10 @@ export const AdminOpsJobsPage: React.FC = () => {
                     ].join(' ')}
                   >
                     <td className="px-3 py-2 font-medium text-[#1e293b]">{r.jobType}</td>
-                    <td className="px-3 py-2 tabular-nums text-[#64748b]">
+                    <td
+                      className="px-3 py-2 tabular-nums text-[#64748b]"
+                      data-testid="e2e-admin-ops-jobs-lastRunAt"
+                    >
                       {r.lastRunAt ? new Date(r.lastRunAt).toLocaleString('zh-TW') : '—'}
                     </td>
                     <td className="px-3 py-2">
@@ -266,7 +269,11 @@ export const AdminOpsJobsPage: React.FC = () => {
                         {r.success ? '成功' : '失敗'}
                       </span>
                     </td>
-                    <td className="max-w-xs truncate px-3 py-2 text-[#64748b]" title={r.message ?? undefined}>
+                    <td
+                      className="max-w-xs truncate px-3 py-2 text-[#64748b]"
+                      title={r.message ?? undefined}
+                      data-testid="e2e-admin-ops-jobs-message"
+                    >
                       {r.message || '—'}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-[#64748b]">

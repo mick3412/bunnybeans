@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getLoyaltyDashboard, type LoyaltyDashboardDto } from '../../../modules/admin/loyaltyApi';
 import type { ApiError } from '../../../modules/admin/adminApi';
-import { useLoyaltyOutletContext } from './LoyaltyLayout';
+import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
 import { Link } from 'react-router-dom';
 
 function Card({
@@ -43,7 +43,7 @@ function typeTag(t: string) {
 }
 
 export const LoyaltyDashboardPage: React.FC = () => {
-  const { merchantId } = useLoyaltyOutletContext();
+  const merchantId = useDefaultMerchantId();
   const [data, setData] = useState<LoyaltyDashboardDto | null>(null);
   const [err, setErr] = useState<string | null>(null);
 

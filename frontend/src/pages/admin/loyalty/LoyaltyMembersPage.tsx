@@ -13,7 +13,7 @@ import {
   type CustomerDetailDto,
 } from '../../../modules/admin/adminApi';
 import type { ApiError } from '../../../modules/admin/adminApi';
-import { useLoyaltyOutletContext } from './LoyaltyLayout';
+import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
 import { TextInput } from '../../../shared/components/TextInput';
 import { Button } from '../../../shared/components/Button';
 import { useAdminToast } from '../AdminToastContext';
@@ -21,7 +21,7 @@ import { useAdminToast } from '../AdminToastContext';
 type DrawerMode = 'create' | 'edit';
 
 export const LoyaltyMembersPage: React.FC = () => {
-  const { merchantId } = useLoyaltyOutletContext();
+  const merchantId = useDefaultMerchantId();
   const showToast = useAdminToast();
   const [rows, setRows] = useState<LoyaltyCustomerRow[]>([]);
   const [searchResults, setSearchResults] = useState<LoyaltyCustomerRow[]>([]);

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import {
   listPromotionRules,
   deletePromotionRule,
@@ -52,9 +53,10 @@ export const AdminPromotionsPage: React.FC = () => {
   const { showToast } = useAdminToast();
   const navigate = useNavigate();
   const { id: routeId } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const status = searchParams.get('status') || 'all';
-  const q = searchParams.get('q') || '';
+  const [searchParams] = useSearchParams();
+  const [scopedParams, setScopedSearchParams] = useScopedSearchParams('marketing.promotions');
+  const status = scopedParams.get('status') ?? searchParams.get('status') ?? 'all';
+  const q = scopedParams.get('q') ?? searchParams.get('q') ?? '';
   const merchantId = useDefaultMerchantId();
   const [rows, setRows] = useState<PromotionRuleDto[]>([]);
   const [effectiveness, setEffectiveness] = useState<Record<string, PromotionEffectivenessItem>>({});
@@ -99,16 +101,17 @@ export const AdminPromotionsPage: React.FC = () => {
   }, [load]);
 
   const setStatus = (key: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('status', key);
-    setSearchParams(next);
+    const nextScoped = new URLSearchParams();
+    nextScoped.set('status', key);
+    if (q.trim()) nextScoped.set('q', q.trim());
+    setScopedSearchParams(nextScoped, { replace: true });
   };
 
   const applySearch = () => {
-    const next = new URLSearchParams(searchParams);
-    if (searchInput.trim()) next.set('q', searchInput.trim());
-    else next.delete('q');
-    setSearchParams(next);
+    const nextScoped = new URLSearchParams();
+    nextScoped.set('status', status);
+    if (searchInput.trim()) nextScoped.set('q', searchInput.trim());
+    setScopedSearchParams(nextScoped, { replace: true });
   };
 
   const closePanel = useCallback(() => {

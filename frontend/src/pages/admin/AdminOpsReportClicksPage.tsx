@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
   listReportClickAudit,
   summaryReportClickAudit,
@@ -10,6 +10,7 @@ import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { Button } from '../../shared/components/Button';
 import { ReferenceIdLink } from '../../shared/components/ReferenceIdLink';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 
 const PAGE_SIZES = [20, 50, 100];
 const KIND_OPTIONS: Array<{ value: string; label: string }> = [
@@ -21,7 +22,7 @@ const KIND_OPTIONS: Array<{ value: string; label: string }> = [
 
 export const AdminOpsReportClicksPage: React.FC = () => {
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useScopedSearchParams('ops.reportClicks');
 
   const [source, setSource] = useState(searchParams.get('source') ?? '');
   const [resolvedKind, setResolvedKind] = useState(searchParams.get('kind') ?? '');

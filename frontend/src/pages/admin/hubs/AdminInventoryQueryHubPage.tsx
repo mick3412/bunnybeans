@@ -1,0 +1,78 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Button } from '../../../shared/components/Button';
+import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
+import { AdminInventoryPage } from '../AdminInventoryPage';
+import { AdminExpiringInventoryPage } from '../AdminExpiringInventoryPage';
+
+export type InventoryQueryHubTabKey = 'balances' | 'slowMoving' | 'expiring';
+
+const TAB_OPTIONS: Array<{ key: InventoryQueryHubTabKey; label: string }> = [
+  { key: 'balances', label: '庫存餘額' },
+  { key: 'slowMoving', label: '滯銷品' },
+  { key: 'expiring', label: '即期庫存' },
+];
+
+function tabButtonClass(active: boolean) {
+  return [
+    'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+    active ? 'bg-[#1e293b] text-white shadow-sm' : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
+  ].join(' ');
+}
+
+export function AdminInventoryQueryHubPage(props: { initialTab?: InventoryQueryHubTabKey }) {
+  const { initialTab } = props;
+  const [hubParams, setHubParams] = useScopedSearchParams('inventory.query.hub');
+  const [invParams, setInvParams] = useScopedSearchParams('inventory.query');
+
+  const tabFromUrl = (hubParams.get('tab') as InventoryQueryHubTabKey | null) ?? null;
+  const defaultTab: InventoryQueryHubTabKey = tabFromUrl ?? initialTab ?? 'balances';
+
+  const [activeTab, setActiveTab] = useState<InventoryQueryHubTabKey>(defaultTab);
+
+  useEffect(() => {
+    if (!tabFromUrl) return;
+    if (tabFromUrl === activeTab) return;
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl, activeTab]);
+
+  useEffect(() => {
+    const nextHub = new URLSearchParams();
+    nextHub.set('tab', activeTab);
+    setHubParams(nextHub, { replace: true });
+  }, [activeTab, setHubParams]);
+
+  useEffect(() => {
+    if (activeTab === 'balances' || activeTab === 'slowMoving') {
+      const desired = activeTab === 'slowMoving' ? 'slowMoving' : 'balances';
+      const nextInv = new URLSearchParams();
+      nextInv.set('invView', desired);
+      setInvParams(nextInv, { replace: true });
+    }
+  }, [activeTab, setInvParams]);
+
+  const ActivePage = useMemo(() => {
+    if (activeTab === 'expiring') return AdminExpiringInventoryPage;
+    return AdminInventoryPage;
+  }, [activeTab]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2 border-b border-brand-surface pb-3">
+        {TAB_OPTIONS.map((t) => (
+          <Button
+            key={t.key}
+            type="button"
+            size="sm"
+            variant="secondary"
+            className={tabButtonClass(activeTab === t.key)}
+            onClick={() => setActiveTab(t.key)}
+          >
+            {t.label}
+          </Button>
+        ))}
+      </div>
+      <ActivePage />
+    </div>
+  );
+}
+

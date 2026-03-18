@@ -16,41 +16,115 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
       : 'border-transparent text-neutral-400 hover:bg-white/[0.06] hover:text-neutral-200',
   ].join(' ');
 
-function headerTitle(pathname: string): string {
-  if (pathname === '/admin' || pathname === '/admin/') return '總覽';
+function headerTitle(
+  pathname: string,
+  hubs: {
+    financeTab: string | null;
+    inventoryTab: string | null;
+    productTab: string | null;
+    opsTab: string | null;
+    memberTab: string | null;
+    marketingTab: string | null;
+  },
+): string {
+  const { financeTab, inventoryTab, productTab, opsTab, memberTab } = hubs;
+
+  if (pathname === '/admin' || pathname === '/admin/') {
+    if (opsTab === 'jobs') return 'Job 監控';
+    if (opsTab === 'clicks') return '穿透點擊審計';
+    return '總覽';
+  }
   if (pathname.startsWith('/admin/inventory/adjust')) return '入庫／盤點';
   if (pathname.startsWith('/admin/inventory/expiring')) return '即期庫存';
-  if (pathname.startsWith('/admin/inventory')) return '庫存餘額';
-  if (pathname.startsWith('/admin/products')) return '商品主檔';
+  if (pathname.startsWith('/admin/inventory')) {
+    if (inventoryTab === 'expiring') return '即期庫存';
+    if (inventoryTab === 'slowMoving') return '滯銷品';
+    return '庫存報表';
+  }
+  if (pathname.startsWith('/admin/products')) {
+    if (productTab === 'categories') return '類別管理';
+    return '商品主檔';
+  }
   if (pathname.startsWith('/admin/categories')) return '類別管理';
   if (pathname.startsWith('/admin/warehouses')) return '倉庫/門市';
-  if (pathname.startsWith('/admin/reports')) return '金流報表';
-  if (pathname.startsWith('/admin/balances')) return '應收應付餘額';
-  if (pathname.startsWith('/admin/finance/periods')) return '關帳區間';
-  if (pathname.startsWith('/admin/finance/audit')) return '稽核紀錄';
-  if (pathname.startsWith('/admin/finance/snapshots')) return '金流快照';
-  if (pathname.startsWith('/admin/ops/jobs')) return 'Job 監控';
-  if (pathname.startsWith('/admin/ops/report-clicks')) return '穿透點擊審計';
-  if (pathname.startsWith('/admin/marketing/rules')) return '行銷發券規則';
+  if (pathname.startsWith('/admin/reports') || pathname.startsWith('/admin/balances') || pathname.startsWith('/admin/finance/')) {
+    if (financeTab === 'balances') return '應收應付餘額';
+    if (financeTab === 'periods') return '關帳區間';
+    if (financeTab === 'audit') return '稽核紀錄';
+    if (financeTab === 'snapshots') return '金流快照';
+    return '金流報表';
+  }
+  if (pathname.startsWith('/admin/ops/jobs')) {
+    if (opsTab === 'overview') return '總覽';
+    if (opsTab === 'clicks') return '穿透點擊審計';
+    return 'Job 監控';
+  }
+  if (pathname.startsWith('/admin/ops/report-clicks')) {
+    if (opsTab === 'overview') return '總覽';
+    if (opsTab === 'jobs') return 'Job 監控';
+    return '穿透點擊審計';
+  }
+  if (pathname.startsWith('/admin/marketing/rules/new')) return '新增行銷規則';
+  if (pathname.match(/\/admin\/marketing\/rules\/[^/]+/)) return '編輯行銷規則';
+  if (pathname.startsWith('/admin/marketing/rules')) return '行銷規則（常駐）';
+  if (pathname.startsWith('/admin/crm/jobs')) return '行銷工作台（Jobs）';
   if (pathname.startsWith('/admin/segments/export')) return '分群匯出';
-  if (pathname.startsWith('/admin/segments')) return '分群管理';
-  if (pathname.startsWith('/admin/dispatch-rules')) return '發券規則';
   if (pathname.includes('/admin/promotions/new')) return '新增促銷';
   if (pathname.match(/\/admin\/promotions\/[^/]+/)) return '編輯促銷';
-  if (pathname.startsWith('/admin/promotions')) return '促銷規則';
-  if (pathname.startsWith('/admin/customers/import')) return '客戶 CSV';
-  if (pathname.startsWith('/admin/customers')) return '會員列表';
+  if (pathname.startsWith('/admin/promotions')) {
+    if (marketingTab === 'jobs') return '行銷工作台（Jobs）';
+    if (marketingTab === 'marketingRules') return '行銷規則（常駐）';
+    return '促銷規則';
+  }
+  if (pathname.startsWith('/admin/customers/import')) return '客戶 CSV 匯入';
+  // 會員中心/會員管理：依 member.hub.tab 決定
   if (pathname.startsWith('/admin/suppliers')) return '供應商管理';
   if (pathname.startsWith('/admin/purchase-orders')) return '採購單管理';
   if (pathname.startsWith('/admin/replenishment')) return '補貨建議';
   if (pathname.startsWith('/admin/receiving-notes')) return '進貨驗收';
-  if (pathname.startsWith('/admin/loyalty/settings')) return '集點設定';
-  if (pathname.startsWith('/admin/loyalty/point-ledger')) return '點數存摺';
   // /admin/loyalty/members 已在路由層 redirect 到 /admin/customers
-  if (pathname.startsWith('/admin/loyalty/members')) return '會員列表';
-  if (pathname.startsWith('/admin/loyalty/coupons')) return '優惠券';
-  if (pathname.startsWith('/admin/loyalty/reports')) return '活動報表';
-  if (pathname.startsWith('/admin/loyalty')) return '儀表板';
+  if (pathname.startsWith('/admin/loyalty/members')) return '會員管理';
+  if (
+    pathname.startsWith('/admin/loyalty') ||
+    pathname.startsWith('/admin/customers') ||
+    pathname.startsWith('/admin/segments') ||
+    pathname.startsWith('/admin/dispatch-rules')
+  ) {
+    const fromTab =
+      memberTab === 'members'
+        ? '會員管理'
+        : memberTab === 'pointLedger'
+          ? '點數存摺'
+          : memberTab === 'coupons'
+            ? '優惠券'
+            : memberTab === 'reports'
+              ? '活動報表'
+              : memberTab === 'settings'
+                ? '集點設定'
+                : memberTab === 'tierRules'
+                  ? '會員等級規則'
+                  : memberTab === 'segments'
+                    ? '分群管理'
+                    : memberTab === 'dispatchRules'
+                      ? '發券規則'
+                      : memberTab === 'dashboard'
+                        ? '儀表板'
+                        : null;
+
+    if (fromTab) return fromTab;
+
+    // 當 member.hub.tab 尚未寫入 URL（例如剛進頁）時，以 pathname 做兜底
+    if (pathname.startsWith('/admin/loyalty/settings')) return '集點設定';
+    if (pathname.startsWith('/admin/loyalty/point-ledger')) return '點數存摺';
+    if (pathname.startsWith('/admin/loyalty/coupons')) return '優惠券';
+    if (pathname.startsWith('/admin/loyalty/reports')) return '活動報表';
+    if (pathname.startsWith('/admin/loyalty/tier-rules')) return '會員等級規則';
+    if (pathname.startsWith('/admin/loyalty/members')) return '會員管理';
+    if (pathname.startsWith('/admin/dispatch-rules')) return '發券規則';
+    if (pathname.startsWith('/admin/segments')) return '分群管理';
+    if (pathname.startsWith('/admin/customers')) return '會員管理';
+    return '儀表板';
+  }
   if (pathname.startsWith('/admin/merchants')) return '商家主檔';
   return '後台';
 }
@@ -62,7 +136,18 @@ export const AdminLayout: React.FC = () => {
   const merchantId = useDefaultMerchantId();
   const { items: todoItems } = useAdminTodoItems(merchantId);
   const { isHidden, dismiss, snooze } = useTodoDismiss();
-  const title = useMemo(() => headerTitle(location.pathname), [location.pathname]);
+  const hubs = useMemo(
+    () => ({
+      financeTab: searchParams.get('finance.hub.tab'),
+      inventoryTab: searchParams.get('inventory.query.hub.tab'),
+      productTab: searchParams.get('product.hub.tab'),
+      opsTab: searchParams.get('ops.monitoring.hub.tab'),
+      memberTab: searchParams.get('member.hub.tab'),
+      marketingTab: searchParams.get('marketing.hub.tab'),
+    }),
+    [searchParams],
+  );
+  const title = useMemo(() => headerTitle(location.pathname, hubs), [location.pathname, hubs]);
   const dateStr = useMemo(
     () =>
       new Date().toLocaleDateString('zh-TW', {
@@ -160,50 +245,66 @@ export const AdminLayout: React.FC = () => {
             </div>
           </div>
           <nav className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 flex flex-col gap-0.5" aria-label="導覽">
-            {/* 營運管理 */}
-            <div className="mb-1 mt-0.5 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">營運管理</div>
-            <NavLink to="/admin" className={navClass} end>總覽</NavLink>
-            <NavLink to="/admin/products" className={navClass}>商品主檔</NavLink>
-            <NavLink to="/admin/categories" className={navClass}>類別管理</NavLink>
-            <NavLink to="/admin/warehouses" className={navClass}>倉庫/門市</NavLink>
-            <NavLink to="/admin/inventory" className={navClass} end>庫存餘額</NavLink>
-            <NavLink to="/admin/inventory/expiring" className={navClass}>即期庫存</NavLink>
-            <NavLink to="/admin/inventory/adjust" className={navClass}>入庫／盤點</NavLink>
-            <NavLink to="/admin/suppliers" className={navClass}>供應商</NavLink>
-            <NavLink to="/admin/purchase-orders" className={navClass}>採購單</NavLink>
-            <NavLink to="/admin/receiving-notes" className={navClass}>進貨驗收</NavLink>
-            <NavLink to="/admin/replenishment" className={navClass}>補貨建議</NavLink>
-            <NavLink to="/admin/balances" className={navClass}>應收應付餘額</NavLink>
-            <NavLink to="/admin/finance/periods" className={navClass}>關帳區間</NavLink>
-            <NavLink to="/admin/finance/audit" className={navClass}>稽核紀錄</NavLink>
-            <NavLink to="/admin/finance/snapshots" className={navClass}>金流快照</NavLink>
-            <NavLink to="/admin/ops/jobs" className={navClass}>Job 監控</NavLink>
-            <NavLink to="/admin/ops/report-clicks" className={navClass}>穿透點擊審計</NavLink>
+            {/* 第一層：總覽 / 監控（不可點） */}
+            <div className="mb-1 mt-0.5 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">總覽 / 監控</div>
+            {/* 第二層：主入口（可點） */}
+            <NavLink to="/admin" className={navClass} end>
+              總覽
+            </NavLink>
+            <NavLink to="/admin/ops/jobs" className={navClass}>
+              Job 監控
+            </NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />
 
-            {/* 報表中心 */}
-            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">報表中心</div>
-            <NavLink to="/pos/reports" className={navClass}>銷售報表</NavLink>
-            <NavLink to="/admin/reports" className={navClass}>金流報表</NavLink>
-            <NavLink to="/admin/inventory" className={navClass} end>庫存報表</NavLink>
-            <NavLink to="/admin/loyalty/reports" className={navClass}>會員報表</NavLink>
+            {/* 第一層：商品/庫存（不可點） */}
+            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">商品/庫存</div>
+            {/* 第二層：主入口（可點） */}
+            <NavLink to="/admin/products" className={navClass}>
+              商品主檔
+            </NavLink>
+            <NavLink to="/admin/inventory" className={navClass}>
+              庫存
+            </NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />
 
-            {/* 會員與行銷 */}
-            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">會員與行銷</div>
-            <NavLink to="/admin/loyalty" className={navClass} end>儀表板</NavLink>
-            <NavLink to="/admin/loyalty/point-ledger" className={navClass}>點數存摺</NavLink>
-            <NavLink to="/admin/customers" className={navClass}>會員管理</NavLink>
-            <NavLink to="/admin/loyalty/coupons" className={navClass}>優惠券</NavLink>
-            <NavLink to="/admin/loyalty/reports" className={navClass}>活動報表</NavLink>
-            <NavLink to="/admin/loyalty/settings" className={navClass}>集點設定</NavLink>
-            <NavLink to="/admin/segments" className={navClass}>分群管理</NavLink>
-            <NavLink to="/admin/dispatch-rules" className={navClass}>發券規則</NavLink>
-            <NavLink to="/admin/crm/jobs" className={navClass}>行銷工作台（Jobs）</NavLink>
-            <NavLink to="/admin/marketing/rules" className={navClass}>行銷規則（常駐）</NavLink>
-            <NavLink to="/admin/promotions" className={navClass}>促銷規則</NavLink>
+            {/* 第一層：採購管理（不可點） */}
+            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">採購管理</div>
+            {/* 第二層：主入口（可點） */}
+            <NavLink to="/admin/inventory/adjust" className={navClass}>
+              入庫／盤點
+            </NavLink>
+            <NavLink to="/admin/purchase-orders" className={navClass}>
+              採購單
+            </NavLink>
+
+            <div className="my-2 border-t border-white/25" aria-hidden />
+
+            {/* 第一層：財務（不可點） */}
+            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">財務</div>
+            {/* 第二層：主入口（可點） */}
+            <NavLink to="/admin/reports" className={navClass}>
+              金流報表
+            </NavLink>
+            <NavLink to="/admin/balances" className={navClass}>
+              應收應付餘額
+            </NavLink>
+
+            <div className="my-2 border-t border-white/25" aria-hidden />
+
+            {/* 第一層：會員/行銷（不可點） */}
+            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">會員/行銷</div>
+            {/* 第二層：主入口（可點） */}
+            <NavLink to="/admin/loyalty" className={navClass} end>
+              儀表板
+            </NavLink>
+            <NavLink to="/admin/customers" className={navClass}>
+              會員管理
+            </NavLink>
+            <NavLink to="/admin/promotions" className={navClass}>
+              促銷規則
+            </NavLink>
           </nav>
           <div className="shrink-0 border-t border-white/10 px-2 py-4">
             <button

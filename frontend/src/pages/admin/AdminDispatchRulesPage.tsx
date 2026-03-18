@@ -16,6 +16,7 @@ import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { useAdminToast } from './AdminToastContext';
 import { Button } from '../../shared/components/Button';
+import { useNavigate } from 'react-router-dom';
 
 const SCHEDULE_OPTIONS: { value: string; label: string }[] = [
   { value: 'manual', label: '手動' },
@@ -32,6 +33,7 @@ const ENABLED_FILTER: { key: boolean | 'all'; label: string }[] = [
 
 export const AdminDispatchRulesPage: React.FC = () => {
   const { showToast } = useAdminToast();
+  const navigate = useNavigate();
   const merchantId = useDefaultMerchantId();
   const [rules, setRules] = useState<DispatchRuleRow[]>([]);
   const [segments, setSegments] = useState<SegmentRow[]>([]);
@@ -348,19 +350,34 @@ export const AdminDispatchRulesPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-2 text-[#64748b]">
                       <div className="flex min-w-[240px] flex-col gap-0.5">
-                        <span className="tabular-nums">
+                        <span className="tabular-nums" data-testid="e2e-dispatch-rules-lastRunAt">
                           {row.lastRunAt ? new Date(row.lastRunAt).toLocaleString('zh-TW') : '—'}
                         </span>
-                        {row.lastRunCode ? <span className="font-mono text-[11px] text-muted">{row.lastRunCode}</span> : null}
+                        {row.lastRunCode ? (
+                          <span
+                            className="font-mono text-[11px] text-muted"
+                            data-testid="e2e-dispatch-rules-lastRunCode"
+                          >
+                            {row.lastRunCode}
+                          </span>
+                        ) : null}
                         {row.lastRunNote ? (
-                          <span className="max-w-[320px] truncate text-[11px] text-muted" title={row.lastRunNote}>
+                          <span
+                            className="max-w-[320px] truncate text-[11px] text-muted"
+                            title={row.lastRunNote}
+                            data-testid="e2e-dispatch-rules-lastRunNote"
+                          >
                             {row.lastRunNote}
                           </span>
                         ) : null}
                         <button
                           type="button"
                           className="w-fit text-[11px] font-medium text-sky-700 hover:underline"
-                          onClick={() => showToast('可到 Job 監控篩選 crm-run-scheduled 查看 run log', 'ok')}
+                          data-testid="e2e-dispatch-rules-run-log"
+                          onClick={() => {
+                            // 導向 ops jobs 讓 E2E 可驗證對應 run log 與 jobId 訊息
+                            navigate('/admin/ops/jobs?kind=crm-run-scheduled');
+                          }}
                         >
                           查看 run log
                         </button>

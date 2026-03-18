@@ -8,6 +8,7 @@ import { EmptyState } from '../../shared/components/EmptyState';
 import { KpiCard } from '../../shared/components/KpiCard';
 import { MiniBarChart } from '../../shared/components/MiniBarChart';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
+import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 
 const PRESETS = [
   { value: '', label: '自訂' },
@@ -15,13 +16,14 @@ const PRESETS = [
 ];
 
 export const LoyaltyReportActivityPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [globalSearchParams] = useSearchParams();
+  const [scopedParams, setScopedSearchParams] = useScopedSearchParams('member.reports.activity');
   const merchantIdDefault = useDefaultMerchantId();
-  const merchantIdFromUrl = (searchParams.get('merchantId') ?? '').trim();
+  const merchantIdFromUrl = (globalSearchParams.get('merchantId') ?? '').trim();
   const merchantId = merchantIdFromUrl || merchantIdDefault;
-  const presetFromUrl = searchParams.get('preset') || 'last30d';
-  const fromFromUrl = searchParams.get('from') || '';
-  const toFromUrl = searchParams.get('to') || '';
+  const presetFromUrl = scopedParams.get('preset') ?? globalSearchParams.get('preset') ?? 'last30d';
+  const fromFromUrl = scopedParams.get('from') ?? globalSearchParams.get('from') ?? '';
+  const toFromUrl = scopedParams.get('to') ?? globalSearchParams.get('to') ?? '';
 
   const [from, setFrom] = useState(fromFromUrl);
   const [to, setTo] = useState(toFromUrl);
@@ -73,16 +75,12 @@ export const LoyaltyReportActivityPage: React.FC = () => {
   }, [preset, from, to]);
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    if (preset) params.set('preset', preset);
-    else params.delete('preset');
-    if (from) params.set('from', from);
-    else params.delete('from');
-    if (to) params.set('to', to);
-    else params.delete('to');
-    // 保留 merchantId（由 AdminLayout 管理/寫入）
-    setSearchParams(params, { replace: true });
-  }, [preset, from, to, searchParams, setSearchParams]);
+    const next = new URLSearchParams();
+    if (preset) next.set('preset', preset);
+    if (from) next.set('from', from);
+    if (to) next.set('to', to);
+    setScopedSearchParams(next, { replace: true });
+  }, [preset, from, to, setScopedSearchParams]);
 
   return (
     <StandardListLayout

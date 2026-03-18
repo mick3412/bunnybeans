@@ -5,13 +5,13 @@ import {
   type LoyaltySettingsDto,
 } from '../../../modules/admin/loyaltyApi';
 import type { ApiError } from '../../../modules/admin/adminApi';
-import { useLoyaltyOutletContext } from './LoyaltyLayout';
+import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
 import { Button } from '../../../shared/components/Button';
 import { TextInput } from '../../../shared/components/TextInput';
 import { useAdminToast } from '../AdminToastContext';
 
 export const LoyaltySettingsPage: React.FC = () => {
-  const { merchantId } = useLoyaltyOutletContext();
+  const merchantId = useDefaultMerchantId();
   const showToast = useAdminToast();
   const [form, setForm] = useState<Partial<LoyaltySettingsDto>>({});
   const [loading, setLoading] = useState(true);

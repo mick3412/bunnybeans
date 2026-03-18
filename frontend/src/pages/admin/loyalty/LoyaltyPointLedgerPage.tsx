@@ -7,7 +7,7 @@ import {
   type LoyaltyCustomerRow,
 } from '../../../modules/admin/loyaltyApi';
 import type { ApiError } from '../../../modules/admin/adminApi';
-import { useLoyaltyOutletContext } from './LoyaltyLayout';
+import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
 import { TextInput } from '../../../shared/components/TextInput';
 import { ReferenceIdLink } from '../../../shared/components/ReferenceIdLink';
 
@@ -30,7 +30,7 @@ function typeStyle(t: string) {
 }
 
 export const LoyaltyPointLedgerPage: React.FC = () => {
-  const { merchantId } = useLoyaltyOutletContext();
+  const merchantId = useDefaultMerchantId();
   const [searchParams] = useSearchParams();
   const customerIdFromUrl = searchParams.get('customerId') ?? '';
   const [customers, setCustomers] = useState<LoyaltyCustomerRow[]>([]);

@@ -237,6 +237,7 @@ export interface GetPosReportsSummaryParams {
   from?: string;
   to?: string;
   storeId?: string;
+  merchantId?: string;
 }
 
 export async function getPosReportsSummary(
@@ -248,6 +249,7 @@ export async function getPosReportsSummary(
   if (params?.from) q.set('from', params.from);
   if (params?.to) q.set('to', params.to);
   if (params?.storeId) q.set('storeId', params.storeId);
+  if (params?.merchantId) q.set('merchantId', params.merchantId);
   const path = `pos/reports/summary${q.toString() ? `?${q.toString()}` : ''}`;
   const out = await request<PosReportsSummaryDto>(path, {
     traceId: traceId ?? genTraceId(),
@@ -265,11 +267,12 @@ export interface PosTopItemRow {
 }
 
 export async function getPosTopItems(
-  params: { from: string; to: string; storeId?: string; limit?: number; sortBy?: 'quantity' | 'revenue' },
+  params: { from: string; to: string; storeId?: string; limit?: number; sortBy?: 'quantity' | 'revenue'; merchantId?: string },
   traceId?: string,
 ): Promise<PosTopItemRow[] | ApiError> {
   const q = new URLSearchParams({ from: params.from, to: params.to });
   if (params.storeId) q.set('storeId', params.storeId);
+  if (params.merchantId) q.set('merchantId', params.merchantId);
   if (params.limit != null) q.set('limit', String(params.limit));
   if (params.sortBy) q.set('sortBy', params.sortBy);
   const out = await request<PosTopItemRow[]>(`pos/reports/top-items?${q.toString()}`, {
@@ -286,11 +289,12 @@ export interface PosDailyRow {
 }
 
 export async function getPosDaily(
-  params: { from: string; to: string; storeId?: string },
+  params: { from: string; to: string; storeId?: string; merchantId?: string },
   traceId?: string,
 ): Promise<PosDailyRow[] | ApiError> {
   const q = new URLSearchParams({ from: params.from, to: params.to });
   if (params.storeId) q.set('storeId', params.storeId);
+  if (params.merchantId) q.set('merchantId', params.merchantId);
   const out = await request<PosDailyRow[]>(`pos/reports/daily?${q.toString()}`, {
     traceId: traceId ?? genTraceId(),
   });
