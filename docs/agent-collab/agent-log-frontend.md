@@ -15,6 +15,11 @@
 
 ---
 
+### INSTRUCTIONS 010（click-audit v2 健康分數/告警 + CI gate 強化）
+- 做了：① `/admin/ops/report-clicks` 升級 v2：改以後端 summary（topSources/trendByDay/topReferenceIds/byResultCode）呈現健康分數（NOT_FOUND/MULTI_MATCH 比例、NAVIGATED 比例、success 成功率）與 OK/WARN/ALERT，並在 list 針對各 resultCode 顯示 fixHint 與修復路徑指引。② `admin-smoke` 金流報表段落在 `E2E_PROFILE=full` 下改為必跑（缺固定資料集直接 fail）。③ 行銷常駐規則正式化：在發券規則列表顯示 `lastRunAt/lastRunCode/lastRunNote` 與查看 run log 引導。RBAC 長期 skip 未做。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts` ✅（1 pass / 1 skip：金流報表需資料/後端可連；full profile 下將改為 fail-fast）。
+- commits：`da1ce6f` feat(ops,crm): click-audit v2 health and marketing last-run；`8938340` fix(ops): require admin key for click-audit POST。
+
 ### INSTRUCTIONS 009（click-audit 視覺化 + full profile E2E 規則）
 - 做了：① `/admin/ops/report-clicks` 增加 resultCode 排行（NOT_FOUND/MULTI_MATCH，依 source/kind 組合）與近 7/14/30 天趨勢表（按 resultCode），並在 list 對 NOT_FOUND/MULTI_MATCH 提供可操作「下一步」導引。② 行銷常駐規則頁補「最近一次執行（crm-run-scheduled）」摘要與前往 `/admin/ops/jobs` 入口。③ E2E 支援 `E2E_PROFILE=full`：缺 fixture 時不得長期 skip（改為 fail），並新增 click-audit 視覺化 smoke spec；同步更新 `docs/e2e-pos.md` full profile 規則與建議指令。RBAC 長期 skip 未做。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts e2e/admin-barcode-min.spec.ts` ✅（1 pass / 2 skip：條碼需 DB fixture、金流報表需資料/後端可連）。
