@@ -1,17 +1,35 @@
 # 前端開發紀錄（僅追加）
 
-規格 Agent 收斂時讀本檔**最上方最新條目**。前端 Agent **每輪完成後**在上方追加，**勿刪改**下方舊文。**新條目標題必含實際寫入當下之 `HH:MM`**。  
-每一條目請簡短對照當輪的前端 INSTRUCTIONS（見 [tasks/instructions/](../tasks/instructions/)；以最新編號檔案為準）§1，說明各任務「已完成／進行中／未開始」與測試結果（build／E2E 等）。
+規格 Agent 收斂時讀本檔**最上方最新條目**。前端 Agent **每輪完成後**在上方追加，**勿刪改**下方舊文。  
+本檔條目**改以 INSTRUCTIONS 編號分輪**（不再以日期時間分輪）。每一條目請簡短對照當輪的前端 INSTRUCTIONS（見 [tasks/instructions/](../tasks/instructions/)；以最新編號檔案為準）§1，說明各任務「已完成／進行中／未開始」與測試結果（build／E2E 等）。
 
 格式：
 
 ```markdown
-### YYYY-MM-DD HH:MM（本輪摘要一句）
+### INSTRUCTIONS NNN（本輪摘要一句）
 - 做了：…
+- 測試/驗收：…
+- commits：<short_sha> <message>；<short_sha> <message>（或 PR）
 - PR／檔案（可選）：…
 ```
 
 ---
+
+### INSTRUCTIONS 006（將 INSTRUCTIONS 005 變更提交成可驗收 commits + E2E）
+- 做了：① 將 INSTRUCTIONS 005 的前端成果拆成 6 個 atomic commits（見下方）。② 條碼 E2E 改為預設固定 fixture `E2E-BC-0001`（後端可連 + seed 就緒時必跑；不就緒時 skip 需輸出可操作提示）。③ Finance snapshots 補 `POST /finance/snapshots` 並在 `/admin/finance/snapshots` 加「手動補跑」輸入（asOfDate/type）。④ 補「換貨 Phase2 差額/對帳」最小端對端驗收腳本（依 fixture 狀況可 skip）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts e2e/admin-barcode-min.spec.ts` ✅（1 pass / 2 skip：條碼需 DB fixture、金流報表需資料/後端可連）。
+- commits：`0739da9` test(e2e): use fixed barcode fixture；`43d0715` feat(adminApi): snapshots create, expiring summary, network guard；`190697f` feat(inventory/purchase): expiring panel and return summary；`36df52b` feat(promotions): add move up/down reorder buttons；`992cb95` feat(finance): add manual snapshot creation UI；`67c5e8a` test(e2e): add exchange settlement journey。
+
+### INSTRUCTIONS 005（即期庫存面板＋促銷排序按鈕＋退供應商摘要）
+- 做了：① **即期庫存面板化**：`AdminInventoryPage` 增「查看即期庫存」彈窗（依商品彙總/依批次明細、daysAhead 可調），並補 `adminApi.getExpiringInventorySummaryByProduct()` 以串後端 `GET /inventory/expiring?groupBy=product`；`AdminReceivingNotesPage` 詳情增加「查看即期庫存面板」入口（同倉庫、同 daysAhead）。② **促銷規則排序**：`AdminPromotionsPage` 每列新增「上移/下移」按鈕，沿用既有 optimistic + 失敗回滾 + toast；另補手測清單 `docs/tasks/PROMOTION-REORDER-TESTPLAN.md`。③ **退回供應商摘要**：`AdminReceivingNotesPage` 退供應商區塊新增摘要（退回件數、估算金額）並提示會寫入庫存 `RETURN_TO_SUPPLIER` 與金流 `PURCHASE_RETURN`。④ **路由/一致性小修**：`/admin/loyalty/members` 已 redirect，`AdminLayout` 標題對齊為「會員列表」；門市/倉庫列表的表格容器寬度與 overflow 行為一致。⑤ **穩定性**：`adminApi.request` 補 fetch network error 轉 `ApiError{ code: NETWORK_ERROR }`，避免未處理 rejection 噪音/白屏風險。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts` ✅（1 pass / 1 skip：金流報表需後端/API 可連）；`pnpm exec playwright test e2e/admin-barcode-min.spec.ts` ✅（skip：需 seed fixture 或後端可連）。
+- commits：尚未提交（本輪為工作區變更）。
+
+### INSTRUCTIONS 003（Finance 關帳/Audit + Ops 可觀測性 + 換貨/條碼 Phase2）
+- 做了：① **ReportClickAudit 後台**：新增 `/admin/ops/report-clicks`（summary+list+filters+referenceId drill-down，帶 `returnTo`）。② **Finance**：補齊 `/admin/finance/periods`（merchantId、close/unlock、友善錯誤碼、樣式收斂）、重整 `/admin/finance/audit`（StandardListLayout、URL 同步 filters、來源/摘要欄位、錯誤/空態一致）、新增 `/admin/finance/snapshots`（list+篩選+複製 path；API 不可用時顯示未就緒/權限提示）。③ **Ops 補跑可追蹤**：`/admin/ops/jobs` 補跑成功後吃 `runLogId`，自動切篩選/刷新並高亮該筆 runLog。④ **RBAC UI（最小矩陣）**：以「需管理金鑰/權限不足」為原則，套用到 3 個代表性操作（商品批次改價、關帳/解鎖、Ops 補跑）做到 disabled+原因，並統一 401/403 文案。⑤ **換貨 Phase2**：POS 訂單詳情新增「換貨關聯」卡（原單/衍生換貨單可一鍵跳轉，保留 `returnTo` 回退）。⑥ **條碼端到端**：POS/庫存掃碼改真串接 `GET /products/search-barcode?q=`，補「找不到」「多筆命中需選擇」「單筆直接加入/加入盤點」UX，並新增最小 E2E（可 skip）。⑦ **行銷規則常駐（最小 CRUD 骨架）**：新增 `/admin/marketing/rules` 與表單頁（後端未就緒時不假成功，提供 ops jobs 入口）。\n+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts` ✅（1 pass / 1 skip：金流報表需後端/API 可連）；`pnpm exec playwright test e2e/admin-barcode-min.spec.ts` ✅（skip：需 `E2E_BARCODE` seed fixture）。\n+- 檔案：`frontend/src/pages/admin/AdminOpsReportClicksPage.tsx`、`frontend/src/pages/admin/AdminFinancePeriodsPage.tsx`、`frontend/src/pages/admin/AdminFinanceAuditPage.tsx`、`frontend/src/pages/admin/AdminFinanceSnapshotsPage.tsx`、`frontend/src/pages/admin/AdminOpsJobsPage.tsx`、`frontend/src/pages/admin/AdminInventoryPage.tsx`、`frontend/src/pages/PosPage.tsx`、`frontend/src/pages/PosOrderDetailPage.tsx`、`frontend/src/pages/admin/AdminMarketingRulesPage.tsx`、`frontend/src/pages/admin/AdminMarketingRuleEditPage.tsx`、`frontend/src/modules/admin/adminApi.ts`、`frontend/src/modules/pos/posOrdersApi.ts`、`frontend/src/shared/rbac/adminKey.ts`、`e2e/admin-barcode-min.spec.ts`、`frontend/src/App.tsx`、`frontend/src/pages/admin/AdminLayout.tsx`、`frontend/src/shared/errors/errorMessages.ts`。\n+
+### FRONTEND-INSTRUCTIONS 001（tokens／列表殼／浮動列／多商家 Phase2／活動成效 v2／整合旅程與 E2E）
+- 做了：依 `docs/tasks/FRONTEND-INSTRUCTIONS 001.md` §1 九項落地。① **迴歸**：`pnpm --filter pos-erp-frontend build` 全綠；先補 `pnpm exec playwright install chromium`，再跑 `e2e/admin-smoke.spec.ts`（1 pass、1 skip：referenceId 資料不足時 skip）、`e2e/admin-loyalty-smoke.spec.ts`（1 pass、1 skip：需 Admin Key/DB）、新增整合旅程 `e2e/admin-journey-exchange-loyalty.spec.ts`（依資料情況 skip）。② **Design tokens**：補 `styles.css` tokens（success/warning 等）並把共用元件（Button/TextInput/KpiCard/MiniLineChart/MiniBarChart/Alert/PartyViewSegmented）硬編碼色碼/字級收斂到 token；POS 報表/促銷/訂單查詢等頁面同步收斂。③ **StandardListLayout**：新增 `StandardListLayout`，套用於金流報表、CRM Jobs、供應商頁，統一標題區/filters 殼。④ **StandardFloatBar**：新增 `StandardFloatBar`，套用商品批次改價、庫存盤點一鍵提交兩頁。⑤ **條碼 UX**：POS/庫存掃碼盤點補「條碼待後端正式契約」提示，不做 fallback 假成功（待後端 Barcode 任務 #9）。⑥ **多商家 Phase 2**：AdminLayout 頂欄新增商家選取器（讀 current+list），並以 URL query `merchantId` 傳遞；CRM Jobs/庫存頁讀取 `merchantId`（或 fallback default）。⑦ **活動成效報表 v2**：`LoyaltyReportActivityPage` 改用 `StandardListLayout`，補 v2 指標欄位（ROI/平均用券等）可選顯示與「尚未查詢」空態。⑧ **換貨整合旅程**：referenceId 穿透新增 `returnTo`，POS 訂單詳情提供「回到來源」並保留既有換貨導引。⑨ **整合 E2E**：新增報表→訂單→換貨→活動成效旅程 spec，依資料/環境條件 skip。
+- 檔案：`frontend/src/styles.css`、`frontend/src/shared/components/StandardListLayout.tsx`、`frontend/src/shared/components/StandardFloatBar.tsx`、`frontend/src/pages/admin/AdminLayout.tsx`、`frontend/src/shared/components/ReferenceIdLink.tsx`、`frontend/src/pages/PosOrderDetailPage.tsx`、`frontend/src/pages/admin/AdminReportsPage.tsx`、`frontend/src/pages/admin/AdminCrmJobsPage.tsx`、`frontend/src/pages/admin/AdminSuppliersPage.tsx`、`frontend/src/pages/admin/AdminInventoryPage.tsx`、`frontend/src/pages/admin/LoyaltyReportActivityPage.tsx`、`frontend/src/pages/PosReportsPage.tsx`、`frontend/src/pages/PosOrdersListPage.tsx`、`frontend/src/pages/PosPromosPage.tsx`、`frontend/src/pages/LoginPage.tsx`、`e2e/admin-smoke.spec.ts`、`e2e/admin-journey-exchange-loyalty.spec.ts`、`docs/agent-collab/agent-log-frontend.md`。
 
 ### 2026-03-18 01:49（FRONTEND-INSTRUCTIONS §1 十四項計畫補齊：CRM jobs 歷史＋cross-link＋最終 build）
 - 做了：依本輪 **frontend-14-tasks-execution** 計畫，把已完成的 20 項任務整理成 14 個執行 To-do 並全部補齊。① **行銷工作台：CRM jobs 歷史** — 新增 `/admin/crm/jobs`（`AdminCrmJobsPage`）：列表支援 kind/from/to/page/pageSize + URL query 同步，點「查看結果」開右側 Drawer，呼叫 `GET /crm/jobs/:id` 顯示 sent/skipped/errors/error。② **側欄入口** — 在「會員與行銷」區塊新增「行銷工作台（Jobs）」連結。③ **cross-link 1：Finance → 應收應付餘額** — 金流報表依對象彙總區塊新增可點 chips，依 partyId 前綴決定 `view=customer|supplier|other`，導向 `/admin/balances?view=...&partyId=...`。④ **cross-link 2：Loyalty 活動 → 優惠券** — 活動成效報表「依券成效」表格中券號改為連結 `/admin/loyalty/coupons?q=...`，`LoyaltyCouponsPage` 加入 `q` query 雙向同步作為搜尋預填。⑤ **再跑 build 驗收** — `pnpm --filter pos-erp-frontend build` 全綠，未新增 linter 錯誤。  
