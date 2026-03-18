@@ -45,6 +45,11 @@ export const AdminOpsReportClicksPage: React.FC = () => {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [trendDays, setTrendDays] = useState<7 | 14 | 30>(7);
+  const [trendLoading, setTrendLoading] = useState(false);
+  const [trendErr, setTrendErr] = useState<string | null>(null);
+  const [trendRows, setTrendRows] = useState<Array<{ date: string; NOT_FOUND: number; MULTI_MATCH: number }>>([]);
+  const [rankRows, setRankRows] = useState<Array<{ key: string; count: number }>>([]);
 
   const parsedSuccess = useMemo(() => {
     if (success === 'true') return true;
@@ -94,9 +99,87 @@ export const AdminOpsReportClicksPage: React.FC = () => {
     }
   }, [from, to, source, resolvedKind, resultCode, parsedSuccess, referenceId, page, pageSize]);
 
+  const loadTrendsAndRanks = useCallback(async () => {
+    // 以 list data 做前端趨勢/排行（避免依賴未落地的後端聚合端點）
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(end.getDate() - (trendDays - 1));
+    const fromStr = start.toISOString().slice(0, 10);
+    const toStr = end.toISOString().slice(0, 10);
+
+    setTrendLoading(true);
+    setTrendErr(null);
+    try {
+      const listOut = await listReportClickAudit({
+        from: fromStr,
+        to: toStr,
+        source: source.trim() || undefined,
+        resolvedKind: resolvedKind.trim() || undefined,
+        success: parsedSuccess,
+        referenceId: referenceId.trim() || undefined,
+        page: 1,
+        pageSize: 200,
+        order: 'desc',
+      });
+      if (!('items' in listOut)) {
+        setTrendErr(getErrorMessage(listOut as ApiError));
+        setTrendRows([]);
+        setRankRows([]);
+        return;
+      }
+      const rows = listOut.items ?? [];
+
+      // 趨勢：依日統計 NOT_FOUND/MULTI_MATCH
+      const byDate: Record<string, { NOT_FOUND: number; MULTI_MATCH: number }> = {};
+      for (let i = 0; i < trendDays; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const key = d.toISOString().slice(0, 10);
+        byDate[key] = { NOT_FOUND: 0, MULTI_MATCH: 0 };
+      }
+      for (const r of rows) {
+        const day = new Date(r.createdAt).toISOString().slice(0, 10);
+        const code = ((r as unknown as { resultCode?: string | null }).resultCode ?? '').toUpperCase();
+        if (!byDate[day]) continue;
+        if (code === 'NOT_FOUND') byDate[day].NOT_FOUND += 1;
+        if (code === 'MULTI_MATCH') byDate[day].MULTI_MATCH += 1;
+      }
+      setTrendRows(
+        Object.keys(byDate)
+          .sort()
+          .map((date) => ({ date, ...byDate[date] })),
+      );
+
+      // 排行：針對 NOT_FOUND/MULTI_MATCH 以 source/kind 組合計數（僅基於此 window 的 list 取樣）
+      const rankMap: Record<string, number> = {};
+      for (const r of rows) {
+        const code = ((r as unknown as { resultCode?: string | null }).resultCode ?? '').toUpperCase();
+        if (code !== 'NOT_FOUND' && code !== 'MULTI_MATCH') continue;
+        const k = `${code} · ${r.source} · ${r.resolvedKind}`;
+        rankMap[k] = (rankMap[k] ?? 0) + 1;
+      }
+      setRankRows(
+        Object.entries(rankMap)
+          .map(([key, count]) => ({ key, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10),
+      );
+    } catch (e) {
+      setTrendErr(e instanceof Error ? e.message : '載入失敗');
+      setTrendRows([]);
+      setRankRows([]);
+    } finally {
+      setTrendLoading(false);
+    }
+  }, [parsedSuccess, referenceId, resolvedKind, source, trendDays]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void loadTrendsAndRanks();
+  }, [loadTrendsAndRanks]);
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -316,6 +399,81 @@ export const AdminOpsReportClicksPage: React.FC = () => {
     >
       {summaryCards ? <div className="mb-4">{summaryCards}</div> : null}
 
+      <div className="mb-4 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-xl border border-brand-surface bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-semibold text-muted">resultCode 排行（NOT_FOUND / MULTI_MATCH）</div>
+            <div className="text-[11px] text-muted">視窗：近 {trendDays} 天（最多取 200 筆）</div>
+          </div>
+          {trendLoading ? (
+            <div className="mt-3 text-xs text-muted">載入中…</div>
+          ) : trendErr ? (
+            <div className="mt-3 text-xs text-brand-danger">{trendErr}</div>
+          ) : rankRows.length ? (
+            <div className="mt-3 space-y-1 text-xs">
+              {rankRows.map((r) => (
+                <div key={r.key} className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-content" title={r.key}>
+                    {r.key}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-muted">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 text-xs text-muted">（此期間內尚無 NOT_FOUND / MULTI_MATCH）</div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-brand-surface bg-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs font-semibold text-muted">近 {trendDays} 天趨勢（按 resultCode）</div>
+            <div className="flex items-center gap-1">
+              {([7, 14, 30] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={[
+                    'rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
+                    trendDays === d ? 'bg-forge-sidebar text-white shadow-sm' : 'bg-table-head text-muted hover:bg-brand-surface',
+                  ].join(' ')}
+                  onClick={() => setTrendDays(d)}
+                >
+                  {d} 天
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {trendLoading ? (
+            <div className="mt-3 text-xs text-muted">載入中…</div>
+          ) : trendErr ? (
+            <div className="mt-3 text-xs text-brand-danger">{trendErr}</div>
+          ) : (
+            <div className="mt-3 overflow-x-auto rounded-lg border border-brand-surface">
+              <table className="w-full min-w-[520px] text-left text-xs">
+                <thead className="border-b border-brand-surface bg-table-head text-[11px] font-semibold uppercase text-muted">
+                  <tr>
+                    <th className="px-3 py-2">date</th>
+                    <th className="px-3 py-2 text-right">NOT_FOUND</th>
+                    <th className="px-3 py-2 text-right">MULTI_MATCH</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trendRows.map((r) => (
+                    <tr key={r.date} className="border-t border-brand-surface hover:bg-brand-canvas">
+                      <td className="px-3 py-2 font-mono text-[11px] text-content">{r.date}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted">{r.NOT_FOUND}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-muted">{r.MULTI_MATCH}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="overflow-hidden rounded-xl border border-brand-surface bg-white">
         <div className="table-sticky-head overflow-x-auto">
           <table className="min-w-full text-left text-sm">
@@ -328,6 +486,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
                 <th className="px-3 py-2">resultCode</th>
                 <th className="px-3 py-2">resolvedKind</th>
                 <th className="px-3 py-2">success</th>
+                <th className="px-3 py-2">下一步</th>
               </tr>
             </thead>
             <tbody>
@@ -357,6 +516,26 @@ export const AdminOpsReportClicksPage: React.FC = () => {
                     >
                       {r.success ? '成功' : '失敗'}
                     </span>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-muted">
+                    {(() => {
+                      const code = String((r as unknown as { resultCode?: string | null }).resultCode ?? '').toUpperCase();
+                      if (code === 'MULTI_MATCH') {
+                        return (
+                          <span>
+                            建議：確認條碼資料是否不唯一；POS/庫存掃碼會要求選擇（可用 `E2E-BC-MULTI` 驗證）。
+                          </span>
+                        );
+                      }
+                      if (code === 'NOT_FOUND') {
+                        return (
+                          <span>
+                            建議：補齊 fixture 或確認輸入值；可先跑 `pnpm db:seed` → `pnpm --filter pos-erp-backend e2e:seed`。
+                          </span>
+                        );
+                      }
+                      return <span>—</span>;
+                    })()}
                   </td>
                 </tr>
               ))}
