@@ -15,6 +15,16 @@
 
 ---
 
+### INSTRUCTIONS 015（admin import/export/replenishment 狀態一致性 + selector 穩定化）
+- 做了：① `customers/import preview`、`inventory export/import` 的 401 錯誤文案統一改用 `getErrorMessage`（不再硬編 `需 VITE_ADMIN_API_KEY`），避免 shared error schema 不一致；② `replenishment` 補上關鍵 UI 的 `data-testid`，並同步更新對應 E2E selectors；③ 更新 `docs/e2e-pos.md` 對應四個 spec 驗收摘要（customers-import / replenishment 加上 testid 定位說明）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`export CI=0 E2E_PROFILE=full E2E_BASE_URL=http://localhost:5174 pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-customers-import.spec.ts e2e/admin-bulk.spec.ts e2e/admin-replenishment.spec.ts` ✅（缺 Key 時對應用例 skip：4 skipped / 8 passed）。
+- commits：653e05db frontend: unify admin import/export/replenishment errors + stable selectors
+
+### INSTRUCTIONS 014（dispatch-rules run log + referenceId 穿透 full gate）
+- 做了：① `AdminDispatchRulesPage`「查看 run log」改為實際導向 `/admin/ops/jobs?kind=crm-run-scheduled`，並在 lastRun 區塊補上穩定 `data-testid`；② referenceId 穿透旅程移除 full profile 的 referenceId=0 skip，並修正換貨導引遮罩下「回到來源」的互動順序；③ 更新 `docs/e2e-pos.md` full profile 驗收要點。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`export CI=0 E2E_PROFILE=full E2E_BASE_URL=http://localhost:5174 pnpm exec playwright test e2e/admin-dispatch-rules.spec.ts` ✅；同指令跑 `e2e/admin-journey-exchange-loyalty.spec.ts` ✅。
+- commits：42d0a7ee frontend: stabilize dispatch/referenceId penetration flows；feb376e4 e2e: stabilize dispatch-rules and referenceId penetration；2427dc41 docs: align full-profile E2E expectations
+
 ### INSTRUCTIONS 010（click-audit v2 健康分數/告警 + CI gate 強化）
 - 做了：① `/admin/ops/report-clicks` 升級 v2：改以後端 summary（topSources/trendByDay/topReferenceIds/byResultCode）呈現健康分數（NOT_FOUND/MULTI_MATCH 比例、NAVIGATED 比例、success 成功率）與 OK/WARN/ALERT，並在 list 針對各 resultCode 顯示 fixHint 與修復路徑指引。② `admin-smoke` 金流報表段落在 `E2E_PROFILE=full` 下改為必跑（缺固定資料集直接 fail）。③ 行銷常駐規則正式化：在發券規則列表顯示 `lastRunAt/lastRunCode/lastRunNote` 與查看 run log 引導。RBAC 長期 skip 未做。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts` ✅（1 pass / 1 skip：金流報表需資料/後端可連；full profile 下將改為 fail-fast）。

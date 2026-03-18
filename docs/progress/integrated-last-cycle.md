@@ -1,24 +1,25 @@
 # 上一輪整合（規格 Agent 每輪覆寫）
 
-**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **012** · 前端 **010**  
+**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **014** · 前端 **014**  
 （路徑：[agent-collab/agent-log-backend.md](../agent-collab/agent-log-backend.md)、[agent-collab/agent-log-frontend.md](../agent-collab/agent-log-frontend.md)）
 
 ## 後端（收斂摘要）
 
-- **INSTRUCTIONS 012 已完成（dispatch-rules 常駐化：full fixtures/runner 驗收 + lastRun/ops 導向一致性）**：
-  - **E2E full fixtures**：補齊 segment/coupon 與 enabled/邊界 rules（teardown 後可重放）。
-  - **Runner 驗收與對應**：補 integration 邊界（disabled/future/duplicate）與 API `lastRun*` 回傳一致性，並確保 `e2e/admin-dispatch-rules.spec.ts` full gate 不默默 skip。
-  - **Ops job 對應驗收**：runner 記錄能對應 `jobType=crm-run-scheduled`，E2E 能驗證導向 `/admin/ops/jobs` 的關聯。
-- **回歸**：`pnpm --filter pos-erp-backend test` 全綠；migrations 可 deploy。
+- **INSTRUCTIONS 014 已完成（referenceId UUID-like 修復 + 報表穿透穩定性）**：
+  - **E2E seed：UUID-like referenceId + deterministic occurredAt**：調整 POS order / receivingNote / exchange 對應 referenceId 為純 hex UUID-like，並補 deterministic occurredAt 以提升可重放性。
+  - **Fail-fast 驗證（seed）擴充**：驗證 UUID-like 格式符合，且存在至少 1 筆 finance/報表事件可解析為 `posOrder/receivingNote`，避免 full profile 在 `ReferenceIdLink` 長期不可點。
+  - **Ops reference resolve 邊界**：補 integration 以覆蓋 resolve 不落入 unknown 的邊界。
+  - **文件對齊**：更新 `docs/e2e-pos.md` referenceId 契約與 full profile 驗收要點。
+- **回歸**：`pnpm --filter pos-erp-backend test` 全綠（含 `e2e:seed` fail-fast）。
 - **RBAC**：維持長期 skip（客戶不需要）。
 
 ## 前端（收斂摘要）
 
-- **INSTRUCTIONS 010 已完成（click-audit v2 健康/告警 + CI gate 強化 + 行銷常駐規則正式化 UX）**：
-  - **Click-audit 視覺化 v2**：`/admin/ops/report-clicks` 顯示 `health`（門檻 OK/WARN/ALERT）與對應修復告警。
-  - **修復路徑 drill-down**：每個 resultCode 提供 `fixHint` 與「下一步」按鈕導引。
-  - **行銷常駐規則 UX**：列表顯示 `lastRunAt/lastRunCode/lastRunNote`，並提供 run log 入口。
-- **回歸**：`pnpm --filter pos-erp-frontend build` ✅；E2E 依 full fixtures 設定 pass（缺 fixture 才能 skip）。
+- **INSTRUCTIONS 014 已完成（dispatch-rules run log + referenceId 穿透 full gate）**：
+  - **AdminDispatchRulesPage 驗收導向**：把「查看 run log」導向 `/admin/ops/jobs?kind=crm-run-scheduled`，並在 lastRun 區塊提供穩定 `data-testid`。
+  - **referenceId 穿透 full gate**：移除 full profile 對 referenceId==0 的跳過，並修正換貨導引遮罩下「回到來源」的互動順序，確保旅程回跳與導向可穩定驗證。
+  - **文件對齊**：更新 `docs/e2e-pos.md` full profile 驗收要點。
+- **回歸**：`pnpm --filter pos-erp-frontend build` ✅；full profile 下跑 `e2e/admin-dispatch-rules.spec.ts` 與 `e2e/admin-journey-exchange-loyalty.spec.ts` ✅。
 - **RBAC**：維持長期 skip（客戶不需要）。
 
 ## 前端：Admin 後台側欄 Hub 化與子頁面結構變更 Log
@@ -78,8 +79,8 @@
 | 來源 | 缺口 | 優先 |
 |------|------|------|
 | erp-roadmap / Phase 5 / admin-roles | **RBAC（長期 skip）**：客戶不需要角色/權限；維持現有 `AdminApiKeyGuard`（有/無管理金鑰）即可。本專案不落地 Role/Permission 資料模型與 permissions endpoint。 | 低 |
-| crm-member-roadmap（階段 G） | **發券規則常駐化：前端仍需完成驗收與 UI/UX**：需把 `/admin/dispatch-rules` 的 run log 導向可驗收、lastRun* 渲染/selector 穩定性補齊，並納入全站 UI/UX 再審視（按鈕/空態/錯誤態行動建議）。 | 中 |
-| ops-roadmap / Phase 4 | **報表穿透（referenceId）E2E 穩定性缺口**：`ReferenceIdLink` 目前只會在 UUID-like 時渲染可點擊按鈕；E2E seed 的 referenceId（POS order / receiving note）若不符 UUID-like，full profile 下無法穩定導向並導致只能 skip。需調整 E2E fixtures/seed 與 E2E 斷言策略，讓 full profile 下報表穿透不再依賴 skip。 | 高 |
+| frontend-ui-principles / UI Review | **全站 UI/UX 再審視（按鈕/空態/錯誤態行動建議 + loading/disabled 一致性 + selector 穩定性）**：將 shared 元件與 Admin Hub 通用區塊的狀態呈現一致化，並補強 E2E 可定位 selector，避免 strict-mode 多筆匹配與 race condition。 | 高 |
+| ops-roadmap / CI E2E coverage | **E2E full gate 擴充：把更多 admin smoke spec 納入固定清單**：將 `admin-categories` / `admin-customers-import` / `admin-bulk` / `admin-replenishment` 納入 `.github/workflows/e2e-full.yml` 固定 suite，並補齊必要 seed/selector，降低 full profile 的 skip。 | 中 |
 
 ### 後續 Phase
 
@@ -95,7 +96,7 @@
 ## 整合風險／待對齊
 
 - **migration 可重放性**：歷史 migrations 的「從零建庫」可重放性需持續維持；若依賴 baseline/squash，需明確規範「新環境初始化」與「舊環境升級」兩條路徑，避免 CI/Preview 認知不一致。  
-- **E2E 環境一致性**：前端 E2E 需 DATABASE_URL、後端 :3003、VITE_ADMIN_API_KEY；建議 CI 或專用聯調環境定期跑完整 suite（admin-smoke、admin-bulk、admin-loyalty-smoke、admin-pos-reports、admin-replenishment、admin-balances、admin-dispatch-rules、admin-categories）。
+- **E2E 環境一致性**：前端 E2E 需 DATABASE_URL、後端 :3003、VITE_ADMIN_API_KEY；建議 CI 或專用聯調環境定期跑完整 suite（admin-smoke、admin-bulk、admin-customers-import、admin-loyalty-smoke、admin-pos-reports、admin-replenishment、admin-balances、admin-dispatch-rules、admin-categories）。
 
 ---
 
