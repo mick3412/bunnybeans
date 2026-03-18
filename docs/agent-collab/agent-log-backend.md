@@ -15,6 +15,21 @@
 
 ---
 
+### INSTRUCTIONS-012（dispatch-rules 常駐化：full fixtures/runner 驗收 + lastRun/ops 導向一致性）
+- 做了：依 `BACKEND-INSTRUCTIONS 012.md` §1 完成 #1～#10（RBAC 長期 skip）。
+  - **#1 迴歸維護 + commit**：`prisma migrate deploy` 無 pending；`pnpm --filter pos-erp-backend test` 全綠後再提交 atomic commits。
+  - **#2 E2E full fixtures（dispatch-rules runner 所需固定資料）**：`backend/scripts/e2e-seed.ts` full profile 新增 segment/coupon 與 enabled 規則（固定 key：`E2E-SEGMENT-NORMAL-0001` / `E2E-COUPON-0001` / `E2E-RULE-ENABLED-0001`），並用 `deleteMany` teardown 確保可重放。
+  - **#3 runner 作用範圍（正/負向邊界）**：新增 disabled（`E2E-RULE-DISABLED-0001`）與未到時間 future（`E2E-RULE-FUTURE-0001`），並在 full profile 加 fail-fast 驗證。
+  - **#4 OpsJobRunLog 對應驗收**：runner 回傳訊息彙總（含 rule name + `jobId=`），`crm.controller`/`ops.service` 以該 message 記錄 `OpsJobRunLog(jobType=crm-run-scheduled)`。
+  - **#5 integration 邏輯邊界補全**：`backend/src/modules/crm/crm.integration-spec.ts` 擴充 disabled 不觸發/lastRun* 為 null、future 不觸發、duplicate 防重為 `SKIPPED` 且 lastRunNote 含 `duplicate-protection`、失敗為 `FAILED` 並 `nextRunAt` 後延約 +30min。
+  - **#6 API 合約：dispatch-rules list lastRun 欄位**：補最小 integration-spec 確認列表回傳 `lastRunAt/lastRunCode/lastRunNote` 欄位一致（即使為 null）。
+  - **#7 E2E full gate 不得 skip**：新增 `e2e/admin-dispatch-rules.spec.ts`，在 `E2E_PROFILE=full` 時觸發 runner 並驗證 lastRun* 非空且 lastRunCode 合理。
+  - **#8 E2E：run log 導向 /admin/ops/jobs**：驗證 ops jobs 表可看到 `crm-run-scheduled` 且訊息包含 `jobId=`。
+  - **#9 CI**：`.github/workflows/e2e-full.yml` 固定加入 `e2e/admin-dispatch-rules.spec.ts`，並 fail-fast 輸出預期 fixture keys。
+  - **#10 文件對齊**：更新 `docs/e2e-pos.md`、`docs/crm-member-roadmap.md`；新增 `BACKEND/FRONTEND-INSTRUCTIONS 012` 並移除已過時的 009/010。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
+- commits：e4aebf1 feat(ops,crm,e2e): dispatch-rules full gate fixtures and runner observability；9b36cd1 docs: align E2E/CI dispatch-rules acceptance for INSTRUCTIONS 012
+
 ### INSTRUCTIONS-010（E2E full gate 強化 + click-audit v2 健康/修復提示 + 常駐規則防重與重試）
 - 做了：依 `BACKEND-INSTRUCTIONS 010.md` §1 完成 #1～#7（RBAC 長期 skip）。
   - **#1 Regression**：`prisma migrate deploy` 無 pending；`pnpm --filter pos-erp-backend test` 全綠（含新增 seed integration spec）。
