@@ -15,6 +15,18 @@
 
 ---
 
+### INSTRUCTIONS-010（E2E full gate 強化 + click-audit v2 健康/修復提示 + 常駐規則防重與重試）
+- 做了：依 `BACKEND-INSTRUCTIONS 010.md` §1 完成 #1～#7（RBAC 長期 skip）。
+  - **#1 Regression**：`prisma migrate deploy` 無 pending；`pnpm --filter pos-erp-backend test` 全綠（含新增 seed integration spec）。
+  - **#2 Full fixtures 補金流報表資料集**：`E2E_PROFILE=full` seed 新增穩定 finance report dataset（sale/purchase referenceId），並加 `src/scripts/e2e-seed.integration-spec.ts` 驗證 seed 後可查到。
+  - **#3 CI gate**：`.github/workflows/e2e-full.yml` 強化 fail-fast 輸出，並改為固定 gate specs 清單（barcode multi / 換貨 settlement / click-audit / 金流報表）。
+  - **#4 Click-audit 健康分數 v2**：summary 新增 `health`（rate + OK/WARN/ALERT 門檻）與 `fixHints[]` 供前端顯示下一步；補 ops integration-spec。
+  - **#5 Click-audit 修復路徑分類 v2**：list 回傳 `fixHint`（DATA_MISSING / NEEDS_DISAMBIGUATION / PERMISSION / OK），summary 回 `fixHints[]`；文件對齊。
+  - **#6 常駐規則正式化保護**：runner 新增「同期間防重」→ `SKIPPED`，失敗最小重試策略（`nextRunAt` +30min）→ `FAILED`；補 crm integration-spec。
+  - **#7 文件對齊**：更新 `docs/e2e-pos.md`（full fixtures 含金流報表）、`docs/ops-roadmap.md`（health/fixHint）、`docs/crm-member-roadmap.md`（防重/重試）。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
+- commits：58ffe7c feat(e2e,ops,crm): full gate + click-audit v2 + dispatch rule hardening；31d10c3 docs: align click-audit v2 and full e2e fixtures
+
 ### INSTRUCTIONS-009（click-audit 可觀測性彙總 + E2E full fixtures/CI + CRM runner 監控欄位）
 - 做了：依 `BACKEND-INSTRUCTIONS 009.md` §1 完成 #1～#8（RBAC 長期 skip）。
   - **#1 Regression**：修正 purchase integration-spec 會被殘留關帳資料污染的問題（測試前清 `FinancePeriodClose`），`prisma migrate deploy` 可跑通，後端 jest 全綠。
