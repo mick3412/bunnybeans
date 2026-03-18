@@ -56,21 +56,21 @@ export const LoyaltySettingsPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="text-sm text-neutral-500">載入中…</div>;
+    return <div className="text-sm text-muted">載入中…</div>;
   }
 
+  const cardClass = 'rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm';
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">系統設定</h2>
-        <p className="mt-1 text-sm text-neutral-500">集點規則與效期（PATCH 須 X-Admin-Key）</p>
+      <div className="border-b border-[#e2e8f0] pb-2">
+        <p className="text-sm text-muted">集點規則與效期（PATCH 須 X-Admin-Key）</p>
       </div>
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
       )}
-      <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm" data-testid="e2e-loyalty-settings">
-        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">集點規則</div>
-        <p className="text-xs text-neutral-600">
+      <div className={`space-y-4 ${cardClass}`} data-testid="e2e-loyalty-settings">
+        <h3 className="border-b border-[#e2e8f0] pb-2 text-sm font-semibold text-content">集點規則</h3>
+        <p className="text-xs text-muted">
           基本消費：每消費 NT${form.earnPerNT ?? '—'} 得 1 點 · 1 點 = NT${form.pointValueNT ?? '—'} ·
           生日當月點數 ×{form.birthdayMultiplier ?? '—'}
         </p>
@@ -95,8 +95,8 @@ export const LoyaltySettingsPage: React.FC = () => {
           />
         </div>
       </div>
-      <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-        <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">效期與通知</div>
+      <div className={`space-y-4 ${cardClass}`}>
+        <h3 className="border-b border-[#e2e8f0] pb-2 text-sm font-semibold text-content">效期與通知</h3>
         <div className="grid gap-3 sm:grid-cols-2">
           <TextInput
             label="滾動效期天數（rollingDays）"
@@ -112,12 +112,12 @@ export const LoyaltySettingsPage: React.FC = () => {
           />
         </div>
       </div>
-      <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-600">
-        <div className="font-medium text-neutral-800">系統整合</div>
+      <div className="rounded-2xl border border-dashed border-[#e2e8f0] bg-[#f8fafc] p-6 text-sm text-muted shadow-sm">
+        <div className="font-medium text-content">系統整合</div>
         <p className="mt-1">POS 整合：<span className="text-emerald-700">已連線（同網域 API）</span></p>
         <p>ERP 整合：<span className="text-amber-700">依部署環境</span></p>
       </div>
-      <Button type="button" onClick={() => void save()} disabled={saving}>
+      <Button type="button" variant="primary" size="sm" onClick={() => void save()} disabled={saving}>
         {saving ? '儲存中…' : '儲存'}
       </Button>
     </div>

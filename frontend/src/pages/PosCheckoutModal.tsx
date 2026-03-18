@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../shared/components/Button';
 import { TextInput } from '../shared/components/TextInput';
 import { getErrorMessage } from '../shared/errors/errorMessages';
@@ -6,6 +6,7 @@ import type { CartItem } from '../modules/pos/types';
 import type { CreatePosOrderRequest } from '../modules/pos/posOrdersMockService';
 import type { CreateOrderResult } from '../modules/pos/posOrdersApi';
 import { createOrder } from '../modules/pos/posOrdersApi';
+import { searchCustomers, type CustomerSearchItem } from '../modules/admin/loyaltyApi';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -47,7 +48,11 @@ interface PosCheckoutModalProps {
   items: CartItem[];
   totalAmount: number;
   storeId: string;
+  /** 選填；有值時顯示會員搜尋（GET /customers/search）typeahead */
+  merchantId?: string;
   onOrderCreated: (result: CreateOrderResult) => void;
+  /** 選填；開啟時預填會員識別（如促銷試算已輸入的 UUID／手機／Email） */
+  initialMemberInput?: string;
 }
 
 export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
@@ -56,11 +61,16 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
   items,
   totalAmount,
   storeId,
+  merchantId = '',
   onOrderCreated,
+  initialMemberInput = '',
 }) => {
   const [method, setMethod] = useState<'CASH' | 'CARD' | 'TRANSFER'>('CASH');
   const [receivedAmount, setReceivedAmount] = useState<number>(totalAmount);
   const [memberInput, setMemberInput] = useState('');
+  const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
+  const [memberSearchResults, setMemberSearchResults] = useState<CustomerSearchItem[]>([]);
+  const [memberSearchLoading, setMemberSearchLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -69,12 +79,40 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
   useEffect(() => {
     if (open) {
       setReceivedAmount(totalAmount);
-      setMemberInput('');
+      setMemberInput(initialMemberInput?.trim() ?? '');
+      setPointsToRedeem(0);
+      setMemberSearchResults([]);
       setErrorMessage(null);
       setErrorCode(null);
       setErrorTraceId(null);
     }
-  }, [open, totalAmount]);
+  }, [open, totalAmount, initialMemberInput]);
+
+  const searchMembers = useCallback(async (q: string) => {
+    if (!merchantId || !q.trim()) {
+      setMemberSearchResults([]);
+      return;
+    }
+    setMemberSearchLoading(true);
+    const out = await searchCustomers(merchantId, q.trim());
+    setMemberSearchLoading(false);
+    if ('statusCode' in out) {
+      setMemberSearchResults([]);
+      return;
+    }
+    setMemberSearchResults(out.items ?? []);
+  }, [merchantId]);
+
+  useEffect(() => {
+    if (!merchantId || !memberInput.trim()) {
+      setMemberSearchResults([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      searchMembers(memberInput);
+    }, 280);
+    return () => clearTimeout(t);
+  }, [merchantId, memberInput, searchMembers]);
 
   const parsed = useMemo(() => parseMemberLookup(memberInput), [memberInput]);
   const kindLabel =
@@ -160,6 +198,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
         customerPhone: parsed.customerPhone,
         customerEmail: parsed.customerEmail,
         allowCredit: allowCredit || undefined,
+        ...(pointsToRedeem > 0 ? { pointsToRedeem } : {}),
       };
 
       const result = await createOrder(payload);
@@ -185,31 +224,56 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4" data-testid="e2e-checkout-modal">
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-900">結帳</h2>
+          <h2 className="text-sm font-semibold text-content">結帳</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-xs text-slate-400 hover:text-slate-600"
+            className="text-xs text-muted hover:text-muted"
             disabled={submitting}
           >
             關閉
           </button>
         </div>
 
-        <div className="mb-3 space-y-3 rounded-xl bg-slate-50 p-3 text-xs">
-          <div className="border-b border-slate-200 pb-2">
-            <div className="mb-1 text-[11px] font-semibold text-slate-700">關聯會員（選填）</div>
-            <p className="mb-2 text-[10px] text-slate-500">
-              同一欄可輸入會員 ID（UUID）、手機或 Email。未填則不綁定。掛帳時須能對應到一筆客戶（UUID，或與後台客戶手機／Email 唯一相符）。
+        <div className="mb-3 space-y-3 rounded-xl bg-[#f8fafc] p-3 text-xs">
+          <div className="border-b border-[#e2e8f0] pb-2">
+            <div className="mb-1 text-[11px] font-semibold text-muted">關聯會員（選填）</div>
+            <p className="mb-2 text-[10px] text-muted">
+              可從下拉選會員帶入，或手動輸入會員 ID（UUID）、手機、Email。未填則不綁定。掛帳時須能對應到一筆客戶。
             </p>
-            <TextInput
-              label="會員識別"
-              placeholder="UUID、手機或 Email，選填"
-              value={memberInput}
-              onChange={(e) => setMemberInput(e.target.value)}
-              className="!py-1.5 !text-xs"
-              data-testid="e2e-checkout-member"
-            />
+            <div className="relative">
+              <TextInput
+                label="會員識別"
+                placeholder={merchantId ? '搜尋會員（手機／姓名／Email）或輸入 UUID' : 'UUID、手機或 Email，選填'}
+                value={memberInput}
+                onChange={(e) => setMemberInput(e.target.value)}
+                className="!py-1.5 !text-xs"
+                data-testid="e2e-checkout-member"
+              />
+              {merchantId && memberSearchLoading && (
+                <p className="absolute left-0 top-full mt-0.5 text-[10px] text-muted">搜尋中…</p>
+              )}
+              {merchantId && memberSearchResults.length > 0 && (
+                <ul className="absolute left-0 right-0 top-full z-10 mt-0.5 max-h-40 overflow-y-auto rounded border border-[#e2e8f0] bg-white shadow-lg">
+                  {memberSearchResults.map((c) => (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        className="w-full px-2 py-1.5 text-left text-xs hover:bg-slate-100"
+                        onClick={() => {
+                          setMemberInput(c.id);
+                          setMemberSearchResults([]);
+                        }}
+                      >
+                        {c.name}
+                        {c.phone ? ` · ${c.phone}` : ''}
+                        {c.memberCode ? ` (${c.memberCode})` : ''}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             {kindLabel && (
               <p className="mt-1 text-[10px] text-sky-700">
                 辨識為：<span className="font-medium">{kindLabel}</span>
@@ -217,13 +281,32 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
             )}
           </div>
 
+          <div className="border-b border-[#e2e8f0] pb-2">
+            <div className="mb-1 text-[11px] font-semibold text-muted">點數折抵（BURNED）</div>
+            <p className="mb-2 text-[10px] text-muted">選定會員後可輸入欲折抵點數，送出時將自該會員點數扣減（後端 BURNED）。</p>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              className="w-24 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 text-right text-xs text-[#1e293b] focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+              value={pointsToRedeem > 0 ? pointsToRedeem : ''}
+              placeholder="0"
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^\d]/g, '');
+                setPointsToRedeem(v === '' ? 0 : Math.max(0, parseInt(v, 10) || 0));
+              }}
+              data-testid="e2e-checkout-points-redeem"
+            />
+          </div>
+
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-slate-600">
+            <div className="flex items-center justify-between text-muted">
               <span>應收金額</span>
-              <span className="text-base font-semibold text-slate-900">${totalAmount.toLocaleString()}</span>
+              <span className="text-base font-semibold text-content">${totalAmount.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-600">付款方式</span>
+              <span className="text-muted">付款方式</span>
               <div className="inline-flex flex-wrap gap-1">
                 <Button
                   type="button"
@@ -252,13 +335,13 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-600">實收金額</span>
+              <span className="text-muted">實收金額</span>
               <div className="flex flex-wrap items-center justify-end gap-1">
                 <input
                   type="text"
                   inputMode="numeric"
                   data-testid="e2e-checkout-received"
-                  className="w-32 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-xs text-slate-900 focus:border-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-100"
+                  className="w-32 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1 text-right text-xs text-[#1e293b] focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
                   value={receivedAmount.toString()}
                   onChange={(e) => changeReceived(e.target.value)}
                 />
@@ -268,7 +351,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
               </div>
             </div>
             {!allowCredit && (
-              <div className="flex items-center justify-between text-slate-600">
+              <div className="flex items-center justify-between text-muted">
                 <span>找零</span>
                 <span className="font-semibold text-emerald-700">${change.toLocaleString()}</span>
               </div>

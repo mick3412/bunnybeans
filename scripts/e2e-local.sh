@@ -11,6 +11,7 @@ if ! curl -sf "http://localhost:3003/health" >/dev/null; then
   echo "  cd backend && 設定 DATABASE_URL 後："
   echo "  pnpm prisma:db:push   # 或 migrate"
   echo "  pnpm db:seed"
+  echo "  pnpm e2e:seed         # 掛帳 E2E 需此步驟"
   echo "  pnpm dev              # 另開終端，監聽 :3003"
   exit 1
 fi

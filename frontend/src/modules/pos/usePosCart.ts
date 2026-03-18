@@ -40,7 +40,8 @@ export const usePosCart = () => {
     const subtotal = items.reduce((acc, item) => acc + item.unitPrice * item.quantity, 0);
     const tax = Math.round(subtotal * POS_TAX_RATE);
     const total = subtotal + tax;
-    return { subtotal, tax, total };
+    const totalQuantity = items.reduce((acc, item) => acc + item.quantity, 0);
+    return { subtotal, tax, total, totalQuantity };
   }, [items]);
 
   return {

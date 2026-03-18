@@ -28,6 +28,7 @@ import { StandardFloatBar } from '../../shared/components/StandardFloatBar';
 import { TextInput } from '../../shared/components/TextInput';
 import { useAdminToast } from './AdminToastContext';
 import { pollImportJob } from '../../shared/utils/pollImportJob';
+import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/adminKey';
 
 const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v2';
 const PRODUCTS_TABLE_COL_DEFAULTS = {
@@ -51,6 +52,7 @@ export const AdminProductsPage: React.FC = () => {
   const location = useLocation();
   const merchantId = useDefaultMerchantId();
   const { showToast } = useAdminToast();
+  const canWrite = hasAdminApiKey();
   const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [products, setProducts] = useState<ProductFullDto[]>([]);
   const [stockByProduct, setStockByProduct] = useState<Record<string, number>>({});
@@ -742,7 +744,7 @@ export const AdminProductsPage: React.FC = () => {
                 type="button"
                 size="sm"
                 variant="primary"
-                disabled={bulkSubmitting || !bulkSalePrice.trim()}
+                disabled={bulkSubmitting || !bulkSalePrice.trim() || !canWrite}
                 onClick={async () => {
                   const salePrice = bulkSalePrice.trim();
                   if (!salePrice) return;
@@ -769,6 +771,7 @@ export const AdminProductsPage: React.FC = () => {
               >
                 {bulkSubmitting ? '送出中…' : '批次改價'}
               </Button>
+              {!canWrite ? <div className="text-xs text-muted">{ADMIN_KEY_REQUIRED_HINT}</div> : null}
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Button
@@ -930,10 +933,10 @@ export const AdminProductsPage: React.FC = () => {
                       placeholder="例如：紅色／無香味"
                     />
                     <TextInput
-                      label="有效期限 (expiryDescription)"
+                      label="保存說明（非效期日）(expiryDescription)"
                       value={form.expiryDescription}
                       onChange={(e) => setForm((f) => ({ ...f, expiryDescription: e.target.value }))}
-                      placeholder="例如：常溫 12 個月；實際以包裝標示為準"
+                      placeholder="例如：常溫 12 個月；實際效期日請在入庫批次填日期"
                     />
                   </div>
                     {editing && (

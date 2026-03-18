@@ -94,7 +94,20 @@ async function request<T>(
     (headers as Record<string, string>)['X-Trace-Id'] = traceId;
   }
 
-  const res = await fetch(url, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, headers });
+  } catch (e) {
+    return {
+      ok: false,
+      error: {
+        statusCode: 0,
+        message: (e as Error)?.message ?? 'Failed to fetch',
+        code: 'NETWORK_ERROR',
+        traceId,
+      },
+    };
+  }
   let body: unknown;
   try {
     body = await res.json();
@@ -159,17 +172,33 @@ export async function getBrands(traceId?: string): Promise<BrandDto[] | ApiError
 }
 
 export async function getProducts(
-  params?: { categoryId?: string; brandId?: string; tag?: string },
+  params?: { categoryId?: string; brandId?: string; tag?: string; sku?: string },
   traceId?: string,
 ): Promise<ProductDto[] | ApiError> {
   const q = new URLSearchParams();
   if (params?.categoryId) q.set('categoryId', params.categoryId);
   if (params?.brandId) q.set('brandId', params.brandId);
   if (params?.tag?.trim()) q.set('tag', params.tag.trim());
+  if (params?.sku?.trim()) q.set('sku', params.sku.trim());
   const path = `products${q.toString() ? `?${q.toString()}` : ''}`;
   const out = await request<ProductDto[]>(path, { traceId: traceId ?? genTraceId() });
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
+}
+
+/** GET /products/search-barcode?q= — 條碼精確查詢（回 { items }） */
+export async function searchProductsByBarcode(
+  q: string,
+  limit = 20,
+  traceId?: string,
+): Promise<{ items: ProductDto[] } | ApiError> {
+  const term = q.trim();
+  if (!term) return { items: [] };
+  const qs = new URLSearchParams({ q: term, limit: String(limit) });
+  const out = await request<{ items: ProductDto[] }>(`products/search-barcode?${qs}`, { traceId: traceId ?? genTraceId() });
+  if (!out.ok) return out.error;
+  const items = Array.isArray(out.data.items) ? out.data.items : [];
+  return { items };
 }
 
 export async function getCategories(traceId?: string): Promise<CategoryDto[] | ApiError> {
@@ -184,12 +213,85 @@ export interface PosReportsSummaryDto {
   avgOrder: string;
   refundsCount: number;
   refundsTotal: string;
+  period?: { preset?: string; from: string; to: string };
+  byPaymentMethod?: Record<string, number>;
+  byCategory?: { categoryId: string | null; categoryCode?: string; revenue: number }[];
+  /** 區間銷貨成本（costPrice 彙總）；後端有 costPrice 時才有 */
+  totalCost?: string;
+  /** 毛利 = totalRevenue - totalCost */
+  grossMargin?: string;
+  /** 毛利率 % */
+  grossMarginRate?: number | null;
+}
+
+export type PosReportsPreset =
+  | 'today'
+  | 'last7d'
+  | 'last30d'
+  | 'currentMonth'
+  | 'last60d'
+  | 'lastHalfYear';
+
+export interface GetPosReportsSummaryParams {
+  preset?: PosReportsPreset;
+  from?: string;
+  to?: string;
+  storeId?: string;
 }
 
 export async function getPosReportsSummary(
+  params?: GetPosReportsSummaryParams,
   traceId?: string,
 ): Promise<PosReportsSummaryDto | ApiError> {
-  const out = await request<PosReportsSummaryDto>('pos/reports/summary', {
+  const q = new URLSearchParams();
+  if (params?.preset) q.set('preset', params.preset);
+  if (params?.from) q.set('from', params.from);
+  if (params?.to) q.set('to', params.to);
+  if (params?.storeId) q.set('storeId', params.storeId);
+  const path = `pos/reports/summary${q.toString() ? `?${q.toString()}` : ''}`;
+  const out = await request<PosReportsSummaryDto>(path, {
+    traceId: traceId ?? genTraceId(),
+  });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+export interface PosTopItemRow {
+  productId: string;
+  sku?: string;
+  name?: string;
+  quantity: number;
+  revenue: number;
+}
+
+export async function getPosTopItems(
+  params: { from: string; to: string; storeId?: string; limit?: number; sortBy?: 'quantity' | 'revenue' },
+  traceId?: string,
+): Promise<PosTopItemRow[] | ApiError> {
+  const q = new URLSearchParams({ from: params.from, to: params.to });
+  if (params.storeId) q.set('storeId', params.storeId);
+  if (params.limit != null) q.set('limit', String(params.limit));
+  if (params.sortBy) q.set('sortBy', params.sortBy);
+  const out = await request<PosTopItemRow[]>(`pos/reports/top-items?${q.toString()}`, {
+    traceId: traceId ?? genTraceId(),
+  });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+export interface PosDailyRow {
+  date: string;
+  revenue: number;
+  ordersCount: number;
+}
+
+export async function getPosDaily(
+  params: { from: string; to: string; storeId?: string },
+  traceId?: string,
+): Promise<PosDailyRow[] | ApiError> {
+  const q = new URLSearchParams({ from: params.from, to: params.to });
+  if (params.storeId) q.set('storeId', params.storeId);
+  const out = await request<PosDailyRow[]>(`pos/reports/daily?${q.toString()}`, {
     traceId: traceId ?? genTraceId(),
   });
   if (!out.ok) return out.error;

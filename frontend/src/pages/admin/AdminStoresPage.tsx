@@ -1,22 +1,20 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '../../shared/components/Button';
 import {
-  listMerchants,
   listStores,
   createStore,
   updateStore,
   deleteStore,
-  type MerchantDto,
   type StoreDto,
   type ApiError,
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
+import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 
 export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
-  const [merchants, setMerchants] = useState<MerchantDto[]>([]);
+  const merchantId = useDefaultMerchantId();
   const [rows, setRows] = useState<StoreDto[]>([]);
   const [err, setErr] = useState<string | null>(null);
-  const [merchantId, setMerchantId] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
@@ -25,18 +23,12 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
 
   const load = useCallback(async () => {
     setErr(null);
-    const [m, s] = await Promise.all([listMerchants(), listStores()]);
-    if (!Array.isArray(m)) {
-      setErr(getErrorMessage(m as ApiError));
-      return;
-    }
+    const s = await listStores();
     if (!Array.isArray(s)) {
       setErr(getErrorMessage(s as ApiError));
       return;
     }
-    setMerchants(m);
     setRows(s);
-    setMerchantId((prev) => (prev || (m[0]?.id ?? '')));
   }, []);
 
   useEffect(() => {
@@ -93,10 +85,11 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
   };
 
   const H = embedded ? 'h2' : 'h1';
+  const fieldClass = 'h-9 rounded-lg border border-[#e2e8f0] px-2 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20';
   return (
-    <div className={embedded ? '' : 'max-w-4xl'}>
-      <H className="mb-2 text-xl font-bold text-slate-900">門市</H>
-      <p className="mb-4 text-sm text-slate-500">
+    <div className={embedded ? '' : 'mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm'}>
+      <H className="mb-2 text-xl font-bold text-content">門市</H>
+      <p className="mb-4 text-sm text-muted">
         CRUD；所屬商家自動使用系統預設（單一商家情境，不顯示商家選單）。
       </p>
       {err && (
@@ -104,87 +97,69 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
           {err}
         </div>
       )}
-      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-2 text-xs font-semibold text-slate-700">新增門市</div>
-        <div className="flex flex-wrap items-end gap-2">
-          <input
-            className="h-9 min-w-[180px] flex-1 rounded border border-slate-200 px-2 text-sm"
-            placeholder="名稱"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <input
-            className="h-9 rounded border border-slate-200 px-2 text-sm"
-            placeholder="代碼"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
-          <Button type="button" size="sm" variant="primary" onClick={() => void handleCreate()}>
-            新增
-          </Button>
-        </div>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <input
+          className={`${fieldClass} w-24`}
+          placeholder="代碼"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+        <input
+          className={`${fieldClass} min-w-[140px] flex-1`}
+          placeholder="名稱"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <Button type="button" size="sm" variant="primary" onClick={() => void handleCreate()}>
+          新增
+        </Button>
       </div>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-600">
+      <div className="overflow-x-auto rounded-lg border border-[#e2e8f0]">
+        <table className="w-full min-w-[500px] text-left text-sm">
+          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
             <tr>
-              <th className="px-4 py-2">名稱</th>
-              <th className="px-4 py-2">代碼</th>
-              <th className="px-4 py-2 font-mono text-xs">ID</th>
-              <th className="px-4 py-2 w-40">操作</th>
+              <th className="px-4 py-2 font-medium">代碼</th>
+              <th className="px-4 py-2 font-medium">名稱</th>
+              <th className="w-32 px-4 py-2 text-right">操作</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((s) => (
-              <tr key={s.id} className="border-t border-slate-100">
+              <tr key={s.id} className="border-t border-[#e2e8f0]">
                 {editId === s.id ? (
                   <>
                     <td className="px-4 py-2">
                       <input
-                        className="w-full rounded border border-slate-200 px-1 text-sm"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        className="w-full rounded border border-slate-200 px-1 text-sm"
+                        className={`${fieldClass} w-full`}
                         value={editCode}
                         onChange={(e) => setEditCode(e.target.value)}
                       />
                     </td>
-                    <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{s.id}</td>
                     <td className="px-4 py-2">
+                      <input
+                        className={`${fieldClass} w-full`}
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-right">
                       <Button type="button" size="sm" variant="primary" onClick={() => void saveEdit()}>
                         儲存
                       </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        className="ml-1"
-                        onClick={() => setEditId(null)}
-                      >
+                      <Button type="button" size="sm" variant="secondary" className="ml-1" onClick={() => setEditId(null)}>
                         取消
                       </Button>
                     </td>
                   </>
                 ) : (
                   <>
-                    <td className="px-4 py-2 font-medium">{s.name}</td>
-                    <td className="px-4 py-2">{s.code}</td>
-                    <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{s.id}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 font-medium">{s.code}</td>
+                    <td className="px-4 py-2 text-muted">{s.name}</td>
+                    <td className="px-4 py-2 text-right">
                       <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(s)}>
                         編輯
                       </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        className="ml-1 text-red-700"
-                        onClick={() => void handleDelete(s.id)}
-                      >
+                      <Button type="button" size="sm" variant="secondary" className="ml-1" onClick={() => void handleDelete(s.id)}>
                         刪除
                       </Button>
                     </td>
@@ -194,6 +169,9 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
             ))}
           </tbody>
         </table>
+        {rows.length === 0 && (
+          <div className="px-4 py-8 text-center text-sm text-muted">尚無門市</div>
+        )}
       </div>
     </div>
   );

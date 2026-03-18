@@ -76,24 +76,24 @@ export const AdminMerchantsPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl">
-      <p className="mb-4 text-sm text-slate-600">CRUD；代碼須唯一。</p>
+    <div className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm">
+      <p className="mb-4 text-sm text-[#64748b]">CRUD；代碼須唯一。</p>
       {err && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {err}
         </div>
       )}
-      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-2 text-xs font-semibold text-slate-700">新增商家</div>
+      <div className="mb-6 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+        <div className="mb-2 text-xs font-semibold text-muted">新增商家</div>
         <div className="flex flex-wrap items-end gap-2">
           <input
-            className="h-9 rounded border border-slate-200 px-2 text-sm"
+            className="h-9 rounded border border-[#e2e8f0] px-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
             placeholder="代碼"
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
           <input
-            className="h-9 min-w-[200px] flex-1 rounded border border-slate-200 px-2 text-sm"
+            className="h-9 min-w-[200px] flex-1 rounded border border-[#e2e8f0] px-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
             placeholder="名稱"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -103,9 +103,9 @@ export const AdminMerchantsPage: React.FC = () => {
           </Button>
         </div>
       </div>
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="table-sticky-head overflow-hidden rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 text-slate-600">
+          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
             <tr>
               <th className="px-4 py-2">代碼</th>
               <th className="px-4 py-2">名稱</th>
@@ -120,19 +120,19 @@ export const AdminMerchantsPage: React.FC = () => {
                   <>
                     <td className="px-4 py-2">
                       <input
-                        className="w-full rounded border border-slate-200 px-1 text-sm"
+                        className="w-full rounded border border-[#e2e8f0] px-1 text-sm focus:border-[#0ea5e9]"
                         value={editCode}
                         onChange={(e) => setEditCode(e.target.value)}
                       />
                     </td>
                     <td className="px-4 py-2">
                       <input
-                        className="w-full rounded border border-slate-200 px-1 text-sm"
+                        className="w-full rounded border border-[#e2e8f0] px-1 text-sm focus:border-[#0ea5e9]"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                       />
                     </td>
-                    <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{m.id}</td>
+                    <td className="px-4 py-2 font-mono text-[10px] text-[#64748b]">{m.id}</td>
                     <td className="px-4 py-2">
                       <Button type="button" size="sm" variant="primary" onClick={() => void saveEdit()}>
                         儲存
@@ -152,7 +152,7 @@ export const AdminMerchantsPage: React.FC = () => {
                   <>
                     <td className="px-4 py-2 font-medium">{m.code}</td>
                     <td className="px-4 py-2">{m.name}</td>
-                    <td className="px-4 py-2 font-mono text-[10px] text-slate-500">{m.id}</td>
+                    <td className="px-4 py-2 font-mono text-[10px] text-[#64748b]">{m.id}</td>
                     <td className="px-4 py-2">
                       <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(m)}>
                         編輯

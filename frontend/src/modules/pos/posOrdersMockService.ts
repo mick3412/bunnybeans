@@ -23,6 +23,8 @@ export interface CreatePosOrderRequest {
   /** 選填；後端可用於依 email 查詢／綁定 Customer */
   customerEmail?: string | null;
   allowCredit?: boolean;
+  /** 選填；折抵點數（BURNED），後端兌回時扣減會員點數 */
+  pointsToRedeem?: number;
 }
 
 export interface PosOrderSummary {
@@ -55,6 +57,20 @@ export interface PosOrderDetail extends PosOrderSummary {
   remainingAmount: number;
   credit: boolean;
   customerCode?: string | null;
+  /** 換貨 Phase 2：此單由哪張單換貨而來 */
+  exchangeFromOrderId?: string | null;
+  /** 換貨 Phase 2：關聯回溯（原單/衍生單） */
+  exchange?: null | { sourceOrderId: string | null; derivedOrderIds: string[] };
+  /** 換貨 Phase 2：差額/補款/退款狀態摘要（若後端回傳則顯示） */
+  exchangeSettlement?: null | {
+    sourceOrderId: string;
+    derivedOrderIds: string[];
+    sourceTotal: number;
+    derivedTotal: number;
+    deltaAmount: number;
+    refundStatus: 'NOT_NEEDED' | 'REQUIRED' | 'SETTLED';
+    topupStatus: 'NOT_NEEDED' | 'REQUIRED' | 'SETTLED';
+  };
   /** 後端促銷／明細擴充 */
   subtotalAmount?: number;
   discountAmount?: number;

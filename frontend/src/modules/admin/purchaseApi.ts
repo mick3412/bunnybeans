@@ -244,11 +244,15 @@ export type RnStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'RETURNED';
 export interface RnLineDto {
   id: string;
   poLineId: string;
+  productId?: string;
   orderedQty: number;
   receivedQty: number;
   qualifiedQty: number;
   returnedQty: number;
   returnReason?: string | null;
+  batchCode?: string | null;
+  expiryDate?: string | null;
+  weightUnit?: string | null;
 }
 export interface ReceivingNoteDto {
   id: string;
@@ -257,6 +261,7 @@ export interface ReceivingNoteDto {
   purchaseOrderId: string;
   poNumber?: string;
   supplierName?: string;
+  warehouseId?: string | null;
   status: RnStatus;
   inspectorName?: string | null;
   remark?: string | null;
@@ -332,6 +337,7 @@ function normalizeRnFromApi(raw: Record<string, unknown>): ReceivingNoteDto {
     purchaseOrderId: String(raw.purchaseOrderId ?? ''),
     poNumber: po?.orderNumber,
     supplierName: po?.supplier?.name,
+    warehouseId: undefined,
     status: raw.status as RnStatus,
     inspectorName: (raw.inspectorName as string) ?? null,
     remark: (raw.remark as string) ?? null,
@@ -346,15 +352,19 @@ function normalizeRnDetailFromApi(raw: Record<string, unknown>): ReceivingNoteDt
   const lines: RnLineDto[] = Array.isArray(linesRaw)
     ? linesRaw.map((row) => {
         const l = row as Record<string, unknown>;
-        const pol = l.purchaseOrderLine as { id?: string } | undefined;
+        const pol = l.purchaseOrderLine as { id?: string; productId?: string } | undefined;
         return {
           id: String(l.id ?? ''),
           poLineId: String(l.purchaseOrderLineId ?? pol?.id ?? ''),
+          productId: pol?.productId ? String(pol.productId) : undefined,
           orderedQty: Number(l.orderedQty) || 0,
           receivedQty: Number(l.receivedQty) || 0,
           qualifiedQty: Number(l.qualifiedQty) || 0,
           returnedQty: Number(l.returnedQty) || 0,
           returnReason: (l.returnReason as string) ?? null,
+          batchCode: (l.batchCode as string) ?? null,
+          expiryDate: (l.expiryDate as string) ?? null,
+          weightUnit: (l.weightUnit as string) ?? null,
         };
       })
     : [];
@@ -367,6 +377,7 @@ function normalizeRnDetailFromApi(raw: Record<string, unknown>): ReceivingNoteDt
     purchaseOrderId: String(raw.purchaseOrderId ?? ''),
     poNumber: po?.orderNumber,
     supplierName: po?.supplier?.name,
+    warehouseId: (po as { warehouseId?: string } | undefined)?.warehouseId ?? null,
     status: raw.status as RnStatus,
     inspectorName: (raw.inspectorName as string) ?? null,
     remark: (raw.remark as string) ?? null,
@@ -642,7 +653,16 @@ export async function createReceivingNote(body: {
 
 export async function patchReceivingNoteLines(
   id: string,
-  lines: { lineId: string; receivedQty?: number; qualifiedQty?: number; returnedQty?: number; returnReason?: string }[],
+  lines: {
+    lineId: string;
+    receivedQty?: number;
+    qualifiedQty?: number;
+    returnedQty?: number;
+    returnReason?: string;
+    batchCode?: string | null;
+    expiryDate?: string | null;
+    weightUnit?: string | null;
+  }[],
 ): Promise<ReceivingNoteDto | ApiError> {
   if (!BASE) {
     mockRNs = mockRNs.map((r) => {
@@ -710,6 +730,23 @@ export async function rejectReceivingNote(id: string): Promise<ReceivingNoteDto 
     method: 'POST',
     body: '{}',
   });
+  return out.ok ? out.data : out.error;
+}
+
+/** §5.1 POST /receiving-notes/:id/return-to-supplier，僅 COMPLETED 可呼叫；body lines: receivingNoteLineId + quantity。 */
+export type ReturnToSupplierLine = { receivingNoteLineId: string; quantity: number };
+
+export async function returnToSupplier(
+  id: string,
+  body: { lines: ReturnToSupplierLine[] },
+): Promise<ReceivingNoteDto | ApiError> {
+  if (!BASE) {
+    return { statusCode: 501, message: 'return-to-supplier 需後端上線' };
+  }
+  const out = await req<ReceivingNoteDto>(
+    `receiving-notes/${encodeURIComponent(id)}/return-to-supplier`,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
   return out.ok ? out.data : out.error;
 }
 

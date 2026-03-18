@@ -8,16 +8,28 @@ function Card({
   title,
   value,
   sub,
+  accent,
 }: {
   title: string;
   value: string | number;
   sub?: string;
+  accent?: 'blue' | 'green' | 'amber' | 'slate';
 }) {
+  const accentClass =
+    accent === 'blue'
+      ? 'kpi-card-accent-blue'
+      : accent === 'green'
+        ? 'kpi-card-accent-green'
+        : accent === 'amber'
+          ? 'kpi-card-accent-amber'
+          : accent === 'slate'
+            ? 'kpi-card-accent-slate'
+            : '';
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">{title}</div>
-      <div className="mt-2 text-2xl font-semibold tabular-nums text-neutral-900">{value}</div>
-      {sub && <div className="mt-1 text-xs text-neutral-500">{sub}</div>}
+    <div className={`rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm ${accentClass}`}>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{title}</div>
+      <div className="mt-2 text-2xl font-semibold tabular-nums text-[#1e293b]">{value}</div>
+      {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
     </div>
   );
 }
@@ -26,8 +38,8 @@ function typeTag(t: string) {
   if (t === 'EARNED') return 'bg-emerald-100 text-emerald-800';
   if (t === 'BURNED') return 'bg-rose-100 text-rose-800';
   if (t === 'LOCKED') return 'bg-amber-100 text-amber-900';
-  if (t === 'EXPIRED') return 'bg-neutral-200 text-neutral-700';
-  return 'bg-slate-100 text-slate-700';
+  if (t === 'EXPIRED') return 'bg-[#e2e8f0] text-muted';
+  return 'bg-[#f8fafc] text-muted';
 }
 
 export const LoyaltyDashboardPage: React.FC = () => {
@@ -50,9 +62,9 @@ export const LoyaltyDashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">會員集點與促銷總覽</h2>
-        <p className="mt-1 text-sm text-neutral-500">
+      <div className="border-b border-[#e2e8f0] pb-2">
+        <h2 className="text-lg font-semibold text-[#1e293b]">會員集點與促銷總覽</h2>
+        <p className="mt-1 text-sm text-muted">
           四張 KPI 與 GET /loyalty/dashboard 擴充欄位一致；近 30 日發放／兌回仍保留於後台統計
         </p>
       </div>
@@ -64,29 +76,31 @@ export const LoyaltyDashboardPage: React.FC = () => {
           title="流通點數總額"
           value={data?.circulatingPointsTotal ?? '—'}
           sub="目前餘額 &gt;0 合計"
+          accent="blue"
         />
-        <Card title="本月新增會員" value={data?.newMembersThisMonth ?? '—'} sub="Customer.createdAt 當月" />
+        <Card title="本月新增會員" value={data?.newMembersThisMonth ?? '—'} sub="Customer.createdAt 當月" accent="green" />
         <Card
           title="累計兌回點數"
           value={data?.totalPointsBurnedLifetime ?? '—'}
           sub="歷史 BURNED 絕對值合計"
+          accent="amber"
         />
-        <Card title="進行中活動" value={data?.ongoingPromotionsCount ?? '—'} sub="促銷規則 draft=false 且檔期內" />
+        <Card title="進行中活動" value={data?.ongoingPromotionsCount ?? '—'} sub="促銷規則 draft=false 且檔期內" accent="slate" />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-semibold text-neutral-900">最近點數異動</span>
+            <span className="text-sm font-semibold text-[#1e293b]">最近點數異動</span>
             <Link
               to="/admin/loyalty/point-ledger"
-              className="text-xs font-medium text-sky-700 hover:underline"
+              className="text-xs font-medium text-[#0ea5e9] hover:underline"
             >
               查看存摺
             </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-xs">
-              <thead className="border-b text-neutral-500">
+              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
                 <tr>
                   <th className="py-2 pr-2">會員</th>
                   <th className="py-2 pr-2">類型</th>
@@ -98,7 +112,7 @@ export const LoyaltyDashboardPage: React.FC = () => {
               <tbody className="divide-y divide-neutral-100">
                 {recent.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-neutral-400">
+                    <td colSpan={5} className="py-6 text-center text-muted">
                       尚無流水
                     </td>
                   </tr>
@@ -110,8 +124,8 @@ export const LoyaltyDashboardPage: React.FC = () => {
                       <span className={`rounded px-1.5 py-0.5 font-medium ${typeTag(r.type)}`}>{r.type}</span>
                     </td>
                     <td className="py-1.5 pr-2 text-right tabular-nums">{r.amount > 0 ? `+${r.amount}` : r.amount}</td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums text-neutral-600">{r.balanceAfter}</td>
-                    <td className="whitespace-nowrap py-1.5 text-neutral-500">
+                    <td className="py-1.5 pr-2 text-right tabular-nums text-muted">{r.balanceAfter}</td>
+                    <td className="whitespace-nowrap py-1.5 text-muted">
                       {new Date(r.createdAt).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </td>
                   </tr>
@@ -120,32 +134,32 @@ export const LoyaltyDashboardPage: React.FC = () => {
             </table>
           </div>
         </div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-semibold text-neutral-900">進行中活動</div>
+        <div className="rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+          <div className="mb-3 text-sm font-semibold text-[#1e293b]">進行中活動</div>
           <ul className="space-y-2 text-sm">
-            {promos.length === 0 && <li className="text-neutral-400">尚無進行中促銷（或皆為草稿）</li>}
+            {promos.length === 0 && <li className="text-muted">尚無進行中促銷（或皆為草稿）</li>}
             {promos.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-neutral-100 bg-neutral-50/80 px-3 py-2"
+                className="flex items-center justify-between gap-2 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2"
               >
-                <span className="min-w-0 truncate font-medium text-neutral-800">{p.name}</span>
+                <span className="min-w-0 truncate font-medium text-content">{p.name}</span>
                 <span className="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
                   進行中
                 </span>
-                <span className="shrink-0 text-xs tabular-nums text-neutral-500">使用 {p.usageCount}</span>
+                <span className="shrink-0 text-xs tabular-nums text-muted">使用 {p.usageCount}</span>
               </li>
             ))}
           </ul>
           <Link
             to={`/admin/promotions${merchantId ? `?merchantId=${encodeURIComponent(merchantId)}` : ''}`}
-            className="mt-3 inline-block text-xs font-medium text-sky-700 hover:underline"
+            className="mt-3 inline-block text-xs font-medium text-[#0ea5e9] hover:underline"
           >
             編輯促銷規則
           </Link>
         </div>
       </div>
-      <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50/50 px-3 py-2 text-[11px] text-neutral-500">
+      <div className="rounded-lg border border-dashed border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-[11px] text-muted">
         近 30 日發放 {data?.pointsIssued30d ?? '—'} 點 · 近 30 日兌回 {data?.pointsRedeemed30d ?? '—'} 點 ·
         持有點數會員 {data?.activeMembersWithPoints ?? '—'} 人
       </div>

@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  listMerchants,
   previewCustomersImport,
   applyCustomersImport,
   type CustomerImportPreviewRow,
@@ -9,6 +8,7 @@ import {
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
+import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { useAdminToast } from './AdminToastContext';
 
 function defaultAction(r: CustomerImportPreviewRow): CustomerImportApplyDecision {
@@ -37,9 +37,9 @@ function decisionsToCsv(
 
 export const AdminCustomerImportPage: React.FC = () => {
   const { showToast } = useAdminToast();
-  const [merchants, setMerchants] = useState<{ id: string; name: string }[]>([]);
-  const [merchantId, setMerchantId] = useState('');
+  const merchantId = useDefaultMerchantId();
   const fileRef = useRef<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState('');
   const inputKey = useRef(0);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -50,16 +50,6 @@ export const AdminCustomerImportPage: React.FC = () => {
   const [parseErrors, setParseErrors] = useState<{ row: number; reason: string }[]>([]);
   const [decisions, setDecisions] = useState<Map<number, CustomerImportApplyDecision>>(new Map());
   const hasAdminKey = Boolean((import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim());
-
-  useEffect(() => {
-    (async () => {
-      const m = await listMerchants();
-      if (Array.isArray(m) && m.length) {
-        setMerchants(m.map((x) => ({ id: x.id, name: x.name })));
-        setMerchantId((prev) => prev || m[0].id);
-      }
-    })();
-  }, []);
 
   const resetPreview = () => {
     setFileHash(null);
@@ -176,71 +166,79 @@ export const AdminCustomerImportPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl" data-testid="e2e-admin-customers-import">
-      <h2 className="mb-2 text-lg font-semibold text-neutral-900">客戶 CSV 匯入</h2>
-      <p className="mb-4 text-sm text-slate-600">
-        先 <strong>預覽</strong>（不寫入），再逐列決策後 <strong>套用</strong>。套用須與預覽<strong>同一檔</strong>。
+    <div className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm" data-testid="e2e-admin-customers-import">
+      <p className="mb-2 text-sm text-[#64748b]">
+        步驟：<strong>1. 選擇 CSV 檔案</strong> → 2. 預覽（不寫入）→ 3. 確認決策後套用寫入。套用須與預覽同一檔。
       </p>
       {err && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {err}
         </div>
       )}
-      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">商家</label>
-          <select
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-            value={merchantId}
-            onChange={(e) => {
-              setMerchantId(e.target.value);
-              resetPreview();
-            }}
-          >
-            {merchants.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div data-testid="e2e-admin-customers-import-preview">
-          <label className="mb-1 block text-xs font-medium text-slate-600">CSV</label>
-          <input
-            key={inputKey.current}
-            type="file"
-            accept=".csv,text/csv"
-            disabled={!hasAdminKey}
-            title={!hasAdminKey ? '需 VITE_ADMIN_API_KEY' : undefined}
-            onChange={(e) => {
-              const f = e.target.files?.[0] ?? null;
-              onPickFile(f);
-            }}
-          />
-          {fileName && <span className="ml-2 text-xs text-slate-500">{fileName}</span>}
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={previewLoading || !fileRef.current || !merchantId || !hasAdminKey}
-          onClick={runPreview}
-        >
-          {previewLoading ? '預覽中…' : '預覽'}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            fileRef.current = null;
-            setFileName('');
-            inputKey.current += 1;
-            resetPreview();
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4 shadow-sm">
+        <input
+          ref={fileInputRef}
+          key={inputKey.current}
+          type="file"
+          accept=".csv,text/csv"
+          disabled={!hasAdminKey}
+          className="hidden"
+          aria-label="選擇 CSV 檔案"
+          data-testid="e2e-admin-customers-import-file"
+          title={!hasAdminKey ? '需 VITE_ADMIN_API_KEY' : undefined}
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null;
+            onPickFile(f);
           }}
+        />
+        <div data-testid="e2e-admin-customers-import-preview" className="contents">
+        <Button
+          type="button"
+          size="sm"
+          variant="primary"
+          disabled={!hasAdminKey}
+          onClick={() => fileInputRef.current?.click()}
         >
-          重選檔案
+          {fileName ? `已選：${fileName}` : '選擇 CSV 檔案'}
         </Button>
+        {fileName && (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={previewLoading || !merchantId || !hasAdminKey}
+              onClick={runPreview}
+            >
+              {previewLoading ? '預覽中…' : '預覽'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                fileRef.current = null;
+                setFileName('');
+                inputKey.current += 1;
+                resetPreview();
+              }}
+            >
+              重選檔案
+            </Button>
+          </>
+        )}
+        {rows.length > 0 && (
+          <Button
+            type="button"
+            size="sm"
+            variant="primary"
+            disabled={applyLoading || !hasAdminKey}
+            onClick={runApply}
+          >
+            {applyLoading ? '套用中…' : '套用寫入'}
+          </Button>
+        )}
+        </div>
       </div>
 
       {parseErrors.length > 0 && (
@@ -275,9 +273,9 @@ export const AdminCustomerImportPage: React.FC = () => {
               {applyLoading ? '套用中…' : '套用寫入'}
             </Button>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="table-sticky-head overflow-x-auto rounded-lg border border-[#e2e8f0] bg-white">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
+              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs text-[#64748b]">
                 <tr>
                   <th className="px-2 py-2">列</th>
                   <th className="px-2 py-2">name</th>
@@ -304,7 +302,7 @@ export const AdminCustomerImportPage: React.FC = () => {
                       </td>
                       <td className="px-2 py-1.5">
                         <select
-                          className="rounded border border-slate-200 px-1 py-0.5 text-xs"
+                          className="rounded border border-[#e2e8f0] px-1 py-0.5 text-xs"
                           value={d?.action ?? 'skip'}
                           onChange={(e) => {
                             const action = e.target.value as CustomerImportApplyDecision['action'];
@@ -325,7 +323,7 @@ export const AdminCustomerImportPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-[11px] text-slate-500">
+          <p className="mt-2 text-[11px] text-[#64748b]">
             fileHash（預覽）: {fileHash?.slice(0, 16)}… · 套用時會比對同檔
           </p>
         </>

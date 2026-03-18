@@ -1,0 +1,106 @@
+@page {
+  size: A4;
+  margin: 16mm 14mm;
+}
+
+html,
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans TC', 'PingFang TC',
+    'Microsoft JhengHei', system-ui, sans-serif;
+  color: #111;
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+code,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+}
+
+.doc-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+.doc-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.doc-meta {
+  font-size: 11px;
+  color: #444;
+}
+
+.chapter-title {
+  font-size: 16px;
+  margin: 0 0 10px 0;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+h2 {
+  font-size: 13px;
+  margin: 14px 0 6px;
+}
+
+h3 {
+  font-size: 12px;
+  margin: 12px 0 6px;
+}
+
+pre {
+  background: #f6f7f9;
+  border: 1px solid #e6e8eb;
+  padding: 10px 12px;
+  overflow: hidden;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+code {
+  background: #f6f7f9;
+  border: 1px solid #e6e8eb;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+ul,
+ol {
+  padding-left: 18px;
+}
+
+.page-break {
+  break-after: page;
+  page-break-after: always;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border: 1px solid #e6e8eb;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+th {
+  background: #f6f7f9;
+  font-weight: 600;
+}
+

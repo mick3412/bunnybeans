@@ -45,7 +45,7 @@ if ! curl -sf "http://localhost:3003/health" >/dev/null; then
   BACKEND_PID=$!
   echo "後端 PID $BACKEND_PID，日誌 /tmp/pos-e2e-backend.log"
   if ! wait_health; then
-    echo "後端 90 秒內未就緒。請檢查 DATABASE_URL、pnpm prisma:db:push、pnpm db:seed"
+    echo "後端 90 秒內未就緒。請檢查 DATABASE_URL、pnpm prisma:db:push、pnpm db:seed、pnpm e2e:seed（掛帳 E2E 需 e2e:seed）"
     echo "日誌尾端："
     tail -20 /tmp/pos-e2e-backend.log || true
     exit 1

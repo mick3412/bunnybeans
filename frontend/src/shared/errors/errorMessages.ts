@@ -18,6 +18,10 @@ export const ERROR_CODE_MAP: Record<string, string> = {
   FINANCE_UNSUPPORTED_EVENT_TYPE: '金流類型不支援',
   FINANCE_CURRENCY_REQUIRED: '請提供幣別',
   FINANCE_AMOUNT_INVALID: '金額必須為數字',
+  FINANCE_PERIOD_CLOSED: '該日期所在區間已關帳，無法寫入（請先解鎖或改日期）',
+  FINANCE_PERIOD_OVERLAP: '關帳區間無效：起迄日需為有效日期且起日不得晚於迄日',
+  FINANCE_PERIOD_ALREADY_CLOSED: '關帳區間與既有已關帳區間重疊（請調整起迄日）',
+  FINANCE_PERIOD_NOT_FOUND: '找不到此關帳區間，可能已被刪除或無權限',
   POS_CUSTOMER_NOT_FOUND: '找不到客戶，請重新選擇',
   POS_ORDER_ALREADY_SETTLED: '此單已收齊，無需補款',
   POS_PAYMENT_EXCEEDS_REMAINING: '補款金額不可超過未收金額',
@@ -32,8 +36,24 @@ export const ERROR_CODE_MAP: Record<string, string> = {
   POS_RETURN_EXCEEDS_SOLD: '退貨入庫數量不可超過原銷售數量',
 };
 
-export function getErrorMessage(input: { code?: string; message?: string }): string {
-  const { code, message } = input;
+export interface AdminApiErrorLike {
+  code?: string;
+  message?: string;
+  statusCode?: number;
+}
+
+export function getErrorMessage(input: { code?: string; message?: string; statusCode?: number }): string {
+  const { code, message, statusCode } = input;
+  if (statusCode === 401) {
+    return (
+      ERROR_CODE_MAP.ADMIN_API_KEY_REQUIRED ??
+      '此操作需後台金鑰，請設定 VITE_ADMIN_API_KEY（與後端 ADMIN_API_KEY 相同）。'
+    );
+  }
+  if (statusCode === 403) {
+    if (code && ERROR_CODE_MAP[code]) return ERROR_CODE_MAP[code];
+    return '權限不足（Forbidden）。若你應該有權限，請確認角色或管理金鑰設定。';
+  }
   if (code && ERROR_CODE_MAP[code]) {
     return ERROR_CODE_MAP[code];
   }
@@ -42,4 +62,14 @@ export function getErrorMessage(input: { code?: string; message?: string }): str
   }
   return '發生錯誤，請稍後再試。';
 }
+
+export function showAdminApiErrorToast(
+  showToast: (message: string, variant?: 'ok' | 'err') => void,
+  error: AdminApiErrorLike,
+): void {
+  if (error.statusCode === 401) return;
+  const msg = getErrorMessage(error);
+  showToast(msg, 'err');
+}
+
 

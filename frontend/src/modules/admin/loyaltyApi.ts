@@ -174,16 +174,42 @@ export type LoyaltyCustomerRow = {
   pointBalance?: number | null;
   expiringSoon?: number | null;
   expiringAt?: string | null;
+  status?: string | null;
+  tags?: string[] | null;
 };
 
 export async function listLoyaltyCustomers(
   merchantId: string,
+  opts?: { status?: string; tag?: string },
 ): Promise<LoyaltyCustomerRow[] | ApiError> {
-  const out = await req<LoyaltyCustomerRow[]>(
-    `customers?merchantId=${encodeURIComponent(merchantId)}`,
-  );
+  const q = new URLSearchParams({ merchantId });
+  if (opts?.status?.trim()) q.set('status', opts.status.trim());
+  if (opts?.tag?.trim()) q.set('tag', opts.tag.trim());
+  const out = await req<LoyaltyCustomerRow[]>(`customers?${q}`);
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
+}
+
+/** §8 GET /customers/search?merchantId=&q= — 模糊搜尋 phone／name／memberCode，最多 20 筆；q 空白回傳空陣列 */
+export type CustomerSearchItem = {
+  id: string;
+  name: string;
+  phone: string | null;
+  memberLevel: string | null;
+  memberCode: string | null;
+};
+
+export async function searchCustomers(
+  merchantId: string,
+  q: string,
+): Promise<{ items: CustomerSearchItem[] } | ApiError> {
+  const params = new URLSearchParams({ merchantId, q: q.trim() });
+  const out = await req<{ items: CustomerSearchItem[] }>(
+    `customers/search?${params}`,
+  );
+  if (!out.ok) return out.error;
+  const data = out.data as { items?: CustomerSearchItem[] };
+  return { items: Array.isArray(data?.items) ? data.items : [] };
 }
 
 export type LoyaltyCouponDto = {
@@ -246,6 +272,80 @@ export async function patchLoyaltyCoupon(
     `loyalty/coupons/${encodeURIComponent(id)}?merchantId=${encodeURIComponent(merchantId)}`,
     { method: 'PATCH', body: JSON.stringify(body) },
   );
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+export type TierRuleDto = {
+  id: string;
+  merchantId: string;
+  name: string;
+  ruleType: string;
+  threshold: number;
+  targetLevel: string;
+  lookbackDays: number;
+  createdAt: string;
+};
+
+/** GET /crm/tier-rules?merchantId= — 會員等級規則列表 */
+export async function listTierRules(
+  merchantId: string,
+): Promise<TierRuleDto[] | ApiError> {
+  const q = new URLSearchParams({ merchantId });
+  const out = await req<TierRuleDto[]>(`crm/tier-rules?${q}`);
+  if (!out.ok) return out.error;
+  return Array.isArray(out.data) ? out.data : [];
+}
+
+/** POST /crm/tier-rules?merchantId= — 新增會員等級規則 */
+export async function createTierRule(
+  merchantId: string,
+  body: { name: string; ruleType: string; threshold: number; targetLevel: string; lookbackDays?: number },
+): Promise<TierRuleDto | ApiError> {
+  const q = new URLSearchParams({ merchantId });
+  const out = await req<TierRuleDto>(`crm/tier-rules?${q}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+/** PATCH /crm/tier-rules/:id?merchantId= — 更新會員等級規則 */
+export async function updateTierRule(
+  merchantId: string,
+  id: string,
+  body: Partial<{ name: string; threshold: number; targetLevel: string; lookbackDays: number }>,
+): Promise<TierRuleDto | ApiError> {
+  const q = new URLSearchParams({ merchantId });
+  const out = await req<TierRuleDto>(`crm/tier-rules/${encodeURIComponent(id)}?${q}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+/** DELETE /crm/tier-rules/:id?merchantId= — 刪除會員等級規則 */
+export async function deleteTierRule(
+  merchantId: string,
+  id: string,
+): Promise<void | ApiError> {
+  const q = new URLSearchParams({ merchantId });
+  const out = await req<unknown>(`crm/tier-rules/${encodeURIComponent(id)}?${q}`, {
+    method: 'DELETE',
+  });
+  if (!out.ok) return out.error;
+}
+
+/** POST /crm/recalc-tiers — 依 TierRule 批次重算會員等級 */
+export async function recalcTiers(
+  merchantId: string,
+): Promise<{ updated: number } | ApiError> {
+  const out = await req<{ updated: number }>('crm/recalc-tiers', {
+    method: 'POST',
+    body: JSON.stringify({ merchantId }),
+  });
   if (!out.ok) return out.error;
   return out.data;
 }

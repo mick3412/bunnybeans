@@ -1,14 +1,47 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { listLoyaltyCustomers, type LoyaltyCustomerRow } from '../../../modules/admin/loyaltyApi';
+import { Link } from 'react-router-dom';
+import {
+  listLoyaltyCustomers,
+  searchCustomers,
+  type LoyaltyCustomerRow,
+} from '../../../modules/admin/loyaltyApi';
+import {
+  createCustomer,
+  getCustomer,
+  patchCustomer,
+  type CreateCustomerBody,
+  type CustomerDetailDto,
+} from '../../../modules/admin/adminApi';
 import type { ApiError } from '../../../modules/admin/adminApi';
 import { useLoyaltyOutletContext } from './LoyaltyLayout';
 import { TextInput } from '../../../shared/components/TextInput';
+import { Button } from '../../../shared/components/Button';
+import { useAdminToast } from '../AdminToastContext';
+
+type DrawerMode = 'create' | 'edit';
 
 export const LoyaltyMembersPage: React.FC = () => {
   const { merchantId } = useLoyaltyOutletContext();
+  const showToast = useAdminToast();
   const [rows, setRows] = useState<LoyaltyCustomerRow[]>([]);
+  const [searchResults, setSearchResults] = useState<LoyaltyCustomerRow[]>([]);
+  const [searching, setSearching] = useState(false);
   const [q, setQ] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState<DrawerMode>('create');
+  const [editId, setEditId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<CustomerDetailDto | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    memberLevel: '',
+    memberCode: '',
+    joinDate: '',
+  });
+  const [manualLevelNote, setManualLevelNote] = useState('');
 
   const load = async () => {
     if (!merchantId) return;
@@ -22,39 +55,153 @@ export const LoyaltyMembersPage: React.FC = () => {
     void load();
   }, [merchantId]);
 
+  useEffect(() => {
+    const t = q.trim();
+    if (!t || !merchantId) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const timer = setTimeout(() => {
+      void (async () => {
+        const out = await searchCustomers(merchantId, t);
+        if ('statusCode' in out) {
+          setSearchResults([]);
+          setErr((out as ApiError).message);
+        } else {
+          setErr(null);
+          setSearchResults(
+            out.items.map((x) => ({
+              id: x.id,
+              name: x.name,
+              phone: x.phone ?? undefined,
+              memberLevel: x.memberLevel ?? undefined,
+              memberCode: x.memberCode ?? undefined,
+              code: x.memberCode ?? undefined,
+            })),
+          );
+        }
+        setSearching(false);
+      })();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [merchantId, q]);
+
+  const openCreate = () => {
+    setDrawerMode('create');
+    setEditId(null);
+    setDetail(null);
+    setForm({ name: '', phone: '', email: '', memberLevel: '', memberCode: '', joinDate: '' });
+    setDrawerOpen(true);
+  };
+
+  const openEdit = async (id: string) => {
+    setDrawerMode('edit');
+    setEditId(id);
+    setDetail(null);
+    setDrawerOpen(true);
+    const out = await getCustomer(id);
+    if ('statusCode' in out) {
+      showToast((out as ApiError).message, 'err');
+      return;
+    }
+    const d = out as CustomerDetailDto;
+    setDetail(d);
+    setForm({
+      name: d.name ?? '',
+      phone: d.phone ?? '',
+      email: d.email ?? '',
+      memberLevel: d.memberLevel ?? '',
+      memberCode: d.memberCode ?? d.code ?? '',
+      joinDate: d.joinDate ? d.joinDate.slice(0, 10) : '',
+    });
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setEditId(null);
+    setDetail(null);
+  };
+
+  const submitCreate = async () => {
+    if (!merchantId || !form.name.trim()) {
+      showToast('請填寫姓名', 'err');
+      return;
+    }
+    setSaving(true);
+    const out = await createCustomer({
+      merchantId,
+      name: form.name.trim(),
+      phone: form.phone.trim() || undefined,
+      email: form.email.trim() || undefined,
+      memberLevel: form.memberLevel.trim() || undefined,
+      memberCode: form.memberCode.trim() || undefined,
+    });
+    setSaving(false);
+    if ('statusCode' in out) {
+      showToast((out as ApiError).message, 'err');
+      return;
+    }
+    showToast('已新增會員', 'ok');
+    closeDrawer();
+    void load();
+  };
+
+  const submitEdit = async () => {
+    if (!editId) return;
+    setSaving(true);
+    const body: Partial<CustomerDetailDto> = {
+      name: form.name.trim(),
+      phone: form.phone.trim() || undefined,
+      email: form.email.trim() || undefined,
+      memberLevel: form.memberLevel.trim() || undefined,
+      memberCode: form.memberCode.trim() || undefined,
+      code: form.memberCode.trim() || undefined,
+    };
+    if (form.joinDate) body.joinDate = form.joinDate;
+    const out = await patchCustomer(editId, body);
+    setSaving(false);
+    if ('statusCode' in out) {
+      showToast((out as ApiError).message, 'err');
+      return;
+    }
+    showToast('已更新會員', 'ok');
+    closeDrawer();
+    void load();
+  };
+
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return rows;
-    return rows.filter(
-      (r) =>
-        r.name?.toLowerCase().includes(s) ||
-        r.phone?.includes(s) ||
-        r.id.toLowerCase().includes(s) ||
-        (r.memberCode && r.memberCode.toLowerCase().includes(s)),
-    );
-  }, [rows, q]);
+    if (q.trim()) return searchResults;
+    return rows;
+  }, [rows, q, searchResults]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">會員管理</h2>
-          <p className="mt-1 text-sm text-neutral-500">含點數餘額／即將到期（B3）</p>
+        <div className="border-b border-[#e2e8f0] pb-2">
+          <p className="text-sm text-[#64748b]">含點數餘額／即將到期；新增與編輯需後端 §7</p>
         </div>
-        <TextInput
-          label="搜尋"
-          placeholder="姓名、電話、會員碼、ID"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          className="min-w-[200px]"
-        />
+        <div className="flex items-center gap-2">
+          <TextInput
+            label="搜尋"
+            placeholder="姓名、電話、會員碼（GET /customers/search）"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="min-w-[200px]"
+          />
+          {searching && <span className="text-xs text-muted">搜尋中…</span>}
+          <Button type="button" onClick={openCreate}>
+            新增會員
+          </Button>
+        </div>
       </div>
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
       )}
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm">
+      <div className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-neutral-200 bg-neutral-50 text-xs text-neutral-600">
+          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs text-muted">
             <tr>
               <th className="px-3 py-2">會員碼</th>
               <th className="px-3 py-2">姓名</th>
@@ -64,17 +211,18 @@ export const LoyaltyMembersPage: React.FC = () => {
               <th className="px-3 py-2 text-right">即將到期</th>
               <th className="px-3 py-2">到期日</th>
               <th className="px-3 py-2">加入日</th>
+              <th className="px-3 py-2">操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {filtered.map((r) => (
-              <tr key={r.id} className="hover:bg-neutral-50/80">
+              <tr key={r.id} className="hover:bg-[#f8fafc]">
                 <td className="px-3 py-2 font-mono text-xs">{r.memberCode ?? '—'}</td>
                 <td className="px-3 py-2 font-medium">{r.name}</td>
                 <td className="px-3 py-2 tabular-nums">{r.phone ?? '—'}</td>
                 <td className="px-3 py-2">
                   {r.memberLevel ? (
-                    <span className="rounded bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-800">
+                    <span className="rounded bg-[#0ea5e9]/10 px-2 py-0.5 text-[11px] font-medium text-[#0ea5e9]">
                       {r.memberLevel}
                     </span>
                   ) : (
@@ -83,21 +231,201 @@ export const LoyaltyMembersPage: React.FC = () => {
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.pointBalance ?? 0}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{r.expiringSoon ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-neutral-600">
+                <td className="px-3 py-2 text-xs text-muted">
                   {r.expiringAt ? new Date(r.expiringAt).toLocaleDateString('zh-TW') : '—'}
                 </td>
-                <td className="px-3 py-2 text-xs text-neutral-600">
+                <td className="px-3 py-2 text-xs text-muted">
                   {r.joinDate ? new Date(r.joinDate).toLocaleDateString('zh-TW') : '—'}
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-sky-700 hover:underline"
+                      onClick={() => void openEdit(r.id)}
+                    >
+                      編輯
+                    </button>
+                    <Link
+                      to={`/admin/loyalty/point-ledger?customerId=${encodeURIComponent(r.id)}`}
+                      className="text-xs font-medium text-sky-700 hover:underline"
+                    >
+                      點數存摺
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-neutral-500">
-        新增會員請至 <a className="text-sky-700 underline" href="/admin/customers/import">客戶 CSV</a> 或後續 POST
-        customer。
-      </p>
+
+      {/* 新增／編輯 Drawer */}
+      {drawerOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/25"
+            aria-hidden
+            onClick={closeDrawer}
+          />
+          <aside
+            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-[#e2e8f0] bg-white shadow-xl"
+            aria-label={drawerMode === 'create' ? '新增會員' : '編輯會員'}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+              <h3 className="font-semibold text-content">
+                {drawerMode === 'create' ? '新增會員' : '編輯會員'}
+              </h3>
+              <button
+                type="button"
+                className="rounded px-2 py-1 text-sm text-muted hover:bg-[#f1f5f9]"
+                onClick={closeDrawer}
+              >
+                關閉
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
+              {drawerMode === 'edit' && detail && (
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-[#f8fafc] p-3 text-xs">
+                    <div className="font-medium text-muted">點數與效期</div>
+                    <div className="mt-1 text-muted">
+                      點數餘額 {detail.pointBalance ?? 0} · 即將到期 {detail.expiringSoon ?? '—'} · 到期日{' '}
+                      {detail.expiringAt ? new Date(detail.expiringAt).toLocaleDateString('zh-TW') : '—'}
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-[#e2e8f0] bg-white p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold text-content">消費統計（預留）</div>
+                      <span className="text-[11px] text-muted">待後端擴充欄位</span>
+                    </div>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                        <div className="text-[11px] font-medium text-muted">最近一筆</div>
+                        <div className="mt-1 text-sm font-semibold tabular-nums text-content">—</div>
+                        <div className="mt-0.5 text-[11px] text-muted">金額／時間</div>
+                      </div>
+                      <div className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                        <div className="text-[11px] font-medium text-muted">累計金額</div>
+                        <div className="mt-1 text-sm font-semibold tabular-nums text-content">—</div>
+                        <div className="mt-0.5 text-[11px] text-muted">歷史訂單合計</div>
+                      </div>
+                      <div className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                        <div className="text-[11px] font-medium text-muted">消費頻率</div>
+                        <div className="mt-1 text-sm font-semibold tabular-nums text-content">—</div>
+                        <div className="mt-0.5 text-[11px] text-muted">近 30 日 / 90 日</div>
+                      </div>
+                      <div className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                        <div className="text-[11px] font-medium text-muted">偏好品類</div>
+                        <div className="mt-1 text-sm font-semibold tabular-nums text-content">—</div>
+                        <div className="mt-0.5 text-[11px] text-muted">Top 3</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 rounded-md border border-dashed border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-xs text-muted">
+                      之後會由後端提供：最近購買品項、品類占比、累計/區間統計。前端先保留版位與視覺化容器，避免假資料造成誤判。
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-[#e2e8f0] bg-white p-3">
+                    <div className="text-xs font-semibold text-content">偏好品類視覺化（預留）</div>
+                    <div className="mt-2 space-y-2">
+                      {['—', '—', '—'].map((label, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <div className="w-16 truncate text-[11px] text-muted">{label}</div>
+                          <div className="h-2 flex-1 rounded-full bg-[#e2e8f0]">
+                            <div className="h-2 rounded-full bg-[#0ea5e9]/30" style={{ width: `${(3 - idx) * 20}%` }} />
+                          </div>
+                          <div className="w-10 text-right text-[11px] tabular-nums text-muted">—%</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 text-[11px] text-muted">完成接欄位後會顯示 Top 品類與最近購買品項清單。</div>
+                  </div>
+
+                  <div className="rounded-lg border border-dashed border-[#cbd5f5] bg-[#eff6ff] p-3 text-xs">
+                    <div className="mb-1 flex items-center justify-between">
+                      <div className="font-medium text-[#1d4ed8]">手動調整會員等級</div>
+                      <span className="text-[11px] text-[#64748b]">
+                        僅限有 Admin Key 者在後台修改
+                      </span>
+                    </div>
+                    <p className="mb-2 text-[11px] text-[#1e293b]">
+                      直接輸入新的 <span className="font-semibold">memberLevel</span>，例如
+                      <span className="font-mono"> GOLD</span>、<span className="font-mono"> VIP</span>；下次排程重算時仍會依 TierRule 規則覆蓋。
+                    </p>
+                    <div className="mb-2 rounded-md border border-dashed border-[#bfdbfe] bg-white/70 px-2 py-1.5">
+                      <div className="text-[11px] font-medium text-[#1d4ed8]">
+                        最近一次自動升降級（預留）
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-[#475569]">
+                        之後會由後端等級重算紀錄帶入「最後重算時間／原因」等資訊，目前僅作為版位預留，實際判斷仍以
+                        TierRule 定期重算為準。
+                      </p>
+                    </div>
+                    <TextInput
+                      label="手動指定等級（覆寫目前等級）"
+                      value={form.memberLevel}
+                      onChange={(e) => setForm((f) => ({ ...f, memberLevel: e.target.value }))}
+                      placeholder="例如：VIP / GOLD / NORMAL"
+                    />
+                    <TextInput
+                      label="調整說明（僅備註用途，可填入原因與經辦人）"
+                      value={manualLevelNote}
+                      onChange={(e) => setManualLevelNote(e.target.value)}
+                      placeholder="例如：補發升等、客服處理投訴等"
+                    />
+                  </div>
+                </div>
+              )}
+              <TextInput
+                label="姓名"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="必填"
+              />
+              <TextInput
+                label="電話"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              />
+              <TextInput
+                label="Email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              />
+              <TextInput
+                label="等級 (memberLevel)"
+                value={form.memberLevel}
+                onChange={(e) => setForm((f) => ({ ...f, memberLevel: e.target.value }))}
+                placeholder="VIP, GOLD, NORMAL"
+              />
+              <TextInput
+                label="會員碼 (memberCode)"
+                value={form.memberCode}
+                onChange={(e) => setForm((f) => ({ ...f, memberCode: e.target.value }))}
+              />
+              {drawerMode === 'edit' && (
+                <TextInput
+                  label="加入日"
+                  type="date"
+                  value={form.joinDate}
+                  onChange={(e) => setForm((f) => ({ ...f, joinDate: e.target.value }))}
+                />
+              )}
+            </div>
+            <div className="border-t border-neutral-100 p-4">
+              <Button
+                type="button"
+                disabled={saving}
+                onClick={() => (drawerMode === 'create' ? void submitCreate() : void submitEdit())}
+              >
+                {saving ? '儲存中…' : '儲存'}
+              </Button>
+            </div>
+          </aside>
+        </>
+      )}
     </div>
   );
 };

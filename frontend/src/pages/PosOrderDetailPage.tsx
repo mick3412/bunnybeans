@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../shared/components/Button';
 import {
   getOrderById,
@@ -26,6 +26,7 @@ function paymentMethodLabel(method: string): string {
 export const PosOrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo');
   const [order, setOrder] = useState<PosOrderDetail | null>(null);
@@ -351,6 +352,133 @@ export const PosOrderDetailPage: React.FC = () => {
                 </div>
               )}
 
+              {(() => {
+                const ex = order.exchange ?? null;
+                const st = order.exchangeSettlement ?? null;
+                const sourceOrderId = ex?.sourceOrderId ?? order.exchangeFromOrderId ?? null;
+                const derivedOrderIds = ex?.derivedOrderIds ?? [];
+                const visible = Boolean(sourceOrderId || derivedOrderIds.length);
+                if (!visible) return null;
+                const selfReturnTo = `${location.pathname}${location.search}`;
+                const delta = st?.deltaAmount;
+                const deltaText =
+                  typeof delta === 'number' && Number.isFinite(delta)
+                    ? delta === 0
+                      ? '差額 $0'
+                      : delta > 0
+                        ? `需補款 $${Math.abs(delta).toLocaleString()}`
+                        : `需退款 $${Math.abs(delta).toLocaleString()}`
+                    : null;
+                const refundStatus = st?.refundStatus;
+                const topupStatus = st?.topupStatus;
+                return (
+                  <div className="rounded-lg border border-brand-surface bg-white px-3 py-2 sm:px-4">
+                    <div className="text-[10px] font-semibold uppercase text-muted">換貨關聯</div>
+                    {deltaText ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="rounded-full bg-table-head px-2 py-1 font-semibold text-content">{deltaText}</span>
+                        {refundStatus ? (
+                          <span className="rounded-full bg-table-head px-2 py-1 text-muted">
+                            退款狀態：{refundStatus === 'REQUIRED' ? '需退款' : refundStatus === 'SETTLED' ? '已退款' : '不需'}
+                          </span>
+                        ) : null}
+                        {topupStatus ? (
+                          <span className="rounded-full bg-table-head px-2 py-1 text-muted">
+                            補款狀態：{topupStatus === 'REQUIRED' ? '需補款' : topupStatus === 'SETTLED' ? '已補款' : '不需'}
+                          </span>
+                        ) : null}
+                        {refundStatus === 'REQUIRED' ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const el = document.getElementById('refund');
+                              el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                          >
+                            前往退款
+                          </Button>
+                        ) : null}
+                        {topupStatus === 'REQUIRED' ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              const el = document.getElementById('append-payment');
+                              el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                          >
+                            前往補款
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-[11px] text-muted">提示：若後端提供 settlement 資訊，這裡會顯示差額與補款/退款狀態。</div>
+                    )}
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <div className="min-w-0 rounded-lg bg-table-head px-3 py-2">
+                        <div className="text-[10px] font-semibold uppercase text-muted">來源（原單）</div>
+                        {sourceOrderId ? (
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <span className="truncate font-mono text-[11px] text-content" title={sourceOrderId}>
+                              {sourceOrderId}
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => {
+                                const qs = new URLSearchParams();
+                                qs.set('returnTo', selfReturnTo);
+                                navigate(`/pos/orders/${encodeURIComponent(sourceOrderId)}?${qs.toString()}`);
+                              }}
+                            >
+                              查看
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-xs text-muted">—</div>
+                        )}
+                      </div>
+                      <div className="min-w-0 rounded-lg bg-table-head px-3 py-2">
+                        <div className="text-[10px] font-semibold uppercase text-muted">衍生（換貨單）</div>
+                        {derivedOrderIds.length ? (
+                          <div className="mt-1 space-y-1">
+                            {derivedOrderIds.slice(0, 3).map((oid) => (
+                              <div key={oid} className="flex items-center justify-between gap-2">
+                                <span className="truncate font-mono text-[11px] text-content" title={oid}>
+                                  {oid}
+                                </span>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => {
+                                    const qs = new URLSearchParams();
+                                    qs.set('returnTo', selfReturnTo);
+                                    navigate(`/pos/orders/${encodeURIComponent(oid)}?${qs.toString()}`);
+                                  }}
+                                >
+                                  查看
+                                </Button>
+                              </div>
+                            ))}
+                            {derivedOrderIds.length > 3 ? (
+                              <div className="text-[11px] text-muted">…尚有 {derivedOrderIds.length - 3} 筆</div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="mt-1 text-xs text-muted">—</div>
+                        )}
+                      </div>
+                    </div>
+                    {returnTo ? <div className="mt-2 text-[11px] text-muted">回退：可用右上角「回到來源」。</div> : null}
+                  </div>
+                );
+              })()}
+
               <div className="rounded-lg border border-[#e2e8f0] bg-slate-50/90 px-3 py-2 sm:px-4">
                 <div className="text-[10px] font-semibold uppercase text-muted">消費者</div>
                 <div className="mt-1 space-y-0.5 text-content">
@@ -413,7 +541,7 @@ export const PosOrderDetailPage: React.FC = () => {
               )}
 
               {remainingAmount > 0 && (
-                <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">
+                <div id="append-payment" className="rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">
                   <div className="mb-2 text-[11px] font-semibold text-sky-900">補款</div>
                   <div className="flex flex-wrap items-end gap-2">
                     <div className="flex gap-1">
@@ -455,7 +583,7 @@ export const PosOrderDetailPage: React.FC = () => {
               )}
 
               {displayPaid >= 0.01 && (
-                <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                <div id="refund" className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
                   <div className="mb-1 text-[11px] font-semibold text-[#1e293b]">退款（沖帳）</div>
                   <p className="mb-2 text-[10px] text-[#64748b]">
                     已實收範圍內登記退款，不超過實收合計；全賒未收單不可退。
