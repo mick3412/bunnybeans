@@ -572,6 +572,76 @@ describe('InventoryService (integration)', () => {
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 20000);
 
+  it('getExpiring groupBy=product returns summary with earliestExpiryDate and expiringQty', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-EXPS-${Date.now()}`, name: 'Expiring Summary Merchant' },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `W-EXPS-${Date.now()}`,
+        name: 'Expiring Summary WH',
+        merchantId: merchant.id,
+      },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-EXPS-${Date.now()}`, name: 'Expiring Summary Product' },
+    });
+
+    const expiry1 = new Date();
+    expiry1.setDate(expiry1.getDate() + 5);
+    const expiry2 = new Date();
+    expiry2.setDate(expiry2.getDate() + 12);
+
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 3,
+      batchCode: 'B-1',
+      expiryDate: expiry1.toISOString(),
+      note: 'seed exp summary 1',
+    });
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 7,
+      batchCode: 'B-2',
+      expiryDate: expiry2.toISOString(),
+      note: 'seed exp summary 2',
+    });
+
+    const out: any = await inventoryService.getExpiringSummaryByProduct({
+      warehouseId: warehouse.id,
+      from: new Date().toISOString(),
+      daysAhead: 30,
+      page: 1,
+      pageSize: 50,
+    });
+    if (out.items.length > 0) {
+      const row = out.items.find((x: any) => x.productId === product.id);
+      expect(row).toBeTruthy();
+      expect(row.sku).toBe(product.sku);
+      expect(row.productName).toBe(product.name);
+      expect(row.expiringQty).toBe(10);
+      expect(Array.isArray(row.batches)).toBe(true);
+      expect(row.batches.length).toBeGreaterThanOrEqual(2);
+      expect(new Date(row.earliestExpiryDate).getTime()).toBeLessThanOrEqual(expiry2.getTime());
+    }
+
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 20000);
+
   it('getSlowMoving returns product with low soldQty and high onHandQty', async () => {
     if (!process.env.DATABASE_URL) return;
 

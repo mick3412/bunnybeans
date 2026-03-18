@@ -254,30 +254,31 @@ describe('CustomerService member 2.0 + contacts (integration)', () => {
 
   it('getById includes consumption insights (integration)', async () => {
     if (!process.env.DATABASE_URL) return;
+    const uniq = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const m = await prisma.merchant.create({
-      data: { code: `INS-${Date.now()}`, name: 'Insight' },
+      data: { code: `INS-${uniq}`, name: 'Insight' },
     });
     const store = await prisma.store.create({
-      data: { code: `S-${Date.now()}`, name: 'S', merchantId: m.id },
+      data: { code: `S-${uniq}`, name: 'S', merchantId: m.id },
     });
     const c = await prisma.customer.create({
       data: { merchantId: m.id, name: 'C' },
     });
     const catA = await prisma.category.create({
-      data: { code: `CA-${Date.now()}`, name: 'CatA' },
+      data: { code: `CA-${uniq}`, name: 'CatA' },
     });
     const catB = await prisma.category.create({
-      data: { code: `CB-${Date.now()}`, name: 'CatB' },
+      data: { code: `CB-${uniq}`, name: 'CatB' },
     });
     const p1 = await prisma.product.create({
-      data: { sku: `SKU-${Date.now()}-1`, name: 'P1', categoryId: catA.id },
+      data: { sku: `SKU-${uniq}-1`, name: 'P1', categoryId: catA.id },
     });
     const p2 = await prisma.product.create({
-      data: { sku: `SKU-${Date.now()}-2`, name: 'P2', categoryId: catB.id },
+      data: { sku: `SKU-${uniq}-2`, name: 'P2', categoryId: catB.id },
     });
     const o1 = await prisma.posOrder.create({
       data: {
-        orderNumber: `O-${Date.now()}-1`,
+        orderNumber: `O-${uniq}-1`,
         storeId: store.id,
         customerId: c.id,
         subtotalAmount: new Prisma.Decimal(100),
@@ -289,7 +290,7 @@ describe('CustomerService member 2.0 + contacts (integration)', () => {
     });
     const o2 = await prisma.posOrder.create({
       data: {
-        orderNumber: `O-${Date.now()}-2`,
+        orderNumber: `O-${uniq}-2`,
         storeId: store.id,
         customerId: c.id,
         subtotalAmount: new Prisma.Decimal(200),

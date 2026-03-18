@@ -161,6 +161,7 @@ describe('PromotionService reorder (integration)', () => {
       await expect(promotionService.reorder(m1.id, [])).rejects.toMatchObject({ response: { code: 'PROMOTION_REORDER_EMPTY' } });
       await expect(promotionService.reorder(m1.id, [r1.id, r1.id])).rejects.toMatchObject({ response: { code: 'PROMOTION_REORDER_DUPLICATE_IDS' } });
       await expect(promotionService.reorder(m1.id, [r1.id, other.id])).rejects.toMatchObject({ response: { code: 'PROMOTION_NOT_FOUND' } });
+      await expect(promotionService.reorder(m1.id, [r1.id])).rejects.toMatchObject({ response: { code: 'PROMOTION_REORDER_INVALID' } });
       await promotionService.reorder(m1.id, [r2.id, r1.id]);
       const rows = await prisma.promotionRule.findMany({ where: { merchantId: m1.id }, orderBy: { priority: 'asc' }, select: { id: true, priority: true } });
       expect(rows.map((x) => x.id)).toEqual([r2.id, r1.id]);

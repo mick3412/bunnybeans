@@ -584,6 +584,68 @@ export class InventoryService {
     });
   }
 
+  async getExpiringSummaryByProduct(filter: ExpiringInventoryFilter) {
+    const page = filter.page && filter.page > 0 ? filter.page : 1;
+    const pageSize =
+      filter.pageSize && filter.pageSize > 0
+        ? Math.min(filter.pageSize, 200)
+        : 50;
+
+    let from: Date | undefined;
+    let to: Date | undefined;
+    const now = new Date();
+
+    if (filter.from) {
+      const d = new Date(filter.from);
+      if (Number.isNaN(d.getTime())) {
+        throw new BadRequestException({
+          message: 'invalid from',
+          code: 'INVENTORY_INVALID_INPUT',
+        });
+      }
+      from = d;
+    } else {
+      from = new Date(now.toISOString().slice(0, 10));
+    }
+
+    if (filter.to) {
+      const d = new Date(filter.to);
+      if (Number.isNaN(d.getTime())) {
+        throw new BadRequestException({
+          message: 'invalid to',
+          code: 'INVENTORY_INVALID_INPUT',
+        });
+      }
+      to = d;
+    } else {
+      const daysAhead = filter.daysAhead ?? 30;
+      if (!Number.isFinite(daysAhead) || daysAhead <= 0 || daysAhead > 365) {
+        throw new BadRequestException({
+          message: 'daysAhead must be between 1 and 365',
+          code: 'INVENTORY_INVALID_INPUT',
+        });
+      }
+      to = new Date(from);
+      to.setDate(to.getDate() + daysAhead);
+    }
+
+    if (from && to && from > to) {
+      throw new BadRequestException({
+        message: 'from must not be after to',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+
+    return this.repo.findExpiringProductSummary({
+      warehouseId: filter.warehouseId,
+      productId: filter.productId,
+      from,
+      to,
+      page,
+      pageSize,
+    });
+  }
+
   private computeReplenishmentSuggestion(input: {
     onHandQty: number;
     avgDailySales: number;

@@ -39,6 +39,7 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter pos-erp-backend exec prisma db push
+      - run: pnpm ci:schema-migration-check
+      - run: pnpm --filter pos-erp-backend exec prisma migrate deploy
       - run: pnpm --filter pos-erp-backend db:seed
       - run: pnpm --filter pos-erp-backend test

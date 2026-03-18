@@ -438,6 +438,62 @@ export class FinanceService {
       byParty,
     };
     const path = `finance/YYYY-MM-DD.json`.replace('YYYY-MM-DD', asOf.toISOString().slice(0, 10));
-    return { path: type === 'monthly' ? path.replace('.json', '-monthly.json') : path, generatedAt: payload.generatedAt, summary: payload };
+    const resolvedPath = type === 'monthly' ? path.replace('.json', '-monthly.json') : path;
+    const saved = await this.repo.upsertSnapshot({
+      asOfDate: new Date(payload.asOfDate),
+      type,
+      path: resolvedPath,
+      summary: payload,
+    });
+    return {
+      id: saved.id,
+      asOfDate: payload.asOfDate,
+      type,
+      path: resolvedPath,
+      generatedAt: payload.generatedAt,
+      summary: payload,
+      createdAt: saved.createdAt.toISOString(),
+    };
+  }
+
+  async listSnapshots(q: { type?: 'daily' | 'monthly'; page?: number; pageSize?: number }) {
+    const type = q.type === 'monthly' ? 'monthly' : q.type === 'daily' ? 'daily' : undefined;
+    const out = await this.repo.listSnapshots({ type, page: q.page, pageSize: q.pageSize });
+    return {
+      items: out.items.map((s) => ({
+        id: s.id,
+        asOfDate: s.asOfDate.toISOString().slice(0, 10),
+        type: s.type,
+        path: s.path,
+        createdAt: s.createdAt.toISOString(),
+      })),
+      page: out.page,
+      pageSize: out.pageSize,
+      total: out.total,
+    };
+  }
+
+  async getSnapshotById(id: string) {
+    const row = await this.repo.findSnapshotById(id);
+    if (!row) {
+      throw new NotFoundException({
+        code: 'FINANCE_SNAPSHOT_NOT_FOUND',
+        message: 'Snapshot not found',
+      });
+    }
+    const summary = row.summaryJson as any;
+    const generatedAt =
+      summary && typeof summary === 'object' && typeof summary.generatedAt === 'string'
+        ? summary.generatedAt
+        : row.createdAt.toISOString();
+    return {
+      id: row.id,
+      asOfDate: row.asOfDate.toISOString().slice(0, 10),
+      type: row.type,
+      path: row.path,
+      generatedAt,
+      summary,
+      createdAt: row.createdAt.toISOString(),
+    };
   }
 }

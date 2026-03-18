@@ -233,6 +233,17 @@ export class PromotionService {
       });
     }
 
+    // Must include all rules for the merchant; partial reorder is rejected for UI consistency.
+    const totalForMerchant = await this.prisma.promotionRule.count({
+      where: { merchantId: merchantId.trim() },
+    });
+    if (uniq.length !== totalForMerchant) {
+      throw new BadRequestException({
+        message: 'ids must include all promotion rules for merchant',
+        code: 'PROMOTION_REORDER_INVALID',
+      });
+    }
+
     await this.repo.reorder(merchantId.trim(), uniq);
   }
 

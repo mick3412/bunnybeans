@@ -502,4 +502,123 @@ describe('FinanceService (integration)', () => {
       await prisma.merchant.deleteMany({ where: { id: { in: [ma.id, mb.id] } } });
     }
   }, 15000);
+
+  it('closePeriod blocks recordFinanceEvent (global close) and unlock allows write again', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const today = new Date();
+    const startDate = today.toISOString().slice(0, 10);
+    const endDate = startDate;
+    const closed = await financeService.closePeriod({ startDate, endDate });
+    try {
+      let code: string | undefined;
+      try {
+        await financeService.recordFinanceEvent({
+          type: 'ADJUSTMENT',
+          partyId: null,
+          currency: 'TWD',
+          amount: 1,
+          occurredAt: today.toISOString(),
+          note: 'should be blocked',
+        });
+      } catch (e: unknown) {
+        const r = e as { response?: { code?: string } };
+        code = r.response?.code;
+      }
+      expect(code).toBe('FINANCE_PERIOD_CLOSED');
+
+      await financeService.unlockPeriod(closed.id);
+      const ok = await financeService.recordFinanceEvent({
+        type: 'ADJUSTMENT',
+        partyId: null,
+        currency: 'TWD',
+        amount: 2,
+        occurredAt: today.toISOString(),
+        note: 'should pass after unlock',
+      });
+      expect(ok).toBeDefined();
+      await prisma.financeEvent.delete({ where: { id: ok.id } });
+    } finally {
+      await prisma.financePeriodClose.deleteMany({ where: { id: closed.id } });
+    }
+  }, 15000);
+
+  it('recordFinanceEvent writes FinanceAuditLog and listAuditLog can query by eventId', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const out = await financeService.recordFinanceEvent(
+      {
+        type: 'ADJUSTMENT',
+        partyId: null,
+        currency: 'TWD',
+        amount: 9,
+        occurredAt: new Date().toISOString(),
+        note: 'audit test',
+      },
+      { actor: 'tester', source: 'integration' },
+    );
+    try {
+      const log = await financeService.listAuditLog({ eventId: out.id, page: 1, pageSize: 10 });
+      expect(log.total).toBeGreaterThanOrEqual(1);
+      const row = log.items.find((x) => x.eventId === out.id);
+      expect(row).toBeDefined();
+      expect(row?.actor).toBe('tester');
+      expect(row?.source).toBe('integration');
+    } finally {
+      await prisma.financeAuditLog.deleteMany({ where: { eventId: out.id } });
+      await prisma.financeEvent.delete({ where: { id: out.id } });
+    }
+  }, 15000);
+
+  it('createSnapshot persists and listSnapshots returns items', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const asOfDate = new Date().toISOString().slice(0, 10);
+    const created = await financeService.createSnapshot({ asOfDate, type: 'daily' });
+    try {
+      const list = await financeService.listSnapshots({ type: 'daily', page: 1, pageSize: 20 });
+      expect(list.items.some((x) => x.id === created.id)).toBe(true);
+    } finally {
+      await prisma.financeSnapshot.deleteMany({ where: { id: created.id } });
+    }
+  }, 20000);
+
+  it('getSnapshotById returns summary and generatedAt', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const asOfDate = new Date().toISOString().slice(0, 10);
+    const created = await financeService.createSnapshot({ asOfDate, type: 'daily' });
+    try {
+      const got = await financeService.getSnapshotById(created.id);
+      expect(got.id).toBe(created.id);
+      expect(got.asOfDate).toBe(asOfDate);
+      expect(got.type).toBe('daily');
+      expect(got.path).toContain(asOfDate);
+      expect(typeof got.generatedAt).toBe('string');
+      expect(got.summary).toBeDefined();
+      expect((got.summary as any).asOfDate).toBe(asOfDate);
+    } finally {
+      await prisma.financeSnapshot.deleteMany({ where: { id: created.id } });
+    }
+  }, 20000);
+
+  it('createSnapshot returns fields consistent with getSnapshotById', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const asOfDate = new Date().toISOString().slice(0, 10);
+    const created = await financeService.createSnapshot({ asOfDate, type: 'daily' });
+    try {
+      expect(created.id).toBeTruthy();
+      expect(created.asOfDate).toBe(asOfDate);
+      expect(created.type).toBe('daily');
+      expect(typeof created.generatedAt).toBe('string');
+      expect(created.summary).toBeDefined();
+      expect(created.path).toContain(asOfDate);
+
+      const got = await financeService.getSnapshotById(created.id);
+      expect(got.id).toBe(created.id);
+      expect(got.asOfDate).toBe(created.asOfDate);
+      expect(got.type).toBe(created.type);
+      expect(got.path).toBe(created.path);
+      expect(got.generatedAt).toBe(created.generatedAt);
+    } finally {
+      await prisma.financeSnapshot.deleteMany({ where: { id: created.id } });
+    }
+  }, 20000);
 });

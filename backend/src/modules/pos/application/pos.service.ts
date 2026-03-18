@@ -633,7 +633,90 @@ export class PosService {
         code: 'POS_ORDER_NOT_FOUND',
       });
     }
-    return this.toOrderDetail(order);
+    const detail = this.toOrderDetail(order);
+    try {
+      const sourceOrderId = detail.exchangeFromOrderId;
+      const sourceId = sourceOrderId || order.id;
+
+      const derived = await this.prisma.posOrder.findMany({
+        where: { exchangeFromOrderId: sourceId },
+        select: { id: true, totalAmount: true, payments: { select: { amount: true } } },
+      });
+
+      // Resolve source order totals (if this order is derived).
+      const source =
+        sourceOrderId
+          ? await this.prisma.posOrder.findUnique({
+              where: { id: sourceId },
+              select: { id: true, totalAmount: true },
+            })
+          : { id: order.id, totalAmount: order.totalAmount };
+
+      const sourceTotal =
+        source && typeof source.totalAmount === 'object' && source.totalAmount != null && 'toNumber' in source.totalAmount
+          ? (source.totalAmount as { toNumber: () => number }).toNumber()
+          : Number((source as any)?.totalAmount ?? 0);
+
+      const derivedTotal = derived.reduce((s, d) => s + Number(d.totalAmount), 0);
+      const deltaAmount = Math.round((derivedTotal - sourceTotal) * 100) / 100;
+
+      const derivedPaid = derived.reduce(
+        (s, d) => s + (d.payments ?? []).reduce((ss, p) => ss + Number(p.amount), 0),
+        0,
+      );
+      const derivedRemaining = Math.round((derivedTotal - derivedPaid) * 100) / 100;
+
+      const refundedAgg = await this.prisma.financeEvent.aggregate({
+        where: { referenceId: sourceId, type: 'SALE_REFUND' },
+        _sum: { amount: true },
+      });
+      const refunded = Number(refundedAgg._sum.amount ?? 0);
+      const refundNeeded = deltaAmount < 0 ? Math.abs(deltaAmount) : 0;
+
+      const refundEvents = await this.prisma.financeEvent.findMany({
+        where: { referenceId: sourceId, type: 'SALE_REFUND' },
+        orderBy: { occurredAt: 'asc' },
+        select: { id: true, amount: true, occurredAt: true, note: true },
+        take: 50,
+      });
+
+      detail.exchange = {
+        sourceOrderId: sourceOrderId,
+        derivedOrderIds: derived.map((d) => d.id),
+      };
+      detail.exchangeSettlement = {
+        sourceOrderId: sourceId,
+        derivedOrderIds: derived.map((d) => d.id),
+        sourceTotal,
+        derivedTotal,
+        deltaAmount,
+        refund: {
+          neededAmount: refundNeeded,
+          refundedAmount: refunded,
+          events: refundEvents.map((e) => ({
+            id: e.id,
+            amount: Number(e.amount),
+            occurredAt: e.occurredAt.toISOString(),
+            note: e.note ?? null,
+          })),
+        },
+        topup: {
+          neededAmount: deltaAmount > 0 ? deltaAmount : 0,
+          remainingAmount: deltaAmount > 0 ? (derivedRemaining > 0 ? derivedRemaining : 0) : 0,
+        },
+        refundStatus:
+          refundNeeded > 0 && refunded + 0.01 < refundNeeded ? 'REQUIRED' : refundNeeded > 0 ? 'SETTLED' : 'NOT_NEEDED',
+        topupStatus:
+          deltaAmount > 0 && derivedRemaining > 0.01 ? 'REQUIRED' : deltaAmount > 0 ? 'SETTLED' : 'NOT_NEEDED',
+      };
+    } catch {
+      detail.exchange = {
+        sourceOrderId: detail.exchangeFromOrderId,
+        derivedOrderIds: [],
+      };
+      detail.exchangeSettlement = null;
+    }
+    return detail;
   }
 
   async listOrders(filter: {
@@ -830,6 +913,32 @@ export class PosService {
       storeId: order.storeId,
       customerId: order.customerId ?? null,
       exchangeFromOrderId: order.exchangeFromOrderId ?? null,
+      exchange: null as null | { sourceOrderId: string | null; derivedOrderIds: string[] },
+      exchangeSettlement: null as
+        | null
+        | {
+            sourceOrderId: string;
+            derivedOrderIds: string[];
+            sourceTotal: number;
+            derivedTotal: number;
+            deltaAmount: number;
+            refund: {
+              neededAmount: number;
+              refundedAmount: number;
+              events: Array<{
+                id: string;
+                amount: number;
+                occurredAt: string;
+                note: string | null;
+              }>;
+            };
+            topup: {
+              neededAmount: number;
+              remainingAmount: number;
+            };
+            refundStatus: 'NOT_NEEDED' | 'REQUIRED' | 'SETTLED';
+            topupStatus: 'NOT_NEEDED' | 'REQUIRED' | 'SETTLED';
+          },
       customerName: order.customer?.name ?? null,
       customerCode: order.customer?.code ?? null,
       subtotalAmount: subtotal,

@@ -208,4 +208,37 @@ export class FinanceController {
       throw e;
     }
   }
+
+  @Get('snapshots')
+  @UseGuards(AdminApiKeyGuard)
+  listSnapshots(
+    @Query('type') type?: 'daily' | 'monthly',
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.service.listSnapshots({
+      type,
+      page: page ? parseInt(page, 10) : undefined,
+      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+    });
+  }
+
+  @Get('snapshots/:id')
+  @UseGuards(AdminApiKeyGuard)
+  getSnapshot(@Param('id') id: string) {
+    return this.service.getSnapshotById(id);
+  }
+
+  @Get('snapshots/:id/download')
+  @UseGuards(AdminApiKeyGuard)
+  @Header('Content-Type', 'application/json; charset=utf-8')
+  async downloadSnapshot(
+    @Res({ passthrough: false }) res: Response,
+    @Param('id') id: string,
+  ) {
+    const snap = await this.service.getSnapshotById(id);
+    const filename = `finance-snapshot-${snap.asOfDate}-${snap.type}.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(JSON.stringify(snap.summary ?? {}, null, 2));
+  }
 }

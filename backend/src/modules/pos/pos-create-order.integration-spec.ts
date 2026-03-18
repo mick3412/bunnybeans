@@ -1123,12 +1123,35 @@ describe('PosService (integration)', () => {
     const exchanged = await posService.createOrder({
       storeId: store.id,
       exchangeFromOrderId: original.id,
-      items: [{ productId: product.id, quantity: 1, unitPrice: 100 }],
-      payments: [{ method: 'CASH', amount: 100 }],
+      items: [{ productId: product.id, quantity: 1, unitPrice: 80 }],
+      payments: [{ method: 'CASH', amount: 80 }],
     });
 
     const fetched = await posService.getOrderById(exchanged.id);
     expect(fetched.exchangeFromOrderId).toBe(original.id);
+    expect(fetched.exchange?.sourceOrderId).toBe(original.id);
+    expect(Array.isArray(fetched.exchange?.derivedOrderIds)).toBe(true);
+    expect(fetched.exchange?.derivedOrderIds).toEqual([exchanged.id]);
+
+    const origFetched = await posService.getOrderById(original.id);
+    expect(origFetched.exchange?.sourceOrderId).toBeNull();
+    expect(origFetched.exchange?.derivedOrderIds).toContain(exchanged.id);
+
+    // Phase 2 settlement: derivedTotal(80) - sourceTotal(100) = -20 => refund required
+    expect(origFetched.exchangeSettlement?.sourceTotal).toBe(100);
+    expect(origFetched.exchangeSettlement?.derivedTotal).toBe(80);
+    expect(origFetched.exchangeSettlement?.deltaAmount).toBe(-20);
+    expect(origFetched.exchangeSettlement?.refund.neededAmount).toBe(20);
+    expect(origFetched.exchangeSettlement?.refund.refundedAmount).toBe(0);
+    expect(Array.isArray(origFetched.exchangeSettlement?.refund.events)).toBe(true);
+    expect(origFetched.exchangeSettlement?.refundStatus).toBe('REQUIRED');
+    expect(origFetched.exchangeSettlement?.topupStatus).toBe('NOT_NEEDED');
+
+    await posService.refundToOrder(original.id, { amount: 20 });
+    const afterRefund = await posService.getOrderById(original.id);
+    expect(afterRefund.exchangeSettlement?.refundStatus).toBe('SETTLED');
+    expect(afterRefund.exchangeSettlement?.refund.refundedAmount).toBeGreaterThanOrEqual(20);
+    expect(afterRefund.exchangeSettlement?.refund.events.length).toBeGreaterThanOrEqual(1);
 
     await prisma.financeEvent.deleteMany({ where: { referenceId: { in: [original.id, exchanged.id] } } });
     await prisma.posOrderItem.deleteMany({ where: { orderId: { in: [original.id, exchanged.id] } } });

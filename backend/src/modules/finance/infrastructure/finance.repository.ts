@@ -365,10 +365,11 @@ export class FinanceRepository {
     try {
       const dayOnly = new Date(occurredAt);
       dayOnly.setUTCHours(0, 0, 0, 0);
-      const where: { status: string; startDate: { lte: Date }; endDate: { gte: Date }; merchantId?: string } = {
+      const where: { status: string; startDate: { lte: Date }; endDate: { gte: Date }; merchantId: string | null } = {
         status: 'CLOSED',
         startDate: { lte: dayOnly },
         endDate: { gte: dayOnly },
+        merchantId: null,
       };
       if (merchantId?.trim()) where.merchantId = merchantId.trim();
       const count = await this.prisma.financePeriodClose.count({ where });
@@ -471,6 +472,44 @@ export class FinanceRepository {
       }),
     ]);
     return { items, total, page, pageSize };
+  }
+
+  async upsertSnapshot(data: { asOfDate: Date; type: 'daily' | 'monthly'; path: string; summary: unknown }) {
+    return this.prisma.financeSnapshot.upsert({
+      where: { asOfDate_type: { asOfDate: data.asOfDate, type: data.type } },
+      create: {
+        asOfDate: data.asOfDate,
+        type: data.type,
+        path: data.path,
+        summaryJson: data.summary as Prisma.JsonObject,
+      },
+      update: {
+        path: data.path,
+        summaryJson: data.summary as Prisma.JsonObject,
+      },
+    });
+  }
+
+  async listSnapshots(params: { type?: 'daily' | 'monthly'; page?: number; pageSize?: number }) {
+    const page = Math.max(1, params.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 20));
+    const where: Prisma.FinanceSnapshotWhereInput = {};
+    if (params.type) where.type = params.type;
+    const [total, items] = await Promise.all([
+      this.prisma.financeSnapshot.count({ where }),
+      this.prisma.financeSnapshot.findMany({
+        where,
+        orderBy: [{ asOfDate: 'desc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+    return { items, total, page, pageSize };
+  }
+
+  async findSnapshotById(id: string) {
+    if (!id?.trim()) return null;
+    return this.prisma.financeSnapshot.findUnique({ where: { id: id.trim() } });
   }
 
   /** 檢查區間是否與既有關帳重疊（status=CLOSED） */

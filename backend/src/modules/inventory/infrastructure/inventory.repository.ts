@@ -26,6 +26,8 @@ interface ExpiringBatchFilter {
   pageSize: number;
 }
 
+interface ExpiringProductSummaryFilter extends ExpiringBatchFilter {}
+
 @Injectable()
 export class InventoryRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -255,6 +257,116 @@ export class InventoryRepository {
       };
     } catch {
       // 欄位不存在（未 migrate）等情境：回空即可
+      return { items: [], page, pageSize, total: 0 };
+    }
+  }
+
+  /**
+   * 即期庫存 summary（按 product 彙總）：回傳每商品最早效期、即期總量與 batches 明細。
+   * batches 仍以 batchCode+expiryDate 聚合；summary 以 SQL 一次組裝，避免 service 端 N+1。
+   */
+  async findExpiringProductSummary(filter: ExpiringProductSummaryFilter) {
+    const { warehouseId, productId, from, to, page, pageSize } = filter;
+    try {
+      const whClause = warehouseId ? `AND e."warehouseId" = $3` : '';
+      const prodClause = productId ? `AND e."productId" = $4` : '';
+      const params: any[] = [from, to, warehouseId, productId, pageSize, (page - 1) * pageSize];
+
+      const rows = await this.prisma.$queryRawUnsafe<
+        Array<{
+          productId: string;
+          sku: string | null;
+          productName: string | null;
+          earliestExpiryDate: Date;
+          expiringQty: number;
+          batches: unknown;
+        }>
+      >(
+        `
+        WITH batches AS (
+          SELECT
+            e."productId" as "productId",
+            e."warehouseId" as "warehouseId",
+            e."batchCode" as "batchCode",
+            e."expiryDate" as "expiryDate",
+            CAST(SUM(e."quantity") AS INT) as "onHandQty"
+          FROM "InventoryEvent" e
+          WHERE
+            e."expiryDate" IS NOT NULL
+            AND e."expiryDate" >= $1
+            AND e."expiryDate" <= $2
+            ${whClause}
+            ${prodClause}
+          GROUP BY e."productId", e."warehouseId", e."batchCode", e."expiryDate"
+          HAVING SUM(e."quantity") > 0
+        )
+        SELECT
+          b."productId" as "productId",
+          p."sku" as "sku",
+          p."name" as "productName",
+          MIN(b."expiryDate") as "earliestExpiryDate",
+          CAST(SUM(b."onHandQty") AS INT) as "expiringQty",
+          json_agg(
+            json_build_object(
+              'warehouseId', b."warehouseId",
+              'batchCode', b."batchCode",
+              'expiryDate', b."expiryDate",
+              'onHandQty', b."onHandQty"
+            )
+            ORDER BY b."expiryDate" ASC
+          ) as "batches"
+        FROM batches b
+        LEFT JOIN "Product" p ON p."id" = b."productId"
+        GROUP BY b."productId", p."sku", p."name"
+        ORDER BY MIN(b."expiryDate") ASC
+        LIMIT $5 OFFSET $6
+        `,
+        ...params,
+      );
+
+      const totalRows = await this.prisma.$queryRawUnsafe<Array<{ total: number }>>(
+        `
+        WITH batches AS (
+          SELECT
+            e."productId" as "productId",
+            e."warehouseId" as "warehouseId",
+            e."batchCode" as "batchCode",
+            e."expiryDate" as "expiryDate"
+          FROM "InventoryEvent" e
+          WHERE
+            e."expiryDate" IS NOT NULL
+            AND e."expiryDate" >= $1
+            AND e."expiryDate" <= $2
+            ${whClause}
+            ${prodClause}
+          GROUP BY e."productId", e."warehouseId", e."batchCode", e."expiryDate"
+          HAVING SUM(e."quantity") > 0
+        )
+        SELECT COUNT(*)::INT as total
+        FROM (
+          SELECT 1
+          FROM batches
+          GROUP BY "productId"
+        ) t
+        `,
+        ...params.slice(0, 4),
+      );
+      const total = totalRows[0]?.total ?? 0;
+
+      return {
+        items: rows.map((r) => ({
+          productId: r.productId,
+          sku: r.sku,
+          productName: r.productName,
+          earliestExpiryDate: r.earliestExpiryDate,
+          expiringQty: r.expiringQty,
+          batches: Array.isArray(r.batches) ? r.batches : [],
+        })),
+        page,
+        pageSize,
+        total,
+      };
+    } catch {
       return { items: [], page, pageSize, total: 0 };
     }
   }

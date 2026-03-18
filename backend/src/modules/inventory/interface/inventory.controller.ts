@@ -189,6 +189,7 @@ export class InventoryController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('daysAhead') daysAhead?: string,
+    @Query('groupBy') groupBy?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
@@ -201,6 +202,9 @@ export class InventoryController {
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
     };
+    if (groupBy === 'product') {
+      return this.service.getExpiringSummaryByProduct(filter);
+    }
     return this.service.getExpiring(filter);
   }
 

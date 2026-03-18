@@ -102,11 +102,52 @@ describe('ProductService importFromCsvBuffer (integration)', () => {
     }
   }, 10000);
 
+  it('searchBarcode returns multiple items when barcode duplicates exist', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const barcode = `BC-DUP-${Date.now()}`;
+    const p1 = await prisma.product.create({
+      data: { sku: `BC-DUP-SKU-1-${Date.now()}`, barcode, name: 'Barcode Dup 1' },
+    });
+    const p2 = await prisma.product.create({
+      data: { sku: `BC-DUP-SKU-2-${Date.now()}`, barcode, name: 'Barcode Dup 2' },
+    });
+    try {
+      const out = await productService.searchBarcode(barcode, 50);
+      const ids = out.items.map((x) => x.id);
+      expect(ids).toContain(p1.id);
+      expect(ids).toContain(p2.id);
+    } finally {
+      await prisma.product.deleteMany({ where: { id: { in: [p1.id, p2.id] } } });
+    }
+  }, 10000);
+
   it('searchBarcode empty q returns empty items', async () => {
     if (!process.env.DATABASE_URL) return;
     const out = await productService.searchBarcode('   ');
     expect(out.items).toEqual([]);
   });
+
+  it('searchBarcode respects limit', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const barcode = `BC-LIM-${Date.now()}`;
+    const ps = await Promise.all(
+      Array.from({ length: 5 }).map((_, i) =>
+        prisma.product.create({
+          data: {
+            sku: `BC-LIM-SKU-${i}-${Date.now()}`,
+            barcode,
+            name: `Barcode Lim ${i}`,
+          },
+        }),
+      ),
+    );
+    try {
+      const out = await productService.searchBarcode(barcode, 2);
+      expect(out.items.length).toBeLessThanOrEqual(2);
+    } finally {
+      await prisma.product.deleteMany({ where: { id: { in: ps.map((p) => p.id) } } });
+    }
+  }, 10000);
 
   it('getProduct with includeBalances returns balances', async () => {
     if (!process.env.DATABASE_URL) return;
