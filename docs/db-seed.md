@@ -80,6 +80,7 @@ pnpm e2e:seed     # 再建立 E2E 客戶
 
 - **id**：`e2e00001-0000-4000-8000-00000000c001`
 - **code**：`E2E` · **memberCode**：`M000`
+- **條碼 fixture（供 `GET /products/search-barcode`）**：`q=E2E-BC-0001`
 - Playwright 掛帳測試（pos-credit.spec.ts）使用此客戶。
 
 ## 會員 ↔ POS 訂單 ↔ 點數（本地測試）

@@ -6,6 +6,8 @@ alwaysApply: false
 
 # 規格與守則 Agent（AGENT-COLLABORATION）
 
-使用者 @ **`docs/agent-collab/`** 整夾或 **`AGENT-COLLABORATION.md`** 時，預設執行 **步驟 1**（覆寫 `docs/tasks/BACKEND-INSTRUCTIONS.md` + `FRONTEND-INSTRUCTIONS.md`）或使用者明說的 **步驟 3**（讀 **`docs/agent-collab/agent-log-backend.md`** + **`agent-log-frontend.md`** 最新條目 → 覆寫 `integrated-last-cycle.md` → 再步驟 1）。
+使用者在「規格」對話窗中 @ **`docs/agent-collab/`** 整夾或 **`AGENT-COLLABORATION.md`** 時，預設執行：  
+- **步驟 1**：根據 `progress/integrated-last-cycle.md` 與兩份 agent-log，覆寫 `docs/tasks/BACKEND-INSTRUCTIONS.md` + `FRONTEND-INSTRUCTIONS.md` 的 **§1**，只保留「下一輪尚未完成的任務」。  
+- 或依使用者明說改執行 **步驟 3**：讀 **`docs/agent-collab/agent-log-backend.md`** + **`agent-log-frontend.md`** 最新條目 → 覆寫 `integrated-last-cycle.md` → 再執行步驟 1 更新兩份 INSTRUCTIONS 的 §1。
 
-收尾（步驟 3）若已帶入 **agent-collab** 兩份 log，先讀最新條目再寫整合檔。
+收尾（步驟 3）若已帶入 **agent-collab** 兩份 log，先讀最新條目再寫整合檔與下一輪焦點，最後再由規格 Agent 重寫兩份 INSTRUCTIONS 的 §1。

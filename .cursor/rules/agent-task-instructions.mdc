@@ -6,7 +6,9 @@ alwaysApply: false
 
 # 任務指令檔（BACKEND / FRONTEND INSTRUCTIONS）
 
-凡讀寫、覆寫或依本檔執行開發前，**先讀** [docs/agent-collab/AGENT-COLLABORATION.md](docs/agent-collab/AGENT-COLLABORATION.md) **步驟 2**（後端／前端 Agent）或 **步驟 1／3**（規格 Agent 覆寫本檔時）。
+凡讀寫、覆寫或依本檔執行開發前，**先讀** [docs/agent-collab/AGENT-COLLABORATION.md](docs/agent-collab/AGENT-COLLABORATION.md)。  
+- 在「規格」對話窗中修改本檔時：依該檔說明執行 **步驟 1／3**，**只改 §1，且 §1 只放「尚未完成的任務」**。  
+- 在「Backend／Frontend」對話窗中開本檔時：依該檔說明執行 **步驟 2**，**只讀取 §1、實作與測試，完成後寫入對應 agent-log，不直接修改本檔內容**。
 
 並讀 [docs/AGENT-RULES.md](docs/AGENT-RULES.md)。
 

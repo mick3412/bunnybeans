@@ -147,6 +147,7 @@
   - `q`（必填）：barcode 字串（精確比對；大小寫不敏感）
   - `limit?`（預設 20，上限 50）
 - **Response**：`{ items: Product[] }`（欄位同 `GET /products` 單筆）
+- **唯一性規則（stable）**：目前 **允許重複**（barcode 不保證唯一）；因此同一條碼可能命中 **0～多筆**。前端 UX **必須**在多筆時提供選擇列表（例如以 `sku/name` 顯示）。
 
 ### 6.2a `GET /products/:id`（stable）
 
@@ -167,7 +168,7 @@
 
 ### 6.3 `POST/PATCH /products`
 
-- **Body** 可選：`barcode?`（可選；與 sku 一樣應唯一）、`description`、`specSize`、`specColor`（棄用）、`weightGrams`（棄用）、`specCapacity`、`specStyle`、`specWeight`、`expiryDescription`、`listPrice`、`salePrice`、`costPrice`（未送則 `listPrice`/`salePrice` 預設 0）、`categoryId`、`brandId`、`tags`（字串陣列）。
+- **Body** 可選：`barcode?`（可選；**不保證唯一**）、`description`、`specSize`、`specColor`（棄用）、`weightGrams`（棄用）、`specCapacity`、`specStyle`、`specWeight`、`expiryDescription`、`listPrice`、`salePrice`、`costPrice`（未送則 `listPrice`/`salePrice` 預設 0）、`categoryId`、`brandId`、`tags`（字串陣列）。
 - **POS 建單**：`POST /pos/orders` 仍依 request 的 `unitPrice`；商品主檔 `salePrice` 僅供後台／前端預設帶入，非強制。
 
 ### 6.3a `PATCH /products/batch-price`（stable）

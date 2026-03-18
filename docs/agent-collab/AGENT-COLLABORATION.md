@@ -39,7 +39,7 @@
 
 | 檔案 | 寫入者 | 寫入方式 |
 |------|--------|----------|
-| [tasks/instructions/](../tasks/instructions/) | 規格 Agent | **只更新最新編號檔案之 §1，並在完成後產生 `NNN+1` 新編號檔案**（§0、§2～§4 與檔首常駐指令勿刪；§1 只放「下一輪尚未完成的任務」） |
+| [tasks/instructions/](../tasks/instructions/) | 規格 Agent | **只更新最新檔案之 §1；更新完成後產生 `NNN+1` 新編號檔案，並刪除舊檔**（確保資料夾永遠只保留最新一組；§0、§2～§4 與檔首常駐指令勿刪；§1 只放「下一輪尚未完成的任務」） |
 | [agent-log-backend.md](agent-log-backend.md) | 後端 Agent | **僅追加**（不刪改既有條目） |
 | [agent-log-frontend.md](agent-log-frontend.md) | 前端 Agent | **僅追加**（不刪改既有條目） |
 | [progress/integrated-last-cycle.md](../progress/integrated-last-cycle.md) | 規格 Agent | **整檔覆寫**（每輪收尾時） |
@@ -51,7 +51,9 @@
 ### 步驟 1（規格與守則 Agent）
 
 1. 在「規格」對話窗中，依產品目標或 [progress/integrated-last-cycle.md](../progress/integrated-last-cycle.md) 的「全局審查缺口清單」擬定本輪任務。  
-2. **只修改** [tasks/instructions/](../tasks/instructions/) 中**最新編號**的兩份 INSTRUCTIONS 的 **§1**，並在更新完成後產生 `NNN+1` 新編號檔案：  
+2. **只修改** [tasks/instructions/](../tasks/instructions/) 中的兩份 INSTRUCTIONS 的 **§1**，並在更新完成後：  
+   - 產生 `NNN+1` 新編號檔案  
+   - **刪除舊檔**（確保資料夾永遠只保留最新一組）  
    - §1 只列出「**下一輪尚未完成、需要 Backend／Frontend 去做的任務**」，完成的任務不要留在 §1，改由 agent-log + integrated-last-cycle 記錄歷史。  
    - **禁止**：整份重寫、刪除 §0 常駐指令、刪除 §2～§4。  
    - §1 內容必須為**可執行的開發行為**（例如「實作 GET /foo」「補 integration-spec」「跑 build + E2E」），不可將「修改本 md」當作任務。
@@ -66,14 +68,21 @@
 1. 讀 [AGENT-RULES.md](../AGENT-RULES.md)（守則與 api-design 路徑）。  
 2. 讀本角色對應的 INSTRUCTIONS 檔（後端或前端），**只使用 §1 做為本輪任務清單，不改動其內容**。  
 3. 依 §1 擬定實作計畫並執行；**改 API 前先改** `docs/api-design-*.md`（見 RULES）。  
-4. **完成後必做**：在對應的 agent-log（[agent-log-backend.md](agent-log-backend.md) 或 [agent-log-frontend.md](agent-log-frontend.md)）**最上方追加一筆**，格式見該檔開頭，並且：  
+4. **Commit 原則（本流程新增）**：實作過程請以「小而完整」為單位提交 commits，並確保可回溯與可驗收。  
+   - **Atomic**：一個 commit 只做一件事（例：一個 endpoint、一個頁面、一組測試補齊）。  
+   - **可驗收**：每個 commit 至少滿足該層最低驗收（後端至少跑 `pnpm --filter pos-erp-backend test`；前端至少跑 `pnpm --filter pos-erp-frontend build`；E2E 依環境條件註明 pass/skip）。  
+   - **訊息格式（建議）**：`[INSTRUCTIONS-NNN] <scope>: <summary>`（重點寫 why/影響；避免「update/fix」無資訊）。  
+   - **不要混雜**：格式化/大搬移/依賴升級請獨立 commit；避免把無關改動混進功能 commit。  
+   - **固定檢查（必做）**：每輪結束前一定要檢查 `git status` 與 `git diff`。\n+     - 若有變更：**必須至少提交一個 commit**（可分多個 atomic commits）。\n+     - 若無變更：在 agent-log 明確註記「無需 commit（無工作區變更）」。
+5. **完成後必做**：在對應的 agent-log（[agent-log-backend.md](agent-log-backend.md) 或 [agent-log-frontend.md](agent-log-frontend.md)）**最上方追加一筆**，格式見該檔開頭，並且：  
    - 逐條簡短說明本輪對「當前 §1 任務」的執行情況（已完成／進行中／未開始）。  
    - 註明實際測試結果（jest／build／E2E 等）與是否有尚未補齊的測試。
+   - **列出本輪 commits**：以 `<short_sha> <message>` 方式列出（或附 PR 連結）。 
 
 ### 步驟 3（規格與守則 Agent，收尾用）
 
-1. 在「規格」對話窗中，讀 [agent-log-backend.md](agent-log-backend.md) 與 [agent-log-frontend.md](agent-log-frontend.md) **最新一輪**條目，了解本輪各 §1 任務的「已完成／未完成／未開始」狀態與測試結果。  
-2. **覆寫** [progress/integrated-last-cycle.md](../progress/integrated-last-cycle.md)：寫入本輪後端摘要、本輪前端摘要、整合風險／待對齊、以及更新「全局審查缺口清單」。  
+1. 在「規格」對話窗中，讀 [agent-log-backend.md](agent-log-backend.md) 與 [agent-log-frontend.md](agent-log-frontend.md) **最上方最新條目**，並以條目標題的 **INSTRUCTIONS 編號**視為本輪，了解本輪各 §1 任務的「已完成／未完成／未開始」狀態與測試結果。  
+2. **覆寫** [progress/integrated-last-cycle.md](../progress/integrated-last-cycle.md)：寫入本輪後端摘要、本輪前端摘要、整合風險／待對齊、以及更新「全局審查缺口清單」（並在檔首標示本輪對應的 INSTRUCTIONS 編號）。  
 3. **下一步開發計畫與 INSTRUCTIONS 更新**：  
    (a) **全局審查**（必做，不可跳過）：讀取 [progress/integrated-last-cycle.md](../progress/integrated-last-cycle.md)、[erp-roadmap.md](../erp-roadmap.md)、[finance-accounting-roadmap.md](../finance-accounting-roadmap.md)、[crm-member-roadmap.md](../crm-member-roadmap.md)、[inventory-roadmap.md](../inventory-roadmap.md)、[order-roadmap.md](../order-roadmap.md)、[purchase-roadmap.md](../purchase-roadmap.md)、[product-roadmap.md](../product-roadmap.md)、[promotion-roadmap.md](../promotion-roadmap.md)、[ops-roadmap.md](../ops-roadmap.md)，審查已開發模組缺口、開發中模組缺口、待開發項目；產出缺口清單並寫入 integrated-last-cycle「全局審查缺口清單」區塊。  
    (b) **得出下一步開發計畫**：依缺口與優先順序整理為具體任務。  

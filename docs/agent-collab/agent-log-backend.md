@@ -1,17 +1,52 @@
 # 後端開發紀錄（僅追加）
 
-規格 Agent 收斂時讀本檔**最上方最新條目**。後端 Agent **每輪完成後**在上方追加，**勿刪改**下方舊文。**新條目標題必含實際寫入當下之 `HH:MM`**（與 [daily-progress-format.md](../daily-progress-format.md) 一致）。  
-每一條目請簡短對照當輪的後端 INSTRUCTIONS（見 [tasks/instructions/](../tasks/instructions/)；以最新編號檔案為準）§1，說明各任務「已完成／進行中／未開始」與測試結果（jest／其它驗收）。
+規格 Agent 收斂時讀本檔**最上方最新條目**。後端 Agent **每輪完成後**在上方追加，**勿刪改**下方舊文。  
+本檔條目**改以 INSTRUCTIONS 編號分輪**（不再以日期時間分輪）。每一條目請簡短對照當輪的後端 INSTRUCTIONS（見 [tasks/instructions/](../tasks/instructions/)；以最新編號檔案為準）§1，說明各任務「已完成／進行中／未開始」與測試結果（jest／其它驗收）。
 
 格式：
 
 ```markdown
-### YYYY-MM-DD HH:MM（本輪摘要一句）
+### INSTRUCTIONS NNN（本輪摘要一句）
 - 做了：…
+- 測試/驗收：…
+- commits：<short_sha> <message>；<short_sha> <message>（或 PR）
 - PR／檔案（可選）：…
 ```
 
 ---
+
+### INSTRUCTIONS-007（click-audit resultCode + barcode/seed/E2E 契約補齊 + 閉環驗收）
+- 做了：依 `BACKEND-INSTRUCTIONS 007.md` §1 完成 #1～#10（RBAC 依文件前言長期 skip）。\n+  - **#1 Regression**：`prisma migrate deploy`、`db:seed`、後端 jest 全綠。\n+  - **#2 Snapshots 閉環**：補/驗證 `POST /finance/snapshots` 與 list/get/download 欄位一致，新增整合測試覆蓋 POST→list→download。\n+  - **#3 換貨 Phase2 驗收支援**：`exchangeSettlement` 補 `refund.events[]`（SALE_REFUND 摘要）與 topup/refund needed/refunded；整合測試覆蓋「需退款→退款後 SETTLED」。\n+  - **#4 Barcode 契約**：`GET /products/search-barcode` 明確允許多筆命中（回 `items[]`），並補 `limit` 行為整合測試。\n+  - **#5 E2E fixture**：`pnpm e2e:seed` 固定條碼 `E2E-BC-0001` 可重複生成；文件補充 fixture key。\n+  - **#6 Promotion reorder**：完整驗證重複/遺漏/跨 merchant（`PROMOTION_REORDER_INVALID`），integration-spec 覆蓋。\n+  - **#7 Purchase 退供再驗收**：integration-spec 覆蓋 return-to-supplier 的庫存/金流事件與 receiving-note 欄位。\n+  - **#8 Click-audit 可觀測性**：`ReportClickAudit` 新增 `resultCode`（string）+ migration；`POST /ops/reports/click-audit` 支援 `resultCode?` 並在未提供時推導 `NOT_FOUND/NAVIGATED`；summary 新增 `byResultCode` 聚合；補整合測試至少 3 種結果。\n+  - **#9 E2E 文件化**：更新 `docs/e2e-pos.md` 加入 migrate deploy → db:seed → e2e:seed → e2e 一鍵順序、barcode fixture、CI 步驟對齊。\n+  - **#10 文件對齊**：更新 `ops-roadmap.md` 補 `resultCode` 欄位說明。\n+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`prisma migrate deploy` 套用新增 migration；`prisma generate` 更新 client。\n+- commits：無（本輪未要求 commit）。\n+\n 
+### INSTRUCTIONS-006（換貨差額驗收補強 + barcode 文件對齊；RBAC 仍跳過）
+- 做了：依 `BACKEND-INSTRUCTIONS 006.md` §1 完成 #1、#4～#7；#2/#3 RBAC 依目前產品決策指示 **忽略/跳過**（與文件要求衝突，已在文件註明以避免漂移）。
+  - **#1 Regression**：`prisma migrate deploy`、`pnpm db:seed`、`pnpm --filter pos-erp-backend test` 全綠。
+  - **#4 Barcode（維持可重複）**：更新 `api-design.md` 釐清 `GET /products/search-barcode` 允許多筆命中，前端需提供選擇列表 UX。
+  - **#5 Snapshots POST 一致性驗收**：補整合測試，確保 `createSnapshot` 回傳欄位與 `getSnapshotById` 一致（generatedAt/summary/path）。
+  - **#6 換貨 Phase 2 驗收支援**：擴充 `GET /pos/orders/:id` 的 `exchangeSettlement`，新增 `refund{neededAmount,refundedAmount,events[]}` 與 `topup{neededAmount,remainingAmount}`，讓前端可顯示退款事件摘要（SALE_REFUND）；補整合測試覆蓋「需退款→退款後 SETTLED」。
+  - **#7 文件對齊**：更新 `erp-roadmap.md`、`order-roadmap.md` 的換貨/條碼/RBAC 狀態描述。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（15 suites / 119 tests）。
+- commits：無（本輪未要求 commit）。
+
+### INSTRUCTIONS-005（barcode 可重複 + snapshot 查看/下載 + 換貨差額對帳 + 即期庫存 summary）
+- 做了：依 `BACKEND-INSTRUCTIONS 005.md` §1 完成 #1、#4～#12；#2/#3 RBAC 依指示長期 skip。
+  - **#1 Regression**：`prisma migrate deploy`、`pnpm db:seed`、`pnpm --filter pos-erp-backend test` 全綠。
+  - **#4/#5 Barcode（允許重複）**：移除 `Product.barcode` unique（新增 index），`GET /products/search-barcode` 支援多筆命中；`pnpm e2e:seed` 補固定條碼 fixture `q=E2E-BC-0001`，並更新文件。
+  - **#6 Finance snapshots 閉環**：補 `GET /finance/snapshots/:id` 與 `GET /finance/snapshots/:id/download`（含 summary/generateAt/path）。
+  - **#7 換貨 Phase 2（最小對帳）**：`GET /pos/orders/:id` 回傳 `exchangeSettlement`（source/derived totals、delta、refund/topup status），並以 `SALE_REFUND` 判斷退款狀態。
+  - **#8 即期庫存 summary**：`GET /inventory/expiring?groupBy=product` 回 `{ earliestExpiryDate, expiringQty, batches[] }`（含分頁）。
+  - **#9 退供 UI 欄位**：確認 `GET /receiving-notes/:id`（service）回傳 qualified/returned/reason/batch/expiry 等欄位並補測試。
+  - **#10 Promotion reorder 限制**：`PATCH /promotion-rules/reorder/bulk` 要求 ids 必須包含該 merchant 全部規則；partial reorder 回 `PROMOTION_REORDER_INVALID`，補錯誤碼文件與整合測試。
+  - **#11 CI gate**：backend CI 新增 `pnpm ci:schema-migration-check`，並改用 `prisma migrate deploy`（取代 db push）。
+  - **#12 文件對齊**：更新 finance snapshots 查看/下載、ERP 補充 inventory summary / promotion reorder 限制 / barcode fixture，並註明 RBAC 長期 skip。
+- 測試/驗收：新增/更新之 module spec 單跑皆通過（product/finance/pos/inventory/purchase/promotion）；本輪 migration 可 deploy。
+- 檔案（摘要）：`backend/prisma/schema.prisma`、`backend/prisma/migrations/20260318090000_barcode_non_unique`、`backend/scripts/e2e-seed.ts`、`backend/src/modules/finance/*`、`backend/src/modules/pos/*`、`backend/src/modules/inventory/*`、`backend/src/modules/promotion/*`、`.github/workflows/backend-ci.yml`、`docs/*`。
+
+### INSTRUCTIONS-003（關帳/Audit/Snapshot + click-audit 查詢 + 可追蹤補跑）
+- 做了：依 `BACKEND-INSTRUCTIONS 003.md` §1 完成 #1～#6、#8～#10；#7 RBAC 依指示跳過。\n+  - **#1 Regression**：`migrate deploy`、`db:seed`、後端 jest 全綠。\n+  - **#2 Click-audit 完整化**：新增 `GET /ops/reports/click-audit`（filter/sort/page）與 `GET /ops/reports/click-audit/summary`（聚合），補 ops integration-spec。\n+  - **#3 Finance periods + 寫入保護**：修正關帳檢查預設只套用 global（`merchantId=null`），新增 close/unlock 阻擋寫入測試。\n+  - **#4 Finance audit log**：驗證 `recordFinanceEvent` 成功後寫入 `FinanceAuditLog`，並可用 `GET /finance/audit-log` 查詢。\n+  - **#5 Snapshots 最小落地**：新增 `FinanceSnapshot`（migration + upsert），補 `GET /finance/snapshots` 列表與整合測試；Ops `finance-snapshot` 手動補跑仍可用。\n+  - **#6 Ops run 可追蹤**：`POST /ops/jobs/run` 回傳 `runLogId`，並可由 `GET /ops/jobs` 查到；補整合測試。\n+  - **#8 換貨回溯**：`GET /pos/orders/:id` 回傳 `exchange`（source/derived ids），補整合測試。\n+  - **#9 條碼規則**：文件補充 barcode 全域唯一說明（`GET /products/search-barcode`）。\n+  - **#10 CRM skeleton**：dispatch-rule runner 觸發 job、更新 nextRunAt，並寫 OpsJobRunLog（整合測試覆蓋）。\n+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；相關 module spec（ops/finance/pos/crm/product/customer）單跑亦通過。\n+
+### INSTRUCTIONS-001（Phase 2 能力全做；重新追加）
+- 做了：完成 `BACKEND-INSTRUCTIONS 001.md` §1 #1～#9。包含：`ReportClickAudit` + `POST /ops/reports/click-audit`；`pnpm ci:schema-migration-check`（schema/migration drift 檢查）；`GET /finance/balances`（merchantId 隔離、分頁、totals）；POS reports / Loyalty activity / Finance balances 多商家隔離與錯誤態測試；Loyalty activity v2 平均指標；POS 換貨追蹤 `exchangeFromOrderId`；`GET /products/search-barcode?q=` 條碼契約與 scan-stocktake 文件釐清。
+- 測試/驗收：ops/finance/pos/loyalty/product 相關 integration-spec 皆通過；`prisma generate` 與 `migrate deploy` 可跑通。
+- 檔案（摘要）：`backend/src/modules/ops/*`、`backend/src/modules/finance/*`、`backend/src/modules/pos/*`、`backend/src/modules/loyalty/*`、`backend/src/modules/product/*`、`backend/scripts/prisma-check-migrations.sh`、`docs/*`。
 
 ### 2026-03-18 01:47（BACKEND-INSTRUCTIONS §1：12 項執行驗收）
 - 做了：依 `docs/tasks/BACKEND-INSTRUCTIONS.md` §1 執行並驗收（本輪做 #1~#7、#10~#12；#8/#9 略過）。包含：referenceId 規則跨文件一致；`GET /ops/references/resolve` 邊界整合測試；`pnpm e2e:seed` 穩定穿透 fixture；Finance summary `groupBy=day|week`；Party view/partyId 解析來源；CRM job 歷史列表；Loyalty 活動成效報表；換貨 MVP 文件；`ci:backend-with-db` 可重現跑通。

@@ -54,6 +54,7 @@
 | `PROMOTION_BODY_INVALID` | 400 | 缺少 merchantId／name 等 | 請檢查請求欄位 |
 | `PROMOTION_REORDER_EMPTY` | 400 | bulk reorder 的 ids 為空 | 請提供規則 id 列表 |
 | `PROMOTION_REORDER_DUPLICATE_IDS` | 400 | bulk reorder 的 ids 含重複 | 請移除重複的規則 id |
+| `PROMOTION_REORDER_INVALID` | 400 | bulk reorder 的 ids 未包含該 merchant 全部規則（partial reorder） | 請以完整列表送出排序 ids |
 | **Inventory** | | | |
 | `INVENTORY_PRODUCT_NOT_FOUND` | 404 | 商品不存在 | 商品不存在 |
 | `INVENTORY_WAREHOUSE_NOT_FOUND` | 404 | 倉庫不存在 | 倉庫不存在 |

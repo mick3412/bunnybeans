@@ -191,6 +191,12 @@
 
 - **採用**：**S3**。cron 做日結（如每日 00:05 產出前一日）；**POST /finance/snapshots**（Admin）body `{ asOfDate, type: daily | monthly }` 供手動補跑或月結。
 
+**查看/下載閉環（最小可用）**：
+
+- **GET /finance/snapshots**（Admin）：列表（支援 `type`、分頁），回 `{ items, page, pageSize, total }`。
+- **GET /finance/snapshots/:id**（Admin）：單筆查看，回 `{ id, asOfDate, type, path, generatedAt, summary, createdAt }`。
+- **GET /finance/snapshots/:id/download**（Admin）：下載 JSON（對帳/留存用）。
+
 **決策四：儲存介面與檔名** — **已採用 F2**
 
 | 選項 | 說明 | 優點 | 缺點 |

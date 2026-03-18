@@ -123,3 +123,5 @@ Response: `subtotal`（折前小計）、`discount`（促銷折讓合計）、`t
 | PROMOTION_NOT_FOUND | 規則不存在或 merchant 不符 |
 | PROMOTION_BODY_INVALID | 缺少 merchantId / name |
 | PROMOTION_REORDER_EMPTY | ids 空 |
+| PROMOTION_REORDER_DUPLICATE_IDS | ids 含重複 |
+| PROMOTION_REORDER_INVALID | ids 未包含該 merchant 全部規則（不允許 partial reorder） |

@@ -108,6 +108,12 @@
   - **是否可跨商品**：可（換不同商品，本質是退貨入庫 + 新單）。  
   - **是否可跨門市/倉庫**：MVP 先限制同門市（沿用原單 `storeId`；退貨入庫需回原扣庫倉）。  
   - **reference 關聯（Phase 2）**：新單可在 `POST /pos/orders` body 帶 `exchangeFromOrderId=原單PosOrder.id`；後端會在 `GET /pos/orders/:id` 回傳 `exchangeFromOrderId`，供對帳與追溯「此單由哪張原單換貨而來」。
+  - **差額對帳摘要（Phase 2）**：`GET /pos/orders/:id` 會回傳：
+    - `exchange`：`{ sourceOrderId, derivedOrderIds[] }`
+    - `exchangeSettlement`：`{ sourceTotal, derivedTotal, deltaAmount, refundStatus, topupStatus, refund{neededAmount,refundedAmount,events[]}, topup{neededAmount,remainingAmount} }`
+    - **refundStatus 判斷**：`deltaAmount < 0` 且 `refund.refundedAmount < refund.neededAmount` → `REQUIRED`；否則 `SETTLED/NOT_NEEDED`。
+    - **topupStatus 判斷**：`deltaAmount > 0` 且 `topup.remainingAmount > 0` → `REQUIRED`；否則 `SETTLED/NOT_NEEDED`。
+    - **退款事件摘要**：`refund.events[]` 來自 `FinanceEvent(type=SALE_REFUND, referenceId=sourceOrderId)`（供驗收與前端導引顯示）。
 
 - **錯誤碼與防呆（沿用既有）**
   - 退貨入庫：

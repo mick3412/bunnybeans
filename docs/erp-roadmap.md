@@ -149,9 +149,23 @@
 |------|------|
 | 多商家切換 | 從 `useDefaultMerchantId` 演進到真正的「商家選取器」。 |
 | 角色與權限 | 店長 / 店員 / 財務角色，UI 依權限顯示或隱藏操作按鈕。 |
-| RBAC API | 後端 middleware 依角色控制 API scope。 |
+| RBAC API | 後端 middleware 依角色控制 API scope。（**本專案目前長期 skip**；本輪未落地） |
 
 > 此 Phase 獨立規劃，不與前面綁定。
+
+---
+
+## 本輪落地補充（INSTRUCTIONS-005）
+
+- **Inventory 即期庫存 summary**：`GET /inventory/expiring?groupBy=product`（搭配 `warehouseId`、`daysAhead`、分頁）供面板使用。
+- **Promotion 拖曳排序限制**：`PATCH /promotion-rules/reorder/bulk` **必須包含該 merchant 全部規則 ids**；partial reorder 會回 `PROMOTION_REORDER_INVALID`（前端可一次送完整列表）。
+- **條碼 fixture（E2E）**：`pnpm e2e:seed` 會確保存在可查條碼 `q=E2E-BC-0001`（供 `GET /products/search-barcode`）。
+
+## 本輪狀態補充（INSTRUCTIONS-006）
+
+- **RBAC**：雖 `BACKEND-INSTRUCTIONS 006.md` 要求落地，但依目前產品決策仍 **暫不實作**（避免反覆漂移，後續若要做請先定認證方式與角色來源）。
+- **Barcode**：維持「允許重複 + 多筆命中回 items[]」的契約，前端需在多筆時提供選擇列表。
+- **換貨 Phase 2**：訂單明細回 `exchangeSettlement`，包含退款事件摘要（SALE_REFUND），供驗收與導引。
 
 ---
 
