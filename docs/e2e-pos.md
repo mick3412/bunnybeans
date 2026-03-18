@@ -75,6 +75,11 @@ pnpm exec playwright test
 
 當 `E2E_PROFILE=full` 時，代表資料/後端/seed 已就緒，**不允許長期 skip**。若缺 fixture 應直接 fail，並在錯誤訊息中指出缺少 DB/seed/後端/ADMIN_KEY 等條件。
 
+穿透 referenceId 契約（避免 `ReferenceIdLink` 長期非可點狀態）：
+- 後台報表/清單的 `referenceId` 只有符合 UUID-like（純 hex）格式時，才會渲染成可點擊按鈕並呼叫 `/ops/references/resolve`。
+- UUID-like regex：`^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`
+- `E2E_PROFILE=full` 驗收要點：`/admin/reports`（或 finance events 列表）必須至少有 1 筆可穿透 `referenceId`，且 E2E smoke 點擊第一個 `訂單` 按鈕必須導向 `/pos/orders/:id`（不可因按鈕數量為 0 而 skip）。
+
 建議指令：
 
 ```bash
@@ -117,8 +122,8 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 
 換貨 settlement fixture（`E2E_PROFILE=full`）：
 
-- source 訂單 id：`e2e00005-0000-4000-8000-00000000x001`
-- derived 訂單 id：`e2e00006-0000-4000-8000-00000000x002`
+- source 訂單 id：`e2e00005-0000-4000-8000-00000000d001`
+- derived 訂單 id：`e2e00006-0000-4000-8000-00000000e002`
 - source 會寫入 `SALE_REFUND`（delta=50）供 `exchangeSettlement.refund.events[]` 驗收
 
 金流報表 fixtures（`E2E_PROFILE=full`，供後台金流報表段落 fail-fast 不 skip）：
