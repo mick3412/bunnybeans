@@ -109,9 +109,15 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 
 掛帳用客戶 UUID 固定為 **`e2e00001-0000-4000-8000-00000000c001`**（`code: E2E` 客戶）。請先執行 **`pnpm db:seed`**，再執行 **`pnpm e2e:seed`** 建立此客戶，然後跑掛帳 E2E。
 
-條碼 fixture（供 `GET /products/search-barcode` 與前端掃碼流程）固定為 **`q=E2E-BC-0001`**（由 `pnpm --filter pos-erp-backend e2e:seed` 確保存在）。
+條碼 fixture（供 `GET /products/search-barcode` 與前端掃碼流程）固定為 **`q=E2E-BC-0001`**（由 `pnpm --filter pos-erp-backend e2e:seed` 確保「單筆命中」存在）。
 
-多筆命中 fixture：建議後端 `e2e:seed` 提供 **`q=E2E-BC-MULTI`** 對應 >=2 筆商品，用於驗收「多筆命中需選擇」。
+多筆命中 fixture（`E2E_PROFILE=full`）：固定為 **`q=E2E-BC-0002`**（>=2 筆商品），用於驗收「多筆命中需選擇」。
+
+換貨 settlement fixture（`E2E_PROFILE=full`）：
+
+- source 訂單 id：`e2e00005-0000-4000-8000-00000000x001`
+- derived 訂單 id：`e2e00006-0000-4000-8000-00000000x002`
+- source 會寫入 `SALE_REFUND`（delta=50）供 `exchangeSettlement.refund.events[]` 驗收
 
 ## CI（GitHub Actions）
 
@@ -119,5 +125,6 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 |------|------|
 | [`.github/workflows/backend-ci.yml`](../.github/workflows/backend-ci.yml) | Postgres 15 → `ci:schema-migration-check` → `migrate deploy` → seed → **`pnpm --filter pos-erp-backend test`** |
 | [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) | **Job1 `backend-test`**（Postgres → db push → seed → **jest**）→ **Job2 `playwright`（needs job1）** → 獨立 DB → 後端 **:3003** → Playwright **`pnpm e2e`** |
+| [`.github/workflows/e2e-full.yml`](../.github/workflows/e2e-full.yml) | **手動/排程**：`migrate deploy` → `db:seed` → `E2E_PROFILE=full e2e:seed`（缺 fixture 直接 fail-fast）→ Playwright `pnpm e2e` |
 
 觸發：`push` / `pull_request` 至 `main` 或 `master`。E2E job 內 **`CI=1`** 時 Playwright 會自起 Vite（見 `playwright.config.ts`）。本機勿設 `CI=1` 若已佔用 5173。

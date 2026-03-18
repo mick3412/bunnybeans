@@ -27,7 +27,7 @@
 
 ## 二、設計原則
 
-- **只讀查詢**：Ops 模組不提供「手動觸發 job」API（依產品需求可選配）。
+- **以查詢為主**：Ops 模組以狀態/列表查詢為主；但為了補跑與排查，提供**受限的手動補跑** API（`POST /ops/jobs/run`，需 `X-Admin-Key`，且僅支援部分 jobType）。
 - **append-only**：每次執行寫入一筆 OpsJobRunLog，不覆寫。
 - **與 CRM / Finance 解耦**：job 執行邏輯在各模組，Ops 僅紀錄。
 
@@ -42,6 +42,8 @@
 | POST | /ops/jobs/run | 手動補跑指定 job（Admin；會寫 OpsJobRunLog） | **stable** |
 | GET | /ops/references/resolve | 報表穿透：解析 referenceId 對應單據（POS 訂單 / 驗收單 / unknown） | **stable** |
 | POST | /ops/reports/click-audit | 報表穿透 2.0：點擊審計（記錄 referenceId 解析結果與成功率） | **stable** |
+| GET | /ops/reports/click-audit | 點擊審計列表（分頁、排序、交叉篩選，含 resultCode filter） | **stable** |
+| GET | /ops/reports/click-audit/summary | 點擊審計彙總（含 topSources/trendByDay/topReferenceIds） | **stable** |
 
 **jobType 範例**：`crm-run-scheduled`、`finance-period-close`、`finance-snapshot`
 
@@ -67,11 +69,40 @@
   - `field?`（選填，預設 `referenceId`）：來源欄位名稱
   - `referenceId`（必填）：被點擊的 referenceId（字串；可能不是 UUID）
   - `merchantId?`（選填）：商家 UUID（若前端可得）
+  - `resultCode?`（選填）：點擊結果分類（供 UX/可觀測性）。建議值：
+    - `NOT_FOUND`：無法解析/找不到單據
+    - `MULTI_MATCH`：多筆命中（例如條碼多筆、或未來擴充情境）
+    - `PERMISSION`：權限不足/無法導覽
+    - `NAVIGATED`：成功導覽到單據頁
 - **行為**
   - 內部會用與 `GET /ops/references/resolve` 相同的邏輯解析 `resolvedKind`
   - `success` 定義：`resolvedKind !== 'unknown'`
 - **Response** `201`
   - `{ id: string, resolvedKind: "posOrder" | "receivingNote" | "unknown", success: boolean, createdAt: string }`
+
+### 3.1b 點擊審計列表 `GET /ops/reports/click-audit`（stable）
+
+- **Query（節錄）**
+  - `from?`、`to?`：ISO datetime（以 `createdAt` 篩選）
+  - `source?`：交叉篩選
+  - `resolvedKind?`：交叉篩選
+  - `success?`：`true|false`
+  - `referenceId?`：精確比對
+  - `resultCode?`：精確比對（例如 `NOT_FOUND`、`MULTI_MATCH`）
+- **排序**
+  - `sort=createdAt&order=desc`（預設）
+
+### 3.1c 點擊審計彙總 `GET /ops/reports/click-audit/summary`（stable）
+
+- **用途**：給前端做「可觀測性視覺化」：哪些 source 最常失敗、近期趨勢、最常失敗的 referenceId。
+- **Query**
+  - 同列表的 `from/to/source/resolvedKind/success`（用於交叉篩選）
+  - `days?`：未帶 `from/to` 時使用（預設 14，最大 180）
+  - `top?`：排行筆數（預設 20，最大 200）
+- **Response（新增欄位）**
+  - `topSources[]`：`{ source, notFound, multiMatch, total }`（以 `NOT_FOUND/MULTI_MATCH` 聚合排行）
+  - `trendByDay[]`：`{ day: "YYYY-MM-DD", total, failed }`
+  - `topReferenceIds[]`：`{ field, referenceId, count }`（僅統計 `success=false`）
 
 ### 3.2 Job 列表：from/to 篩選 `GET /ops/jobs`（stable）
 

@@ -142,7 +142,7 @@
 |------|------|
 | **Job 狀態** | **B** — 新增 **GET /crm/jobs/:id**，crm 專用 job 表（如 `CrmMarketingJob`）；response 含 status、result（sent/skipped/errors）、error。 |
 | **生日券／回購券** | **B2 + R3** — 皆改為**依分群發券**。Request body：merchantId、**segmentId**、couponId｜couponCode。不新增 Customer 生日欄位；「生日」可由營運建分群或名單。 |
-| **發券規則常駐（選配）** | 可新增「行銷發券規則」實體（啟用／停用、排程如每日／每週／每月），類似促銷活動設定；cron 掃啟用規則並執行發券。可含**發放規則**選項（分群、券、排程）供後台設定。 |
+| **發券規則常駐（選配）** | 可新增「行銷發券規則」實體（啟用／停用、排程如每日／每週／每月），類似促銷活動設定；cron 掃啟用規則並執行發券。並記錄最近執行結果欄位：`lastRunAt/lastRunCode/lastRunNote`（例如 SENT/FAILED + 錯誤碼），供前端顯示。 |
 | **報表** | 活動參與筆數、用券數、點數成本；候選 GET /loyalty/reports/activity，見 api-design §6.8.2。 |
 
 ### 前端
