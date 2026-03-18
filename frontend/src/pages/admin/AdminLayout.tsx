@@ -19,6 +19,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
 function headerTitle(pathname: string): string {
   if (pathname === '/admin' || pathname === '/admin/') return '總覽';
   if (pathname.startsWith('/admin/inventory/adjust')) return '入庫／盤點';
+  if (pathname.startsWith('/admin/inventory/expiring')) return '即期庫存';
   if (pathname.startsWith('/admin/inventory')) return '庫存餘額';
   if (pathname.startsWith('/admin/products')) return '商品主檔';
   if (pathname.startsWith('/admin/categories')) return '類別管理';
@@ -27,7 +28,10 @@ function headerTitle(pathname: string): string {
   if (pathname.startsWith('/admin/balances')) return '應收應付餘額';
   if (pathname.startsWith('/admin/finance/periods')) return '關帳區間';
   if (pathname.startsWith('/admin/finance/audit')) return '稽核紀錄';
+  if (pathname.startsWith('/admin/finance/snapshots')) return '金流快照';
   if (pathname.startsWith('/admin/ops/jobs')) return 'Job 監控';
+  if (pathname.startsWith('/admin/ops/report-clicks')) return '穿透點擊審計';
+  if (pathname.startsWith('/admin/marketing/rules')) return '行銷發券規則';
   if (pathname.startsWith('/admin/segments/export')) return '分群匯出';
   if (pathname.startsWith('/admin/segments')) return '分群管理';
   if (pathname.startsWith('/admin/dispatch-rules')) return '發券規則';
@@ -42,7 +46,8 @@ function headerTitle(pathname: string): string {
   if (pathname.startsWith('/admin/receiving-notes')) return '進貨驗收';
   if (pathname.startsWith('/admin/loyalty/settings')) return '集點設定';
   if (pathname.startsWith('/admin/loyalty/point-ledger')) return '點數存摺';
-  if (pathname.startsWith('/admin/loyalty/members')) return '會員管理';
+  // /admin/loyalty/members 已在路由層 redirect 到 /admin/customers
+  if (pathname.startsWith('/admin/loyalty/members')) return '會員列表';
   if (pathname.startsWith('/admin/loyalty/coupons')) return '優惠券';
   if (pathname.startsWith('/admin/loyalty/reports')) return '活動報表';
   if (pathname.startsWith('/admin/loyalty')) return '儀表板';
@@ -162,6 +167,7 @@ export const AdminLayout: React.FC = () => {
             <NavLink to="/admin/categories" className={navClass}>類別管理</NavLink>
             <NavLink to="/admin/warehouses" className={navClass}>倉庫/門市</NavLink>
             <NavLink to="/admin/inventory" className={navClass} end>庫存餘額</NavLink>
+            <NavLink to="/admin/inventory/expiring" className={navClass}>即期庫存</NavLink>
             <NavLink to="/admin/inventory/adjust" className={navClass}>入庫／盤點</NavLink>
             <NavLink to="/admin/suppliers" className={navClass}>供應商</NavLink>
             <NavLink to="/admin/purchase-orders" className={navClass}>採購單</NavLink>
@@ -170,7 +176,9 @@ export const AdminLayout: React.FC = () => {
             <NavLink to="/admin/balances" className={navClass}>應收應付餘額</NavLink>
             <NavLink to="/admin/finance/periods" className={navClass}>關帳區間</NavLink>
             <NavLink to="/admin/finance/audit" className={navClass}>稽核紀錄</NavLink>
+            <NavLink to="/admin/finance/snapshots" className={navClass}>金流快照</NavLink>
             <NavLink to="/admin/ops/jobs" className={navClass}>Job 監控</NavLink>
+            <NavLink to="/admin/ops/report-clicks" className={navClass}>穿透點擊審計</NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />
 
@@ -194,6 +202,7 @@ export const AdminLayout: React.FC = () => {
             <NavLink to="/admin/segments" className={navClass}>分群管理</NavLink>
             <NavLink to="/admin/dispatch-rules" className={navClass}>發券規則</NavLink>
             <NavLink to="/admin/crm/jobs" className={navClass}>行銷工作台（Jobs）</NavLink>
+            <NavLink to="/admin/marketing/rules" className={navClass}>行銷規則（常駐）</NavLink>
             <NavLink to="/admin/promotions" className={navClass}>促銷規則</NavLink>
           </nav>
           <div className="shrink-0 border-t border-white/10 px-2 py-4">

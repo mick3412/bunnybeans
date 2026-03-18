@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   getWarehouses,
@@ -6,6 +6,11 @@ import {
   getInventoryEvents,
   getSlowMoving,
   batchStocktake,
+  searchProductsByBarcode,
+  getExpiringInventory,
+  getExpiringInventorySummaryByProduct,
+  type ExpiringBatchRow,
+  type ExpiringProductSummaryRow,
   fetchCsvExport,
   importInventoryEventsCsv,
   createImportJob,
@@ -72,6 +77,14 @@ export const AdminInventoryPage: React.FC = () => {
   const [stocktakeMode, setStocktakeMode] = useState<'list' | 'scan'>('list');
   const [scanSku, setScanSku] = useState('');
   const [scanQty, setScanQty] = useState('');
+  const [scanChoices, setScanChoices] = useState<Array<{ productId: string; sku: string; name: string }>>([]);
+  const [expiringOpen, setExpiringOpen] = useState(false);
+  const [expiringTab, setExpiringTab] = useState<'product' | 'batch'>('product');
+  const [expiringDaysAhead, setExpiringDaysAhead] = useState(30);
+  const [expiringLoading, setExpiringLoading] = useState(false);
+  const [expiringErr, setExpiringErr] = useState<string | null>(null);
+  const [expiringProductRows, setExpiringProductRows] = useState<ExpiringProductSummaryRow[]>([]);
+  const [expiringBatchRows, setExpiringBatchRows] = useState<ExpiringBatchRow[]>([]);
   const pageSize = 20;
   const hasAdminKey = Boolean((import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim());
 
@@ -82,6 +95,86 @@ export const AdminInventoryPage: React.FC = () => {
     }
     return m;
   }, [balances]);
+
+  const applyScanAddByProductId = (productId: string) => {
+    setSelectedProductIds((prev) => new Set(prev).add(productId));
+    const qty = scanQty.trim() === '' ? undefined : Number(scanQty);
+    if (qty != null && Number.isFinite(qty) && qty >= 0) {
+      setActualQtyByProductId((prev) => ({ ...prev, [productId]: qty }));
+    }
+    setScanSku('');
+    setScanQty('');
+  };
+
+  const resolveScanToBalanceRow = async (): Promise<BalanceEnrichedRow | null> => {
+    const term = scanSku.trim();
+    if (!term) return null;
+    const key = term.toLowerCase();
+    const row = skuToBalanceRow.get(key);
+    if (row) return row;
+    const out = await searchProductsByBarcode(term, 10);
+    if ('statusCode' in out) {
+      showToast(getErrorMessage(out as ApiError), 'err');
+      return null;
+    }
+    const items = out.items ?? [];
+    if (!items.length) {
+      showToast('找不到此 SKU/條碼', 'err');
+      return null;
+    }
+    if (items.length === 1) {
+      const sku = (items[0].sku ?? '').trim().toLowerCase();
+      const bySku = sku ? skuToBalanceRow.get(sku) : undefined;
+      if (bySku) return bySku;
+      showToast('商品已找到，但目前倉庫/列表中沒有對應的 SKU 餘額列', 'err');
+      return null;
+    }
+    setScanChoices(items.map((p) => ({ productId: p.id, sku: p.sku, name: p.name })));
+    showToast(`條碼命中 ${items.length} 筆商品，請先選擇`, 'err');
+    return null;
+  };
+
+  const loadExpiring = useCallback(async () => {
+    if (!warehouseId) return;
+    setExpiringLoading(true);
+    setExpiringErr(null);
+    const daysAhead = expiringDaysAhead;
+    const out =
+      expiringTab === 'product'
+        ? await getExpiringInventorySummaryByProduct({
+            warehouseId,
+            daysAhead,
+            page: 1,
+            pageSize: 50,
+          })
+        : await getExpiringInventory({
+            warehouseId,
+            daysAhead,
+            page: 1,
+            pageSize: 50,
+          });
+    setExpiringLoading(false);
+    if (out && typeof out === 'object' && 'statusCode' in out) {
+      setExpiringErr(getErrorMessage(out as ApiError));
+      setExpiringProductRows([]);
+      setExpiringBatchRows([]);
+      return;
+    }
+    if (expiringTab === 'product') {
+      const d = out as { items: ExpiringProductSummaryRow[] };
+      setExpiringProductRows(Array.isArray(d.items) ? d.items : []);
+      setExpiringBatchRows([]);
+    } else {
+      const d = out as { items: ExpiringBatchRow[] };
+      setExpiringBatchRows(Array.isArray(d.items) ? d.items : []);
+      setExpiringProductRows([]);
+    }
+  }, [expiringDaysAhead, expiringTab, warehouseId]);
+
+  useEffect(() => {
+    if (!expiringOpen) return;
+    void loadExpiring();
+  }, [expiringOpen, expiringTab, expiringDaysAhead, warehouseId, loadExpiring]);
 
   useEffect(() => {
     (async () => {
@@ -421,6 +514,18 @@ export const AdminInventoryPage: React.FC = () => {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span>庫存餘額</span>
                 <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={!warehouseId}
+                    onClick={() => {
+                      setExpiringOpen(true);
+                      void loadExpiring();
+                    }}
+                  >
+                    查看即期庫存
+                  </Button>
                   <span className="text-xs font-medium text-muted">盤點模式</span>
                   <button
                     type="button"
@@ -456,29 +561,17 @@ export const AdminInventoryPage: React.FC = () => {
                     <label className="mb-1 block text-xs font-semibold text-muted">SKU/條碼</label>
                     <input
                       className="h-9 w-full rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                      placeholder="輸入 SKU（條碼查詢待後端 Barcode 契約）"
+                      placeholder="輸入 SKU 或條碼（Enter 送出）"
                       value={scanSku}
                       onChange={(e) => setScanSku(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key !== 'Enter') return;
                         e.preventDefault();
-                        const sku = scanSku.trim().toLowerCase();
-                        if (!sku) {
-                          showToast('請輸入 SKU', 'err');
-                          return;
-                        }
-                        const row = skuToBalanceRow.get(sku);
-                        if (!row) {
-                          showToast('找不到此 SKU（請確認倉庫與 SKU）', 'err');
-                          return;
-                        }
-                        setSelectedProductIds((prev) => new Set(prev).add(row.productId));
-                        const qty = scanQty.trim() === '' ? undefined : Number(scanQty);
-                        if (qty != null && Number.isFinite(qty) && qty >= 0) {
-                          setActualQtyByProductId((prev) => ({ ...prev, [row.productId]: qty }));
-                        }
-                        setScanSku('');
-                        setScanQty('');
+                        void (async () => {
+                          const row = await resolveScanToBalanceRow();
+                          if (!row) return;
+                          applyScanAddByProductId(row.productId);
+                        })();
                       }}
                     />
                   </div>
@@ -498,30 +591,49 @@ export const AdminInventoryPage: React.FC = () => {
                     size="sm"
                     variant="secondary"
                     onClick={() => {
-                      const sku = scanSku.trim().toLowerCase();
-                      if (!sku) {
-                        showToast('請輸入 SKU', 'err');
-                        return;
-                      }
-                      const row = skuToBalanceRow.get(sku);
-                      if (!row) {
-                        showToast('找不到此 SKU（請確認倉庫與 SKU）', 'err');
-                        return;
-                      }
-                      setSelectedProductIds((prev) => new Set(prev).add(row.productId));
-                      const qty = scanQty.trim() === '' ? undefined : Number(scanQty);
-                      if (qty != null && Number.isFinite(qty) && qty >= 0) {
-                        setActualQtyByProductId((prev) => ({ ...prev, [row.productId]: qty }));
-                      }
-                      setScanSku('');
-                      setScanQty('');
-                      showToast('已加入盤點清單', 'ok');
+                      void (async () => {
+                        const row = await resolveScanToBalanceRow();
+                        if (!row) return;
+                        applyScanAddByProductId(row.productId);
+                        showToast('已加入盤點清單', 'ok');
+                      })();
                     }}
                   >
                     加入
                   </Button>
                   <span className="text-xs text-muted">加入後可在列表中調整實際數量，再一鍵提交。</span>
                 </div>
+                {scanChoices.length > 1 ? (
+                  <div className="mt-2 rounded-xl border border-brand-surface bg-white p-2">
+                    <div className="mb-1 text-xs font-semibold text-muted">條碼命中多筆，請選擇</div>
+                    <div className="flex flex-col gap-1">
+                      {scanChoices.slice(0, 6).map((c) => (
+                        <button
+                          key={c.productId}
+                          type="button"
+                          className="flex items-center justify-between gap-2 rounded-lg border border-brand-surface px-2 py-1.5 text-left text-xs hover:bg-brand-canvas"
+                          onClick={() => {
+                            const skuKey = (c.sku ?? '').trim().toLowerCase();
+                            const row = skuKey ? skuToBalanceRow.get(skuKey) : undefined;
+                            if (!row) {
+                              showToast('目前倉庫/列表中沒有對應的 SKU 餘額列', 'err');
+                              return;
+                            }
+                            applyScanAddByProductId(row.productId);
+                            setScanChoices([]);
+                            showToast('已加入盤點清單', 'ok');
+                          }}
+                        >
+                          <span className="min-w-0 truncate text-content">{c.name}</span>
+                          <span className="shrink-0 font-mono text-[11px] text-muted">{c.sku}</span>
+                        </button>
+                      ))}
+                      {scanChoices.length > 6 ? (
+                        <div className="text-[11px] text-muted">…尚有 {scanChoices.length - 6} 筆，請縮小條碼/limit 或清理資料</div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
             <div className="overflow-x-auto">
@@ -608,6 +720,136 @@ export const AdminInventoryPage: React.FC = () => {
               </table>
             </div>
           </section>
+
+          {expiringOpen ? (
+            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
+              <div className="w-full max-w-4xl rounded-2xl border border-brand-surface bg-white p-4 shadow-xl">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-content">即期庫存監控</div>
+                    <div className="mt-0.5 text-xs text-muted">
+                      warehouseId：<span className="font-mono">{warehouseId || '—'}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-brand-surface px-2 py-1 text-xs text-muted hover:bg-table-head"
+                    onClick={() => setExpiringOpen(false)}
+                  >
+                    關閉
+                  </button>
+                </div>
+
+                <div className="mb-3 flex flex-wrap items-end gap-2">
+                  <div className="flex items-center gap-2 rounded-full bg-table-head px-2 py-1">
+                    <button
+                      type="button"
+                      className={[
+                        'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+                        expiringTab === 'product'
+                          ? 'bg-forge-sidebar text-white shadow-sm'
+                          : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
+                      ].join(' ')}
+                      onClick={() => setExpiringTab('product')}
+                    >
+                      依商品彙總
+                    </button>
+                    <button
+                      type="button"
+                      className={[
+                        'rounded-full px-3 py-1.5 text-xs font-semibold transition',
+                        expiringTab === 'batch'
+                          ? 'bg-forge-sidebar text-white shadow-sm'
+                          : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
+                      ].join(' ')}
+                      onClick={() => setExpiringTab('batch')}
+                    >
+                      依批次明細
+                    </button>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-muted">daysAhead</label>
+                    <input
+                      type="number"
+                      min={1}
+                      className="h-9 w-28 rounded-lg border border-brand-surface bg-white px-3 text-sm text-right tabular-nums focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                      value={expiringDaysAhead}
+                      onChange={(e) => setExpiringDaysAhead(Math.max(1, Number(e.target.value || 1)))}
+                    />
+                  </div>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => void loadExpiring()} disabled={expiringLoading}>
+                    {expiringLoading ? '載入中…' : '重新整理'}
+                  </Button>
+                  {expiringErr ? <div className="text-xs text-brand-danger">{expiringErr}</div> : null}
+                </div>
+
+                <div className="overflow-hidden rounded-xl border border-brand-surface">
+                  {expiringLoading ? (
+                    <div className="px-4 py-8 text-center text-sm text-muted">載入中…</div>
+                  ) : expiringTab === 'product' ? (
+                    expiringProductRows.length === 0 ? (
+                      <div className="px-4 py-10 text-center text-sm text-muted">沒有即期商品</div>
+                    ) : (
+                      <div className="table-sticky-head overflow-x-auto">
+                        <table className="min-w-full text-left text-sm">
+                          <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
+                            <tr>
+                              <th className="px-4 py-2">SKU</th>
+                              <th className="px-4 py-2">商品</th>
+                              <th className="px-4 py-2">最早到期</th>
+                              <th className="px-4 py-2">即期總量</th>
+                              <th className="px-4 py-2">倉庫數</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {expiringProductRows.map((r) => (
+                              <tr key={r.productId} className="border-t border-brand-surface hover:bg-brand-canvas">
+                                <td className="px-4 py-2 font-mono text-xs text-content">{r.sku ?? '—'}</td>
+                                <td className="px-4 py-2 text-content">{r.productName ?? r.productId.slice(0, 8) + '…'}</td>
+                                <td className="px-4 py-2 tabular-nums text-muted">{r.earliestExpiryDate}</td>
+                                <td className="px-4 py-2 tabular-nums text-content">{r.expiringQty}</td>
+                                <td className="px-4 py-2 tabular-nums text-muted">{r.warehousesCount}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  ) : expiringBatchRows.length === 0 ? (
+                    <div className="px-4 py-10 text-center text-sm text-muted">沒有即期批次</div>
+                  ) : (
+                    <div className="table-sticky-head overflow-x-auto">
+                      <table className="min-w-full text-left text-sm">
+                        <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
+                          <tr>
+                            <th className="px-4 py-2">SKU</th>
+                            <th className="px-4 py-2">商品</th>
+                            <th className="px-4 py-2">批次</th>
+                            <th className="px-4 py-2">到期日</th>
+                            <th className="px-4 py-2">數量</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {expiringBatchRows.map((b, idx) => (
+                            <tr
+                              key={`${b.productId}-${b.warehouseId}-${b.batchCode ?? 'none'}-${b.expiryDate}-${idx}`}
+                              className="border-t border-brand-surface hover:bg-brand-canvas"
+                            >
+                              <td className="px-4 py-2 font-mono text-xs text-content">{b.sku ?? '—'}</td>
+                              <td className="px-4 py-2 text-content">{b.productName ?? b.productId.slice(0, 8) + '…'}</td>
+                              <td className="px-4 py-2 font-mono text-xs text-muted">{b.batchCode ?? '—'}</td>
+                              <td className="px-4 py-2 tabular-nums text-muted">{b.expiryDate}</td>
+                              <td className="px-4 py-2 tabular-nums text-content">{b.onHandQty}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <StandardFloatBar visible={selectedProductIds.size > 0} className="w-[min(860px,calc(100%-24px))]">
               <div className="flex flex-wrap items-center gap-3">
