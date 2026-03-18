@@ -15,6 +15,11 @@
 
 ---
 
+### INSTRUCTIONS-014（referenceId UUID-like 修復 + 報表穿透穩定性）
+- 做了：`backend/scripts/e2e-seed.ts` 調整 POS order / receivingNote / exchange referenceId 為 UUID-like（純 hex）並加入 deterministic occurredAt；擴充 seed fail-fast 驗證（UUID-like 格式 + 至少 1 筆 finance referenceId 可解析為 posOrder/receivingNote）；補 `OpsService.resolveReference` integration 邊界測試，並更新 `docs/e2e-pos.md` referenceId UUID-like 契約與 full gate 驗收要點（避免 `ReferenceIdLink` 長期非可點狀態）。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（含 `e2e:seed` fail-fast 驗證）；Playwright/E2E smoke 未於本機執行（依 seed/排序與前端 UUID-like contract 預期 full profile 不再 skip）。
+- commits：da51cb6 feat(e2e,ops): stabilize ReferenceIdLink penetration fixtures；8d8ff8a docs(e2e): add ReferenceIdLink UUID-like contract + full gate checks
+
 ### INSTRUCTIONS-012（dispatch-rules 常駐化：full fixtures/runner 驗收 + lastRun/ops 導向一致性）
 - 做了：依 `BACKEND-INSTRUCTIONS 012.md` §1 完成 #1～#10（RBAC 長期 skip）。
   - **#1 迴歸維護 + commit**：`prisma migrate deploy` 無 pending；`pnpm --filter pos-erp-backend test` 全綠後再提交 atomic commits。
