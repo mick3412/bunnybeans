@@ -506,7 +506,8 @@ describe('FinanceService (integration)', () => {
   it('closePeriod blocks recordFinanceEvent (global close) and unlock allows write again', async () => {
     if (!process.env.DATABASE_URL) return;
 
-    const today = new Date();
+    // Use a stable past date to avoid impacting other suites running in parallel.
+    const today = new Date('2000-01-15T12:00:00.000Z');
     const startDate = today.toISOString().slice(0, 10);
     const endDate = startDate;
     const closed = await financeService.closePeriod({ startDate, endDate });

@@ -42,6 +42,8 @@ describe('PromotionService getEffectiveness (integration)', () => {
 
   it('returns triggerCount and discountTotal when order applies promotion', async () => {
     if (!process.env.DATABASE_URL) return;
+    // Avoid cross-test pollution: FinancePeriodClose can block order finance events.
+    await prisma.financePeriodClose.deleteMany({});
 
     const merchant = await prisma.merchant.create({
       data: { code: `M-EFF-${Date.now()}`, name: 'Effectiveness Merchant' },

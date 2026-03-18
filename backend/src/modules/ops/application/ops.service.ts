@@ -197,6 +197,14 @@ export class OpsService {
     return { from, to };
   }
 
+  private fixHintFromResultCode(resultCode: string | null | undefined): 'DATA_MISSING' | 'NEEDS_DISAMBIGUATION' | 'PERMISSION' | 'OK' {
+    const code = resultCode?.trim() || '';
+    if (code === 'NAVIGATED') return 'OK';
+    if (code === 'PERMISSION') return 'PERMISSION';
+    if (code === 'MULTI_MATCH') return 'NEEDS_DISAMBIGUATION';
+    return 'DATA_MISSING';
+  }
+
   async listReportClickAudit(q: {
     from?: string;
     to?: string;
@@ -217,6 +225,7 @@ export class OpsService {
       field: string;
       referenceId: string;
       resultCode: string | null;
+      fixHint: 'DATA_MISSING' | 'NEEDS_DISAMBIGUATION' | 'PERMISSION' | 'OK';
       resolvedKind: string;
       success: boolean;
       createdAt: string;
@@ -260,6 +269,7 @@ export class OpsService {
         field: r.field,
         referenceId: r.referenceId,
         resultCode: (r as any).resultCode ?? null,
+        fixHint: this.fixHintFromResultCode(((r as any).resultCode ?? null) as any),
         resolvedKind: r.resolvedKind,
         success: r.success,
         createdAt: r.createdAt.toISOString(),
@@ -287,6 +297,19 @@ export class OpsService {
     topSources: { source: string; notFound: number; multiMatch: number; total: number }[];
     trendByDay: { day: string; total: number; failed: number }[];
     topReferenceIds: { field: string; referenceId: string; count: number }[];
+    health: {
+      notFoundRate: number;
+      multiMatchRate: number;
+      navigatedRate: number;
+      status: 'OK' | 'WARN' | 'ALERT';
+      thresholds: {
+        warnNotFoundRate: number;
+        alertNotFoundRate: number;
+        warnMultiMatchRate: number;
+        alertMultiMatchRate: number;
+      };
+    };
+    fixHints: { fixHint: 'DATA_MISSING' | 'NEEDS_DISAMBIGUATION' | 'PERMISSION' | 'OK'; count: number }[];
   }> {
     const { from, to } = this.parseRange(q.from, q.to);
     const where: Prisma.ReportClickAuditWhereInput = {};
@@ -385,15 +408,54 @@ export class OpsService {
     }
     const topSources = [...topSourcesMap.values()].sort((a, b) => b.total - a.total).slice(0, top);
 
+    const byResultCode = (byResultCodeRows as any[]).map((r) => ({ resultCode: r.resultCode ?? null, count: r._count._all })) as Array<{
+      resultCode: string | null;
+      count: number;
+    }>;
+    const notFound = byResultCode.find((x) => x.resultCode === 'NOT_FOUND')?.count ?? 0;
+    const multiMatch = byResultCode.find((x) => x.resultCode === 'MULTI_MATCH')?.count ?? 0;
+    const navigated = byResultCode.find((x) => x.resultCode === 'NAVIGATED')?.count ?? 0;
+    const denom = total > 0 ? total : 1;
+    const notFoundRate = notFound / denom;
+    const multiMatchRate = multiMatch / denom;
+    const navigatedRate = navigated / denom;
+    const thresholds = {
+      warnNotFoundRate: 0.2,
+      alertNotFoundRate: 0.5,
+      warnMultiMatchRate: 0.05,
+      alertMultiMatchRate: 0.2,
+    };
+    const status: 'OK' | 'WARN' | 'ALERT' =
+      notFoundRate >= thresholds.alertNotFoundRate || multiMatchRate >= thresholds.alertMultiMatchRate
+        ? 'ALERT'
+        : notFoundRate >= thresholds.warnNotFoundRate || multiMatchRate >= thresholds.warnMultiMatchRate
+          ? 'WARN'
+          : 'OK';
+
+    const fixHints = [
+      { fixHint: 'DATA_MISSING' as const, count: notFound },
+      { fixHint: 'NEEDS_DISAMBIGUATION' as const, count: multiMatch },
+      { fixHint: 'PERMISSION' as const, count: byResultCode.find((x) => x.resultCode === 'PERMISSION')?.count ?? 0 },
+      { fixHint: 'OK' as const, count: navigated },
+    ];
+
     return {
       total,
       bySuccess: bySuccessRows.map((r) => ({ success: r.success, count: r._count._all })),
       bySource: bySourceRows.map((r) => ({ source: r.source, count: r._count._all })),
-      byResultCode: (byResultCodeRows as any[]).map((r) => ({ resultCode: r.resultCode ?? null, count: r._count._all })),
+      byResultCode,
       byResolvedKind: byKindRows.map((r) => ({ resolvedKind: r.resolvedKind, count: r._count._all })),
       topSources,
       trendByDay: trendRows,
       topReferenceIds: topRefRows as any,
+      health: {
+        notFoundRate,
+        multiMatchRate,
+        navigatedRate,
+        status,
+        thresholds,
+      },
+      fixHints,
     };
   }
 

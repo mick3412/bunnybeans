@@ -187,6 +187,8 @@ describe('PosReportsService (integration)', () => {
 
   it('top-items returns ranked items and respects limit', async () => {
     if (!process.env.DATABASE_URL) return;
+    // Avoid cross-test pollution: FinancePeriodClose can block order finance events.
+    await prisma.financePeriodClose.deleteMany({});
 
     const merchant = await prisma.merchant.create({
       data: { code: `MR2-${Date.now()}`, name: 'Report Merchant 2' },

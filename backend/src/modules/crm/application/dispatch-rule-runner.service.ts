@@ -29,6 +29,21 @@ export class DispatchRuleRunnerService {
 
     for (const rule of rules) {
       try {
+        // duplicate protection: if already ran within the same period, skip issuing again
+        if (rule.lastRunAt && this.isSamePeriod(rule.lastRunAt, now, rule.scheduleType)) {
+          const next = this.computeNextRunAt(now, rule.scheduleType);
+          await this.prisma.crmCouponDispatchRule.update({
+            where: { id: rule.id },
+            data: {
+              nextRunAt: next,
+              lastRunAt: now,
+              lastRunCode: 'SKIPPED',
+              lastRunNote: 'duplicate-protection: already ran in this period',
+            },
+          });
+          continue;
+        }
+
         const job = await this.crmJobService.createJob('segment-coupon', {
           merchantId: rule.merchantId,
           segmentId: rule.segmentId,
@@ -49,9 +64,12 @@ export class DispatchRuleRunnerService {
       } catch (e) {
         const err = this.formatError(e);
         errors.push(`${rule.id}: ${err}`);
-        await this.prisma.crmCouponDispatchRule.update({
+        const retryAt = new Date(now.getTime() + 30 * 60 * 1000);
+        // Be tolerant: rule might be deleted concurrently (tests/ops), don't fail the whole runner.
+        await this.prisma.crmCouponDispatchRule.updateMany({
           where: { id: rule.id },
           data: {
+            nextRunAt: retryAt,
             lastRunAt: now,
             lastRunCode: 'FAILED',
             lastRunNote: err.slice(0, 500),
@@ -76,6 +94,27 @@ export class DispatchRuleRunnerService {
     } catch {
       return 'unknown error';
     }
+  }
+
+  private isSamePeriod(a: Date, b: Date, scheduleType: string): boolean {
+    const da = new Date(a);
+    const db = new Date(b);
+    if (scheduleType === 'daily') {
+      return da.getUTCFullYear() === db.getUTCFullYear() && da.getUTCMonth() === db.getUTCMonth() && da.getUTCDate() === db.getUTCDate();
+    }
+    if (scheduleType === 'monthly') {
+      return da.getUTCFullYear() === db.getUTCFullYear() && da.getUTCMonth() === db.getUTCMonth();
+    }
+    // weekly (ISO-ish using UTC week number)
+    const weekKey = (d: Date) => {
+      const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+      const day = date.getUTCDay() || 7;
+      date.setUTCDate(date.getUTCDate() + 4 - day);
+      const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+      const week = Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+      return `${date.getUTCFullYear()}-${week}`;
+    };
+    return weekKey(da) === weekKey(db);
   }
 
   private computeNextRunAt(after: Date, scheduleType: string): Date {

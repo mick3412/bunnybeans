@@ -6,7 +6,7 @@
  */
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+export const prisma = new PrismaClient();
 
 const E2E_CUSTOMER_ID = 'e2e00001-0000-4000-8000-00000000c001';
 const E2E_ORDER_ID = 'e2e00002-0000-4000-8000-00000000o001';
@@ -18,8 +18,9 @@ const E2E_BARCODE_MULTI = 'E2E-BC-0002';
 const E2E_EX_SOURCE_ORDER_ID = 'e2e00005-0000-4000-8000-00000000x001';
 const E2E_EX_DERIVED_ORDER_ID = 'e2e00006-0000-4000-8000-00000000x002';
 
-async function main() {
-  const merchant = await prisma.merchant.findFirst({
+export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClient }) {
+  const client = opts?.client ?? prisma;
+  const merchant = await client.merchant.findFirst({
     where: { code: 'M001' },
     select: { id: true },
   });
@@ -32,7 +33,7 @@ async function main() {
     return new Date(y - yOff, m, d);
   };
 
-  await prisma.customer.upsert({
+  await client.customer.upsert({
     where: { id: E2E_CUSTOMER_ID },
     create: {
       id: E2E_CUSTOMER_ID,
@@ -57,49 +58,51 @@ async function main() {
   });
 
   // ---- Drilldown fixtures (referenceId) ----
-  const store = await prisma.store.findFirst({
+  const store = await client.store.findFirst({
     where: { merchantId: merchant.id },
     select: { id: true },
   });
-  const warehouse = await prisma.warehouse.findFirst({
+  const warehouse = await client.warehouse.findFirst({
     where: { merchantId: merchant.id },
     select: { id: true },
   });
-  const supplier = await prisma.supplier.findFirst({
+  const supplier = await client.supplier.findFirst({
     where: { merchantId: merchant.id, status: 'ACTIVE' },
     select: { id: true },
   });
-  const product = await prisma.product.findFirst({
+  // Use a stable seed product to avoid cross-test interference.
+  const product = await client.product.findUnique({
+    where: { sku: 'DEMO-TEE-BLK-M' },
     select: { id: true },
   });
   if (!store || !warehouse || !supplier || !product) {
     throw new Error('缺少 store/warehouse/supplier/product。請先執行 pnpm db:seed');
   }
 
-  const profile = (process.env.E2E_PROFILE ?? '').trim().toLowerCase();
+  const profile = (opts?.profile ?? process.env.E2E_PROFILE ?? '').trim().toLowerCase();
   const isFull = profile === 'full';
 
   // ---- Barcode fixtures ----
   // single: ensure exactly one product has barcode
-  await prisma.product.updateMany({
+  await client.product.updateMany({
     where: { barcode: E2E_BARCODE_SINGLE },
     data: { barcode: null },
   });
-  await prisma.product.update({
+  await client.product.update({
     where: { id: product.id },
     data: { barcode: E2E_BARCODE_SINGLE },
   });
 
   // multi: ensure >=2 products share same barcode (full profile only)
   if (isFull) {
-    const existing = await prisma.product.findMany({
+    const existing = await client.product.findMany({
       where: { barcode: E2E_BARCODE_MULTI },
       select: { id: true },
       take: 10,
     });
     if (existing.length < 2) {
       // create 2 dedicated products to avoid disturbing seed data
-      await prisma.product.createMany({
+      await client.product.createMany({
         data: [
           {
             sku: 'E2E-BC-MULTI-001',
@@ -118,13 +121,13 @@ async function main() {
   }
 
   // POS order + FinanceEvent + PointLedger
-  await prisma.financeEvent.deleteMany({ where: { referenceId: E2E_ORDER_ID } });
-  await prisma.pointLedger.deleteMany({ where: { referenceId: E2E_ORDER_ID } });
-  await prisma.posOrderPayment.deleteMany({ where: { orderId: E2E_ORDER_ID } });
-  await prisma.posOrderItem.deleteMany({ where: { orderId: E2E_ORDER_ID } });
-  await prisma.posOrder.deleteMany({ where: { id: E2E_ORDER_ID } });
+  await client.financeEvent.deleteMany({ where: { referenceId: E2E_ORDER_ID } });
+  await client.pointLedger.deleteMany({ where: { referenceId: E2E_ORDER_ID } });
+  await client.posOrderPayment.deleteMany({ where: { orderId: E2E_ORDER_ID } });
+  await client.posOrderItem.deleteMany({ where: { orderId: E2E_ORDER_ID } });
+  await client.posOrder.deleteMany({ where: { id: E2E_ORDER_ID } });
 
-  await prisma.posOrder.create({
+  await client.posOrder.create({
     data: {
       id: E2E_ORDER_ID,
       orderNumber: 'E2E-ORDER-0001',
@@ -137,7 +140,7 @@ async function main() {
       payments: { create: [{ method: 'CASH', amount: 100 }] },
     },
   });
-  await prisma.financeEvent.createMany({
+  await client.financeEvent.createMany({
     data: [
       {
         occurredAt: new Date(),
@@ -161,7 +164,7 @@ async function main() {
       },
     ],
   });
-  await prisma.pointLedger.create({
+  await client.pointLedger.create({
     data: {
       merchantId: merchant.id,
       customerId: E2E_CUSTOMER_ID,
@@ -175,13 +178,13 @@ async function main() {
   });
 
   // ReceivingNote + FinanceEvent(PURCHASE_PAYABLE) to validate receivingNote drilldown
-  await prisma.financeEvent.deleteMany({ where: { referenceId: E2E_RN_ID } });
-  await prisma.receivingNoteLine.deleteMany({ where: { receivingNoteId: E2E_RN_ID } });
-  await prisma.receivingNote.deleteMany({ where: { id: E2E_RN_ID } });
-  await prisma.purchaseOrderLine.deleteMany({ where: { poId: E2E_PO_ID } });
-  await prisma.purchaseOrder.deleteMany({ where: { id: E2E_PO_ID } });
+  await client.financeEvent.deleteMany({ where: { referenceId: E2E_RN_ID } });
+  await client.receivingNoteLine.deleteMany({ where: { receivingNoteId: E2E_RN_ID } });
+  await client.receivingNote.deleteMany({ where: { id: E2E_RN_ID } });
+  await client.purchaseOrderLine.deleteMany({ where: { poId: E2E_PO_ID } });
+  await client.purchaseOrder.deleteMany({ where: { id: E2E_PO_ID } });
 
-  const po = await prisma.purchaseOrder.create({
+  const po = await client.purchaseOrder.create({
     data: {
       id: E2E_PO_ID,
       merchantId: merchant.id,
@@ -193,7 +196,7 @@ async function main() {
     },
     include: { lines: true },
   });
-  await prisma.receivingNote.create({
+  await client.receivingNote.create({
     data: {
       id: E2E_RN_ID,
       merchantId: merchant.id,
@@ -213,7 +216,7 @@ async function main() {
       },
     },
   });
-  await prisma.financeEvent.create({
+  await client.financeEvent.create({
     data: {
       occurredAt: new Date(),
       type: 'PURCHASE_PAYABLE',
@@ -229,13 +232,13 @@ async function main() {
   // ---- Full profile: Exchange settlement + finance events fixtures ----
   if (isFull) {
     // teardown (orders & finance events)
-    await prisma.financeEvent.deleteMany({ where: { referenceId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
-    await prisma.posOrderPayment.deleteMany({ where: { orderId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
-    await prisma.posOrderItem.deleteMany({ where: { orderId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
-    await prisma.posOrder.deleteMany({ where: { id: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
+    await client.financeEvent.deleteMany({ where: { referenceId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
+    await client.posOrderPayment.deleteMany({ where: { orderId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
+    await client.posOrderItem.deleteMany({ where: { orderId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
+    await client.posOrder.deleteMany({ where: { id: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
 
     // source order: paid 200
-    await prisma.posOrder.create({
+    await client.posOrder.create({
       data: {
         id: E2E_EX_SOURCE_ORDER_ID,
         orderNumber: 'E2E-EX-SOURCE-0001',
@@ -250,7 +253,7 @@ async function main() {
     });
 
     // derived order: total 150, exchangeFromOrderId points to source
-    await prisma.posOrder.create({
+    await client.posOrder.create({
       data: {
         id: E2E_EX_DERIVED_ORDER_ID,
         orderNumber: 'E2E-EX-DERIVED-0001',
@@ -266,7 +269,7 @@ async function main() {
     });
 
     // finance events: receivable/payment + refund for exchange settlement traceability
-    await prisma.financeEvent.createMany({
+    await client.financeEvent.createMany({
       data: [
         {
           occurredAt: new Date(),
@@ -304,7 +307,7 @@ async function main() {
     // additional finance events for reports visibility (stable window)
     const reportDay = new Date();
     reportDay.setHours(12, 0, 0, 0);
-    await prisma.financeEvent.createMany({
+    await client.financeEvent.createMany({
       data: [
         {
           occurredAt: reportDay,
@@ -330,31 +333,62 @@ async function main() {
       skipDuplicates: true,
     });
 
+    // finance report stable dataset (admin reports must not skip in full profile)
+    await client.financeEvent.createMany({
+      data: [
+        {
+          occurredAt: reportDay,
+          type: 'PURCHASE_PAYABLE',
+          partyId: `supplier:${supplier.id}`,
+          currency: 'TWD',
+          amount: 120,
+          taxAmount: 0,
+          referenceId: 'E2E-REPORT-PUR-001',
+          note: 'E2E report purchase payable',
+        },
+        {
+          occurredAt: reportDay,
+          type: 'PURCHASE_REBATE',
+          partyId: `supplier:${supplier.id}`,
+          currency: 'TWD',
+          amount: 20,
+          taxAmount: 0,
+          referenceId: 'E2E-REPORT-PUR-001',
+          note: 'E2E report purchase rebate',
+        },
+      ],
+      skipDuplicates: true,
+    });
+
     // ---- fail-fast verification (for CI) ----
-    const singleCount = await prisma.product.count({ where: { barcode: E2E_BARCODE_SINGLE } });
+    const singleCount = await client.product.count({ where: { barcode: E2E_BARCODE_SINGLE } });
     if (singleCount !== 1) {
       throw new Error(`E2E fixture invalid: barcode single count=${singleCount} (expected 1)`);
     }
-    const multiCount = await prisma.product.count({ where: { barcode: E2E_BARCODE_MULTI } });
+    const multiCount = await client.product.count({ where: { barcode: E2E_BARCODE_MULTI } });
     if (multiCount < 2) {
       throw new Error(`E2E fixture invalid: barcode multi count=${multiCount} (expected >=2)`);
     }
     const [srcOrder, derivedOrder] = await Promise.all([
-      prisma.posOrder.findUnique({ where: { id: E2E_EX_SOURCE_ORDER_ID }, select: { id: true } }),
-      prisma.posOrder.findUnique({ where: { id: E2E_EX_DERIVED_ORDER_ID }, select: { id: true, exchangeFromOrderId: true } }),
+      client.posOrder.findUnique({ where: { id: E2E_EX_SOURCE_ORDER_ID }, select: { id: true } }),
+      client.posOrder.findUnique({ where: { id: E2E_EX_DERIVED_ORDER_ID }, select: { id: true, exchangeFromOrderId: true } }),
     ]);
     if (!srcOrder || !derivedOrder || derivedOrder.exchangeFromOrderId !== E2E_EX_SOURCE_ORDER_ID) {
       throw new Error('E2E fixture invalid: exchange orders missing or linkage broken');
     }
-    const refundCount = await prisma.financeEvent.count({
+    const refundCount = await client.financeEvent.count({
       where: { referenceId: E2E_EX_SOURCE_ORDER_ID, type: 'SALE_REFUND' },
     });
     if (refundCount < 1) {
       throw new Error('E2E fixture invalid: SALE_REFUND missing for exchange source order');
     }
-    const reportEventCount = await prisma.financeEvent.count({ where: { referenceId: 'E2E-REPORT-SALE-001' } });
+    const reportEventCount = await client.financeEvent.count({ where: { referenceId: 'E2E-REPORT-SALE-001' } });
     if (reportEventCount < 2) {
       throw new Error(`E2E fixture invalid: report finance events count=${reportEventCount} (expected >=2)`);
+    }
+    const reportPurCount = await client.financeEvent.count({ where: { referenceId: 'E2E-REPORT-PUR-001' } });
+    if (reportPurCount < 2) {
+      throw new Error(`E2E fixture invalid: report purchase events count=${reportPurCount} (expected >=2)`);
     }
   }
 
@@ -371,11 +405,14 @@ async function main() {
   }
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Allow importing this file from tests without side effects.
+if (require.main === module) {
+  runE2ESeed()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

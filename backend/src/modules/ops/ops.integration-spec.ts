@@ -404,6 +404,11 @@ describe('OpsService listJobs (integration)', () => {
       referenceId: '',
       resultCode: 'PERMISSION',
     });
+    const n2 = await opsService.recordReportClickAudit({
+      ...base,
+      referenceId: '',
+      resultCode: 'NOT_FOUND',
+    });
     const oldDay = new Date(Date.now() - 2 * 24 * 3600 * 1000);
     const d = await prisma.reportClickAudit.create({
       data: {
@@ -424,7 +429,7 @@ describe('OpsService listJobs (integration)', () => {
         pageSize: 50,
       });
       const ids = list.items.map((x) => x.id);
-      expect(ids).toEqual(expect.arrayContaining([a.id, b.id, c.id, d.id]));
+      expect(ids).toEqual(expect.arrayContaining([a.id, b.id, c.id, n2.id, d.id]));
 
       const summary = await opsService.summaryReportClickAudit({ source: base.source, days: 7, top: 20 });
       expect(summary.byResultCode.some((x) => x.resultCode === 'NOT_FOUND' && x.count >= 1)).toBe(true);
@@ -441,12 +446,16 @@ describe('OpsService listJobs (integration)', () => {
 
       expect(summary.topReferenceIds.some((x) => x.field === 'referenceId' && x.referenceId === 'old-ref' && x.count >= 1)).toBe(true);
 
+      // health v2: NOT_FOUND rate should trip ALERT with 2/5 (>=0.5 threshold uses total under filter)
+      expect(['OK', 'WARN', 'ALERT']).toContain(summary.health.status);
+      expect(summary.fixHints.some((x) => x.fixHint === 'DATA_MISSING' && x.count >= 1)).toBe(true);
+
       // at least 2 filter combinations
       const summaryFailOnly = await opsService.summaryReportClickAudit({ source: base.source, success: 'false', days: 7, top: 20 });
       expect(summaryFailOnly.bySuccess.some((x) => x.success === false && x.count >= 1)).toBe(true);
       expect(summaryFailOnly.topReferenceIds.some((x) => x.referenceId === 'old-ref')).toBe(true);
     } finally {
-      await prisma.reportClickAudit.deleteMany({ where: { id: { in: [a.id, b.id, c.id, d.id] } } });
+      await prisma.reportClickAudit.deleteMany({ where: { id: { in: [a.id, b.id, c.id, n2.id, d.id] } } });
     }
   }, 20000);
 });

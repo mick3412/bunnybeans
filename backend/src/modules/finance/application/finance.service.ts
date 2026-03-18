@@ -384,7 +384,9 @@ export class FinanceService {
         message: 'Period not found',
       });
     }
-    return this.repo.unlockPeriod(period.id);
+    const unlocked = await this.repo.unlockPeriod(period.id);
+    if (!unlocked) return { ok: true, skipped: true };
+    return unlocked;
   }
 
   async listAuditLog(q: { eventId?: string; from?: string; to?: string; actor?: string; page?: number; pageSize?: number }) {

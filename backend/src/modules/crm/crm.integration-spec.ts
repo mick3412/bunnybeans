@@ -343,6 +343,21 @@ describe('SegmentService (integration)', () => {
         nextRunAt: new Date(0),
       },
     });
+    const dupeRule = await prisma.crmCouponDispatchRule.create({
+      data: {
+        merchantId: m.id,
+        name: 'Dupe Rule (same period)',
+        segmentId: seg.id,
+        couponId: coupon.id,
+        enabled: true,
+        scheduleType: 'daily',
+        cronExpr: '0 9 * * *',
+        nextRunAt: new Date(0),
+        lastRunAt: new Date(),
+        lastRunCode: 'SENT',
+        lastRunNote: 'seed last run',
+      },
+    });
     try {
       const result = await runner.runScheduled();
       await ops.recordRun('crm-run-scheduled', result.errors.length === 0, result.errors.length ? result.errors.join('; ') : undefined);
@@ -365,6 +380,10 @@ describe('SegmentService (integration)', () => {
       const updatedBad = await prisma.crmCouponDispatchRule.findUnique({ where: { id: badRule.id } });
       expect(updatedBad?.lastRunCode).toBe('FAILED');
       expect(updatedBad?.lastRunNote ?? '').toContain('CRM_JOB_COUPON_REQUIRED');
+
+      const updatedDupe = await prisma.crmCouponDispatchRule.findUnique({ where: { id: dupeRule.id } });
+      expect(updatedDupe?.lastRunCode).toBe('SKIPPED');
+      expect(updatedDupe?.lastRunNote ?? '').toContain('duplicate-protection');
 
       const runLog = await prisma.opsJobRunLog.findFirst({
         where: { jobType: 'crm-run-scheduled' },

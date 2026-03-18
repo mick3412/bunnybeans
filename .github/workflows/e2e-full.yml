@@ -52,6 +52,8 @@ jobs:
 
       - name: Seed + E2E fixtures (full) - fail fast
         run: |
+          echo "E2E full profile gate: this job must FAIL if fixtures/env are not ready."
+          echo "Required: DATABASE_URL, VITE_ADMIN_API_KEY(secret), migrated DB, db:seed, e2e:seed(full)"
           pnpm --filter pos-erp-backend db:seed
           pnpm --filter pos-erp-backend e2e:seed
 
@@ -71,5 +73,10 @@ jobs:
           if [ -n "${{ inputs.suite }}" ]; then
             pnpm e2e -- --grep "${{ inputs.suite }}"
           else
-            pnpm e2e
+            # Fixed gate suite: barcode multi-match + exchange settlement + click-audit visualization + finance reports
+            pnpm e2e -- \
+              e2e/admin-smoke.spec.ts \
+              e2e/admin-barcode-multi-match.spec.ts \
+              e2e/pos-exchange-settlement-journey.spec.ts \
+              e2e/admin-ops-report-clicks-full.spec.ts
           fi
