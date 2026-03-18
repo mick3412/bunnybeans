@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   getPointLedger,
   listLoyaltyCustomers,
@@ -8,26 +9,41 @@ import {
 import type { ApiError } from '../../../modules/admin/adminApi';
 import { useLoyaltyOutletContext } from './LoyaltyLayout';
 import { TextInput } from '../../../shared/components/TextInput';
+import { ReferenceIdLink } from '../../../shared/components/ReferenceIdLink';
 
 const TYPES = ['ALL', 'EARNED', 'BURNED', 'LOCKED', 'EXPIRED'] as const;
+
+const TYPE_LABELS: Record<string, string> = {
+  ALL: '全部',
+  EARNED: '贈點',
+  BURNED: '扣點',
+  LOCKED: '鎖定',
+  EXPIRED: '已過期',
+};
 
 function typeStyle(t: string) {
   if (t === 'EARNED') return 'bg-emerald-100 text-emerald-800';
   if (t === 'BURNED') return 'bg-rose-100 text-rose-800';
   if (t === 'LOCKED') return 'bg-amber-100 text-amber-900';
-  if (t === 'EXPIRED') return 'bg-neutral-200 text-neutral-700';
-  return 'bg-slate-100 text-slate-700';
+  if (t === 'EXPIRED') return 'bg-[#e2e8f0] text-muted';
+  return 'bg-[#f1f5f9] text-muted';
 }
 
 export const LoyaltyPointLedgerPage: React.FC = () => {
   const { merchantId } = useLoyaltyOutletContext();
+  const [searchParams] = useSearchParams();
+  const customerIdFromUrl = searchParams.get('customerId') ?? '';
   const [customers, setCustomers] = useState<LoyaltyCustomerRow[]>([]);
-  /** 空字串 = 全店流水 */
-  const [customerId, setCustomerId] = useState('');
+  /** 空字串 = 全店流水；可從 URL ?customerId= 預填 */
+  const [customerId, setCustomerId] = useState(customerIdFromUrl);
   const [tab, setTab] = useState<(typeof TYPES)[number]>('ALL');
   const [q, setQ] = useState('');
   const [items, setItems] = useState<LedgerItemDto[]>([]);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (customerIdFromUrl) setCustomerId(customerIdFromUrl);
+  }, [customerIdFromUrl]);
 
   useEffect(() => {
     if (!merchantId) return;
@@ -67,15 +83,14 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">點數存摺</h2>
-        <p className="mt-1 text-sm text-neutral-500">
+      <div className="border-b border-[#e2e8f0] pb-2">
+        <p className="text-sm text-[#64748b]">
           Append-only 流水；預設<strong>全店最近筆數</strong>，可改選單一會員
         </p>
       </div>
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[220px]">
-          <label className="mb-1 block text-xs font-medium text-neutral-600">會員（選「全店」看最近流水）</label>
+          <label className="mb-1 block text-xs font-medium text-muted">會員（選「全店」看最近流水）</label>
           <select
             className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
             value={customerId}
@@ -103,10 +118,10 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
               type="button"
               onClick={() => setTab(t)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                tab === t ? 'bg-slate-900 text-white' : 'bg-white text-neutral-600 ring-1 ring-neutral-200'
+                tab === t ? 'bg-slate-900 text-white' : 'bg-white text-muted ring-1 ring-[#e2e8f0]'
               }`}
             >
-              {t === 'ALL' ? '全部' : t}
+              {TYPE_LABELS[t] ?? t}
             </button>
           ))}
         </div>
@@ -114,9 +129,9 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
       )}
-      <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm">
+      <div className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-neutral-200 bg-neutral-50 text-xs text-neutral-600">
+          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs text-muted">
             <tr>
               <th className="px-3 py-2">交易 ID</th>
               {!customerId && <th className="px-3 py-2">會員</th>}
@@ -124,6 +139,7 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
               <th className="px-3 py-2 text-right">點數</th>
               <th className="px-3 py-2 text-right">餘額</th>
               <th className="px-3 py-2">說明</th>
+              <th className="px-3 py-2">訂單</th>
               <th className="px-3 py-2">時間</th>
             </tr>
           </thead>
@@ -131,16 +147,16 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={customerId ? 6 : 7}
-                  className="px-3 py-8 text-center text-neutral-500"
+                  colSpan={customerId ? 7 : 8}
+                  className="px-3 py-8 text-center text-muted"
                 >
                   尚無流水
                 </td>
               </tr>
             )}
             {filtered.map((row) => (
-              <tr key={row.id} className="hover:bg-neutral-50/80">
-                <td className="px-3 py-2 font-mono text-[11px] text-neutral-600">{row.id.slice(0, 12)}…</td>
+              <tr key={row.id} className="hover:bg-[#f8fafc]">
+                <td className="px-3 py-2 font-mono text-[11px] text-muted">{row.id.slice(0, 12)}…</td>
                 {!customerId && (
                   <td className="max-w-[120px] truncate px-3 py-2 font-medium" title={row.customerName ?? ''}>
                     {row.customerName ?? row.customerId?.slice(0, 8) ?? '—'}
@@ -148,15 +164,26 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
                 )}
                 <td className="px-3 py-2">
                   <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${typeStyle(row.type)}`}>
-                    {row.type}
+                    {TYPE_LABELS[row.type] ?? row.type}
                   </span>
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums font-medium">{row.amount}</td>
-                <td className="px-3 py-2 text-right tabular-nums text-neutral-600">{row.balanceAfter}</td>
-                <td className="max-w-[180px] truncate px-3 py-2 text-neutral-600" title={row.note ?? ''}>
+                <td className="px-3 py-2 text-right tabular-nums text-muted">{row.balanceAfter}</td>
+                <td className="max-w-[180px] truncate px-3 py-2 text-muted" title={row.note ?? ''}>
                   {row.note ?? '—'}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-neutral-500">
+                <td className="px-3 py-2">
+                  {row.type && ['EARNED', 'BURNED'].includes(row.type) ? (
+                    <ReferenceIdLink
+                      referenceId={row.referenceId ?? null}
+                      auditSource="loyalty-point-ledger"
+                      auditField="referenceId"
+                    />
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-muted">
                   {new Date(row.createdAt).toLocaleString('zh-TW')}
                 </td>
               </tr>

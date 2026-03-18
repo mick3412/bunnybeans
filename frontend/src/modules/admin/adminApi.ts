@@ -281,15 +281,36 @@ export interface ReportClickAuditRow {
   source: string;
   field: string;
   referenceId: string;
+  resultCode?: string | null;
   resolvedKind: string;
   success: boolean;
   createdAt: string;
+}
+
+/** POST /ops/reports/click-audit — 穿透點擊上報（Admin key） */
+export async function reportClickAudit(body: {
+  merchantId?: string;
+  source: string;
+  field?: string;
+  referenceId: string;
+  resultCode?: 'NOT_FOUND' | 'MULTI_MATCH' | 'NAVIGATED' | string;
+}): Promise<
+  | { id: string; resolvedKind: 'posOrder' | 'receivingNote' | 'unknown'; success: boolean; createdAt: string }
+  | ApiError
+> {
+  const out = await request<{ id: string; resolvedKind: 'posOrder' | 'receivingNote' | 'unknown'; success: boolean; createdAt: string }>(
+    'ops/reports/click-audit',
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+  if (!out.ok) return out.error;
+  return out.data;
 }
 export async function listReportClickAudit(params: {
   from?: string;
   to?: string;
   source?: string;
   resolvedKind?: string;
+  resultCode?: string;
   success?: boolean;
   referenceId?: string;
   page?: number;
@@ -301,6 +322,7 @@ export async function listReportClickAudit(params: {
   if (params.to?.trim()) q.set('to', params.to.trim());
   if (params.source?.trim()) q.set('source', params.source.trim());
   if (params.resolvedKind?.trim()) q.set('resolvedKind', params.resolvedKind.trim());
+  if (params.resultCode?.trim()) q.set('resultCode', params.resultCode.trim());
   if (params.referenceId?.trim()) q.set('referenceId', params.referenceId.trim());
   if (params.success !== undefined) q.set('success', params.success ? 'true' : 'false');
   if (params.page != null) q.set('page', String(params.page));
@@ -318,12 +340,14 @@ export async function summaryReportClickAudit(params: {
   to?: string;
   source?: string;
   resolvedKind?: string;
+  resultCode?: string;
   success?: boolean;
 }): Promise<
   | {
       total: number;
       bySuccess: { success: boolean; count: number }[];
       bySource: { source: string; count: number }[];
+      byResultCode?: { resultCode: string | null; count: number }[];
       byResolvedKind: { resolvedKind: string; count: number }[];
     }
   | ApiError
@@ -333,12 +357,14 @@ export async function summaryReportClickAudit(params: {
   if (params.to?.trim()) q.set('to', params.to.trim());
   if (params.source?.trim()) q.set('source', params.source.trim());
   if (params.resolvedKind?.trim()) q.set('resolvedKind', params.resolvedKind.trim());
+  if (params.resultCode?.trim()) q.set('resultCode', params.resultCode.trim());
   if (params.success !== undefined) q.set('success', params.success ? 'true' : 'false');
   const path = q.toString() ? `ops/reports/click-audit/summary?${q}` : 'ops/reports/click-audit/summary';
   const out = await request<{
     total: number;
     bySuccess: { success: boolean; count: number }[];
     bySource: { source: string; count: number }[];
+    byResultCode?: { resultCode: string | null; count: number }[];
     byResolvedKind: { resolvedKind: string; count: number }[];
   }>(path);
   if (!out.ok) return out.error;

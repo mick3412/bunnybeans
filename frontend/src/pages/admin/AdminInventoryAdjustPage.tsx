@@ -11,6 +11,8 @@ import {
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
+import { ReferenceIdLink } from '../../shared/components/ReferenceIdLink';
+import { useAdminToast } from './AdminToastContext';
 
 const EVENT_TYPES: { value: InventoryEventType; label: string }[] = [
   { value: 'PURCHASE_IN', label: '進貨入庫' },
@@ -19,12 +21,13 @@ const EVENT_TYPES: { value: InventoryEventType; label: string }[] = [
   { value: 'RETURN_FROM_CUSTOMER', label: '客戶退貨入庫' },
 ];
 
-const titleCls = 'text-xl font-bold leading-tight text-neutral-900';
-const descCls = 'mt-2 text-sm leading-relaxed text-neutral-600';
+const titleCls = 'text-xl font-bold leading-tight text-content';
+const descCls = 'mt-2 text-sm leading-relaxed text-[#64748b]';
 const alertBox = 'rounded-lg border px-3 py-2 text-sm';
-const formCard = 'space-y-1 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm';
+const formCard = 'space-y-1 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm';
 
 export const AdminInventoryAdjustPage: React.FC = () => {
+  const { showToast } = useAdminToast();
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [products, setProducts] = useState<ProductFullDto[]>([]);
   const [warehouseId, setWarehouseId] = useState('');
@@ -42,6 +45,7 @@ export const AdminInventoryAdjustPage: React.FC = () => {
   const [transferNote, setTransferNote] = useState('');
   const [transferErr, setTransferErr] = useState<string | null>(null);
   const [transferOk, setTransferOk] = useState<string | null>(null);
+  const [transferRefId, setTransferRefId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -88,6 +92,7 @@ export const AdminInventoryAdjustPage: React.FC = () => {
     e.preventDefault();
     setTransferErr(null);
     setTransferOk(null);
+    setTransferRefId(null);
     if (fromWh === toWh) {
       setTransferErr('來源倉與目的倉不可相同');
       return;
@@ -105,20 +110,21 @@ export const AdminInventoryAdjustPage: React.FC = () => {
       return;
     }
     setTransferOk(
-      `調撥完成 referenceId=${out.referenceId.slice(0, 8)}… 來源倉餘 ${out.balances.from.onHandQty}／目的倉餘 ${out.balances.to.onHandQty}`,
+      `調撥完成。來源倉餘 ${out.balances.from.onHandQty}／目的倉餘 ${out.balances.to.onHandQty}`,
     );
+    setTransferRefId(out.referenceId ?? null);
     setTransferNote('');
   };
 
   const row = 'flex flex-row items-center gap-3 py-1';
   const labelCls =
-    'w-36 shrink-0 text-right text-xs font-medium text-neutral-600 sm:text-left';
+    'w-36 shrink-0 text-right text-xs font-medium text-[#64748b] sm:text-left';
   const fieldCls =
-    'min-w-0 flex-1 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900';
+    'min-w-0 flex-1 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-[#1e293b]';
 
   const HeaderLeft = (
-    <div className="flex min-h-0 flex-col self-stretch border-b border-transparent pb-4 lg:border-0 lg:pb-0">
-      <h2 className={titleCls}>入庫事件</h2>
+    <div className="flex min-h-0 flex-col self-stretch border-b border-[#e2e8f0] pb-4 lg:border-0 lg:pb-0">
+      <h2 className={`${titleCls} border-b border-[#e2e8f0] pb-2`}>入庫事件</h2>
       <p className={descCls}>
         送出即 POST /inventory/events；扣減類型若會使庫存低於 0 將回傳 INVENTORY_INSUFFICIENT。
       </p>
@@ -134,8 +140,8 @@ export const AdminInventoryAdjustPage: React.FC = () => {
   );
 
   const HeaderRight = (
-    <div className="flex min-h-0 flex-col self-stretch border-b border-transparent pb-4 lg:border-0 lg:pb-0">
-      <h2 className={titleCls}>倉庫調撥</h2>
+    <div className="flex min-h-0 flex-col self-stretch border-b border-[#e2e8f0] pb-4 lg:border-0 lg:pb-0">
+      <h2 className={`${titleCls} border-b border-[#e2e8f0] pb-2`}>倉庫調撥</h2>
       <p className={descCls}>
         POST /inventory/transfer：同一筆交易內來源倉扣減、目的倉增加，兩倉需不同。
       </p>
@@ -146,7 +152,24 @@ export const AdminInventoryAdjustPage: React.FC = () => {
           </div>
         )}
         {transferOk && (
-          <div className={`${alertBox} border-[#28A745]/30 bg-[#28A745]/10 text-[#166534]`}>{transferOk}</div>
+          <div className={`${alertBox} border-[#28A745]/30 bg-[#28A745]/10 text-[#166534]`}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>{transferOk}</span>
+              {transferRefId && (
+                <span className="inline-flex items-center gap-2 text-xs">
+                  <span className="text-muted">單據</span>
+                  <ReferenceIdLink
+                    referenceId={transferRefId}
+                    label="查看"
+                    fallback={<span className="font-mono text-[11px] text-muted">{transferRefId.slice(0, 8)}…</span>}
+                    onUnknown={(msg) => showToast(msg, 'err')}
+                    auditSource="admin-inventory-adjust"
+                    auditField="transferRefId"
+                  />
+                </span>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -187,7 +210,7 @@ export const AdminInventoryAdjustPage: React.FC = () => {
       <div className={`${row} items-start`}>
         <label className={`${labelCls} pt-2 leading-snug`}>
           數量
-          <span className="mt-0.5 block font-normal text-neutral-500">（正數；出庫類由後端轉負）</span>
+          <span className="mt-0.5 block font-normal text-[#64748b]">（正數；出庫類由後端轉負）</span>
         </label>
         <input
           type="number"

@@ -523,6 +523,8 @@ export const AdminReportsPage: React.FC = () => {
                         referenceId={ev.referenceId ?? null}
                         fallback={ev.referenceId ?? '—'}
                         returnTo={`${location.pathname}${location.search}`}
+                        auditSource="admin-reports"
+                        auditField="referenceId"
                       />
                     </td>
                     <td className="max-w-xs truncate px-4 py-2 text-xs text-muted">
