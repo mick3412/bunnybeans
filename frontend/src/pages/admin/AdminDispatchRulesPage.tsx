@@ -304,20 +304,21 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 <th className="px-4 py-2 font-semibold">排程</th>
                 <th className="px-4 py-2 font-semibold">狀態</th>
                 <th className="px-4 py-2 font-semibold">下次執行</th>
+                <th className="px-4 py-2 font-semibold">最近一次</th>
                 <th className="px-4 py-2 font-semibold">操作</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-[#64748b]">
+                  <td colSpan={8} className="px-4 py-8 text-center text-[#64748b]">
                     載入中…
                   </td>
                 </tr>
               )}
               {!loading && rules.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-[#64748b]">
+                  <td colSpan={8} className="px-4 py-8 text-center text-[#64748b]">
                     尚無發券規則，請新增
                   </td>
                 </tr>
@@ -344,6 +345,26 @@ export const AdminDispatchRulesPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-2 text-[#64748b]">
                       {row.nextRunAt ? new Date(row.nextRunAt).toLocaleString('zh-TW') : '—'}
+                    </td>
+                    <td className="px-4 py-2 text-[#64748b]">
+                      <div className="flex min-w-[240px] flex-col gap-0.5">
+                        <span className="tabular-nums">
+                          {row.lastRunAt ? new Date(row.lastRunAt).toLocaleString('zh-TW') : '—'}
+                        </span>
+                        {row.lastRunCode ? <span className="font-mono text-[11px] text-muted">{row.lastRunCode}</span> : null}
+                        {row.lastRunNote ? (
+                          <span className="max-w-[320px] truncate text-[11px] text-muted" title={row.lastRunNote}>
+                            {row.lastRunNote}
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="w-fit text-[11px] font-medium text-sky-700 hover:underline"
+                          onClick={() => showToast('可到 Job 監控篩選 crm-run-scheduled 查看 run log', 'ok')}
+                        >
+                          查看 run log
+                        </button>
+                      </div>
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex flex-wrap gap-2">

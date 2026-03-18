@@ -283,6 +283,7 @@ export interface ReportClickAuditRow {
   field: string;
   referenceId: string;
   resultCode?: string | null;
+  fixHint?: 'DATA_MISSING' | 'NEEDS_DISAMBIGUATION' | 'PERMISSION' | 'OK';
   resolvedKind: string;
   success: boolean;
   createdAt: string;
@@ -350,6 +351,9 @@ export async function summaryReportClickAudit(params: {
       bySource: { source: string; count: number }[];
       byResultCode?: { resultCode: string | null; count: number }[];
       byResolvedKind: { resolvedKind: string; count: number }[];
+      topSources?: { source: string; notFound: number; multiMatch: number; total: number }[];
+      trendByDay?: { day: string; total: number; failed: number }[];
+      topReferenceIds?: { field: string; referenceId: string; count: number }[];
     }
   | ApiError
 > {
@@ -367,6 +371,9 @@ export async function summaryReportClickAudit(params: {
     bySource: { source: string; count: number }[];
     byResultCode?: { resultCode: string | null; count: number }[];
     byResolvedKind: { resolvedKind: string; count: number }[];
+    topSources?: { source: string; notFound: number; multiMatch: number; total: number }[];
+    trendByDay?: { day: string; total: number; failed: number }[];
+    topReferenceIds?: { field: string; referenceId: string; count: number }[];
   }>(path);
   if (!out.ok) return out.error;
   return out.data;
@@ -383,6 +390,9 @@ export interface DispatchRuleRow {
   scheduleType: string;
   cronExpr: string | null;
   nextRunAt: string | null;
+  lastRunAt?: string | null;
+  lastRunCode?: string | null;
+  lastRunNote?: string | null;
   createdAt: string;
   updatedAt: string;
 }

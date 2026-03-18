@@ -42,14 +42,14 @@ export const AdminOpsReportClicksPage: React.FC = () => {
     bySource: { source: string; count: number }[];
     byResultCode?: { resultCode: string | null; count: number }[];
     byResolvedKind: { resolvedKind: string; count: number }[];
+    topSources?: { source: string; notFound: number; multiMatch: number; total: number }[];
+    trendByDay?: { day: string; total: number; failed: number }[];
+    topReferenceIds?: { field: string; referenceId: string; count: number }[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [trendDays, setTrendDays] = useState<7 | 14 | 30>(7);
-  const [trendLoading, setTrendLoading] = useState(false);
   const [trendErr, setTrendErr] = useState<string | null>(null);
-  const [trendRows, setTrendRows] = useState<Array<{ date: string; NOT_FOUND: number; MULTI_MATCH: number }>>([]);
-  const [rankRows, setRankRows] = useState<Array<{ key: string; count: number }>>([]);
 
   const parsedSuccess = useMemo(() => {
     if (success === 'true') return true;
@@ -60,6 +60,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
   const load = useCallback(async () => {
     setLoading(true);
     setErr(null);
+    setTrendErr(null);
     const [listOut, sumOut] = await Promise.all([
       listReportClickAudit({
         from: from.trim() || undefined,
@@ -74,8 +75,16 @@ export const AdminOpsReportClicksPage: React.FC = () => {
         order: 'desc',
       }),
       summaryReportClickAudit({
-        from: from.trim() || undefined,
-        to: to.trim() || undefined,
+        // 趨勢/健康分數需更長窗：以「今日往回 trendDays」為主，避免使用者不填 from/to 時看不到趨勢
+        from:
+          from.trim() ||
+          (() => {
+            const end = new Date();
+            const start = new Date(end);
+            start.setDate(end.getDate() - (trendDays - 1));
+            return start.toISOString().slice(0, 10);
+          })(),
+        to: to.trim() || new Date().toISOString().slice(0, 10),
         source: source.trim() || undefined,
         resolvedKind: resolvedKind.trim() || undefined,
         resultCode: resultCode.trim() || undefined,
@@ -97,89 +106,11 @@ export const AdminOpsReportClicksPage: React.FC = () => {
     } else {
       setSummary(null);
     }
-  }, [from, to, source, resolvedKind, resultCode, parsedSuccess, referenceId, page, pageSize]);
-
-  const loadTrendsAndRanks = useCallback(async () => {
-    // 以 list data 做前端趨勢/排行（避免依賴未落地的後端聚合端點）
-    const end = new Date();
-    const start = new Date(end);
-    start.setDate(end.getDate() - (trendDays - 1));
-    const fromStr = start.toISOString().slice(0, 10);
-    const toStr = end.toISOString().slice(0, 10);
-
-    setTrendLoading(true);
-    setTrendErr(null);
-    try {
-      const listOut = await listReportClickAudit({
-        from: fromStr,
-        to: toStr,
-        source: source.trim() || undefined,
-        resolvedKind: resolvedKind.trim() || undefined,
-        success: parsedSuccess,
-        referenceId: referenceId.trim() || undefined,
-        page: 1,
-        pageSize: 200,
-        order: 'desc',
-      });
-      if (!('items' in listOut)) {
-        setTrendErr(getErrorMessage(listOut as ApiError));
-        setTrendRows([]);
-        setRankRows([]);
-        return;
-      }
-      const rows = listOut.items ?? [];
-
-      // 趨勢：依日統計 NOT_FOUND/MULTI_MATCH
-      const byDate: Record<string, { NOT_FOUND: number; MULTI_MATCH: number }> = {};
-      for (let i = 0; i < trendDays; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const key = d.toISOString().slice(0, 10);
-        byDate[key] = { NOT_FOUND: 0, MULTI_MATCH: 0 };
-      }
-      for (const r of rows) {
-        const day = new Date(r.createdAt).toISOString().slice(0, 10);
-        const code = ((r as unknown as { resultCode?: string | null }).resultCode ?? '').toUpperCase();
-        if (!byDate[day]) continue;
-        if (code === 'NOT_FOUND') byDate[day].NOT_FOUND += 1;
-        if (code === 'MULTI_MATCH') byDate[day].MULTI_MATCH += 1;
-      }
-      setTrendRows(
-        Object.keys(byDate)
-          .sort()
-          .map((date) => ({ date, ...byDate[date] })),
-      );
-
-      // 排行：針對 NOT_FOUND/MULTI_MATCH 以 source/kind 組合計數（僅基於此 window 的 list 取樣）
-      const rankMap: Record<string, number> = {};
-      for (const r of rows) {
-        const code = ((r as unknown as { resultCode?: string | null }).resultCode ?? '').toUpperCase();
-        if (code !== 'NOT_FOUND' && code !== 'MULTI_MATCH') continue;
-        const k = `${code} · ${r.source} · ${r.resolvedKind}`;
-        rankMap[k] = (rankMap[k] ?? 0) + 1;
-      }
-      setRankRows(
-        Object.entries(rankMap)
-          .map(([key, count]) => ({ key, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 10),
-      );
-    } catch (e) {
-      setTrendErr(e instanceof Error ? e.message : '載入失敗');
-      setTrendRows([]);
-      setRankRows([]);
-    } finally {
-      setTrendLoading(false);
-    }
-  }, [parsedSuccess, referenceId, resolvedKind, source, trendDays]);
+  }, [from, to, source, resolvedKind, resultCode, parsedSuccess, referenceId, page, pageSize, trendDays]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    void loadTrendsAndRanks();
-  }, [loadTrendsAndRanks]);
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -247,6 +178,137 @@ export const AdminOpsReportClicksPage: React.FC = () => {
       </div>
     );
   }, [summary]);
+
+  const healthCards = useMemo(() => {
+    if (!summary) return null;
+    const total = summary.total || 0;
+    const byCode = summary.byResultCode ?? [];
+    const notFound = byCode.find((x) => x.resultCode === 'NOT_FOUND')?.count ?? 0;
+    const multiMatch = byCode.find((x) => x.resultCode === 'MULTI_MATCH')?.count ?? 0;
+    const navigated = byCode.find((x) => x.resultCode === 'NAVIGATED')?.count ?? 0;
+    const permission = byCode.find((x) => x.resultCode === 'PERMISSION')?.count ?? 0;
+    const notFoundRate = total ? notFound / total : 0;
+    const multiMatchRate = total ? multiMatch / total : 0;
+    const navigatedRate = total ? navigated / total : 0;
+    const okRate = total ? (summary.bySuccess.find((x) => x.success)?.count ?? 0) / total : 0;
+
+    const status = (() => {
+      if (total === 0) return { label: 'OK', cls: 'bg-table-head text-muted ring-1 ring-brand-surface', note: '尚無資料' };
+      if (notFoundRate >= 0.2 || multiMatchRate >= 0.08 || okRate < 0.8)
+        return { label: 'ALERT', cls: 'bg-brand-danger/10 text-brand-danger ring-1 ring-brand-danger/20', note: '需優先處理' };
+      if (notFoundRate >= 0.08 || multiMatchRate >= 0.03 || okRate < 0.9)
+        return { label: 'WARN', cls: 'bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20', note: '建議排程修正' };
+      return { label: 'OK', cls: 'bg-brand-success/10 text-brand-success ring-1 ring-brand-success/20', note: '狀態良好' };
+    })();
+
+    const topSources = summary.topSources ?? [];
+    const trend = summary.trendByDay ?? [];
+    const topRefs = summary.topReferenceIds ?? [];
+
+    return (
+      <div className="mb-4 grid gap-3 lg:grid-cols-3">
+        <div className="rounded-xl border border-brand-surface bg-white p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs font-semibold text-muted">健康分數</div>
+            <span className={['inline-flex rounded-full px-2 py-0.5 text-xs font-semibold', status.cls].join(' ')}>
+              {status.label}
+            </span>
+          </div>
+          <div className="mt-2 text-xs text-muted">{status.note}</div>
+          <div className="mt-3 grid gap-2 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted">NOT_FOUND 比例</span>
+              <span className="font-mono tabular-nums text-content">{Math.round(notFoundRate * 1000) / 10}%</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted">MULTI_MATCH 比例</span>
+              <span className="font-mono tabular-nums text-content">{Math.round(multiMatchRate * 1000) / 10}%</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted">NAVIGATED 比例</span>
+              <span className="font-mono tabular-nums text-content">{Math.round(navigatedRate * 1000) / 10}%</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted">成功率（success）</span>
+              <span className="font-mono tabular-nums text-content">{Math.round(okRate * 1000) / 10}%</span>
+            </div>
+            {permission ? <div className="text-[11px] text-muted">PERMISSION：{permission} 次（可能缺 Admin key）</div> : null}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-brand-surface bg-white p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs font-semibold text-muted">NOT_FOUND / MULTI_MATCH 排行（source）</div>
+            <div className="text-[11px] text-muted">依 summary.topSources</div>
+          </div>
+          {topSources.length ? (
+            <div className="mt-3 space-y-1 text-xs">
+              {topSources.slice(0, 6).map((r) => (
+                <div key={r.source} className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-content">{r.source}</span>
+                  <span className="shrink-0 font-mono text-[11px] text-muted">
+                    NF {r.notFound} · MM {r.multiMatch}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 text-xs text-muted">—</div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-brand-surface bg-white p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs font-semibold text-muted">近期趨勢（failed/total）</div>
+            <div className="flex items-center gap-1">
+              {([7, 14, 30] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={[
+                    'rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
+                    trendDays === d ? 'bg-forge-sidebar text-white shadow-sm' : 'bg-table-head text-muted hover:bg-brand-surface',
+                  ].join(' ')}
+                  onClick={() => setTrendDays(d)}
+                >
+                  {d} 天
+                </button>
+              ))}
+            </div>
+          </div>
+          {trend.length ? (
+            <div className="mt-3 overflow-x-auto rounded-lg border border-brand-surface">
+              <table className="w-full min-w-[360px] text-left text-xs">
+                <thead className="border-b border-brand-surface bg-table-head text-[11px] font-semibold uppercase text-muted">
+                  <tr>
+                    <th className="px-3 py-2">day</th>
+                    <th className="px-3 py-2 text-right">failed</th>
+                    <th className="px-3 py-2 text-right">total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trend.slice(-trendDays).map((r) => (
+                    <tr key={r.day} className="border-t border-brand-surface hover:bg-brand-canvas">
+                      <td className="px-3 py-2 font-mono text-[11px] text-content">{r.day}</td>
+                      <td className="px-3 py-2 text-right font-mono tabular-nums text-muted">{r.failed}</td>
+                      <td className="px-3 py-2 text-right font-mono tabular-nums text-muted">{r.total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-3 text-xs text-muted">—</div>
+          )}
+          {topRefs.length ? (
+            <div className="mt-3 text-[11px] text-muted">
+              常見失敗 referenceId：{topRefs.slice(0, 2).map((x) => `${x.referenceId.slice(0, 8)}…(${x.count})`).join('、')}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }, [summary, trendDays]);
 
   return (
     <StandardListLayout
@@ -398,81 +460,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
       testId="e2e-admin-ops-report-clicks"
     >
       {summaryCards ? <div className="mb-4">{summaryCards}</div> : null}
-
-      <div className="mb-4 grid gap-3 lg:grid-cols-2">
-        <div className="rounded-xl border border-brand-surface bg-white p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-semibold text-muted">resultCode 排行（NOT_FOUND / MULTI_MATCH）</div>
-            <div className="text-[11px] text-muted">視窗：近 {trendDays} 天（最多取 200 筆）</div>
-          </div>
-          {trendLoading ? (
-            <div className="mt-3 text-xs text-muted">載入中…</div>
-          ) : trendErr ? (
-            <div className="mt-3 text-xs text-brand-danger">{trendErr}</div>
-          ) : rankRows.length ? (
-            <div className="mt-3 space-y-1 text-xs">
-              {rankRows.map((r) => (
-                <div key={r.key} className="flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate text-content" title={r.key}>
-                    {r.key}
-                  </span>
-                  <span className="shrink-0 tabular-nums text-muted">{r.count}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-3 text-xs text-muted">（此期間內尚無 NOT_FOUND / MULTI_MATCH）</div>
-          )}
-        </div>
-
-        <div className="rounded-xl border border-brand-surface bg-white p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs font-semibold text-muted">近 {trendDays} 天趨勢（按 resultCode）</div>
-            <div className="flex items-center gap-1">
-              {([7, 14, 30] as const).map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  className={[
-                    'rounded-full px-2.5 py-1 text-[11px] font-semibold transition',
-                    trendDays === d ? 'bg-forge-sidebar text-white shadow-sm' : 'bg-table-head text-muted hover:bg-brand-surface',
-                  ].join(' ')}
-                  onClick={() => setTrendDays(d)}
-                >
-                  {d} 天
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {trendLoading ? (
-            <div className="mt-3 text-xs text-muted">載入中…</div>
-          ) : trendErr ? (
-            <div className="mt-3 text-xs text-brand-danger">{trendErr}</div>
-          ) : (
-            <div className="mt-3 overflow-x-auto rounded-lg border border-brand-surface">
-              <table className="w-full min-w-[520px] text-left text-xs">
-                <thead className="border-b border-brand-surface bg-table-head text-[11px] font-semibold uppercase text-muted">
-                  <tr>
-                    <th className="px-3 py-2">date</th>
-                    <th className="px-3 py-2 text-right">NOT_FOUND</th>
-                    <th className="px-3 py-2 text-right">MULTI_MATCH</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trendRows.map((r) => (
-                    <tr key={r.date} className="border-t border-brand-surface hover:bg-brand-canvas">
-                      <td className="px-3 py-2 font-mono text-[11px] text-content">{r.date}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-muted">{r.NOT_FOUND}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-muted">{r.MULTI_MATCH}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+      {healthCards ? <div className="mb-4">{healthCards}</div> : null}
 
       <div className="overflow-hidden rounded-xl border border-brand-surface bg-white">
         <div className="table-sticky-head overflow-x-auto">
