@@ -134,6 +134,9 @@ export class ReceivingNoteService {
       qualifiedQty?: number;
       returnedQty?: number;
       returnReason?: string;
+      batchCode?: string | null;
+      expiryDate?: string | null;
+      weightUnit?: string | null;
     }[],
   ) {
     const rn = await this.getById(id);
@@ -180,6 +183,43 @@ export class ReceivingNoteService {
           }),
         },
       });
+
+      // Prisma Client schema 可能尚未包含 batchCode/expiryDate/weightUnit；
+      // 若 DB 已 migrate，使用 raw SQL UPDATE 補寫欄位，未 migrate 則忽略保持相容。
+      if (
+        u.batchCode !== undefined ||
+        u.expiryDate !== undefined ||
+        u.weightUnit !== undefined
+      ) {
+        try {
+          // NOTE: 不更新的欄位保留原值（避免把未提供的欄位覆蓋成 null）
+          if (u.batchCode !== undefined) {
+            await this.prisma.$executeRaw`
+              UPDATE "ReceivingNoteLine"
+              SET "batchCode" = ${u.batchCode?.trim() || null}
+              WHERE "id" = ${u.lineId}
+            `;
+          }
+          if (u.expiryDate !== undefined) {
+            await this.prisma.$executeRaw`
+              UPDATE "ReceivingNoteLine"
+              SET "expiryDate" = ${
+                u.expiryDate ? new Date(u.expiryDate) : null
+              }
+              WHERE "id" = ${u.lineId}
+            `;
+          }
+          if (u.weightUnit !== undefined) {
+            await this.prisma.$executeRaw`
+              UPDATE "ReceivingNoteLine"
+              SET "weightUnit" = ${u.weightUnit?.trim() || null}
+              WHERE "id" = ${u.lineId}
+            `;
+          }
+        } catch {
+          // ignore
+        }
+      }
     }
     await this.prisma.receivingNote.update({
       where: { id },
@@ -224,7 +264,7 @@ export class ReceivingNoteService {
       payableTotal += rl.qualifiedQty * Number(pl.unitCost);
     }
 
-    for (const rl of rn.lines) {
+    for (const rl of rn.lines as any[]) {
       if (rl.qualifiedQty <= 0) continue;
       await this.inventory.recordInventoryEvent({
         productId: rl.purchaseOrderLine.productId,
@@ -233,6 +273,12 @@ export class ReceivingNoteService {
         quantity: rl.qualifiedQty,
         referenceId: rl.id,
         note: `RN ${rn.receiptNumber}`,
+        // batchCode / expiryDate 欄位目前僅於 schema 定義，待 Prisma Client 更新後再正式串接
+        batchCode: (rl as any).batchCode ?? undefined,
+        expiryDate: (rl as any).expiryDate
+          ? (rl as any).expiryDate.toISOString()
+          : undefined,
+        weightUnit: (rl as any).weightUnit ?? undefined,
       });
       await this.prisma.purchaseOrderLine.update({
         where: { id: rl.purchaseOrderLineId },
@@ -264,7 +310,7 @@ export class ReceivingNoteService {
     if (payableTotal > 0) {
       await this.finance.recordFinanceEvent({
         type: 'PURCHASE_PAYABLE',
-        partyId: po.supplierId,
+        partyId: `supplier:${po.supplierId}`,
         currency: 'TWD',
         amount: Math.round(payableTotal * 100) / 100,
         referenceId: id,
@@ -288,5 +334,99 @@ export class ReceivingNoteService {
       data: { status: 'RETURNED' },
       include: { lines: true },
     });
+  }
+
+  /**
+   * 部分退貨至供應商：扣庫 RETURN_TO_SUPPLIER、寫一筆 PURCHASE_RETURN。
+   * RN 須為 COMPLETED；每列 quantity 不得超過該列 qualifiedQty 減已退數量。
+   */
+  async returnToSupplier(
+    id: string,
+    body: { lines: { receivingNoteLineId: string; quantity: number }[] },
+  ) {
+    const rn = await this.getById(id);
+    if (rn.status !== 'COMPLETED') {
+      throw new BadRequestException({
+        message: 'Only completed receiving note can return to supplier',
+        code: 'RN_NOT_EDITABLE',
+      });
+    }
+    const po = await this.prisma.purchaseOrder.findUnique({
+      where: { id: rn.purchaseOrderId },
+      include: { lines: true },
+    });
+    if (!po) throw new NotFoundException({ message: 'PO not found', code: 'PO_NOT_FOUND' });
+    const supplierId = po.supplierId;
+    const warehouseId = po.warehouseId;
+
+    const lines = body.lines ?? [];
+    if (!lines.length) {
+      throw new BadRequestException({
+        message: 'lines required with at least one item',
+        code: 'RN_COMPLETE_INVALID',
+      });
+    }
+
+    let totalReturnAmount = 0;
+    const occurredAt = new Date();
+
+    for (const { receivingNoteLineId, quantity } of lines) {
+      if (quantity <= 0 || !Number.isFinite(quantity)) {
+        throw new BadRequestException({
+          message: 'quantity must be a positive number',
+          code: 'RN_COMPLETE_INVALID',
+        });
+      }
+      const rl = rn.lines.find((l) => l.id === receivingNoteLineId);
+      if (!rl) {
+        throw new BadRequestException({
+          message: 'Receiving note line not found',
+          code: 'PO_LINE_NOT_FOUND',
+        });
+      }
+      const pl = po.lines.find((l) => l.id === rl.purchaseOrderLineId)!;
+      const qualifiedQty = rl.qualifiedQty;
+      const alreadyReturned = await this.prisma.inventoryEvent.aggregate({
+        where: {
+          type: 'RETURN_TO_SUPPLIER',
+          referenceId: rl.id,
+        },
+        _sum: { quantity: true },
+      });
+      const returnedSum = Math.abs(alreadyReturned._sum.quantity ?? 0);
+      if (quantity > qualifiedQty - returnedSum) {
+        throw new BadRequestException({
+          message:
+            'quantity exceeds qualified qty minus already returned for line ' +
+            rl.id,
+          code: 'RN_COMPLETE_INVALID',
+        });
+      }
+      await this.inventory.recordInventoryEvent({
+        productId: pl.productId,
+        warehouseId,
+        type: 'RETURN_TO_SUPPLIER',
+        quantity,
+        referenceId: rl.id,
+        occurredAt: occurredAt.toISOString(),
+        note: 'Return to supplier RN ' + rn.receiptNumber,
+      });
+      totalReturnAmount += quantity * Number(pl.unitCost);
+    }
+
+    const amount = Math.round(totalReturnAmount * 100) / 100;
+    if (amount > 0) {
+      await this.finance.recordFinanceEvent({
+        type: 'PURCHASE_RETURN',
+        partyId: `supplier:${supplierId}`,
+        currency: 'TWD',
+        amount,
+        occurredAt: occurredAt.toISOString(),
+        referenceId: id,
+        note: `PURCHASE_RETURN RN ${rn.receiptNumber}`,
+      });
+    }
+
+    return this.getById(id);
   }
 }

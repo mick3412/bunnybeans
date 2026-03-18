@@ -165,6 +165,21 @@ describe('promotion-engine', () => {
     ).toBe(10);
   });
 
+  it('POINTS_MULTIPLIER does not change discount but returns pointsMultiplier', () => {
+    const r = baseRule({
+      conditions: [{ type: 'SPEND', op: '>=', value: 0 }],
+      actions: [{ type: 'POINTS_MULTIPLIER', pointsMultiplier: 2 }],
+    } as any);
+    const out = applyPromotions([r], lines, {
+      at: now,
+      isFirstPurchase: true,
+      memberLevel: 'VIP',
+    });
+    expect(out.discount).toBe(0);
+    expect(out.total).toBe(200);
+    expect(out.pointsMultiplier).toBe(2);
+  });
+
   it('draft skipped', () => {
     const r = baseRule({ draft: true });
     expect(

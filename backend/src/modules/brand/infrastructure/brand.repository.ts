@@ -8,4 +8,24 @@ export class BrandRepository {
   findAll() {
     return this.prisma.brand.findMany({ orderBy: { code: 'asc' } });
   }
+
+  findById(id: string) {
+    return this.prisma.brand.findUnique({ where: { id } });
+  }
+
+  create(data: { code: string; name: string }) {
+    return this.prisma.brand.create({ data });
+  }
+
+  update(id: string, data: { code?: string; name?: string }) {
+    return this.prisma.brand.update({ where: { id }, data });
+  }
+
+  countProducts(brandId: string) {
+    return this.prisma.product.count({ where: { brandId } });
+  }
+
+  deleteById(id: string) {
+    return this.prisma.brand.delete({ where: { id } });
+  }
 }

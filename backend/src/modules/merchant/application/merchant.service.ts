@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MerchantRepository } from '../infrastructure/merchant.repository';
 
 interface CreateMerchantInput {
@@ -37,7 +42,30 @@ interface UpdateWarehouseInput {
 
 @Injectable()
 export class MerchantService {
-  constructor(private readonly repo: MerchantRepository) {}
+  constructor(
+    private readonly repo: MerchantRepository,
+    private readonly config: ConfigService,
+  ) {}
+
+  /** 單一商家：優先 env DEFAULT_MERCHANT_ID，否則 DB 唯一一筆；0 筆或多筆無 env 時拋錯 */
+  async getCurrentMerchant() {
+    const id = this.config.get<string>('DEFAULT_MERCHANT_ID');
+    if (id?.trim()) {
+      return this.getMerchant(id.trim());
+    }
+    const all = await this.repo.findAllMerchants();
+    if (all.length === 1) return all[0];
+    if (all.length === 0) {
+      throw new NotFoundException({
+        message: 'No merchant found',
+        code: 'MERCHANT_NOT_FOUND',
+      });
+    }
+    throw new BadRequestException({
+      message: 'Multiple merchants; set DEFAULT_MERCHANT_ID',
+      code: 'MERCHANT_AMBIGUOUS',
+    });
+  }
 
   listMerchants() {
     return this.repo.findAllMerchants();

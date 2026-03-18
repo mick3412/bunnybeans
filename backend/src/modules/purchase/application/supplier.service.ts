@@ -48,7 +48,69 @@ export class SupplierService {
         code: 'SUPPLIER_NOT_FOUND',
       });
     }
-    return s;
+    const onTimeThresholdDays = 3;
+    const lead = await this.prisma.$queryRaw<
+      { totalCompleted: number; onTimeCount: number; avgDays: number | null }[]
+    >`
+      SELECT
+        COUNT(*)::int AS "totalCompleted",
+        SUM(
+          CASE
+            WHEN (EXTRACT(EPOCH FROM (rn."updatedAt" - COALESCE(po."orderDate", po."createdAt"))) / 86400.0) <= ${onTimeThresholdDays}
+            THEN 1 ELSE 0
+          END
+        )::int AS "onTimeCount",
+        AVG(EXTRACT(EPOCH FROM (rn."updatedAt" - COALESCE(po."orderDate", po."createdAt"))) / 86400.0) AS "avgDays"
+      FROM "ReceivingNote" rn
+      JOIN "PurchaseOrder" po ON po.id = rn."purchaseOrderId"
+      WHERE po."supplierId" = ${s.id}
+        AND rn.status = 'COMPLETED'
+    `;
+    const leadRow = lead[0] ?? { totalCompleted: 0, onTimeCount: 0, avgDays: null };
+
+    const qualified = await this.prisma.$queryRaw<{ qualifiedQty: number }[]>`
+      SELECT COALESCE(SUM(rnl."qualifiedQty"), 0)::int AS "qualifiedQty"
+      FROM "ReceivingNoteLine" rnl
+      JOIN "ReceivingNote" rn ON rn.id = rnl."receivingNoteId"
+      JOIN "PurchaseOrder" po ON po.id = rn."purchaseOrderId"
+      WHERE po."supplierId" = ${s.id}
+        AND rn.status = 'COMPLETED'
+    `;
+    const qualifiedQty = Number((qualified[0] as any)?.qualifiedQty ?? 0);
+
+    const returned = await this.prisma.$queryRaw<{ returnedQty: number }[]>`
+      SELECT COALESCE(ABS(SUM(ie."quantity")), 0)::int AS "returnedQty"
+      FROM "InventoryEvent" ie
+      JOIN "ReceivingNoteLine" rnl ON rnl.id = ie."referenceId"
+      JOIN "ReceivingNote" rn ON rn.id = rnl."receivingNoteId"
+      JOIN "PurchaseOrder" po ON po.id = rn."purchaseOrderId"
+      WHERE po."supplierId" = ${s.id}
+        AND ie.type = 'RETURN_TO_SUPPLIER'
+    `;
+    const returnedQty = Number((returned[0] as any)?.returnedQty ?? 0);
+
+    const deliveryOnTimeRate =
+      leadRow.totalCompleted > 0
+        ? Math.round((leadRow.onTimeCount / leadRow.totalCompleted) * 1000) / 1000
+        : null;
+    const deliveryLeadTimeDaysAvg =
+      leadRow.avgDays != null ? Math.round(leadRow.avgDays * 100) / 100 : null;
+    const returnRate =
+      qualifiedQty > 0
+        ? Math.round((returnedQty / qualifiedQty) * 1000) / 1000
+        : null;
+
+    return {
+      ...s,
+      kpis: {
+        deliveryOnTimeThresholdDays: onTimeThresholdDays,
+        deliveryOnTimeRate,
+        deliveryLeadTimeDaysAvg,
+        qualifiedQty,
+        returnedQty,
+        returnRate,
+      },
+    };
   }
 
   async create(data: {

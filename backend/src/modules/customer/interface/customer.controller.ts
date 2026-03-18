@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Get,
+  Param,
+  Patch,
   Post,
   Query,
   UploadedFile,
@@ -20,10 +22,116 @@ import {
 export class CustomerController {
   constructor(private readonly service: CustomerService) {}
 
-  /** GET 唯讀；POS 促銷試算選客戶用（與 seed memberLevel 對齊） */
+  /** GET 唯讀；支援 status、tag、phone、name、memberLevel 篩選 */
   @Get()
-  list(@Query('merchantId') merchantId: string) {
-    return this.service.listByMerchant(merchantId);
+  list(
+    @Query('merchantId') merchantId: string,
+    @Query('status') status?: string,
+    @Query('tag') tag?: string,
+    @Query('phone') phone?: string,
+    @Query('name') name?: string,
+    @Query('memberLevel') memberLevel?: string,
+  ) {
+    return this.service.listByMerchant(merchantId, {
+      status,
+      tag,
+      phone,
+      name,
+      memberLevel,
+    });
+  }
+
+  /** POST 合併會員（Admin）；body { primaryId, mergeIds } */
+  @Post('merge')
+  @UseGuards(AdminApiKeyGuard)
+  merge(
+    @Body() body: { primaryId: string; mergeIds: string[] },
+  ) {
+    if (!body?.primaryId || !Array.isArray(body.mergeIds)) {
+      throw new BadRequestException({
+        message: 'primaryId and mergeIds (array) required',
+        code: 'CUSTOMER_MERGE_INVALID',
+      });
+    }
+    return this.service.merge(body.primaryId.trim(), body.mergeIds);
+  }
+
+  /** GET 模糊搜尋 phone／name／memberCode，供 POS 快速選客 */
+  @Get('search')
+  search(
+    @Query('merchantId') merchantId: string,
+    @Query('q') q: string,
+  ) {
+    return this.service.search(merchantId, q ?? '');
+  }
+
+  /** GET 互動紀錄 */
+  @Get(':id/contacts')
+  getContacts(
+    @Param('id') id: string,
+    @Query('merchantId') merchantId?: string,
+  ) {
+    return this.service.getContacts(id, merchantId);
+  }
+
+  /** POST 新增一筆互動紀錄（Admin） */
+  @Post(':id/contacts')
+  @UseGuards(AdminApiKeyGuard)
+  addContact(
+    @Param('id') id: string,
+    @Body() body: { type: string; note?: string; nextFollowUpAt?: string; createdBy?: string },
+    @Query('merchantId') merchantId?: string,
+  ) {
+    return this.service.addContact(id, body, merchantId);
+  }
+
+  /** GET 單筆詳情（含 pointBalance、expiringSoon、expiringAt、status、tags） */
+  @Get(':id')
+  getById(
+    @Param('id') id: string,
+    @Query('merchantId') merchantId?: string,
+  ) {
+    return this.service.getById(id, merchantId);
+  }
+
+  /** POST 建立會員（Admin） */
+  @Post()
+  @UseGuards(AdminApiKeyGuard)
+  create(
+    @Body()
+    body: {
+      merchantId: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      memberLevel?: string | null;
+      code?: string | null;
+      memberCode?: string | null;
+    },
+  ) {
+    return this.service.create(body);
+  }
+
+  /** PATCH 更新會員（Admin）；可更新 status、blockReason、tags */
+  @Patch(':id')
+  @UseGuards(AdminApiKeyGuard)
+  update(
+    @Param('id') id: string,
+    @Body()
+    body: Partial<{
+      name: string;
+      phone: string | null;
+      email: string | null;
+      memberLevel: string | null;
+      code: string | null;
+      memberCode: string | null;
+      joinDate: string | null;
+      status: string;
+      blockReason: string | null;
+      tags: string[];
+    }>,
+  ) {
+    return this.service.update(id, body);
   }
 
   @Post('import')

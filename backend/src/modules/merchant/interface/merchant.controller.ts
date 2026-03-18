@@ -5,6 +5,12 @@ import { MerchantService } from '../application/merchant.service';
 export class MerchantController {
   constructor(private readonly service: MerchantService) {}
 
+  // Single merchant (optional; for single-tenant frontend)
+  @Get('merchant/current')
+  getCurrentMerchant() {
+    return this.service.getCurrentMerchant();
+  }
+
   // Merchants
 
   @Get('merchants')

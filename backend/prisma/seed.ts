@@ -8,8 +8,6 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const E2E_CUSTOMER_ID = 'e2e00001-0000-4000-8000-00000000c001';
-
 async function wipeAll() {
   await prisma.receivingNoteLine.deleteMany();
   await prisma.receivingNote.deleteMany();
@@ -27,10 +25,13 @@ async function wipeAll() {
   await prisma.loyaltyCoupon.deleteMany();
   await prisma.loyaltySettings.deleteMany();
   await prisma.promotionRule.deleteMany();
+  await prisma.customerContactLog.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.product.deleteMany();
   await prisma.warehouse.deleteMany();
   await prisma.store.deleteMany();
+  await prisma.segment.deleteMany();
+  await prisma.productTag.deleteMany();
   await prisma.merchant.deleteMany();
   await prisma.category.deleteMany();
   await prisma.brand.deleteMany();
@@ -145,21 +146,19 @@ async function main() {
     },
   });
 
-  /** 會員／客戶：E2E 固定 id + 多樣等級／入會日／有無訂單／點數情境（見 db-seed.md） */
-  const join = (yOff: number, m: number, d: number) => new Date(y - yOff, m, d);
-  await prisma.customer.create({
-    data: {
-      id: E2E_CUSTOMER_ID,
-      merchantId: merchant.id,
-      code: 'E2E',
-      name: 'E2E 掛帳測試',
-      phone: '0900000001',
-      email: 'e2e@test.local',
-      memberLevel: 'NORMAL',
-      memberCode: 'M000',
-      joinDate: join(2, 0, 15),
-    },
+  /** ProductTag：商品標籤示範，供前端類別管理／商品頁選用 */
+  await prisma.productTag.create({
+    data: { merchantId: merchant.id, code: 'SEED-TAG-HOT', name: '熱銷' },
   });
+  await prisma.productTag.create({
+    data: { merchantId: merchant.id, code: 'SEED-TAG-NEW', name: '新品' },
+  });
+  await prisma.productTag.create({
+    data: { merchantId: merchant.id, code: 'SEED-TAG-CLEARANCE', name: '清倉' },
+  });
+
+  /** 會員／客戶：多樣等級／入會日／有無訂單／點數情境（見 db-seed.md）；E2E 客戶由 e2e-seed 建立 */
+  const join = (yOff: number, m: number, d: number) => new Date(y - yOff, m, d);
   await prisma.customer.create({
     data: {
       merchantId: merchant.id,
@@ -261,6 +260,147 @@ async function main() {
       joinDate: null,
     },
   });
+
+  /** 更多會員 dummy（供會員管理列表／搜尋／篩選測試；多數無訂單） */
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM007',
+      name: '趙測試',
+      phone: '0910001001',
+      email: 'zhao@demo.local',
+      memberLevel: 'NORMAL',
+      memberCode: 'M009',
+      joinDate: new Date(now.getTime() - 2 * 86400000),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM008',
+      name: '孫銀卡',
+      phone: '0910002002',
+      memberLevel: 'GOLD',
+      memberCode: 'M010',
+      joinDate: join(0, 10, 15),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM009',
+      name: '周常客',
+      phone: '0910003003',
+      memberLevel: 'NORMAL',
+      memberCode: 'M011',
+      joinDate: join(1, 1, 20),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM010',
+      name: '吳小惠',
+      phone: '0910004004',
+      email: 'wu@demo.local',
+      memberLevel: 'VIP',
+      memberCode: 'M012',
+      joinDate: join(0, 7, 1),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM011',
+      name: '馮新友',
+      phone: '0910005005',
+      memberLevel: 'NORMAL',
+      memberCode: 'M013',
+      joinDate: new Date(now.getTime() - 14 * 86400000),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM012',
+      name: '陳大點',
+      phone: '0910006006',
+      memberLevel: 'GOLD',
+      memberCode: 'M014',
+      joinDate: join(0, 4, 10),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM013',
+      name: '林小芳',
+      phone: '0910007007',
+      email: 'lin.xiao@demo.local',
+      memberLevel: 'NORMAL',
+      memberCode: 'M015',
+      joinDate: join(1, 11, 5),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM014',
+      name: '許匿名',
+      phone: null,
+      memberLevel: 'NORMAL',
+      memberCode: 'M016',
+      joinDate: join(0, 6, 20),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM015',
+      name: '高回購',
+      phone: '0910008008',
+      memberLevel: 'VIP',
+      memberCode: 'M017',
+      joinDate: join(2, 0, 1),
+    },
+  });
+  await prisma.customer.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'MEM016',
+      name: '謝試用',
+      phone: '0910009009',
+      memberLevel: 'NORMAL',
+      memberCode: 'M018',
+      joinDate: new Date(now.getTime() - 1 * 86400000),
+    },
+  });
+
+  /** 分群（階段 E）：手測 GET /crm/segments/:id/preview 用 */
+  await prisma.segment.create({
+    data: { merchantId: merchant.id, name: '全部 ACTIVE 會員' },
+  });
+  await prisma.segment.create({
+    data: {
+      merchantId: merchant.id,
+      name: 'VIP 會員',
+      conditions: { memberLevel: 'VIP' },
+    },
+  });
+  /** 互動紀錄（階段 F）示範一筆 */
+  const custForLog = await prisma.customer.findFirst({
+    where: { merchantId: merchant.id, code: 'VIP001' },
+  });
+  if (custForLog) {
+    await prisma.customerContactLog.create({
+      data: {
+        customerId: custForLog.id,
+        type: 'CALL',
+        note: 'SEED 示範聯絡紀錄',
+        createdBy: 'seed',
+      },
+    });
+  }
 
   const supActive1 = await prisma.supplier.create({
     data: {
@@ -653,6 +793,31 @@ async function main() {
     },
     data: { onHandQty: { decrement: 2 } },
   });
+  const order1Occurred = new Date(y, 2, 1);
+  await prisma.financeEvent.create({
+    data: {
+      type: 'SALE_RECEIVABLE',
+      partyId: custVip!.id,
+      currency: 'TWD',
+      amount: 290,
+      taxAmount: 0,
+      occurredAt: order1Occurred,
+      referenceId: order1.id,
+      note: `POS ${order1.orderNumber} 應收`,
+    },
+  });
+  await prisma.financeEvent.create({
+    data: {
+      type: 'SALE_PAYMENT',
+      partyId: custVip!.id,
+      currency: 'TWD',
+      amount: 290,
+      taxAmount: 0,
+      occurredAt: order1Occurred,
+      referenceId: order1.id,
+      note: `POS ${order1.orderNumber} 現金`,
+    },
+  });
   await prisma.loyaltySettings.create({ data: { merchantId: merchant.id } });
   await prisma.loyaltyCoupon.create({
     data: {
@@ -717,6 +882,30 @@ async function main() {
         data: { onHandQty: { decrement: l.qty } },
       });
     }
+    await prisma.financeEvent.create({
+      data: {
+        type: 'SALE_RECEIVABLE',
+        partyId: args.customerId,
+        currency: 'TWD',
+        amount: args.total,
+        taxAmount: 0,
+        occurredAt: args.occurredAt,
+        referenceId: order.id,
+        note: `POS ${args.orderNumber} 應收`,
+      },
+    });
+    await prisma.financeEvent.create({
+      data: {
+        type: 'SALE_PAYMENT',
+        partyId: args.customerId,
+        currency: 'TWD',
+        amount: args.total,
+        taxAmount: 0,
+        occurredAt: args.occurredAt,
+        referenceId: order.id,
+        note: `POS ${args.orderNumber} 實收`,
+      },
+    });
     return order;
   }
   const custGold = await c('VIP002');
@@ -843,14 +1032,14 @@ async function main() {
   });
   const order2 = await posSale({
     orderNumber: `DEMO-POS-${y}-002`,
-    customerId: E2E_CUSTOMER_ID,
+    customerId: custVip!.id,
     subtotal: 280,
     discount: 0,
     total: 280,
     method: 'CREDIT',
     occurredAt: new Date(y, 2, 2, 17, 0),
     lines: [{ productId: pFeed.id, qty: 1, unitPrice: 280 }],
-    note: 'POS DEMO-POS-002 E2E 賒帳',
+    note: 'POS DEMO-POS-002 賒帳示範',
   });
   const ledgerRows: {
     customerId: string;
@@ -873,8 +1062,17 @@ async function main() {
     {
       customerId: custVip!.id,
       type: 'EARNED',
+      amount: 2,
+      balanceAfter: 4,
+      referenceId: order2.id,
+      note: `贈點 ${order2.orderNumber}`,
+      createdAt: new Date(y, 2, 2, 17, 1),
+    },
+    {
+      customerId: custVip!.id,
+      type: 'EARNED',
       amount: 4,
-      balanceAfter: 6,
+      balanceAfter: 8,
       referenceId: order1b.id,
       note: `贈點 ${order1b.orderNumber}`,
       createdAt: new Date(y, 2, 10, 14, 31),
@@ -987,15 +1185,6 @@ async function main() {
       note: '兌換折 3 點（seed）',
       createdAt: new Date(y, 2, 9, 11, 0),
     },
-    {
-      customerId: E2E_CUSTOMER_ID,
-      type: 'EARNED',
-      amount: 2,
-      balanceAfter: 2,
-      referenceId: order2.id,
-      note: `贈點 ${order2.orderNumber}`,
-      createdAt: new Date(y, 2, 2, 17, 1),
-    },
   ];
   for (const row of ledgerRows) {
     await prisma.pointLedger.create({
@@ -1078,7 +1267,6 @@ async function main() {
     'RN by status:',
     await prisma.receivingNote.groupBy({ by: ['status'], _count: { _all: true } }),
   );
-  console.log('E2E customer id:', E2E_CUSTOMER_ID);
 }
 
 main()

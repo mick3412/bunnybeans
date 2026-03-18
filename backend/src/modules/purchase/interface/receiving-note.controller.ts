@@ -58,4 +58,15 @@ export class ReceivingNoteController {
   reject(@Param('id') id: string) {
     return this.svc.reject(id);
   }
+
+  @Post(':id/return-to-supplier')
+  returnToSupplier(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      lines: { receivingNoteLineId: string; quantity: number }[];
+    },
+  ) {
+    return this.svc.returnToSupplier(id, body);
+  }
 }

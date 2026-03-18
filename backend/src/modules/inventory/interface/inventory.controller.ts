@@ -16,10 +16,13 @@ import type { Response } from 'express';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { InventoryEventType } from '@prisma/client';
 import {
+  ExpiringInventoryFilter,
   InventoryBalanceFilter,
   InventoryEventFilter,
   InventoryService,
   RecordInventoryEventInput,
+  ReplenishmentSuggestionsFilter,
+  SlowMovingFilter,
   TransferInventoryInput,
 } from '../application/inventory.service';
 
@@ -60,6 +63,33 @@ export class InventoryController {
       });
     }
     return this.service.importEventsFromCsvBuffer(file.buffer);
+  }
+
+  @Post('events/batch-stocktake')
+  @UseGuards(AdminApiKeyGuard)
+  batchStocktake(
+    @Body()
+    body: {
+      warehouseId: string;
+      lines: { productId: string; actualQty: number }[];
+    },
+  ) {
+    return this.service.batchStocktake(body);
+  }
+
+  /**
+   * 掃碼盤點：以 sku（後續可擴充 barcode）輸入實際數量。
+   */
+  @Post('events/scan-stocktake')
+  @UseGuards(AdminApiKeyGuard)
+  scanStocktake(
+    @Body()
+    body: {
+      warehouseId: string;
+      lines: { sku: string; actualQty: number }[];
+    },
+  ) {
+    return this.service.scanStocktake(body);
   }
 
   @Post('events')
@@ -150,6 +180,70 @@ export class InventoryController {
     };
 
     return this.service.getEvents(filter);
+  }
+
+  @Get('expiring')
+  getExpiring(
+    @Query('warehouseId') warehouseId?: string,
+    @Query('productId') productId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('daysAhead') daysAhead?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const filter: ExpiringInventoryFilter = {
+      warehouseId,
+      productId,
+      from,
+      to,
+      daysAhead: daysAhead ? Number(daysAhead) : undefined,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    };
+    return this.service.getExpiring(filter);
+  }
+
+  @Get('slow-moving')
+  getSlowMoving(
+    @Query('merchantId') merchantId: string,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('lookbackDays') lookbackDays?: string,
+    @Query('salesThreshold') salesThreshold?: string,
+    @Query('onHandThreshold') onHandThreshold?: string,
+  ) {
+    const filter: SlowMovingFilter = {
+      merchantId,
+      warehouseId,
+      lookbackDays: lookbackDays ? Number(lookbackDays) : undefined,
+      salesThreshold: salesThreshold != null ? Number(salesThreshold) : undefined,
+      onHandThreshold: onHandThreshold != null ? Number(onHandThreshold) : undefined,
+    };
+    return this.service.getSlowMoving(filter);
+  }
+
+  @Get('replenishment-suggestions')
+  getReplenishmentSuggestions(
+    @Query('merchantId') merchantId: string,
+    @Query('warehouseId') warehouseId?: string,
+    @Query('daysLookback') daysLookback?: string,
+    @Query('daysAhead') daysAhead?: string,
+    @Query('safetyDays') safetyDays?: string,
+    @Query('minSuggestedQty') minSuggestedQty?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const filter: ReplenishmentSuggestionsFilter = {
+      merchantId,
+      warehouseId,
+      daysLookback: daysLookback ? Number(daysLookback) : undefined,
+      daysAhead: daysAhead ? Number(daysAhead) : undefined,
+      safetyDays: safetyDays ? Number(safetyDays) : undefined,
+      minSuggestedQty: minSuggestedQty ? Number(minSuggestedQty) : undefined,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    };
+    return this.service.getReplenishmentSuggestions(filter);
   }
 }
 

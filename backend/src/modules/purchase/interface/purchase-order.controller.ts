@@ -19,6 +19,45 @@ export class PurchaseOrderController {
     return this.svc.getById(id, merchantId);
   }
 
+  @Post('from-replenishment')
+  createFromReplenishment(
+    @Body()
+    body: {
+      supplierId: string;
+      warehouseId: string;
+      suggestions: { productId: string; suggestedQty: number }[];
+    },
+  ) {
+    return this.svc.createFromReplenishment(body);
+  }
+
+  /**
+   * 快速進貨：一鍵建立 PO + RN + complete（並寫入 Inventory/Finance events）。
+   * UI flow: 選供應商 → 選品項 → 輸入數量 → 完成。
+   */
+  @Post('quick-receive')
+  quickReceive(
+    @Body()
+    body: {
+      merchantId: string;
+      supplierId: string;
+      warehouseId: string;
+      orderNumber: string;
+      inspectorName?: string;
+      remark?: string;
+      lines: {
+        productId: string;
+        qty: number;
+        unitCost?: number;
+        batchCode?: string | null;
+        expiryDate?: string | null;
+        weightUnit?: string | null;
+      }[];
+    },
+  ) {
+    return this.svc.quickReceive(body);
+  }
+
   @Post()
   create(
     @Body()

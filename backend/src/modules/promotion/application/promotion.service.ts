@@ -197,13 +197,43 @@ export class PromotionService {
   }
 
   async reorder(merchantId: string, ids: string[]) {
+    if (!merchantId?.trim()) {
+      throw new BadRequestException({
+        message: 'merchantId is required',
+        code: 'PROMOTION_BODY_INVALID',
+      });
+    }
     if (!ids.length) {
       throw new BadRequestException({
         message: 'ids required',
         code: 'PROMOTION_REORDER_EMPTY',
       });
     }
-    await this.repo.reorder(merchantId, ids);
+    const cleaned = ids.map((x) => String(x ?? '').trim()).filter(Boolean);
+    if (!cleaned.length) {
+      throw new BadRequestException({
+        message: 'ids required',
+        code: 'PROMOTION_REORDER_EMPTY',
+      });
+    }
+    const uniq = [...new Set(cleaned)];
+    if (uniq.length !== cleaned.length) {
+      throw new BadRequestException({
+        message: 'duplicate ids',
+        code: 'PROMOTION_REORDER_DUPLICATE_IDS',
+      });
+    }
+    const count = await this.prisma.promotionRule.count({
+      where: { merchantId: merchantId.trim(), id: { in: uniq } },
+    });
+    if (count !== uniq.length) {
+      throw new BadRequestException({
+        message: 'some ids not found for merchant',
+        code: 'PROMOTION_NOT_FOUND',
+      });
+    }
+
+    await this.repo.reorder(merchantId.trim(), uniq);
   }
 
   /**
@@ -270,6 +300,133 @@ export class PromotionService {
       total: result.total,
       applied: result.applied,
       messages: result.previewLines,
+      pointsMultiplier: result.pointsMultiplier,
+    };
+  }
+
+  /**
+   * 促銷成效追蹤：區間內每條規則的觸發次數、折讓合計、帶動銷售額
+   */
+  async getEffectiveness(
+    merchantId: string,
+    filter: { from?: string; to?: string; preset?: string },
+  ) {
+    const REPORT_PRESETS = ['today', 'last7d', 'last30d', 'currentMonth', 'last60d', 'lastHalfYear'] as const;
+    let presetUsed: string | undefined;
+    let start: Date;
+    let end: Date;
+    if (filter.from?.trim() && filter.to?.trim()) {
+      const s = new Date(filter.from.trim());
+      const e = new Date(filter.to.trim());
+      if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
+        throw new BadRequestException({ message: 'Invalid from or to date', code: 'REPORT_INVALID_RANGE' });
+      }
+      start = s;
+      start.setHours(0, 0, 0, 0);
+      end = e;
+      end.setHours(23, 59, 59, 999);
+      if (start.getTime() > end.getTime()) {
+        throw new BadRequestException({ message: 'from must be before or equal to to', code: 'REPORT_INVALID_RANGE' });
+      }
+    } else {
+      const p = REPORT_PRESETS.includes((filter.preset ?? '') as any) ? (filter.preset as string) : 'last30d';
+      presetUsed = p;
+      const now = new Date();
+      start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+      switch (p) {
+        case 'today':
+          break;
+        case 'last7d':
+          start.setDate(start.getDate() - 6);
+          break;
+        case 'last30d':
+          start.setDate(start.getDate() - 29);
+          break;
+        case 'currentMonth':
+          start.setDate(1);
+          break;
+        case 'last60d':
+          start.setDate(start.getDate() - 59);
+          break;
+        case 'lastHalfYear':
+          start.setDate(start.getDate() - 179);
+          break;
+        default:
+          start.setDate(start.getDate() - 29);
+          presetUsed = 'last30d';
+      }
+    }
+
+    const orders = await this.prisma.posOrder.findMany({
+      where: {
+        store: { merchantId },
+        createdAt: { gte: start, lte: end },
+      },
+      select: {
+        id: true,
+        totalAmount: true,
+        promotionApplied: true,
+      },
+    });
+
+    const ruleStats = new Map<
+      string,
+      { triggerCount: number; discountTotal: number; drivenRevenue: number }
+    >();
+
+    for (const o of orders) {
+      const raw = o.promotionApplied as
+        | { applied?: Array<{ ruleId?: string; discount?: number }> }
+        | null
+        | undefined;
+      const applied = Array.isArray(raw?.applied) ? raw!.applied : [];
+      const totalAmount = Number(o.totalAmount ?? 0);
+
+      for (const a of applied) {
+        const ruleId = typeof a?.ruleId === 'string' ? a.ruleId.trim() : '';
+        if (!ruleId) continue;
+        const discount = typeof a?.discount === 'number' ? a.discount : 0;
+        const cur = ruleStats.get(ruleId) ?? {
+          triggerCount: 0,
+          discountTotal: 0,
+          drivenRevenue: 0,
+        };
+        cur.triggerCount += 1;
+        cur.discountTotal += discount;
+        cur.drivenRevenue += totalAmount;
+        ruleStats.set(ruleId, cur);
+      }
+    }
+
+    const rules = await this.prisma.promotionRule.findMany({
+      where: { merchantId },
+      select: { id: true, name: true },
+    });
+    const ruleNames = new Map(rules.map((r) => [r.id, r.name]));
+
+    const items = rules.map((r) => {
+      const s = ruleStats.get(r.id) ?? {
+        triggerCount: 0,
+        discountTotal: 0,
+        drivenRevenue: 0,
+      };
+      return {
+        ruleId: r.id,
+        ruleName: r.name,
+        triggerCount: s.triggerCount,
+        discountTotal: s.discountTotal,
+        drivenRevenue: s.drivenRevenue,
+      };
+    });
+
+    return {
+      from: start.toISOString().slice(0, 10),
+      to: end.toISOString().slice(0, 10),
+      ...(presetUsed && { period: { preset: presetUsed, from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) } }),
+      items,
     };
   }
 }

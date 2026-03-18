@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { createHash } from 'crypto';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { DatabaseModule } from '../../shared/database/database.module';
 import { CustomerModule } from './customer.module';
@@ -177,4 +178,179 @@ describe('CustomerService import (integration)', () => {
     await prisma.customer.deleteMany({ where: { merchantId: m.id } });
     await prisma.merchant.delete({ where: { id: m.id } });
   }, 15000);
+});
+
+describe('CustomerService member 2.0 + contacts (integration)', () => {
+  let app: TestingModule;
+  let prisma: PrismaService;
+  let svc: CustomerService;
+
+  beforeAll(async () => {
+    if (!process.env.DATABASE_URL) return;
+    app = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({ isGlobal: true }),
+        DatabaseModule,
+        CustomerModule,
+      ],
+    }).compile();
+    prisma = app.get(PrismaService);
+    svc = app.get(CustomerService);
+  });
+  afterAll(async () => {
+    if (app) await app.close();
+  });
+
+  it('list filters by status and returns status/tags', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const m = await prisma.merchant.create({
+      data: { code: `M20-${Date.now()}`, name: 'M20' },
+    });
+    const c1 = await prisma.customer.create({
+      data: { merchantId: m.id, name: 'A', status: 'ACTIVE', tags: ['vip'] },
+    });
+    const c2 = await prisma.customer.create({
+      data: { merchantId: m.id, name: 'B', status: 'BLOCKED', tags: [] },
+    });
+    try {
+      const list = await svc.listByMerchant(m.id);
+      expect(list.length).toBeGreaterThanOrEqual(2);
+      const a = list.find((x) => x.id === c1.id);
+      expect(a?.status).toBe('ACTIVE');
+      expect(a?.tags).toEqual(['vip']);
+      const byStatus = await svc.listByMerchant(m.id, { status: 'BLOCKED' });
+      expect(byStatus.find((x) => x.id === c2.id)).toBeDefined();
+      expect(byStatus.find((x) => x.id === c1.id)).toBeUndefined();
+    } finally {
+      await prisma.customer.deleteMany({ where: { merchantId: m.id } });
+      await prisma.merchant.delete({ where: { id: m.id } });
+    }
+  }, 10000);
+
+  it('merge: reassigns orders/ledger and blocks merged', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const m = await prisma.merchant.create({
+      data: { code: `MERG-${Date.now()}`, name: 'Merge' },
+    });
+    const primary = await prisma.customer.create({
+      data: { merchantId: m.id, name: 'Primary' },
+    });
+    const other = await prisma.customer.create({
+      data: { merchantId: m.id, name: 'Other' },
+    });
+    try {
+      const out = await svc.merge(primary.id, [other.id]);
+      expect(out.primaryId).toBe(primary.id);
+      expect(out.merged).toContain(other.id);
+      const blocked = await prisma.customer.findUnique({
+        where: { id: other.id },
+      });
+      expect(blocked?.status).toBe('BLOCKED');
+    } finally {
+      await prisma.customer.deleteMany({ where: { merchantId: m.id } });
+      await prisma.merchant.delete({ where: { id: m.id } });
+    }
+  }, 10000);
+
+  it('getById includes consumption insights (integration)', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const m = await prisma.merchant.create({
+      data: { code: `INS-${Date.now()}`, name: 'Insight' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `S-${Date.now()}`, name: 'S', merchantId: m.id },
+    });
+    const c = await prisma.customer.create({
+      data: { merchantId: m.id, name: 'C' },
+    });
+    const catA = await prisma.category.create({
+      data: { code: `CA-${Date.now()}`, name: 'CatA' },
+    });
+    const catB = await prisma.category.create({
+      data: { code: `CB-${Date.now()}`, name: 'CatB' },
+    });
+    const p1 = await prisma.product.create({
+      data: { sku: `SKU-${Date.now()}-1`, name: 'P1', categoryId: catA.id },
+    });
+    const p2 = await prisma.product.create({
+      data: { sku: `SKU-${Date.now()}-2`, name: 'P2', categoryId: catB.id },
+    });
+    const o1 = await prisma.posOrder.create({
+      data: {
+        orderNumber: `O-${Date.now()}-1`,
+        storeId: store.id,
+        customerId: c.id,
+        subtotalAmount: new Prisma.Decimal(100),
+        discountAmount: new Prisma.Decimal(0),
+        totalAmount: new Prisma.Decimal(100),
+        items: { create: [{ productId: p1.id, quantity: 2, unitPrice: new Prisma.Decimal(50) }] },
+        payments: { create: [{ method: 'CASH', amount: new Prisma.Decimal(100) }] },
+      },
+    });
+    const o2 = await prisma.posOrder.create({
+      data: {
+        orderNumber: `O-${Date.now()}-2`,
+        storeId: store.id,
+        customerId: c.id,
+        subtotalAmount: new Prisma.Decimal(200),
+        discountAmount: new Prisma.Decimal(20),
+        totalAmount: new Prisma.Decimal(180),
+        items: {
+          create: [
+            { productId: p1.id, quantity: 1, unitPrice: new Prisma.Decimal(50) },
+            { productId: p2.id, quantity: 4, unitPrice: new Prisma.Decimal(50) },
+          ],
+        },
+        payments: { create: [{ method: 'CASH', amount: new Prisma.Decimal(180) }] },
+      },
+    });
+    try {
+      const out = await svc.getById(c.id, m.id);
+      expect(out.insights).toBeDefined();
+      expect(out.insights.totalSpend).toBe(280);
+      expect(out.insights.ordersCount).toBe(2);
+      expect(out.insights.ordersLast30d).toBe(2);
+      expect(out.insights.lastOrder?.id).toBe(o2.id);
+      expect(out.insights.lastOrder?.totalAmount).toBe(180);
+      expect(out.insights.preferredCategories[0].categoryId).toBe(catB.id);
+    } finally {
+      await prisma.posOrderPayment.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
+      await prisma.posOrderItem.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
+      await prisma.posOrder.deleteMany({ where: { id: { in: [o1.id, o2.id] } } });
+      await prisma.product.deleteMany({ where: { id: { in: [p1.id, p2.id] } } });
+      await prisma.category.deleteMany({ where: { id: { in: [catA.id, catB.id] } } });
+      await prisma.customer.deleteMany({ where: { id: c.id } });
+      await prisma.store.deleteMany({ where: { id: store.id } });
+      await prisma.merchant.delete({ where: { id: m.id } });
+    }
+  }, 15000);
+
+  it('getContacts and addContact', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const m = await prisma.merchant.create({
+      data: { code: `CON-${Date.now()}`, name: 'Contact' },
+    });
+    const c = await prisma.customer.create({
+      data: { merchantId: m.id, name: 'C' },
+    });
+    try {
+      const empty = await svc.getContacts(c.id);
+      expect(empty.items).toEqual([]);
+      const added = await svc.addContact(c.id, {
+        type: 'CALL',
+        note: 'test',
+        createdBy: 'agent',
+      });
+      expect(added.type).toBe('CALL');
+      expect(added.note).toBe('test');
+      expect(added.createdBy).toBe('agent');
+      const list = await svc.getContacts(c.id);
+      expect(list.items.length).toBe(1);
+      expect(list.items[0].id).toBe(added.id);
+    } finally {
+      await prisma.customerContactLog.deleteMany({ where: { customerId: c.id } });
+      await prisma.customer.deleteMany({ where: { merchantId: m.id } });
+      await prisma.merchant.delete({ where: { id: m.id } });
+    }
+  }, 10000);
 });

@@ -201,4 +201,27 @@ export class LoyaltyController {
       return { error: { code: 'NOT_FOUND', message: 'coupon' } };
     }
   }
+
+  @Get('reports/activity')
+  @UseGuards(AdminApiKeyGuard)
+  async reportsActivity(
+    @Query('merchantId') merchantId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('preset') preset?: string,
+    @Query('groupBy') groupBy?: string,
+  ) {
+    return this.loyalty.getReportsActivity(merchantId?.trim() ?? '', { from, to, preset, groupBy });
+  }
+
+  @Get('reports/members')
+  @UseGuards(AdminApiKeyGuard)
+  async reportsMembers(
+    @Query('merchantId') merchantId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('preset') preset?: string,
+  ) {
+    return this.loyalty.getReportsMembers(merchantId?.trim() ?? '', { from, to, preset });
+  }
 }

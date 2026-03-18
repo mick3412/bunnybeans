@@ -30,6 +30,26 @@ export class PromotionController {
     return this.service.list(merchantId.trim(), { status, q });
   }
 
+  @Get('effectiveness')
+  getEffectiveness(
+    @Query('merchantId') merchantId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('preset') preset?: string,
+  ) {
+    if (!merchantId?.trim()) {
+      throw new BadRequestException({
+        message: 'merchantId is required',
+        code: 'PROMOTION_BODY_INVALID',
+      });
+    }
+    return this.service.getEffectiveness(merchantId.trim(), {
+      from,
+      to,
+      preset,
+    });
+  }
+
   @Patch('reorder/bulk')
   @UseGuards(AdminApiKeyGuard)
   reorderBulk(

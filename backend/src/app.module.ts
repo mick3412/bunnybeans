@@ -16,6 +16,9 @@ import { CustomerModule } from './modules/customer/customer.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { PurchaseModule } from './modules/purchase/purchase.module';
 import { LoyaltyModule } from './modules/loyalty/loyalty.module';
+import { CrmModule } from './modules/crm/crm.module';
+import { OpsModule } from './modules/ops/ops.module';
+import { ProductTagModule } from './modules/product-tag/product-tag.module';
 import { AdminApiKeyGuard } from './shared/guards/admin-api-key.guard';
 
 @Module({
@@ -37,6 +40,9 @@ import { AdminApiKeyGuard } from './shared/guards/admin-api-key.guard';
     ImportsModule,
     PurchaseModule,
     LoyaltyModule,
+    CrmModule,
+    OpsModule,
+    ProductTagModule,
   ],
   controllers: [AppController],
   providers: [AppService, AdminApiKeyGuard],

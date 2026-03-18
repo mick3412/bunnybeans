@@ -8,7 +8,8 @@ export type ActionType =
   | 'WHOLE_PERCENT'
   | 'WHOLE_FIXED'
   | 'LINE_PERCENT'
-  | 'GIFT_OR_UPSELL';
+  | 'GIFT_OR_UPSELL'
+  | 'POINTS_MULTIPLIER';
 export type SelectionRule = 'LOWEST_PRICE' | 'HIGHEST_PRICE' | 'ALL';
 
 export interface Condition {
@@ -34,6 +35,8 @@ export interface Action {
   /** GIFT_OR_UPSELL */
   productName?: string;
   upsellAmount?: number;
+  /** POINTS_MULTIPLIER：點數倍率（例如 2 = 加倍點數） */
+  pointsMultiplier?: number;
   tiers?: ActionTier[];
 }
 
@@ -71,6 +74,8 @@ export interface EngineResult {
   total: number;
   applied: AppliedPromotion[];
   previewLines: string[];
+  /** 點數倍率（POS 贈點用）；預設 1，取套用規則中最大值 */
+  pointsMultiplier: number;
 }
 
 function round2(n: number): number {
@@ -220,6 +225,7 @@ export function applyPromotions(
   let totalDiscount = 0;
   const applied: AppliedPromotion[] = [];
   const previewLines: string[] = [];
+  let pointsMultiplier = 1;
 
   const condCtx = { subtotal, totalQty, lines };
 
@@ -264,6 +270,13 @@ export function applyPromotions(
             ? `贈品：${action.productName ?? '禮品'}`
             : `加價購：${action.productName ?? ''} +$${action.upsellAmount}`,
         );
+      } else if (action.type === 'POINTS_MULTIPLIER') {
+        const m = Number(action.pointsMultiplier ?? 1);
+        if (Number.isFinite(m) && m > 1) {
+          pointsMultiplier = Math.max(pointsMultiplier, m);
+          messages.push(`點數 ${m}x`);
+          previewLines.push(`「${rule.name}」點數加倍 ${m}x`);
+        }
       }
     }
 
@@ -291,6 +304,7 @@ export function applyPromotions(
     total: round2(subtotal - totalDiscount),
     applied,
     previewLines,
+    pointsMultiplier,
   };
 }
 

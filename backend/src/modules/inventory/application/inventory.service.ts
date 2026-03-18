@@ -31,6 +31,14 @@ export interface RecordInventoryEventInput {
   occurredAt?: string;
   referenceId?: string;
   note?: string;
+  /** 飼料／生鮮等需要控管之批號（選填） */
+  batchCode?: string | null;
+  /** 飼料／生鮮等需要控管之效期日（選填，ISO 字串） */
+  expiryDate?: string | null;
+  /** 重量單位（例如 KG, G；選填） */
+  weightUnit?: string | null;
+  /** 批次匯入時為 true，允許多筆共用同一 referenceId */
+  skipReferenceIdCheck?: boolean;
 }
 
 export interface InventoryBalanceFilter {
@@ -46,6 +54,40 @@ export interface InventoryEventFilter {
   to?: string;
   page?: number;
   pageSize?: number;
+}
+
+export interface ExpiringInventoryFilter {
+  warehouseId?: string;
+  productId?: string;
+  from?: string;
+  to?: string;
+  daysAhead?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ReplenishmentSuggestionsFilter {
+  merchantId: string;
+  warehouseId?: string;
+  daysLookback?: number;
+  daysAhead?: number;
+  safetyDays?: number;
+  minSuggestedQty?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface SlowMovingFilter {
+  merchantId: string;
+  warehouseId?: string;
+  lookbackDays?: number;
+  salesThreshold?: number;
+  onHandThreshold?: number;
+}
+
+export interface ScanStocktakeInput {
+  warehouseId: string;
+  lines: { sku: string; actualQty: number }[];
 }
 
 @Injectable()
@@ -98,6 +140,22 @@ export class InventoryService {
       });
     }
 
+    if (
+      input.referenceId?.trim() &&
+      !input.skipReferenceIdCheck &&
+      (input.type === 'STOCKTAKE_GAIN' || input.type === 'STOCKTAKE_LOSS')
+    ) {
+      const existing = await this.prisma.inventoryEvent.findFirst({
+        where: { referenceId: input.referenceId.trim() },
+      });
+      if (existing) {
+        throw new ConflictException({
+          message: 'Duplicate referenceId for inventory event',
+          code: 'INVENTORY_REFERENCE_ID_DUPLICATE',
+        });
+      }
+    }
+
     const event = await this.repo.appendEvent({
       productId: input.productId,
       warehouseId: input.warehouseId,
@@ -106,6 +164,9 @@ export class InventoryService {
       occurredAt,
       referenceId: input.referenceId,
       note: input.note,
+      batchCode: input.batchCode?.trim() || null,
+      expiryDate: input.expiryDate ? new Date(input.expiryDate) : undefined,
+      weightUnit: input.weightUnit?.trim() || null,
     });
 
     const existing = await this.repo.findBalance(input.productId, input.warehouseId);
@@ -124,6 +185,157 @@ export class InventoryService {
     });
 
     return { event, balance };
+  }
+
+  /**
+   * 多品多倉盤點：依 actualQty 與 onHandQty 差異，批次寫入 STOCKTAKE_GAIN/LOSS
+   */
+  async batchStocktake(input: {
+    warehouseId: string;
+    lines: { productId: string; actualQty: number }[];
+  }): Promise<{
+    ok: number;
+    failed: { lineIndex: number; reason: string }[];
+    referenceId: string;
+  }> {
+    const whId = input.warehouseId?.trim();
+    if (!whId) {
+      throw new BadRequestException({
+        message: 'warehouseId is required',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+    const lines = Array.isArray(input.lines) ? input.lines : [];
+    if (lines.length === 0) {
+      throw new BadRequestException({
+        message: 'lines is required and must be non-empty',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+    const warehouse = await this.prisma.warehouse.findUnique({
+      where: { id: whId },
+    });
+    if (!warehouse) {
+      throw new NotFoundException({
+        message: 'Warehouse not found',
+        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
+      });
+    }
+    const productIds = lines.map((l) => l.productId).filter(Boolean);
+    const balances = await this.prisma.inventoryBalance.findMany({
+      where: {
+        warehouseId: whId,
+        productId: { in: productIds },
+      },
+      select: { productId: true, onHandQty: true },
+    });
+    const onHandMap = new Map(balances.map((b) => [b.productId, b.onHandQty]));
+    const referenceId = randomUUID();
+    const occurredAt = new Date().toISOString();
+    let ok = 0;
+    const failed: { lineIndex: number; reason: string }[] = [];
+    const errMsg = (e: unknown): string => {
+      if (e instanceof HttpException) {
+        const r = e.getResponse();
+        if (typeof r === 'object' && r && 'message' in r) {
+          const m = (r as { message?: string }).message;
+          if (typeof m === 'string') return m;
+        }
+        return (e as Error).message;
+      }
+      if (e instanceof Error) return e.message;
+      return String(e);
+    };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const productId = (line?.productId ?? '').trim();
+      const actualQty = Math.floor(Number(line?.actualQty ?? 0));
+      if (!productId) {
+        failed.push({ lineIndex: i + 1, reason: 'productId required' });
+        continue;
+      }
+      const onHand = onHandMap.get(productId) ?? 0;
+      const delta = actualQty - onHand;
+      if (delta === 0) {
+        ok++;
+        continue;
+      }
+      try {
+        await this.recordInventoryEvent({
+          productId,
+          warehouseId: whId,
+          type: delta > 0 ? 'STOCKTAKE_GAIN' : 'STOCKTAKE_LOSS',
+          quantity: Math.abs(delta),
+          occurredAt,
+          referenceId,
+          note: 'batch-stocktake',
+          skipReferenceIdCheck: true,
+        });
+        ok++;
+      } catch (e) {
+        failed.push({ lineIndex: i + 1, reason: errMsg(e) });
+      }
+    }
+    return { ok, failed, referenceId };
+  }
+
+  /**
+   * 掃碼盤點：以 sku（之後可擴充 barcode）輸入實際數量，內部轉換為 productId 後走 batchStocktake。
+   */
+  async scanStocktake(input: ScanStocktakeInput) {
+    const whId = input.warehouseId?.trim();
+    if (!whId) {
+      throw new BadRequestException({
+        message: 'warehouseId is required',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+    const lines = Array.isArray(input.lines) ? input.lines : [];
+    if (lines.length === 0) {
+      throw new BadRequestException({
+        message: 'lines is required and must be non-empty',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+
+    const codes = [...new Set(lines.map((l) => (l?.sku ?? '').trim()).filter(Boolean))];
+    const products = await this.prisma.product.findMany({
+      where: {
+        OR: [{ sku: { in: codes } }, { barcode: { in: codes } }],
+      },
+      select: { id: true, sku: true, barcode: true },
+    });
+    const byCode = new Map<string, string>();
+    for (const p of products) {
+      byCode.set(p.sku, p.id);
+      if (p.barcode) byCode.set(p.barcode, p.id);
+    }
+
+    const failed: { lineIndex: number; reason: string }[] = [];
+    const resolved: { productId: string; actualQty: number }[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const sku = (lines[i]?.sku ?? '').trim();
+      if (!sku) {
+        failed.push({ lineIndex: i + 1, reason: 'sku required' });
+        continue;
+      }
+      const productId = byCode.get(sku);
+      if (!productId) {
+        failed.push({ lineIndex: i + 1, reason: `unknown sku: ${sku}` });
+        continue;
+      }
+      resolved.push({
+        productId,
+        actualQty: Math.floor(Number(lines[i]?.actualQty ?? 0)),
+      });
+    }
+
+    const out = await this.batchStocktake({ warehouseId: whId, lines: resolved });
+    return {
+      ok: out.ok,
+      failed: [...failed, ...out.failed],
+      referenceId: out.referenceId,
+    };
   }
 
   /** 原子調撥：同一 transaction 內 TRANSFER_OUT（來源倉）+ TRANSFER_IN（目的倉），共用 referenceId。 */
@@ -304,6 +516,350 @@ export class InventoryService {
       page,
       pageSize,
     });
+  }
+
+  /**
+   * 查詢即將到期批次：以 InventoryBalance onHandQty>0 搭配 InventoryEvent 的 batchCode/expiryDate 聚合。
+   * 實作細節委由 Repository，這裡只負責解析與驗證查詢條件。
+   */
+  async getExpiring(filter: ExpiringInventoryFilter) {
+    const page = filter.page && filter.page > 0 ? filter.page : 1;
+    const pageSize =
+      filter.pageSize && filter.pageSize > 0
+        ? Math.min(filter.pageSize, 200)
+        : 50;
+
+    let from: Date | undefined;
+    let to: Date | undefined;
+    const now = new Date();
+
+    if (filter.from) {
+      const d = new Date(filter.from);
+      if (Number.isNaN(d.getTime())) {
+        throw new BadRequestException({
+          message: 'invalid from',
+          code: 'INVENTORY_INVALID_INPUT',
+        });
+      }
+      from = d;
+    } else {
+      from = new Date(now.toISOString().slice(0, 10));
+    }
+
+    if (filter.to) {
+      const d = new Date(filter.to);
+      if (Number.isNaN(d.getTime())) {
+        throw new BadRequestException({
+          message: 'invalid to',
+          code: 'INVENTORY_INVALID_INPUT',
+        });
+      }
+      to = d;
+    } else {
+      const daysAhead = filter.daysAhead ?? 30;
+      if (!Number.isFinite(daysAhead) || daysAhead <= 0 || daysAhead > 365) {
+        throw new BadRequestException({
+          message: 'daysAhead must be between 1 and 365',
+          code: 'INVENTORY_INVALID_INPUT',
+        });
+      }
+      to = new Date(from);
+      to.setDate(to.getDate() + daysAhead);
+    }
+
+    if (from && to && from > to) {
+      throw new BadRequestException({
+        message: 'from must not be after to',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+
+    return this.repo.findExpiringBatches({
+      warehouseId: filter.warehouseId,
+      productId: filter.productId,
+      from,
+      to,
+      page,
+      pageSize,
+    });
+  }
+
+  private computeReplenishmentSuggestion(input: {
+    onHandQty: number;
+    avgDailySales: number;
+    daysAhead: number;
+    safetyDays: number;
+    minSuggestedQty: number;
+  }): { targetStock: number; suggestedQty: number; reason: string } {
+    const targetStockRaw =
+      input.avgDailySales * (input.daysAhead + input.safetyDays);
+    const targetStock = Math.max(0, Math.round(targetStockRaw * 100) / 100);
+    const delta = targetStock - input.onHandQty;
+    const suggestedQty = Math.max(0, Math.ceil(delta));
+    if (input.avgDailySales <= 0.000001) {
+      return { targetStock, suggestedQty: 0, reason: 'no recent sales' };
+    }
+    if (suggestedQty < input.minSuggestedQty) {
+      return { targetStock, suggestedQty: 0, reason: 'below minSuggestedQty' };
+    }
+    if (suggestedQty <= 0) {
+      return { targetStock, suggestedQty: 0, reason: 'onHand meets targetStock' };
+    }
+    return { targetStock, suggestedQty, reason: 'onHand below targetStock' };
+  }
+
+  /**
+   * 補貨建議：以近 N 天 SALE_OUT 推估 avgDailySales，並以 InventoryBalance 當前庫存計算 suggestedQty。
+   * 初版先採用預設係數（daysLookback=30, daysAhead=30, safetyDays=7），未來可改成 per-merchant 設定。
+   */
+  async getReplenishmentSuggestions(filter: ReplenishmentSuggestionsFilter) {
+    const merchantId = filter.merchantId?.trim();
+    if (!merchantId) {
+      throw new BadRequestException({
+        message: 'merchantId is required',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+
+    const daysLookback = Math.floor(Number(filter.daysLookback ?? 30));
+    if (!Number.isFinite(daysLookback) || daysLookback < 7 || daysLookback > 90) {
+      throw new BadRequestException({
+        message: 'daysLookback must be between 7 and 90',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+    const daysAhead = Math.floor(Number(filter.daysAhead ?? 30));
+    if (!Number.isFinite(daysAhead) || daysAhead < 1 || daysAhead > 365) {
+      throw new BadRequestException({
+        message: 'daysAhead must be between 1 and 365',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+    const safetyDays = Math.floor(Number(filter.safetyDays ?? 7));
+    if (!Number.isFinite(safetyDays) || safetyDays < 0 || safetyDays > 90) {
+      throw new BadRequestException({
+        message: 'safetyDays must be between 0 and 90',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+    const minSuggestedQty = Math.floor(Number(filter.minSuggestedQty ?? 0));
+    if (!Number.isFinite(minSuggestedQty) || minSuggestedQty < 0 || minSuggestedQty > 100_000) {
+      throw new BadRequestException({
+        message: 'minSuggestedQty must be a non-negative integer',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+
+    const page = filter.page && filter.page > 0 ? filter.page : 1;
+    const pageSize =
+      filter.pageSize && filter.pageSize > 0 ? Math.min(filter.pageSize, 200) : 50;
+
+    const warehouseId = filter.warehouseId?.trim() || undefined;
+    if (warehouseId) {
+      const wh = await this.prisma.warehouse.findFirst({
+        where: { id: warehouseId, merchantId },
+        select: { id: true },
+      });
+      if (!wh) {
+        throw new NotFoundException({
+          message: 'Warehouse not found',
+          code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
+        });
+      }
+    }
+
+    const warehouses = await this.prisma.warehouse.findMany({
+      where: { merchantId, ...(warehouseId && { id: warehouseId }) },
+      select: { id: true },
+    });
+    const warehouseIds = warehouses.map((w) => w.id);
+    if (warehouseIds.length === 0) {
+      return {
+        config: { daysLookback, daysAhead, safetyDays },
+        items: [],
+        page,
+        pageSize,
+        total: 0,
+      };
+    }
+
+    const balances = await this.prisma.inventoryBalance.findMany({
+      where: { warehouseId: { in: warehouseIds } },
+      select: { productId: true, warehouseId: true, onHandQty: true },
+    });
+    if (balances.length === 0) {
+      return {
+        config: { daysLookback, daysAhead, safetyDays },
+        items: [],
+        page,
+        pageSize,
+        total: 0,
+      };
+    }
+
+    const from = new Date();
+    from.setDate(from.getDate() - daysLookback);
+
+    const salesAgg = await this.prisma.inventoryEvent.groupBy({
+      by: ['productId', 'warehouseId'],
+      where: {
+        type: 'SALE_OUT',
+        warehouseId: { in: warehouseIds },
+        occurredAt: { gte: from },
+      },
+      _sum: { quantity: true },
+    });
+    const soldMap = new Map<string, number>();
+    for (const row of salesAgg) {
+      const sumQty = row._sum.quantity ?? 0;
+      const sold = Math.abs(sumQty);
+      soldMap.set(`${row.productId}::${row.warehouseId}`, sold);
+    }
+
+    const computed = balances
+      .map((b) => {
+        const totalSold = soldMap.get(`${b.productId}::${b.warehouseId}`) ?? 0;
+        const avgDailySales = totalSold / daysLookback;
+        const out = this.computeReplenishmentSuggestion({
+          onHandQty: b.onHandQty,
+          avgDailySales,
+          daysAhead,
+          safetyDays,
+          minSuggestedQty,
+        });
+        return {
+          productId: b.productId,
+          warehouseId: b.warehouseId,
+          onHandQty: b.onHandQty,
+          avgDailySales: Math.round(avgDailySales * 1000) / 1000,
+          targetStock: out.targetStock,
+          suggestedQty: out.suggestedQty,
+          reason: out.reason,
+        };
+      })
+      .filter((x) => x.suggestedQty > 0);
+
+    computed.sort((a, b) => b.suggestedQty - a.suggestedQty);
+
+    const total = computed.length;
+    const start = (page - 1) * pageSize;
+    const pageItems = computed.slice(start, start + pageSize);
+
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: [...new Set(pageItems.map((i) => i.productId))] } },
+      select: { id: true, sku: true, name: true },
+    });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    return {
+      config: { daysLookback, daysAhead, safetyDays },
+      items: pageItems.map((i) => ({
+        ...i,
+        sku: productMap.get(i.productId)?.sku ?? null,
+        productName: productMap.get(i.productId)?.name ?? null,
+      })),
+      page,
+      pageSize,
+      total,
+    };
+  }
+
+  /**
+   * 滯銷品：近 N 天銷量小於門檻且庫存大於門檻
+   */
+  async getSlowMoving(filter: SlowMovingFilter) {
+    const merchantId = filter.merchantId?.trim();
+    if (!merchantId) {
+      throw new BadRequestException({
+        message: 'merchantId is required',
+        code: 'INVENTORY_INVALID_INPUT',
+      });
+    }
+    const lookbackDays = Math.floor(Number(filter.lookbackDays ?? 30));
+    const salesThreshold = Math.floor(Number(filter.salesThreshold ?? 0));
+    const onHandThreshold = Math.floor(Number(filter.onHandThreshold ?? 1));
+
+    const warehouseId = filter.warehouseId?.trim() || undefined;
+    const warehouses = await this.prisma.warehouse.findMany({
+      where: { merchantId, ...(warehouseId && { id: warehouseId }) },
+      select: { id: true },
+    });
+    const warehouseIds = warehouses.map((w) => w.id);
+    if (warehouseIds.length === 0) {
+      const to = new Date();
+      const from = new Date(to);
+      from.setDate(from.getDate() - lookbackDays);
+      return { items: [], from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+    }
+
+    const from = new Date();
+    from.setDate(from.getDate() - lookbackDays);
+    const to = new Date();
+
+    const salesAgg = await this.prisma.inventoryEvent.groupBy({
+      by: ['productId', 'warehouseId'],
+      where: {
+        type: 'SALE_OUT',
+        warehouseId: { in: warehouseIds },
+        occurredAt: { gte: from, lte: to },
+      },
+      _sum: { quantity: true },
+    });
+    const soldMap = new Map<string, number>();
+    for (const row of salesAgg) {
+      const sold = Math.abs(Number(row._sum.quantity ?? 0));
+      soldMap.set(`${row.productId}::${row.warehouseId}`, sold);
+    }
+
+    const balances = await this.prisma.inventoryBalance.findMany({
+      where: { warehouseId: { in: warehouseIds } },
+      select: { productId: true, warehouseId: true, onHandQty: true },
+    });
+
+    const items: Array<{
+      productId: string;
+      sku: string;
+      name: string;
+      soldQty: number;
+      onHandQty: number;
+      warehouseId: string;
+    }> = [];
+    for (const b of balances) {
+      const soldQty = soldMap.get(`${b.productId}::${b.warehouseId}`) ?? 0;
+      if (soldQty < salesThreshold && b.onHandQty > onHandThreshold) {
+        items.push({
+          productId: b.productId,
+          sku: '',
+          name: '',
+          soldQty,
+          onHandQty: b.onHandQty,
+          warehouseId: b.warehouseId,
+        });
+      }
+    }
+
+    const productIds = [...new Set(items.map((i) => i.productId))];
+    const products =
+      productIds.length === 0
+        ? []
+        : await this.prisma.product.findMany({
+            where: { id: { in: productIds } },
+            select: { id: true, sku: true, name: true },
+          });
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    for (const i of items) {
+      const p = productMap.get(i.productId);
+      if (p) {
+        i.sku = p.sku;
+        i.name = p.name;
+      }
+    }
+
+    return {
+      items,
+      from: from.toISOString().slice(0, 10),
+      to: to.toISOString().slice(0, 10),
+    };
   }
 
   private csvCell(v: string | number | null | undefined): string {
@@ -512,6 +1068,7 @@ export class InventoryService {
           quantity: Math.abs(delta),
           referenceId: batchRef,
           note: 'csv-import',
+          skipReferenceIdCheck: true,
         });
         ok++;
       } catch (e) {

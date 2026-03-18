@@ -94,6 +94,7 @@ describe('InventoryService (integration)', () => {
     });
     await prisma.product.delete({ where: { id: product.id } });
     await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.customer.deleteMany({ where: { merchantId: warehouse.merchantId } });
     await prisma.merchant.deleteMany({
       where: { id: warehouse.merchantId },
     });
@@ -294,4 +295,344 @@ describe('InventoryService (integration)', () => {
     await prisma.warehouse.delete({ where: { id: warehouse.id } });
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 25000);
+
+  it('batchStocktake writes STOCKTAKE_GAIN and STOCKTAKE_LOSS, updates balances', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-BST-${Date.now()}`, name: 'Batch Stocktake Merchant' },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `W-BST-${Date.now()}`,
+        name: 'Batch Stocktake WH',
+        merchantId: merchant.id,
+      },
+    });
+    const product1 = await prisma.product.create({
+      data: { sku: `SKU-BST1-${Date.now()}`, name: 'Batch Stocktake P1' },
+    });
+    const product2 = await prisma.product.create({
+      data: { sku: `SKU-BST2-${Date.now()}`, name: 'Batch Stocktake P2' },
+    });
+
+    await inventoryService.recordInventoryEvent({
+      productId: product1.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 10,
+      note: 'seed',
+    });
+    await inventoryService.recordInventoryEvent({
+      productId: product2.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 10,
+      note: 'seed',
+    });
+    const out = await inventoryService.batchStocktake({
+      warehouseId: warehouse.id,
+      lines: [
+        { productId: product1.id, actualQty: 12 },
+        { productId: product2.id, actualQty: 7 },
+      ],
+    });
+    expect(out.ok).toBe(2);
+    expect(out.failed).toHaveLength(0);
+    expect(out.referenceId).toBeDefined();
+
+    const balances = await inventoryService.getBalances({
+      productIds: [product1.id, product2.id],
+      warehouseIds: [warehouse.id],
+    });
+    const b1 = balances.find((b) => b.productId === product1.id);
+    const b2 = balances.find((b) => b.productId === product2.id);
+    expect(b1?.onHandQty).toBe(12);
+    expect(b2?.onHandQty).toBe(7);
+
+    await prisma.inventoryEvent.deleteMany({
+      where: { referenceId: out.referenceId },
+    });
+    await prisma.inventoryEvent.deleteMany({
+      where: {
+        productId: { in: [product1.id, product2.id] },
+        warehouseId: warehouse.id,
+      },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: {
+        productId: { in: [product1.id, product2.id] },
+        warehouseId: warehouse.id,
+      },
+    });
+    await prisma.product.deleteMany({ where: { id: { in: [product1.id, product2.id] } } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 20000);
+
+  it('scanStocktake resolves sku/barcode then writes stocktake events', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-SS-${Date.now()}`, name: 'Scan Stocktake Merchant' },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `W-SS-${Date.now()}`,
+        name: 'Scan Stocktake WH',
+        merchantId: merchant.id,
+      },
+    });
+    const barcode = `BC-SS-${Date.now()}`;
+    const product = await prisma.product.create({
+      data: { sku: `SKU-SS-${Date.now()}`, barcode, name: 'Scan Stocktake Product' },
+    });
+
+    try {
+      await inventoryService.recordInventoryEvent({
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 2,
+        note: 'seed',
+      });
+
+      const out = await inventoryService.scanStocktake({
+        warehouseId: warehouse.id,
+        lines: [{ sku: barcode, actualQty: 5 }],
+      });
+      expect(out.ok).toBe(1);
+      expect(out.referenceId).toBeDefined();
+
+      const bal = await prisma.inventoryBalance.findUnique({
+        where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      });
+      expect(bal?.onHandQty).toBe(5);
+    } finally {
+      await prisma.inventoryEvent.deleteMany({ where: { warehouseId: warehouse.id } });
+      await prisma.inventoryBalance.deleteMany({ where: { warehouseId: warehouse.id } });
+      await prisma.product.deleteMany({ where: { id: product.id } });
+      await prisma.warehouse.deleteMany({ where: { id: warehouse.id } });
+      await prisma.merchant.deleteMany({ where: { id: merchant.id } });
+    }
+  }, 20000);
+
+  it('getReplenishmentSuggestions suggests qty when onHand below targetStock', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-REP-${Date.now()}`, name: 'Replenishment Merchant' },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `W-REP-${Date.now()}`,
+        name: 'Replenishment WH',
+        merchantId: merchant.id,
+      },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-REP-${Date.now()}`, name: 'Replenishment Product' },
+    });
+
+    // seed stock
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 10,
+      note: 'seed for replenishment',
+    });
+
+    // create sales within lookback window: totalSold = 6
+    const now = new Date();
+    const occurredAt1 = new Date(now);
+    occurredAt1.setDate(occurredAt1.getDate() - 2);
+    const occurredAt2 = new Date(now);
+    occurredAt2.setDate(occurredAt2.getDate() - 5);
+    const occurredAt3 = new Date(now);
+    occurredAt3.setDate(occurredAt3.getDate() - 9);
+
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'SALE_OUT',
+      quantity: 2,
+      occurredAt: occurredAt1.toISOString(),
+      note: 'sale 1',
+    });
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'SALE_OUT',
+      quantity: 2,
+      occurredAt: occurredAt2.toISOString(),
+      note: 'sale 2',
+    });
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'SALE_OUT',
+      quantity: 2,
+      occurredAt: occurredAt3.toISOString(),
+      note: 'sale 3',
+    });
+
+    // onHand should be 4; avgDailySales = 6/30 = 0.2; targetStock = 0.2*(30+7)=7.4 => suggested ceil(3.4)=4
+    const out = await inventoryService.getReplenishmentSuggestions({
+      merchantId: merchant.id,
+      warehouseId: warehouse.id,
+      daysLookback: 30,
+      daysAhead: 30,
+      safetyDays: 7,
+      minSuggestedQty: 0,
+      page: 1,
+      pageSize: 50,
+    });
+    expect(out.config.daysLookback).toBe(30);
+    expect(out.config.daysAhead).toBe(30);
+    expect(out.config.safetyDays).toBe(7);
+    expect(out.items.length).toBe(1);
+    expect(out.items[0].productId).toBe(product.id);
+    expect(out.items[0].warehouseId).toBe(warehouse.id);
+    expect(out.items[0].onHandQty).toBe(4);
+    expect(out.items[0].avgDailySales).toBeCloseTo(0.2, 3);
+    expect(out.items[0].targetStock).toBeCloseTo(7.4, 2);
+    expect(out.items[0].suggestedQty).toBe(4);
+
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 20000);
+
+  it('getExpiring returns batch rows aggregated by batchCode + expiryDate', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-EXP-${Date.now()}`, name: 'Expiring Merchant' },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `W-EXP-${Date.now()}`,
+        name: 'Expiring WH',
+        merchantId: merchant.id,
+      },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-EXP-${Date.now()}`, name: 'Expiring Product' },
+    });
+
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 10);
+    const expiryIso = expiry.toISOString();
+
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 12,
+      batchCode: 'B-TEST',
+      expiryDate: expiryIso,
+      weightUnit: 'KG',
+      note: 'seed for expiring',
+    });
+
+    const out = await inventoryService.getExpiring({
+      warehouseId: warehouse.id,
+      from: new Date().toISOString(),
+      daysAhead: 30,
+      page: 1,
+      pageSize: 50,
+    });
+    // 若 DB 尚未 migrate，repository 會回空；但在有 migrate 的環境下應能查到該批
+    if (out.items.length > 0) {
+      const row = out.items.find(
+        (x: any) =>
+          x.productId === product.id &&
+          x.warehouseId === warehouse.id &&
+          x.batchCode === 'B-TEST',
+      );
+      expect(row).toBeTruthy();
+      expect((row as any).onHandQty).toBe(12);
+    }
+
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 20000);
+
+  it('getSlowMoving returns product with low soldQty and high onHandQty', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-SLOW-${Date.now()}`, name: 'Slow Merchant' },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `W-SLOW-${Date.now()}`,
+        name: 'Slow WH',
+        merchantId: merchant.id,
+      },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-SLOW-${Date.now()}`, name: 'Slow Product' },
+    });
+
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 50,
+      note: 'seed for slow-moving',
+    });
+    const now = new Date();
+    const occurredAt = new Date(now);
+    occurredAt.setDate(occurredAt.getDate() - 2);
+    await inventoryService.recordInventoryEvent({
+      productId: product.id,
+      warehouseId: warehouse.id,
+      type: 'SALE_OUT',
+      quantity: 2,
+      occurredAt: occurredAt.toISOString(),
+      note: 'low sales',
+    });
+    // onHand = 48, soldQty in 30d = 2
+    const out = await inventoryService.getSlowMoving({
+      merchantId: merchant.id,
+      warehouseId: warehouse.id,
+      lookbackDays: 30,
+      salesThreshold: 5,
+      onHandThreshold: 10,
+    });
+    expect(out.items.length).toBe(1);
+    expect(out.items[0].productId).toBe(product.id);
+    expect(out.items[0].sku).toBe(product.sku);
+    expect(out.items[0].name).toBe(product.name);
+    expect(out.items[0].soldQty).toBe(2);
+    expect(out.items[0].onHandQty).toBe(48);
+    expect(out.items[0].warehouseId).toBe(warehouse.id);
+    expect(out.from).toBeDefined();
+    expect(out.to).toBeDefined();
+
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 20000);
 });

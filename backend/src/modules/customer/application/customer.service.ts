@@ -1,10 +1,29 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { parseCsvRows } from '../../product/application/csv-import.util';
 
 const MAX_ROWS = 10_000;
+
+type CustomerLastOrder = {
+  id: string;
+  orderNumber: string;
+  totalAmount: number;
+  discountAmount: number;
+  createdAt: string;
+};
+
+type CustomerPreferredCategory = {
+  categoryId: string;
+  categoryCode: string;
+  categoryName: string;
+  qty: number;
+};
 
 export type CustomerImportPreviewRow = {
   row: number;
@@ -77,8 +96,92 @@ function parseCustomerCsv(
 export class CustomerService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** 唯讀列表（POS 選客戶／顯示 memberLevel）；不寫入 DB */
-  async listByMerchant(merchantId: string) {
+  private async getConsumptionInsights(customerId: string) {
+    const lastOrder = await this.prisma.posOrder.findFirst({
+      where: { customerId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        orderNumber: true,
+        totalAmount: true,
+        discountAmount: true,
+        createdAt: true,
+      },
+    });
+
+    const firstOrder = await this.prisma.posOrder.findFirst({
+      where: { customerId },
+      orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
+    });
+
+    const totals = await this.prisma.posOrder.aggregate({
+      where: { customerId },
+      _count: { _all: true },
+      _sum: { totalAmount: true },
+    });
+
+    const now = new Date();
+    const since30d = new Date(now);
+    since30d.setDate(since30d.getDate() - 30);
+    const ordersLast30d = await this.prisma.posOrder.count({
+      where: { customerId, createdAt: { gte: since30d } },
+    });
+
+    const preferredCategories = (await this.prisma.$queryRaw<
+      CustomerPreferredCategory[]
+    >`
+      SELECT
+        c.id AS "categoryId",
+        c.code AS "categoryCode",
+        c.name AS "categoryName",
+        COALESCE(SUM(oi.quantity), 0)::int AS "qty"
+      FROM "PosOrderItem" oi
+      JOIN "PosOrder" o ON o.id = oi."orderId"
+      JOIN "Product" p ON p.id = oi."productId"
+      LEFT JOIN "Category" c ON c.id = p."categoryId"
+      WHERE o."customerId" = ${customerId}
+        AND c.id IS NOT NULL
+      GROUP BY c.id, c.code, c.name
+      ORDER BY COALESCE(SUM(oi.quantity), 0) DESC
+      LIMIT 5
+    `).map((r) => ({
+      ...r,
+      qty: Number(r.qty),
+    }));
+
+    const ordersCount = totals._count._all;
+    const totalSpend = Number(totals._sum.totalAmount ?? 0);
+
+    const lastOrderOut: CustomerLastOrder | null = lastOrder
+      ? {
+          id: lastOrder.id,
+          orderNumber: lastOrder.orderNumber,
+          totalAmount: Number(lastOrder.totalAmount),
+          discountAmount: Number(lastOrder.discountAmount),
+          createdAt: lastOrder.createdAt.toISOString(),
+        }
+      : null;
+
+    const avgDaysBetweenOrders =
+      ordersCount >= 2 && firstOrder && lastOrder
+        ? (lastOrder.createdAt.getTime() - firstOrder.createdAt.getTime()) /
+          (ordersCount - 1) /
+          (24 * 60 * 60 * 1000)
+        : null;
+
+    return {
+      lastOrder: lastOrderOut,
+      totalSpend,
+      ordersCount,
+      ordersLast30d,
+      avgDaysBetweenOrders,
+      preferredCategories,
+    };
+  }
+
+  /** 模糊搜尋 phone／name／memberCode，供 POS 快速選客；q 空白回傳空陣列 */
+  async search(merchantId: string, q: string) {
     const m = merchantId?.trim();
     if (!m) {
       throw new BadRequestException({
@@ -86,8 +189,63 @@ export class CustomerService {
         code: 'CUSTOMER_LIST_MERCHANT_REQUIRED',
       });
     }
+    const term = (q ?? '').trim();
+    if (!term) return { items: [] };
     const rows = await this.prisma.customer.findMany({
-      where: { merchantId: m },
+      where: {
+        merchantId: m,
+        OR: [
+          { phone: { contains: term, mode: 'insensitive' } },
+          { name: { contains: term, mode: 'insensitive' } },
+          { memberCode: { contains: term, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        memberLevel: true,
+        memberCode: true,
+      },
+      take: 20,
+      orderBy: [{ name: 'asc' }],
+    });
+    return { items: rows };
+  }
+
+  /** 唯讀列表（支援 status、tag、phone、name、memberLevel 篩選）；回傳含 status、blockReason、tags */
+  async listByMerchant(
+    merchantId: string,
+    filters?: {
+      status?: string;
+      tag?: string;
+      phone?: string;
+      name?: string;
+      memberLevel?: string;
+    },
+  ) {
+    const m = merchantId?.trim();
+    if (!m) {
+      throw new BadRequestException({
+        message: 'merchantId is required',
+        code: 'CUSTOMER_LIST_MERCHANT_REQUIRED',
+      });
+    }
+    const where: Prisma.CustomerWhereInput = { merchantId: m };
+    if (filters?.status?.trim()) {
+      where.status = filters.status.trim();
+    }
+    if (filters?.phone?.trim()) {
+      where.phone = { contains: filters.phone.trim(), mode: 'insensitive' };
+    }
+    if (filters?.name?.trim()) {
+      where.name = { contains: filters.name.trim(), mode: 'insensitive' };
+    }
+    if (filters?.memberLevel?.trim()) {
+      where.memberLevel = filters.memberLevel.trim();
+    }
+    let rows = await this.prisma.customer.findMany({
+      where,
       select: {
         id: true,
         name: true,
@@ -96,9 +254,19 @@ export class CustomerService {
         memberLevel: true,
         memberCode: true,
         joinDate: true,
+        status: true,
+        blockReason: true,
+        tags: true,
       },
       orderBy: [{ code: 'asc' }, { name: 'asc' }],
     });
+    if (filters?.tag?.trim()) {
+      const tag = filters.tag.trim();
+      rows = rows.filter((r) => {
+        const arr = Array.isArray(r.tags) ? r.tags : (r.tags as unknown as string[]);
+        return Array.isArray(arr) && arr.includes(tag);
+      });
+    }
     const ids = rows.map((r) => r.id);
     if (!ids.length) return [];
     const balances = await this.prisma.$queryRaw<
@@ -116,18 +284,373 @@ export class CustomerService {
       WHERE pl."merchantId" = ${m}
     `);
     const balMap = new Map(balances.map((b) => [b.customerId, b.balanceAfter]));
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      code: r.code,
-      phone: r.phone,
-      memberLevel: r.memberLevel,
-      memberCode: r.memberCode,
-      joinDate: r.joinDate?.toISOString() ?? null,
-      pointBalance: balMap.get(r.id) ?? 0,
-      expiringSoon: false,
-      expiringAt: null as string | null,
-    }));
+
+    const settings = await this.prisma.loyaltySettings.findUnique({
+      where: { merchantId: m },
+    });
+    const rollingDays = settings?.rollingDays ?? 365;
+    const notifyDaysBefore = settings?.notifyDaysBefore ?? 30;
+
+    const lastEarned = await this.prisma.pointLedger.groupBy({
+      by: ['customerId'],
+      where: {
+        merchantId: m,
+        customerId: { in: ids },
+        type: 'EARNED',
+      },
+      _max: { createdAt: true },
+    });
+    const expiringAtMap = new Map<string, string | null>();
+    const now = new Date();
+    const notifyEnd = new Date(now);
+    notifyEnd.setDate(notifyEnd.getDate() + notifyDaysBefore);
+    for (const g of lastEarned) {
+      const at = g._max.createdAt;
+      if (!at) continue;
+      const exp = new Date(at);
+      exp.setDate(exp.getDate() + rollingDays);
+      expiringAtMap.set(g.customerId, exp.toISOString());
+    }
+
+    return rows.map((r) => {
+      const pointBalance = balMap.get(r.id) ?? 0;
+      const expiringAt = expiringAtMap.get(r.id) ?? null;
+      const expiringSoon =
+        expiringAt &&
+        pointBalance > 0 &&
+        new Date(expiringAt) <= notifyEnd &&
+        new Date(expiringAt) >= now
+          ? pointBalance
+          : 0;
+      const tagsArr = Array.isArray(r.tags) ? r.tags : (r.tags as unknown as string[]);
+      return {
+        id: r.id,
+        name: r.name,
+        code: r.code,
+        phone: r.phone,
+        memberLevel: r.memberLevel,
+        memberCode: r.memberCode,
+        joinDate: r.joinDate?.toISOString() ?? null,
+        status: r.status,
+        blockReason: r.blockReason ?? null,
+        tags: Array.isArray(tagsArr) ? tagsArr : [],
+        pointBalance,
+        expiringSoon,
+        expiringAt,
+      };
+    });
+  }
+
+  /** 單筆詳情（含 pointBalance、expiringSoon、expiringAt）；merchantId 可選用於驗證同商家 */
+  async getById(id: string, merchantId?: string) {
+    const c = await this.prisma.customer.findUnique({
+      where: { id: id?.trim() },
+    });
+    if (!c) {
+      throw new NotFoundException({
+        message: 'Customer not found',
+        code: 'CUSTOMER_NOT_FOUND',
+      });
+    }
+    if (merchantId?.trim() && c.merchantId !== merchantId.trim()) {
+      throw new NotFoundException({
+        message: 'Customer not found',
+        code: 'CUSTOMER_NOT_FOUND',
+      });
+    }
+    const m = c.merchantId;
+    const balanceRow = await this.prisma.pointLedger.findFirst({
+      where: { customerId: c.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    const pointBalance = balanceRow?.balanceAfter ?? 0;
+
+    const settings = await this.prisma.loyaltySettings.findUnique({
+      where: { merchantId: m },
+    });
+    const rollingDays = settings?.rollingDays ?? 365;
+    const notifyDaysBefore = settings?.notifyDaysBefore ?? 30;
+
+    const lastEarned = await this.prisma.pointLedger.findFirst({
+      where: { customerId: c.id, type: 'EARNED' },
+      orderBy: { createdAt: 'desc' },
+    });
+    let expiringAt: string | null = null;
+    let expiringSoon = 0;
+    if (lastEarned) {
+      const exp = new Date(lastEarned.createdAt);
+      exp.setDate(exp.getDate() + rollingDays);
+      expiringAt = exp.toISOString();
+      const now = new Date();
+      const notifyEnd = new Date(now);
+      notifyEnd.setDate(notifyEnd.getDate() + notifyDaysBefore);
+      if (
+        pointBalance > 0 &&
+        exp >= now &&
+        exp <= notifyEnd
+      ) {
+        expiringSoon = pointBalance;
+      }
+    }
+
+    const tagsArr = Array.isArray(c.tags) ? c.tags : (c.tags as unknown as string[]);
+    const insights = await this.getConsumptionInsights(c.id);
+    return {
+      id: c.id,
+      merchantId: c.merchantId,
+      name: c.name,
+      code: c.code,
+      phone: c.phone,
+      email: c.email,
+      memberLevel: c.memberLevel,
+      memberCode: c.memberCode,
+      joinDate: c.joinDate?.toISOString() ?? null,
+      status: c.status,
+      blockReason: c.blockReason ?? null,
+      tags: Array.isArray(tagsArr) ? tagsArr : [],
+      pointBalance,
+      expiringSoon,
+      expiringAt,
+      insights,
+      createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt.toISOString(),
+    };
+  }
+
+  /** 建立會員（Admin）；回傳含 id */
+  async create(body: {
+    merchantId: string;
+    name: string;
+    phone?: string | null;
+    email?: string | null;
+    memberLevel?: string | null;
+    code?: string | null;
+    memberCode?: string | null;
+  }) {
+    const m = (body.merchantId ?? '').trim();
+    if (!m) {
+      throw new BadRequestException({
+        message: 'merchantId is required',
+        code: 'CUSTOMER_LIST_MERCHANT_REQUIRED',
+      });
+    }
+    const name = (body.name ?? '').trim();
+    if (!name) {
+      throw new BadRequestException({
+        message: 'name is required',
+        code: 'CUSTOMER_NAME_REQUIRED',
+      });
+    }
+    const merchant = await this.prisma.merchant.findUnique({ where: { id: m } });
+    if (!merchant) {
+      throw new NotFoundException({
+        message: 'Merchant not found',
+        code: 'CUSTOMER_MERCHANT_NOT_FOUND',
+      });
+    }
+    const c = await this.prisma.customer.create({
+      data: {
+        merchantId: m,
+        name,
+        phone: body.phone?.trim() || null,
+        email: body.email?.trim() || null,
+        memberLevel: body.memberLevel?.trim() || null,
+        code: body.code?.trim() || null,
+        memberCode: body.memberCode?.trim() || null,
+      },
+    });
+    return {
+      id: c.id,
+      merchantId: c.merchantId,
+      name: c.name,
+      code: c.code,
+      phone: c.phone,
+      email: c.email,
+      memberLevel: c.memberLevel,
+      memberCode: c.memberCode,
+      joinDate: c.joinDate?.toISOString() ?? null,
+    };
+  }
+
+  /** 更新會員（Admin）；不可改 merchantId；可更新 status、blockReason、tags */
+  async update(
+    id: string,
+    body: Partial<{
+      name: string;
+      phone: string | null;
+      email: string | null;
+      memberLevel: string | null;
+      code: string | null;
+      memberCode: string | null;
+      joinDate: string | null;
+      status: string;
+      blockReason: string | null;
+      tags: string[];
+    }>,
+  ) {
+    const c = await this.prisma.customer.findUnique({
+      where: { id: id?.trim() },
+    });
+    if (!c) {
+      throw new NotFoundException({
+        message: 'Customer not found',
+        code: 'CUSTOMER_NOT_FOUND',
+      });
+    }
+    const updated = await this.prisma.customer.update({
+      where: { id: c.id },
+      data: {
+        ...(body.name != null && { name: body.name.trim() }),
+        ...(body.phone !== undefined && { phone: body.phone?.trim() || null }),
+        ...(body.email !== undefined && { email: body.email?.trim() || null }),
+        ...(body.memberLevel !== undefined && {
+          memberLevel: body.memberLevel?.trim() || null,
+        }),
+        ...(body.code !== undefined && { code: body.code?.trim() || null }),
+        ...(body.memberCode !== undefined && {
+          memberCode: body.memberCode?.trim() || null,
+        }),
+        ...(body.status !== undefined && { status: body.status.trim() || 'ACTIVE' }),
+        ...(body.blockReason !== undefined && { blockReason: body.blockReason?.trim() || null }),
+        ...(body.tags !== undefined && { tags: body.tags as unknown as Prisma.InputJsonValue }),
+        ...(body.joinDate !== undefined && {
+          joinDate: body.joinDate ? new Date(body.joinDate) : null,
+        }),
+      },
+    });
+    return this.getById(updated.id);
+  }
+
+  /** 合併會員：主檔保留，併入檔之 PosOrder、PointLedger 歸戶至主檔；併入檔設為 BLOCKED */
+  async merge(primaryId: string, mergeIds: string[]) {
+    const primary = await this.prisma.customer.findUnique({
+      where: { id: primaryId?.trim() },
+    });
+    if (!primary) {
+      throw new NotFoundException({
+        message: 'Primary customer not found',
+        code: 'CUSTOMER_NOT_FOUND',
+      });
+    }
+    const ids = mergeIds.filter((id) => id?.trim() && id.trim() !== primaryId.trim());
+    if (ids.length === 0) {
+      throw new BadRequestException({
+        message: 'mergeIds must contain at least one different customer id',
+        code: 'CUSTOMER_MERGE_INVALID',
+      });
+    }
+    const others = await this.prisma.customer.findMany({
+      where: { id: { in: ids }, merchantId: primary.merchantId },
+    });
+    if (others.length !== ids.length) {
+      throw new BadRequestException({
+        message: 'Some merge ids not found or not same merchant',
+        code: 'CUSTOMER_MERGE_INVALID',
+      });
+    }
+    const mergeIdSet = new Set(ids);
+    await this.prisma.$transaction([
+      this.prisma.posOrder.updateMany({
+        where: { customerId: { in: ids } },
+        data: { customerId: primaryId },
+      }),
+      this.prisma.pointLedger.updateMany({
+        where: { customerId: { in: ids } },
+        data: { customerId: primaryId },
+      }),
+      this.prisma.customerContactLog.updateMany({
+        where: { customerId: { in: ids } },
+        data: { customerId: primaryId },
+      }),
+      this.prisma.customer.updateMany({
+        where: { id: { in: ids } },
+        data: {
+          status: 'BLOCKED',
+          blockReason: `Merged into ${primaryId}`,
+        },
+      }),
+    ]);
+    return { primaryId, merged: ids };
+  }
+
+  /** 互動紀錄：GET /customers/:id/contacts */
+  async getContacts(customerId: string, merchantId?: string) {
+    const c = await this.prisma.customer.findUnique({
+      where: { id: customerId?.trim() },
+    });
+    if (!c) {
+      throw new NotFoundException({
+        message: 'Customer not found',
+        code: 'CUSTOMER_NOT_FOUND',
+      });
+    }
+    if (merchantId?.trim() && c.merchantId !== merchantId.trim()) {
+      throw new NotFoundException({
+        message: 'Customer not found',
+        code: 'CUSTOMER_NOT_FOUND',
+      });
+    }
+    const logs = await this.prisma.customerContactLog.findMany({
+      where: { customerId: c.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    return {
+      items: logs.map((l) => ({
+        id: l.id,
+        type: l.type,
+        note: l.note,
+        nextFollowUpAt: l.nextFollowUpAt?.toISOString() ?? null,
+        createdBy: l.createdBy,
+        createdAt: l.createdAt.toISOString(),
+      })),
+    };
+  }
+
+  /** 互動紀錄：POST /customers/:id/contacts */
+  async addContact(
+    customerId: string,
+    body: { type: string; note?: string; nextFollowUpAt?: string; createdBy?: string },
+    merchantId?: string,
+  ) {
+    const c = await this.prisma.customer.findUnique({
+      where: { id: customerId?.trim() },
+    });
+    if (!c) {
+      throw new NotFoundException({
+        message: 'Customer not found',
+        code: 'CUSTOMER_NOT_FOUND',
+      });
+    }
+    if (merchantId?.trim() && c.merchantId !== merchantId.trim()) {
+      throw new NotFoundException({
+        message: 'Customer not found',
+        code: 'CUSTOMER_NOT_FOUND',
+      });
+    }
+    const type = (body.type ?? '').trim();
+    if (!type) {
+      throw new BadRequestException({
+        message: 'type is required',
+        code: 'CUSTOMER_CONTACT_TYPE_REQUIRED',
+      });
+    }
+    const log = await this.prisma.customerContactLog.create({
+      data: {
+        customerId: c.id,
+        type,
+        note: body.note?.trim() || null,
+        nextFollowUpAt: body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null,
+        createdBy: body.createdBy?.trim() || null,
+      },
+    });
+    return {
+      id: log.id,
+      type: log.type,
+      note: log.note,
+      nextFollowUpAt: log.nextFollowUpAt?.toISOString() ?? null,
+      createdBy: log.createdBy,
+      createdAt: log.createdAt.toISOString(),
+    };
   }
 
   /**
