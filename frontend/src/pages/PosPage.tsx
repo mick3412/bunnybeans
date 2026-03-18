@@ -10,6 +10,7 @@ import {
   getCategories,
   getBrands,
   getWarehouses,
+  searchProductsByBarcode,
   productDtoSalePriceNumber,
   previewPromotions,
   listCustomersForPos,
@@ -82,6 +83,8 @@ export const PosPage: React.FC = () => {
   const [posCustomers, setPosCustomers] = useState<PosCustomerRow[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => loadFavorites());
   const [barcodeHint, setBarcodeHint] = useState<string | null>(null);
+  const [barcodeChoices, setBarcodeChoices] = useState<PosProduct[]>([]);
+  const [barcodeLoading, setBarcodeLoading] = useState(false);
 
   const toggleFavorite = (productId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -95,8 +98,33 @@ export const PosPage: React.FC = () => {
   const handleBarcodeScan = async () => {
     const q = searchQuery.trim();
     if (!q) return;
-    // 本輪規格：條碼查詢需等待後端正式化 barcode 契約（不做 fallback 假成功）
-    setBarcodeHint('條碼查詢 API 尚未就緒（待後端 Barcode 契約）。目前此輸入框僅作為搜尋，不會用 Enter 自動加車。');
+    setBarcodeHint(null);
+    setBarcodeChoices([]);
+    setBarcodeLoading(true);
+    const out = await searchProductsByBarcode(q, 20);
+    setBarcodeLoading(false);
+    if ('statusCode' in out) {
+      setBarcodeHint(out.message ?? '條碼查詢失敗');
+      return;
+    }
+    const mapped: PosProduct[] = out.items.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: productDtoSalePriceNumber(p),
+      sku: p.sku,
+    }));
+    if (mapped.length === 0) {
+      setBarcodeHint('找不到此條碼對應的商品');
+      return;
+    }
+    if (mapped.length === 1) {
+      addProduct(mapped[0]);
+      setSearchQuery('');
+      setBarcodeHint('已加入購物車');
+      return;
+    }
+    setBarcodeHint(`此條碼命中 ${mapped.length} 筆商品，請選擇要加入的商品`);
+    setBarcodeChoices(mapped);
   };
 
   const loadProducts = async (opts?: { categoryId?: string; brandId?: string; tag?: string; sku?: string }) => {
@@ -402,10 +430,44 @@ export const PosPage: React.FC = () => {
                 </div>
               </div>
               {barcodeHint && (
-                <div className="mt-1 text-xs text-amber-800">
+                <div className="mt-1 text-xs text-amber-800" data-testid="e2e-pos-barcode-hint">
                   {barcodeHint}
                 </div>
               )}
+              {barcodeLoading ? (
+                <div className="mt-1 text-xs text-muted">條碼查詢中…</div>
+              ) : null}
+              {!barcodeLoading && barcodeChoices.length > 1 ? (
+                <div className="mt-2 rounded-xl border border-brand-surface bg-white p-2" data-testid="e2e-pos-barcode-choices">
+                  <div className="mb-1 text-xs font-semibold text-muted">選擇商品</div>
+                  <div className="flex flex-col gap-1">
+                    {barcodeChoices.slice(0, 8).map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="flex items-center justify-between gap-2 rounded-lg border border-brand-surface px-2 py-1.5 text-left text-xs hover:bg-brand-canvas"
+                        onClick={() => {
+                          addProduct(p);
+                          setBarcodeChoices([]);
+                          setSearchQuery('');
+                          setBarcodeHint('已加入購物車');
+                        }}
+                      >
+                        <span className="min-w-0 truncate text-content">
+                          {p.name}{' '}
+                          <span className="ml-2 font-mono text-[11px] text-muted">{p.sku}</span>
+                        </span>
+                        <span className="shrink-0 font-mono text-[11px] text-muted">
+                          ${Number(p.salePrice ?? 0).toLocaleString()}
+                        </span>
+                      </button>
+                    ))}
+                    {barcodeChoices.length > 8 ? (
+                      <div className="text-[11px] text-muted">…尚有 {barcodeChoices.length - 8} 筆，請縮小條碼或調整資料</div>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
               <div className="flex flex-wrap items-center gap-1 rounded-2xl bg-table-head px-3 py-2 text-xs min-[640px]:col-start-2 min-[640px]:row-start-2">
                 <span className="mr-1 shrink-0 text-muted">欄數</span>
                 {([3, 4, 5] as const).map((n) => (

@@ -77,7 +77,7 @@ export const AdminInventoryPage: React.FC = () => {
   const [stocktakeMode, setStocktakeMode] = useState<'list' | 'scan'>('list');
   const [scanSku, setScanSku] = useState('');
   const [scanQty, setScanQty] = useState('');
-  const [scanChoices, setScanChoices] = useState<Array<{ productId: string; sku: string; name: string }>>([]);
+  const [scanChoices, setScanChoices] = useState<Array<{ productId: string; sku: string; name: string; onHandQty?: number | null }>>([]);
   const [expiringOpen, setExpiringOpen] = useState(false);
   const [expiringTab, setExpiringTab] = useState<'product' | 'batch'>('product');
   const [expiringDaysAhead, setExpiringDaysAhead] = useState(30);
@@ -129,7 +129,13 @@ export const AdminInventoryPage: React.FC = () => {
       showToast('商品已找到，但目前倉庫/列表中沒有對應的 SKU 餘額列', 'err');
       return null;
     }
-    setScanChoices(items.map((p) => ({ productId: p.id, sku: p.sku, name: p.name })));
+    setScanChoices(
+      items.map((p) => {
+        const skuKey = (p.sku ?? '').trim().toLowerCase();
+        const bySku = skuKey ? skuToBalanceRow.get(skuKey) : undefined;
+        return { productId: p.id, sku: p.sku, name: p.name, onHandQty: bySku?.onHandQty ?? null };
+      }),
+    );
     showToast(`條碼命中 ${items.length} 筆商品，請先選擇`, 'err');
     return null;
   };
@@ -624,8 +630,13 @@ export const AdminInventoryPage: React.FC = () => {
                             showToast('已加入盤點清單', 'ok');
                           }}
                         >
-                          <span className="min-w-0 truncate text-content">{c.name}</span>
-                          <span className="shrink-0 font-mono text-[11px] text-muted">{c.sku}</span>
+                          <span className="min-w-0 truncate text-content">
+                            {c.name}{' '}
+                            <span className="ml-2 font-mono text-[11px] text-muted">{c.sku}</span>
+                          </span>
+                          <span className="shrink-0 font-mono text-[11px] text-muted">
+                            在庫 {typeof c.onHandQty === 'number' ? c.onHandQty : '—'}
+                          </span>
                         </button>
                       ))}
                       {scanChoices.length > 6 ? (
