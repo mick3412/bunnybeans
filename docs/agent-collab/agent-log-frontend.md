@@ -15,6 +15,11 @@
 
 ---
 
+### INSTRUCTIONS 009（click-audit 視覺化 + full profile E2E 規則）
+- 做了：① `/admin/ops/report-clicks` 增加 resultCode 排行（NOT_FOUND/MULTI_MATCH，依 source/kind 組合）與近 7/14/30 天趨勢表（按 resultCode），並在 list 對 NOT_FOUND/MULTI_MATCH 提供可操作「下一步」導引。② 行銷常駐規則頁補「最近一次執行（crm-run-scheduled）」摘要與前往 `/admin/ops/jobs` 入口。③ E2E 支援 `E2E_PROFILE=full`：缺 fixture 時不得長期 skip（改為 fail），並新增 click-audit 視覺化 smoke spec；同步更新 `docs/e2e-pos.md` full profile 規則與建議指令。RBAC 長期 skip 未做。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts e2e/admin-barcode-min.spec.ts` ✅（1 pass / 2 skip：條碼需 DB fixture、金流報表需資料/後端可連）。
+- commits：`5b84de4` feat(ops): visualize click-audit resultCode and trends；`28b8706` feat(marketing): show last crm-run-scheduled run；`2f7a4ff` test(e2e): enforce full profile readiness。
+
 ### INSTRUCTIONS 007（條碼多筆命中閉環＋click-audit resultCode 上報＋退供 UI 補全）
 - 做了：① **條碼多筆命中 UX**：POS/庫存掃碼在多筆命中時提供選擇列表（顯示 SKU/name；庫存頁額外顯示在庫摘要），並新增最小 E2E 覆蓋多筆命中（依 seed fixture 可 skip）。② **採購退供應商完整 UI**：進貨驗收（COMPLETED）退供區塊補逐列原因輸入（前端備註）與送出後明細回顯，並補手測清單。③ **ReportClickAudit resultCode**：referenceId 穿透點擊補 `resultCode` 上報（NAVIGATED/NOT_FOUND），click-audit 後台頁補 resultCode 欄位與 filter（後端支援時可彙總/篩選）。④ **促銷拖曳排序驗收**：補拖曳排序手測清單（維持 optimistic/回滾/toast）。RBAC 依 roadmap 長期 skip 未做。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/admin-smoke.spec.ts e2e/admin-barcode-min.spec.ts e2e/admin-barcode-multi-match.spec.ts` ✅（1 pass / 3 skip：條碼需 DB fixture（含 multi-match）、金流報表需資料/後端可連）。
