@@ -12,7 +12,7 @@ async function loginAdmin(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.getByRole('button', { name: '進入後台（庫存／商品）' }).click();
   // Login 導向 /admin（dashboard），未必含第二段 path
-  await expect(page).toHaveURL(/\/admin(\/|$)/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/admin(?:\/|\?|$)/, { timeout: 15_000 });
 }
 
 test.describe('後台批量 UI smoke', () => {

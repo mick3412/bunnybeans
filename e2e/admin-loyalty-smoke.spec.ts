@@ -11,7 +11,7 @@ test.describe('Loyalty CRM smoke', () => {
     await page.goto('/admin/loyalty');
     await expect(page.getByTestId('e2e-admin-loyalty')).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('link', { name: '儀表板' })).toBeVisible();
-    await expect(page.getByRole('link', { name: '點數存摺' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '促銷規則', exact: true })).toBeVisible();
   });
 
   test('設定頁區塊可見（有 Key 時完整載入）', async ({ page }) => {

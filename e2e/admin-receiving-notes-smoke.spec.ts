@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 async function loginAdmin(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.getByRole('button', { name: '進入後台（庫存／商品）' }).click();
-  await expect(page).toHaveURL(/\/admin(\/|$)/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/admin(?:\/|\?|$)/, { timeout: 15_000 });
 }
 
 test.describe('Admin 進貨驗收 smoke', () => {

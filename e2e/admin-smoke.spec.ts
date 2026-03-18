@@ -7,7 +7,7 @@ test.describe('後台 Admin smoke', () => {
     await page.goto('/admin/inventory');
     await expect(page).toHaveURL(/\/admin\/inventory/);
     await expect(page.getByTestId('e2e-admin-inventory')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole('heading', { name: '庫存餘額', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '庫存報表', level: 1 })).toBeVisible();
   });
 
   test('金流報表頁載入', async ({ page }) => {

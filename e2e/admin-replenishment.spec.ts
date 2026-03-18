@@ -10,7 +10,7 @@ const hasAdminKey = Boolean(
 async function loginAdmin(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.getByRole('button', { name: '進入後台（庫存／商品）' }).click();
-  await expect(page).toHaveURL(/\/admin(\/|$)/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/admin(?:\/|\?|$)/, { timeout: 15_000 });
 }
 
 test.describe('後台 補貨建議頁', () => {
@@ -20,7 +20,7 @@ test.describe('後台 補貨建議頁', () => {
     await expect(page).toHaveURL(/\/admin\/replenishment/);
     const container = page.getByTestId('e2e-admin-replenishment');
     await expect(container).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole('heading', { name: '補貨建議' })).toBeVisible();
+    await expect(container.getByRole('heading', { name: '補貨建議' })).toBeVisible();
     // 倉庫選單
     await expect(container.locator('select').first()).toBeVisible();
   });

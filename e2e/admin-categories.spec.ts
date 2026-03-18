@@ -10,7 +10,7 @@ const hasAdminKey = Boolean(
 async function loginAdmin(page: import('@playwright/test').Page) {
   await page.goto('/login');
   await page.getByRole('button', { name: '進入後台（庫存／商品）' }).click();
-  await expect(page).toHaveURL(/\/admin(\/|$)/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/admin(?:\/|\?|$)/, { timeout: 15_000 });
 }
 
 test.describe('後台 分類頁', () => {
@@ -18,7 +18,7 @@ test.describe('後台 分類頁', () => {
     await loginAdmin(page);
     await page.goto('/admin/categories');
     await expect(page.getByTestId('e2e-admin-categories')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole('heading', { name: '分類維護' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '類別管理' })).toBeVisible();
   });
 
   test('標籤區可見', async ({ page }) => {
