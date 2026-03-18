@@ -1,23 +1,24 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../../shared/components/Button';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { TextInput } from '../../shared/components/TextInput';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import {
   listSuppliers,
   createSupplier,
   updateSupplier,
   deleteSupplier,
-  MOCK_MERCHANT,
   type SupplierDto,
   type ApiError,
 } from '../../modules/admin/purchaseApi';
-import { listMerchants, type MerchantDto } from '../../modules/admin/adminApi';
+import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { useAdminToast } from './AdminToastContext';
 
 const PAYMENT_OPTIONS = ['現金', '月結15天', '月結30天', '月結60天', '預付全額'];
 
 export const AdminSuppliersPage: React.FC = () => {
   const { showToast } = useAdminToast();
-  const [merchantId, setMerchantId] = useState(MOCK_MERCHANT);
+  const merchantId = useDefaultMerchantId();
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<SupplierDto[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -41,6 +42,11 @@ export const AdminSuppliersPage: React.FC = () => {
   const load = useCallback(async () => {
     setListLoading(true);
     setListError(null);
+    if (!merchantId) {
+      setListLoading(false);
+      setRows([]);
+      return;
+    }
     const r = await listSuppliers(merchantId, q || undefined);
     setListLoading(false);
     if (r.error) {
@@ -54,13 +60,6 @@ export const AdminSuppliersPage: React.FC = () => {
 
   const loadRef = useRef(load);
   loadRef.current = load;
-
-  useEffect(() => {
-    (async () => {
-      const m = await listMerchants();
-      if (Array.isArray(m) && m.length) setMerchantId((prev) => (prev === MOCK_MERCHANT ? m[0].id : prev));
-    })();
-  }, []);
 
   useEffect(() => {
     load();
@@ -156,36 +155,38 @@ export const AdminSuppliersPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-5xl rounded-2xl bg-white p-6 shadow-sm ring-1 ring-neutral-100" data-testid="e2e-admin-suppliers">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900">供應商管理</h1>
-          <p className="mt-1 text-sm text-neutral-500">管理供應商資料與聯絡資訊</p>
-        </div>
+    <StandardListLayout
+      title="供應商"
+      description="管理供應商資料與聯絡資訊"
+      testId="e2e-admin-suppliers"
+      actions={
         <button
           type="button"
           onClick={openCreate}
-          className="rounded-lg bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+          className="rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-hover"
         >
           + 新增供應商
         </button>
-      </div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-[280px] flex-1">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </span>
-          <input
-            className="w-full rounded-lg border border-neutral-200 bg-neutral-50/80 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-            placeholder="搜尋供應商名稱 / 編號 / 聯絡人..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+      }
+      filters={
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[280px] flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              className="w-full rounded-lg border border-brand-surface bg-table-head py-2.5 pl-10 pr-3 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+              placeholder="搜尋供應商名稱 / 編號 / 聯絡人..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <span className="text-sm font-medium text-muted">{listLoading ? '…' : `${rows.length} 筆`}</span>
         </div>
-        <span className="text-sm font-medium text-neutral-600">{listLoading ? '…' : `${rows.length} 筆`}</span>
-      </div>
+      }
+    >
       {listError && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           <span>載入失敗：{listError}</span>
@@ -194,14 +195,14 @@ export const AdminSuppliersPage: React.FC = () => {
           </button>
         </div>
       )}
-      <div className="overflow-hidden rounded-xl border border-neutral-100">
+      <div className="table-sticky-head overflow-hidden rounded-xl border border-brand-surface">
         {listLoading ? (
           <div className="flex min-h-[200px] items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" aria-label="載入中" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#0ea5e9] border-t-transparent" aria-label="載入中" />
           </div>
         ) : (
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-neutral-100 bg-neutral-50/90 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">編號</th>
               <th className="px-4 py-3">供應商名稱</th>
@@ -214,14 +215,14 @@ export const AdminSuppliersPage: React.FC = () => {
           <tbody>
             {rows.map((s) => (
               <tr key={s.id} className="border-b border-neutral-50 hover:bg-neutral-50/50">
-                <td className="px-4 py-3.5 font-mono text-xs text-neutral-800">{s.code}</td>
-                <td className="px-4 py-3.5 font-medium text-neutral-900">{s.name}</td>
-                <td className="px-4 py-3.5 text-neutral-700">{s.contactPerson}</td>
-                <td className="px-4 py-3.5 tabular-nums text-neutral-700">{s.phone}</td>
+                <td className="px-4 py-3.5 font-mono text-xs text-content">{s.code}</td>
+                <td className="px-4 py-3.5 font-medium text-content">{s.name}</td>
+                <td className="px-4 py-3.5 text-muted">{s.contactPerson}</td>
+                <td className="px-4 py-3.5 tabular-nums text-muted">{s.phone}</td>
                 <td className="px-4 py-3.5">
                   <span
                     className={`inline-flex rounded-md px-2.5 py-0.5 text-xs font-semibold ${
-                      s.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-200 text-neutral-600'
+                      s.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-[#e2e8f0] text-muted'
                     }`}
                   >
                     {s.status === 'ACTIVE' ? '啟用' : '停用'}
@@ -231,7 +232,7 @@ export const AdminSuppliersPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="rounded p-1.5 text-blue-600 hover:bg-blue-50"
+                      className="rounded p-1.5 text-[#0ea5e9] hover:bg-[#0ea5e9]/10"
                       aria-label="編輯"
                       onClick={() => openEdit(s)}
                     >
@@ -262,7 +263,7 @@ export const AdminSuppliersPage: React.FC = () => {
         </table>
         )}
         {!listLoading && !listError && rows.length === 0 && (
-          <div className="py-16 text-center text-sm text-neutral-500">尚無供應商，請先新增供應商。</div>
+          <EmptyState message="尚無供應商，請先新增供應商。" />
         )}
       </div>
 
@@ -279,7 +280,7 @@ export const AdminSuppliersPage: React.FC = () => {
               <TextInput label="地址" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               <TextInput label="統編" value={form.taxId} onChange={(e) => setForm({ ...form, taxId: e.target.value })} />
               <div>
-                <label className="mb-1 block text-sm font-medium text-neutral-700">付款條件</label>
+                <label className="mb-1 block text-sm font-medium text-muted">付款條件</label>
                 <select
                   className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
                   value={form.paymentTerms}
@@ -294,11 +295,11 @@ export const AdminSuppliersPage: React.FC = () => {
               </div>
               <TextInput label="銀行帳號" value={form.bankAccount} onChange={(e) => setForm({ ...form, bankAccount: e.target.value })} />
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-neutral-700">備註</label>
+                <label className="mb-1 block text-sm font-medium text-muted">備註</label>
                 <textarea className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm" rows={2} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-neutral-700">狀態</label>
+                <label className="mb-1 block text-sm font-medium text-muted">狀態</label>
                 <select className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as 'ACTIVE' | 'INACTIVE' })}>
                   <option value="ACTIVE">啟用</option>
                   <option value="INACTIVE">停用</option>
@@ -316,6 +317,6 @@ export const AdminSuppliersPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </StandardListLayout>
   );
 };

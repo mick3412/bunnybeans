@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../shared/components/Button';
 import {
   getOrderById,
@@ -26,6 +26,8 @@ function paymentMethodLabel(method: string): string {
 export const PosOrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
   const [order, setOrder] = useState<PosOrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,7 @@ export const PosOrderDetailPage: React.FC = () => {
   const [returnStockSubmitting, setReturnStockSubmitting] = useState(false);
   const [returnStockError, setReturnStockError] = useState<string | null>(null);
   const [returnStockOk, setReturnStockOk] = useState<string | null>(null);
+  const [exchangeOpen, setExchangeOpen] = useState(false);
 
   useEffect(() => {
     if (!id) {
@@ -245,9 +248,17 @@ export const PosOrderDetailPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white/80 px-3 py-3 backdrop-blur sm:px-6">
-        <div className="text-sm font-semibold text-slate-900">訂單明細</div>
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-surface bg-white/80 px-3 py-3 backdrop-blur sm:px-6">
+        <div className="text-sm font-semibold text-content">訂單明細</div>
         <div className="flex flex-wrap gap-2">
+          {returnTo && (
+            <Button type="button" size="sm" variant="secondary" onClick={() => navigate(returnTo)}>
+              回到來源
+            </Button>
+          )}
+          <Button type="button" size="sm" variant="primary" onClick={() => setExchangeOpen(true)}>
+            換貨
+          </Button>
           <Button type="button" size="sm" variant="secondary" onClick={() => navigate('/pos/orders')}>
             返回列表
           </Button>
@@ -258,6 +269,61 @@ export const PosOrderDetailPage: React.FC = () => {
       </header>
 
       <main className="min-h-0 flex-1 px-3 pb-4 pt-3 sm:px-4">
+        {exchangeOpen && (
+          <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-content">換貨導引（MVP）</h2>
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 text-xs text-muted hover:bg-[#f1f5f9]"
+                  onClick={() => setExchangeOpen(false)}
+                >
+                  關閉
+                </button>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="text-xs font-semibold text-content">Step 1：先做退貨入庫</div>
+                  <div className="mt-1 text-xs text-muted">
+                    退貨入庫會把庫存加回（RETURN_FROM_CUSTOMER），與退款分開；退款請在本頁「退款（沖帳）」處理。
+                  </div>
+                  <div className="mt-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setExchangeOpen(false);
+                        const el = document.getElementById('return-to-stock');
+                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                    >
+                      前往退貨入庫區塊
+                    </Button>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="text-xs font-semibold text-content">Step 2：去收銀建立新單</div>
+                  <div className="mt-1 text-xs text-muted">
+                    完成退貨入庫後，回到收銀台重新加購要換出的商品並結帳。若需差額，依門市規則用補款/退款處理。
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="primary" onClick={() => navigate('/pos')}>
+                      前往收銀
+                    </Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => navigate('/pos/orders')}>
+                      保留稍後處理
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-[11px] text-muted">
+                  提示：此為最小流程導引，暫不建立「換貨單」關聯；人工可用原單 id 與新單 id 追查。
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="mx-auto w-full max-w-3xl rounded-2xl bg-white p-3 shadow-sm shadow-slate-200 sm:p-4">
           {error && (
             <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">
@@ -265,7 +331,7 @@ export const PosOrderDetailPage: React.FC = () => {
             </div>
           )}
           {loading ? (
-            <div className="py-10 text-center text-xs text-slate-400">載入中…</div>
+            <div className="py-10 text-center text-xs text-muted">載入中…</div>
           ) : order ? (
             <div className="space-y-3 text-xs">
               {credit && (
@@ -285,36 +351,36 @@ export const PosOrderDetailPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-2 sm:px-4">
-                <div className="text-[10px] font-semibold uppercase text-slate-500">消費者</div>
-                <div className="mt-1 space-y-0.5 text-slate-800">
+              <div className="rounded-lg border border-[#e2e8f0] bg-slate-50/90 px-3 py-2 sm:px-4">
+                <div className="text-[10px] font-semibold uppercase text-muted">消費者</div>
+                <div className="mt-1 space-y-0.5 text-content">
                   <div>
-                    <span className="text-slate-500">ID</span>{' '}
+                    <span className="text-muted">ID</span>{' '}
                     <span className="break-all font-mono text-[11px]">{customerIdDisplay ?? '—'}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500">姓名</span>{' '}
+                    <span className="text-muted">姓名</span>{' '}
                     <span className="font-medium">{customerNameDisplay ?? '—'}</span>
                   </div>
                   {customerCodeDisplay && (
                     <div>
-                      <span className="text-slate-500">代碼</span> {customerCodeDisplay}
+                      <span className="text-muted">代碼</span> {customerCodeDisplay}
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="flex justify-between border-b border-slate-100 pb-2">
-                <span className="text-slate-500">單號</span>
-                <span className="font-medium text-slate-900">{order.orderNumber}</span>
+                <span className="text-muted">單號</span>
+                <span className="font-medium text-content">{order.orderNumber}</span>
               </div>
               <div className="flex justify-between border-b border-slate-100 pb-2">
-                <span className="text-slate-500">門市</span>
-                <span className="break-all text-right text-slate-800">{order.storeId}</span>
+                <span className="text-muted">門市</span>
+                <span className="break-all text-right text-content">{order.storeId}</span>
               </div>
               <div className="flex justify-between border-b border-slate-100 pb-2">
-                <span className="text-slate-500">建立時間</span>
-                <span className="text-slate-800">{new Date(order.createdAt).toLocaleString('zh-TW')}</span>
+                <span className="text-muted">建立時間</span>
+                <span className="text-content">{new Date(order.createdAt).toLocaleString('zh-TW')}</span>
               </div>
               {(typeof order.subtotalAmount === 'number' ||
                 typeof order.discountAmount === 'number' ||
@@ -322,7 +388,7 @@ export const PosOrderDetailPage: React.FC = () => {
                 <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-2">
                   <div className="text-[10px] font-semibold uppercase text-emerald-800">金額明細（促銷）</div>
                   {typeof order.subtotalAmount === 'number' && (
-                    <div className="mt-1 flex justify-between text-slate-700">
+                    <div className="mt-1 flex justify-between text-muted">
                       <span>小計</span>
                       <span className="tabular-nums font-medium">${order.subtotalAmount.toLocaleString()}</span>
                     </div>
@@ -334,8 +400,8 @@ export const PosOrderDetailPage: React.FC = () => {
                     </div>
                   )}
                   {order.promotionApplied != null && (
-                    <div className="mt-1 text-[10px] text-slate-600">
-                      <span className="text-slate-500">套用促銷</span>{' '}
+                    <div className="mt-1 text-[10px] text-muted">
+                      <span className="text-muted">套用促銷</span>{' '}
                       <span className="break-all font-mono">
                         {typeof order.promotionApplied === 'string'
                           ? order.promotionApplied
@@ -357,7 +423,7 @@ export const PosOrderDetailPage: React.FC = () => {
                           type="button"
                           onClick={() => setPayMethod(m)}
                           className={`rounded px-2 py-1 text-[10px] font-medium ${
-                            payMethod === m ? 'bg-sky-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200'
+                            payMethod === m ? 'bg-sky-600 text-white' : 'bg-white text-muted ring-1 ring-[#e2e8f0]'
                           }`}
                         >
                           {paymentMethodLabel(m)}
@@ -369,7 +435,7 @@ export const PosOrderDetailPage: React.FC = () => {
                       inputMode="decimal"
                       placeholder="金額"
                       data-testid="e2e-detail-pay-amount"
-                      className="h-8 w-24 rounded border border-slate-200 px-2 text-right tabular-nums"
+                      className="h-8 w-24 rounded border border-[#e2e8f0] px-2 text-right tabular-nums"
                       value={payAmount}
                       onChange={(e) => setPayAmount(e.target.value)}
                     />
@@ -389,9 +455,9 @@ export const PosOrderDetailPage: React.FC = () => {
               )}
 
               {displayPaid >= 0.01 && (
-                <div className="rounded-lg border border-violet-200 bg-violet-50/80 px-3 py-2">
-                  <div className="mb-1 text-[11px] font-semibold text-violet-900">退款（沖帳）</div>
-                  <p className="mb-2 text-[10px] text-violet-800">
+                <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                  <div className="mb-1 text-[11px] font-semibold text-[#1e293b]">退款（沖帳）</div>
+                  <p className="mb-2 text-[10px] text-[#64748b]">
                     已實收範圍內登記退款，不超過實收合計；全賒未收單不可退。
                   </p>
                   <div className="flex flex-wrap items-end gap-2">
@@ -400,14 +466,14 @@ export const PosOrderDetailPage: React.FC = () => {
                       inputMode="decimal"
                       placeholder="退款金額"
                       data-testid="e2e-detail-refund-amount"
-                      className="h-8 w-24 rounded border border-violet-200 bg-white px-2 text-right tabular-nums"
+                      className="h-8 w-24 rounded border border-[#e2e8f0] bg-white px-2 text-right tabular-nums"
                       value={refundAmount}
                       onChange={(e) => setRefundAmount(e.target.value)}
                     />
                     <input
                       type="text"
                       placeholder="備註（選填）"
-                      className="h-8 min-w-[120px] flex-1 rounded border border-violet-200 bg-white px-2 text-[11px]"
+                      className="h-8 min-w-[120px] flex-1 rounded border border-[#e2e8f0] bg-white px-2 text-[11px]"
                       value={refundNote}
                       onChange={(e) => setRefundNote(e.target.value)}
                     />
@@ -426,7 +492,7 @@ export const PosOrderDetailPage: React.FC = () => {
                 </div>
               )}
 
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2">
+              <div id="return-to-stock" className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2">
                 <div className="mb-1 text-[11px] font-semibold text-emerald-900">退貨入庫（實體回倉）</div>
                 <p className="mb-2 text-[10px] text-emerald-800">
                   依本單明細加回庫存（RETURN_FROM_CUSTOMER）；與退款分開；單筆不得超過該列銷量。
@@ -480,11 +546,11 @@ export const PosOrderDetailPage: React.FC = () => {
               </div>
 
               <div className="pt-2">
-                <div className="mb-1.5 font-medium text-slate-700">品項</div>
+                <div className="mb-1.5 font-medium text-muted">品項</div>
                 <div className="-mx-1 overflow-x-auto sm:mx-0">
                   <table className="w-full min-w-[520px] border-collapse text-left">
                     <thead>
-                      <tr className="border-b border-slate-200 text-[11px] text-slate-500">
+                      <tr className="border-b border-[#e2e8f0] text-[11px] text-muted">
                         <th className="py-1.5">分類</th>
                         <th className="py-1.5">品牌</th>
                         <th className="py-1.5">品名</th>
@@ -506,10 +572,10 @@ export const PosOrderDetailPage: React.FC = () => {
                             const displayId = meta?.sku ?? item.productId;
                             return (
                               <>
-                                <td className="py-1.5 text-slate-600">{displayCategory}</td>
-                                <td className="py-1.5 text-slate-600">{displayBrand}</td>
-                                <td className="py-1.5 text-slate-800">{displayName}</td>
-                                <td className="py-1.5 font-mono text-[11px] text-slate-500">{displayId}</td>
+                                <td className="py-1.5 text-muted">{displayCategory}</td>
+                                <td className="py-1.5 text-muted">{displayBrand}</td>
+                                <td className="py-1.5 text-content">{displayName}</td>
+                                <td className="py-1.5 font-mono text-[11px] text-muted">{displayId}</td>
                               </>
                             );
                           })()}
@@ -524,7 +590,7 @@ export const PosOrderDetailPage: React.FC = () => {
                   </table>
                 </div>
               </div>
-              <div className="space-y-2 border-t border-slate-200 pt-2 text-sm">
+              <div className="space-y-2 border-t border-[#e2e8f0] pt-2 text-sm">
                 <div className="flex justify-between font-semibold">
                   <span>應收金額</span>
                   <span className="tabular-nums">${order.totalAmount.toLocaleString()}</span>
@@ -533,7 +599,7 @@ export const PosOrderDetailPage: React.FC = () => {
                   <span>實收合計</span>
                   <span className="tabular-nums">${displayPaid.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-xs text-slate-700">
+                <div className="flex justify-between text-xs text-muted">
                   <span>未收餘額</span>
                   <span className="tabular-nums font-medium">${remainingAmount.toLocaleString()}</span>
                 </div>
@@ -543,8 +609,8 @@ export const PosOrderDetailPage: React.FC = () => {
                   </div>
                 )}
                 <div className="flex justify-between border-t border-slate-100 pt-2 text-xs font-normal">
-                  <span className="text-slate-500">收款方式</span>
-                  <span className="max-w-[70%] text-right text-slate-800">{paymentMethodsText}</span>
+                  <span className="text-muted">收款方式</span>
+                  <span className="max-w-[70%] text-right text-content">{paymentMethodsText}</span>
                 </div>
               </div>
             </div>

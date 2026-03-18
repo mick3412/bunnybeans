@@ -17,8 +17,8 @@ const variantClass: Record<Variant, string> = {
   primary:
     'bg-brand-primary text-white shadow-sm hover:bg-brand-primary-hover focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-brand-canvas',
   secondary:
-    'border border-brand-surface bg-white text-neutral-900 shadow-sm hover:bg-brand-canvas focus-visible:ring-brand-surface',
-  ghost: 'text-neutral-800 hover:bg-brand-surface/50 focus-visible:ring-brand-primary',
+    'border border-brand-surface bg-white text-content shadow-sm hover:bg-brand-canvas focus-visible:ring-brand-surface',
+  ghost: 'text-content hover:bg-brand-surface/50 focus-visible:ring-brand-primary',
   success:
     'bg-brand-primary text-white shadow-sm hover:bg-brand-primary-hover focus-visible:ring-brand-primary focus-visible:ring-offset-2 focus-visible:ring-offset-brand-canvas',
 };

@@ -1,29 +1,37 @@
 @import "tailwindcss";
 
 /*
- * 品牌色 + Forge 殼層（深側欄 #1a1a1a、主區淺灰、選中項近黑 + 左線為 brand-primary）
+ * 依 frontend-ui-principles：側欄 #1e293b、主內容區 #f1f5f9、主色 #0ea5e9、表格邊框 #e2e8f0
+ * 間距建議：區塊間 mb-4 / mb-6（16/24px），區塊內 p-4 / p-5（16/20px），列表篩選→表格 mb-4 或 mb-6 擇一
  */
 @theme {
-  --color-brand-canvas: #fff4ea;
-  --color-brand-surface: #eddcc6;
-  --color-brand-primary: #7eacb5;
-  --color-brand-primary-hover: #6b9ba5;
-  --color-brand-danger: #bf4646;
-  --color-brand-danger-hover: #a63d3d;
-  --color-forge-sidebar: #1a1a1a;
-  --color-forge-sidebar-active: #0a0a0a;
-  --color-forge-main: #f4f4f5;
+  --color-brand-canvas: #f1f5f9;
+  --color-brand-surface: #e2e8f0;
+  --color-brand-primary: #0ea5e9;
+  --color-brand-primary-hover: #0284c7;
+  --color-brand-success: #16a34a;
+  --color-brand-warning: #ea580c;
+  --color-brand-danger: #dc2626;
+  --color-brand-danger-hover: #b91c1c;
+  --color-forge-sidebar: #1e293b;
+  --color-forge-sidebar-active: #0f172a;
+  --color-forge-main: #f1f5f9;
   --color-forge-card: #ffffff;
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", "PingFang TC", "Microsoft JhengHei",
-    "Noto Sans TC", sans-serif;
+  --color-table-border: #e2e8f0;
+  --color-table-head: #f8fafc;
+  --color-content: #1e293b;
+  --color-muted: #64748b;
+  --font-sans: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
-  --color-canvas: #fff4ea;
-  --color-surface: #eddcc6;
-  --color-primary: #7eacb5;
-  --color-primary-hover: #6b9ba5;
-  --color-danger: #bf4646;
+  --color-canvas: #f1f5f9;
+  --color-surface: #e2e8f0;
+  --color-primary: #0ea5e9;
+  --color-primary-hover: #0284c7;
+  --color-success: #16a34a;
+  --color-warning: #ea580c;
+  --color-danger: #dc2626;
 }
 
 @layer base {
@@ -36,7 +44,55 @@
     font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     font-size: 0.9375rem;
     line-height: 1.5;
-    color: #262626;
+    color: var(--color-content);
     background-color: var(--color-forge-main);
   }
+  /* 全站表格：細邊框、表頭淺底、sticky 表頭（依 principles） */
+  table {
+    border-collapse: collapse;
+    border: 1px solid var(--color-table-border);
+  }
+  table th {
+    background-color: var(--color-table-head);
+    border-bottom: 1px solid var(--color-table-border);
+    font-weight: 600;
+  }
+  table td {
+    border-bottom: 1px solid var(--color-table-border);
+  }
 }
+
+/* 需要 sticky 表頭時在表格外層或 table 上加 .table-sticky-head */
+.table-sticky-head thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--color-table-head);
+}
+
+/* 無障礙：Skip link 僅鍵盤聚焦時顯示 */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  background: var(--color-forge-card);
+  color: var(--color-content);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 2px solid var(--color-brand-primary);
+  border-radius: 0 0 0.5rem 0;
+  transform: translateY(-100%);
+  transition: transform 0.15s ease;
+}
+.skip-link:focus {
+  transform: translateY(0);
+  outline: none;
+}
+
+/* KPI 卡左色條（儀表板／報表用） */
+.kpi-card-accent-blue { border-left: 3px solid var(--color-brand-primary); }
+.kpi-card-accent-green { border-left: 3px solid var(--color-brand-success); }
+.kpi-card-accent-amber { border-left: 3px solid var(--color-brand-warning); }
+.kpi-card-accent-slate { border-left: 3px solid var(--color-muted); }

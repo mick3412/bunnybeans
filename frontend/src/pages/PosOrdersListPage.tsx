@@ -76,42 +76,38 @@ export const PosOrdersListPage: React.FC = () => {
   }, [load]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-100">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white/80 px-3 py-3 backdrop-blur sm:px-6">
-        <div>
-          <div className="text-sm font-semibold text-slate-900">今日訂單</div>
-          <div className="text-xs text-slate-500">共 {total} 筆</div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            data-testid="e2e-nav-pos"
-            onClick={() => navigate('/pos')}
-          >
-            回到收銀畫面
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            data-testid="e2e-nav-admin-inventory"
-            onClick={() => navigate('/admin/inventory')}
-            className="border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100"
-          >
-            庫存（後台）
-          </Button>
-        </div>
-      </header>
-
-      <main className="min-h-0 flex-1 px-3 pb-4 pt-3 sm:px-4">
-        <div className="mx-auto max-w-3xl rounded-2xl bg-white p-3 shadow-sm shadow-slate-200 sm:p-4">
-          <div className="mb-2 flex flex-wrap items-end gap-2 text-[11px]">
+    <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-pos-orders">
+      <div className="border-b border-brand-surface pb-2">
+        <h2 className="text-lg font-semibold text-content">訂單查詢</h2>
+        <p className="mt-1 text-sm text-muted">共 {total} 筆 · 可篩選門市、日期後匯出 CSV（需 VITE_ADMIN_API_KEY）</p>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          data-testid="e2e-nav-pos"
+          onClick={() => navigate('/pos')}
+        >
+          回到收銀
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          data-testid="e2e-nav-admin-inventory"
+          onClick={() => navigate('/admin/inventory')}
+          className="border-brand-surface bg-table-head text-brand-primary hover:bg-brand-primary/10"
+        >
+          庫存（後台）
+        </Button>
+      </div>
+      <div className="mt-4">
+          <div className="mb-2 flex flex-wrap items-end gap-2 text-xs">
             <div className="flex min-w-[120px] flex-col">
-              <label className="mb-0.5 text-slate-500">門市</label>
+              <label className="mb-0.5 text-muted">門市</label>
               <select
-                className="h-8 min-w-0 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800"
+                className="h-8 min-w-0 rounded-md border border-brand-surface bg-white px-2 text-xs text-content focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                 value={storeIdFilter}
                 onChange={(e) => setStoreIdFilter(e.target.value)}
               >
@@ -124,24 +120,24 @@ export const PosOrdersListPage: React.FC = () => {
               </select>
             </div>
             <div className="flex flex-col">
-              <label className="mb-0.5 text-slate-500">起日</label>
+              <label className="mb-0.5 text-muted">起日</label>
               <input
                 type="date"
-                className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800"
+                className="h-8 rounded-md border border-brand-surface bg-white px-2 text-xs text-content"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
               />
             </div>
             <div className="flex flex-col">
-              <label className="mb-0.5 text-slate-500">迄日</label>
+              <label className="mb-0.5 text-muted">迄日</label>
               <input
                 type="date"
-                className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-800"
+                className="h-8 rounded-md border border-brand-surface bg-white px-2 text-xs text-content"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
               />
             </div>
-            <label className="flex cursor-pointer items-center gap-1 text-slate-600">
+            <label className="flex cursor-pointer items-center gap-1 text-muted">
               <input
                 type="checkbox"
                 checked={includeLines}
@@ -203,14 +199,14 @@ export const PosOrdersListPage: React.FC = () => {
             <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">
               <div>{error}</div>
               {errorTraceId && (
-                <div className="mt-1 break-all text-[10px] text-red-500">traceId: {errorTraceId}</div>
+                <div className="mt-1 break-all text-xs text-red-500">traceId: {errorTraceId}</div>
               )}
             </div>
           )}
           {loading ? (
-            <div className="py-10 text-center text-xs text-slate-400">載入中…</div>
+            <div className="py-10 text-center text-xs text-muted">載入中…</div>
           ) : orders.length === 0 ? (
-            <div className="py-10 text-center text-xs text-slate-400">目前尚無訂單。</div>
+            <div className="py-10 text-center text-xs text-muted">目前尚無訂單。</div>
           ) : (
             <>
               {/* 小螢幕：卡片 */}
@@ -218,15 +214,15 @@ export const PosOrdersListPage: React.FC = () => {
                 {orders.map((order) => (
                   <li
                     key={order.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs shadow-sm"
+                    className="rounded-xl border border-brand-surface bg-table-head p-3 text-xs shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="font-semibold text-slate-900">{order.orderNumber}</div>
-                        <div className="mt-1 text-slate-500">
-                          客戶：<span className="text-slate-800">{customerLabel(order)}</span>
+                        <div className="font-semibold text-content">{order.orderNumber}</div>
+                        <div className="mt-1 text-muted">
+                          客戶：<span className="text-content">{customerLabel(order)}</span>
                         </div>
-                        <div className="text-slate-500">
+                        <div className="text-muted">
                           {new Date(order.createdAt).toLocaleString('zh-TW', {
                             month: '2-digit',
                             day: '2-digit',
@@ -236,7 +232,7 @@ export const PosOrdersListPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-semibold tabular-nums text-slate-900">
+                        <div className="text-sm font-semibold tabular-nums text-content">
                           ${order.totalAmount.toLocaleString()}
                         </div>
                         <Button
@@ -258,7 +254,7 @@ export const PosOrdersListPage: React.FC = () => {
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[680px] table-fixed border-collapse text-left text-xs">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-center text-[11px] text-slate-500">
+                    <tr className="border-b border-brand-surface bg-table-head text-center text-xs text-muted">
                       <th className="w-28 px-2 py-2 lg:w-32">單號</th>
                       <th className="w-24 px-2 py-2">門市</th>
                       <th className="min-w-[72px] px-2 py-2">客戶</th>
@@ -271,26 +267,26 @@ export const PosOrdersListPage: React.FC = () => {
                     {orders.map((order, idx) => (
                       <tr
                         key={order.id}
-                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                        className="border-b border-brand-surface last:border-0 hover:bg-table-head"
                         data-testid={idx === 0 ? 'e2e-orders-first-row' : undefined}
                       >
                         <td
-                          className="truncate px-2 py-2 font-medium text-slate-900"
+                          className="truncate px-2 py-2 font-medium text-content"
                           title={order.orderNumber}
                           data-testid={idx === 0 ? 'e2e-orders-first-order-number' : undefined}
                         >
                           {order.orderNumber}
                         </td>
-                        <td className="truncate px-2 py-2 text-slate-600" title={order.storeId}>
+                        <td className="truncate px-2 py-2 text-muted" title={order.storeId}>
                           {order.storeId}
                         </td>
-                        <td className="truncate px-2 py-2 text-slate-700" title={customerLabel(order)}>
+                        <td className="truncate px-2 py-2 text-muted" title={customerLabel(order)}>
                           {customerLabel(order)}
                         </td>
-                        <td className="px-2 py-2 text-right tabular-nums text-slate-900">
+                        <td className="px-2 py-2 text-right tabular-nums text-content">
                           ${order.totalAmount.toLocaleString()}
                         </td>
-                        <td className="px-2 py-2 text-slate-500">
+                        <td className="px-2 py-2 text-muted">
                           {new Date(order.createdAt).toLocaleTimeString('zh-TW', {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -315,10 +311,10 @@ export const PosOrdersListPage: React.FC = () => {
               </div>
 
               {total > PAGE_SIZE && (
-                <div className="mt-3 flex items-center justify-center gap-2 text-[11px]">
+                <div className="mt-3 flex items-center justify-center gap-2 text-xs">
                   <button
                     type="button"
-                    className="rounded border border-slate-200 px-2 py-1 disabled:opacity-50"
+                    className="rounded border border-brand-surface px-2 py-1 disabled:opacity-50"
                     disabled={page <= 1 || loading}
                     onClick={() => {
                       const prev = page - 1;
@@ -333,7 +329,7 @@ export const PosOrdersListPage: React.FC = () => {
                   </span>
                   <button
                     type="button"
-                    className="rounded border border-slate-200 px-2 py-1 disabled:opacity-50"
+                    className="rounded border border-brand-surface px-2 py-1 disabled:opacity-50"
                     disabled={page >= Math.ceil(total / PAGE_SIZE) || loading}
                     onClick={() => {
                       const next = page + 1;
@@ -347,8 +343,7 @@ export const PosOrdersListPage: React.FC = () => {
               )}
             </>
           )}
-        </div>
-      </main>
+      </div>
     </div>
   );
 };

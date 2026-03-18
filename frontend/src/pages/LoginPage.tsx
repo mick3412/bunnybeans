@@ -35,7 +35,7 @@ export const LoginPage: React.FC = () => {
   };
 
   const statusColor =
-    healthStatus === 'ok' ? 'text-emerald-600' : healthStatus === 'error' ? 'text-red-700' : 'text-slate-500';
+    healthStatus === 'ok' ? 'text-emerald-600' : healthStatus === 'error' ? 'text-red-700' : 'text-muted';
 
   const handleLogin = (event: React.FormEvent) => {
     event.preventDefault();
@@ -44,10 +44,10 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-forge-main px-4">
-      <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-forge-card px-7 py-8 shadow-lg shadow-neutral-900/5">
-        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-neutral-500">POS ERP</div>
-        <h1 className="mb-2 text-xl font-semibold tracking-tight text-neutral-900">登入</h1>
-        <p className="mb-6 text-xs text-slate-500">
+      <div className="w-full max-w-md rounded-2xl border border-brand-surface bg-forge-card px-7 py-8 shadow-lg shadow-neutral-900/5">
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">POS ERP</div>
+        <h1 className="mb-2 text-xl font-semibold tracking-tight text-content">登入</h1>
+        <p className="mb-6 text-xs text-muted">
           之後會在這裡接上實際的帳號 / 權限，目前先以一鍵登入快速進入 POS 介面。
         </p>
 
@@ -69,22 +69,22 @@ export const LoginPage: React.FC = () => {
           </Button>
         </form>
 
-        <div className="mt-6 border-t border-dashed border-slate-200 pt-4">
-          <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
+        <div className="mt-6 border-t border-dashed border-brand-surface pt-4">
+          <div className="mb-2 flex items-center justify-between text-xs text-muted">
             <span>後端健康檢查</span>
             <Button type="button" size="sm" variant="secondary" onClick={checkHealth}>
               {healthStatus === 'checking' ? '檢查中…' : '檢查後端連線'}
             </Button>
           </div>
-          <div className={`min-h-[1.2rem] text-[11px] ${statusColor}`}>
+          <div className={`min-h-[1.2rem] text-xs ${statusColor}`}>
             {healthStatus === 'idle' && '尚未檢查'}
             {healthStatus === 'checking' && '正在檢查後端健康狀態…'}
             {healthStatus === 'ok' && healthMessage}
             {healthStatus === 'error' && healthMessage}
           </div>
-          <details className="mt-3 rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-2 text-[11px] text-slate-600">
-            <summary className="cursor-pointer font-medium text-slate-700">連不上後端？部署與 Tunnel</summary>
-            <ul className="mt-2 list-inside list-disc space-y-1 text-slate-600">
+          <details className="mt-3 rounded-lg border border-brand-surface bg-table-head px-2 py-2 text-xs text-muted">
+            <summary className="cursor-pointer font-medium text-muted">連不上後端？部署與 Tunnel</summary>
+            <ul className="mt-2 list-inside list-disc space-y-1 text-muted">
               <li>
                 Vercel：設定 <code className="rounded bg-white px-0.5">VITE_API_BASE_URL</code> = 後端 https（Named
                 Tunnel 固定網域最佳），儲存後 <strong>Redeploy</strong>。

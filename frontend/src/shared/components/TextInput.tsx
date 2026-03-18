@@ -1,19 +1,31 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 export interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   hint?: string;
 }
 
-export const TextInput: React.FC<TextInputProps> = ({ label, hint, className = '', ...props }) => {
+export const TextInput: React.FC<TextInputProps> = ({ label, hint, className = '', id: idProp, ...props }) => {
+  const generatedId = useId();
+  const id = idProp ?? generatedId;
   return (
     <div className="space-y-1.5">
-      {label ? <label className="block text-xs font-medium text-slate-700">{label}</label> : null}
+      {label ? (
+        <label htmlFor={id} className="block text-xs font-medium text-muted">
+          {label}
+        </label>
+      ) : null}
       <input
-        className={`block w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none ring-0 placeholder:text-slate-400 focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100 ${className}`.trim()}
+        id={id}
+        className={`block w-full rounded-lg border border-brand-surface bg-table-head px-3 py-2 text-sm outline-none ring-0 placeholder:text-muted focus:border-brand-primary focus:bg-white focus:ring-2 focus:ring-brand-primary/20 ${className}`.trim()}
+        aria-describedby={hint ? `${id}-hint` : undefined}
         {...props}
       />
-      {hint ? <p className="text-[11px] text-slate-400">{hint}</p> : null}
+      {hint ? (
+        <p id={`${id}-hint`} className="text-xs text-muted" role="note">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 };

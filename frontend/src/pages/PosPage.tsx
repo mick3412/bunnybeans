@@ -18,6 +18,24 @@ import {
 } from '../modules/pos/posOrdersApi';
 
 const ALL_ID = '';
+const POS_FAVORITES_KEY = 'pos-favorites';
+
+function loadFavorites(): string[] {
+  try {
+    const s = localStorage.getItem(POS_FAVORITES_KEY);
+    if (s) {
+      const arr = JSON.parse(s) as unknown;
+      return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string') : [];
+    }
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+function saveFavorites(ids: string[]) {
+  localStorage.setItem(POS_FAVORITES_KEY, JSON.stringify(ids));
+}
 
 /** 與後端 Product.tags / seed 一致；選「無」不帶 tag query */
 const DISCOUNT_TAG_OPTIONS: { tag: string; name: string }[] = [
@@ -58,11 +76,30 @@ export const PosPage: React.FC = () => {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [brands, setBrands] = useState<BrandDto[]>([]);
   const [apiStoreId, setApiStoreId] = useState<string | null>(null);
+  const [apiMerchantId, setApiMerchantId] = useState<string | null>(null);
   const [apiProducts, setApiProducts] = useState<PosProductDisplay[] | null>(null);
   const [apiLoadError, setApiLoadError] = useState<string | null>(null);
   const [posCustomers, setPosCustomers] = useState<PosCustomerRow[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => loadFavorites());
+  const [barcodeHint, setBarcodeHint] = useState<string | null>(null);
 
-  const loadProducts = async (opts?: { categoryId?: string; brandId?: string; tag?: string }) => {
+  const toggleFavorite = (productId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setFavoriteIds((prev) => {
+      const next = prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId];
+      saveFavorites(next);
+      return next;
+    });
+  };
+
+  const handleBarcodeScan = async () => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    // 本輪規格：條碼查詢需等待後端正式化 barcode 契約（不做 fallback 假成功）
+    setBarcodeHint('條碼查詢 API 尚未就緒（待後端 Barcode 契約）。目前此輸入框僅作為搜尋，不會用 Enter 自動加車。');
+  };
+
+  const loadProducts = async (opts?: { categoryId?: string; brandId?: string; tag?: string; sku?: string }) => {
     const productsRes = await getProducts(opts);
     if (Array.isArray(productsRes)) {
       setApiProducts(
@@ -114,8 +151,11 @@ export const PosPage: React.FC = () => {
           }
         }
         setApiStoreId(chosen ?? storesRes[0].id);
+        setApiMerchantId(withWh?.merchantId ?? storesRes[0]?.merchantId ?? null);
+      } else {
+        setApiMerchantId(null);
       }
-      else if (!Array.isArray(storesRes)) setApiLoadError(storesRes.message ?? '無法載入門市');
+      if (!Array.isArray(storesRes)) setApiLoadError(storesRes.message ?? '無法載入門市');
       if (Array.isArray(categoriesRes) && categoriesRes.length > 0) setCategories(categoriesRes);
       if (Array.isArray(brandsRes)) setBrands(brandsRes);
       if (Array.isArray(productsRes)) {
@@ -225,26 +265,19 @@ export const PosPage: React.FC = () => {
         : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
 
   return (
-    <div className="flex min-h-full flex-col bg-slate-100">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white/90 px-3 py-2 sm:px-4">
-        <div>
-          <div className="text-sm font-semibold text-slate-900">門市收銀</div>
-          <div className="text-xs text-slate-500">
-            {apiStoreId ? '已連線門市與商品' : apiLoadError ?? '載入中…'}
-          </div>
+    <div className="flex min-h-full flex-col">
+      {apiLoadError && !apiStoreId && (
+        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {apiLoadError}
         </div>
-        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-700">
-          已連線
-        </span>
-      </header>
-
-      <main className="flex min-h-0 flex-1 flex-col gap-3 px-3 pb-[calc(14rem+env(safe-area-inset-bottom))] pt-3 sm:gap-4 sm:px-4 lg:flex-row lg:pb-4 lg:pl-4">
+      )}
+      <main className="flex min-h-0 flex-1 flex-col gap-3 pb-[calc(14rem+env(safe-area-inset-bottom))] lg:flex-row lg:pb-4">
         <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl bg-white p-2 shadow-sm shadow-slate-200 sm:p-3 lg:min-w-0 lg:flex-[3]">
           <div className="mb-3 grid grid-cols-1 gap-2 min-[640px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] min-[640px]:grid-rows-[auto_auto]">
             <div className="rounded-2xl bg-slate-50 px-3 py-2 min-[640px]:row-span-2">
-              <div className="mb-1 text-[11px] font-semibold text-slate-700">篩選</div>
+              <div className="mb-1 text-xs font-semibold text-muted">篩選</div>
               <div className="mb-1.5 flex flex-wrap items-center gap-1">
-                <span className="mr-1 text-[11px] font-medium text-slate-500">品項</span>
+                <span className="mr-1 text-xs font-medium text-muted">品項</span>
                 {[{ id: ALL_ID, name: '全部' }, ...categories].map((c) => {
                   const selected =
                     c.id === ALL_ID ? selectedCategoryIds.length === 0 : selectedCategoryIds.includes(c.id);
@@ -262,8 +295,8 @@ export const PosPage: React.FC = () => {
                           tag: selectedDiscountTag || undefined,
                         });
                       }}
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                        selected ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        selected ? 'bg-brand-primary text-white' : 'bg-table-head text-content hover:bg-brand-surface'
                       }`}
                     >
                       {c.name}
@@ -272,7 +305,7 @@ export const PosPage: React.FC = () => {
                 })}
               </div>
               <div className="mb-1.5 flex flex-wrap items-center gap-1">
-                <span className="mr-1 text-[11px] font-medium text-slate-500">品牌</span>
+                <span className="mr-1 text-xs font-medium text-muted">品牌</span>
                 {brandList.map((b) => {
                   const id = b.id;
                   const selected =
@@ -290,8 +323,8 @@ export const PosPage: React.FC = () => {
                           tag: selectedDiscountTag || undefined,
                         });
                       }}
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                        selected ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        selected ? 'bg-brand-primary text-white' : 'bg-table-head text-content hover:bg-brand-surface'
                       }`}
                     >
                       {b.name}
@@ -300,7 +333,7 @@ export const PosPage: React.FC = () => {
                 })}
               </div>
               <div className="mb-1.5 flex flex-wrap items-center gap-1">
-                <span className="mr-1 text-[11px] font-medium text-slate-500">折扣</span>
+                <span className="mr-1 text-xs font-medium text-muted">折扣</span>
                 {DISCOUNT_TAG_OPTIONS.map((d) => {
                   const selected = selectedDiscountTag === d.tag;
                   return (
@@ -316,8 +349,8 @@ export const PosPage: React.FC = () => {
                           tag: d.tag || undefined,
                         });
                       }}
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                        selected ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        selected ? 'bg-brand-primary text-white' : 'bg-table-head text-content hover:bg-brand-surface'
                       }`}
                     >
                       {d.name}
@@ -325,7 +358,7 @@ export const PosPage: React.FC = () => {
                   );
                 })}
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+              <div className="mt-2 flex items-center justify-between text-xs text-muted">
                 <span>共 {filteredProducts.length} 件</span>
                 {hasActiveFilters && (
                   <button
@@ -334,7 +367,7 @@ export const PosPage: React.FC = () => {
                       clearFilters();
                       await loadProducts();
                     }}
-                    className="text-[11px] font-medium text-slate-500 underline hover:text-slate-700"
+                    className="text-xs font-medium text-muted underline hover:text-content"
                   >
                     清除篩選
                   </button>
@@ -344,29 +377,44 @@ export const PosPage: React.FC = () => {
 
             {/* 搜尋、欄數：各一塊卡片，上下排列 */}
             <div className="flex min-w-0 flex-col gap-2 min-[640px]:contents">
-              <div className="flex items-center rounded-2xl bg-slate-50 px-3 py-2 min-[640px]:col-start-2 min-[640px]:row-start-1">
+              <div className="flex items-center rounded-2xl bg-table-head px-3 py-2 min-[640px]:col-start-2 min-[640px]:row-start-1">
                 <div className="relative w-full min-w-0">
                   <input
                     type="search"
-                    placeholder="搜尋商品或掃條碼..."
+                    placeholder="搜尋商品或掃條碼（Enter 加入）"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-full border border-slate-200 bg-white px-3 py-1.5 pr-8 text-xs text-slate-800 placeholder:text-slate-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      if (barcodeHint) setBarcodeHint(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        void handleBarcodeScan();
+                      }
+                    }}
+                    className="w-full rounded-full border border-brand-surface bg-white px-3 py-1.5 pr-8 text-xs text-content placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                    data-testid="e2e-pos-barcode-input"
                   />
-                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-slate-400">
+                  <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted">
                     ⌘K
                   </span>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-1 rounded-2xl bg-slate-50 px-3 py-2 text-[11px] min-[640px]:col-start-2 min-[640px]:row-start-2">
-                <span className="mr-1 shrink-0 text-slate-500">欄數</span>
+              {barcodeHint && (
+                <div className="mt-1 text-xs text-amber-800">
+                  {barcodeHint}
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-1 rounded-2xl bg-table-head px-3 py-2 text-xs min-[640px]:col-start-2 min-[640px]:row-start-2">
+                <span className="mr-1 shrink-0 text-muted">欄數</span>
                 {([3, 4, 5] as const).map((n) => (
                   <button
                     key={n}
                     type="button"
                     onClick={() => setGridCols(n)}
-                    className={`rounded px-2 py-0.5 text-[11px] font-medium ${
-                      gridCols === n ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    className={`rounded px-2 py-0.5 text-xs font-medium ${
+                      gridCols === n ? 'bg-brand-primary text-white' : 'bg-table-head text-muted hover:bg-brand-surface'
                     }`}
                   >
                     {n} 欄
@@ -377,61 +425,97 @@ export const PosPage: React.FC = () => {
           </div>
 
           {apiLoadError && (
-            <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+            <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
               {apiLoadError}，結帳將使用 mock 資料；若後端已啟動請重新整理。
+            </div>
+          )}
+          {favoriteIds.length > 0 && (
+            <div className="mb-2 rounded-xl border border-brand-surface bg-white p-2">
+              <div className="mb-1.5 text-xs font-semibold text-muted">常用</div>
+              <div className="flex flex-wrap gap-1.5">
+                {productsForGrid
+                  .filter((p) => favoriteIds.includes(p.id))
+                  .map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      data-testid={`pos-favorite-${p.id}`}
+                      onClick={() => addProduct(p as PosProduct)}
+                      className="rounded-lg border border-brand-surface bg-table-head px-2 py-1.5 text-left text-xs hover:border-brand-primary/50 hover:bg-sky-50"
+                    >
+                      <span className="font-medium text-content">{p.name}</span>
+                      <span className="ml-1 text-sky-700">${p.price}</span>
+                    </button>
+                  ))}
+              </div>
             </div>
           )}
           {/* content-start + 固定卡高：與 3 欄時相同高度，不因欄數或少筆商品而撐滿整區 */}
           <div
-            className={`grid min-h-[min(50vh,380px)] flex-1 content-start gap-2 overflow-y-auto rounded-xl border border-dashed border-slate-200 bg-slate-50 p-2 auto-rows-auto ${gridClass}`}
+            className={`grid min-h-[min(50vh,380px)] flex-1 content-start gap-2 overflow-y-auto rounded-xl border border-dashed border-brand-surface bg-table-head p-2 auto-rows-auto ${gridClass}`}
           >
-            {filteredProducts.map((product) => (
-              <button
-                key={product.id}
-                type="button"
-                data-testid={`pos-product-${product.id}`}
-                data-product-name={product.name}
-                onClick={() => addProduct(product as PosProduct)}
-                className="flex h-[118px] w-full min-w-0 shrink-0 flex-col items-start gap-0.5 rounded-lg bg-white px-2 py-1.5 text-left text-[11px] shadow-sm shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-sky-50 sm:h-[120px]"
-              >
-                {product.sku && (
-                  <span className="shrink-0 text-[10px] text-slate-400">{product.sku}</span>
-                )}
-                <span className="line-clamp-2 min-h-0 flex-1 font-medium leading-snug text-slate-900">
-                  {product.name}
-                </span>
-                <span className="shrink-0 text-sky-700">${product.price}</span>
-              </button>
-            ))}
+            {filteredProducts.map((product) => {
+              const isFav = favoriteIds.includes(product.id);
+              return (
+                <div
+                  key={product.id}
+                  className="relative flex h-[118px] w-full min-w-0 shrink-0 flex-col items-stretch gap-0.5 rounded-lg bg-white px-2 py-1.5 shadow-sm shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-sky-50 sm:h-[120px]"
+                >
+                  <button
+                    type="button"
+                    data-testid={`pos-product-${product.id}`}
+                    data-product-name={product.name}
+                    onClick={() => addProduct(product as PosProduct)}
+                    className="absolute inset-0 z-0 rounded-lg text-left"
+                  />
+                  <div className="relative z-10 flex flex-row items-start justify-between gap-1">
+                    {product.sku && <span className="shrink-0 text-xs text-muted">{product.sku}</span>}
+                    <button
+                      type="button"
+                      onClick={(e) => toggleFavorite(product.id, e)}
+                      className="shrink-0 rounded px-1 py-0.5 text-xs text-muted hover:bg-amber-100 hover:text-amber-700"
+                      title={isFav ? '取消常用' : '設為常用'}
+                      aria-label={isFav ? '取消常用' : '設為常用'}
+                    >
+                      {isFav ? '常用' : '設常用'}
+                    </button>
+                  </div>
+                  <span className="relative z-10 line-clamp-2 min-h-0 flex-1 font-medium leading-snug text-content">
+                    {product.name}
+                  </span>
+                  <span className="relative z-10 shrink-0 text-sky-700">${product.price}</span>
+                </div>
+              );
+            })}
           </div>
         </section>
 
-        <section className="fixed bottom-0 left-0 right-0 z-20 max-h-[42vh] w-full border-t border-slate-200 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:static lg:z-0 lg:max-h-none lg:w-[340px] lg:shrink-0 lg:self-stretch lg:border-t-0 lg:shadow-sm lg:rounded-2xl lg:pb-3">
+        <section className="fixed bottom-0 left-0 right-0 z-20 max-h-[42vh] w-full border-t border-brand-surface bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:static lg:z-0 lg:max-h-none lg:w-[340px] lg:shrink-0 lg:self-stretch lg:border-t-0 lg:shadow-sm lg:rounded-2xl lg:pb-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-800">購物車</span>
+            <span className="text-xs font-semibold text-content">購物車</span>
             <Button type="button" size="sm" variant="secondary" onClick={clearCart}>
               清空
             </Button>
           </div>
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto text-xs">
             {items.length === 0 ? (
-              <div className="py-8 text-center text-slate-400">尚無品項</div>
+              <div className="py-8 text-center text-muted">尚無品項</div>
             ) : (
               items.map((line) => (
                 <div
                   key={line.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-brand-surface bg-table-head px-2 py-1.5"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-slate-800">{line.name}</div>
-                    <div className="text-[10px] text-slate-500">
+                    <div className="truncate font-medium text-content">{line.name}</div>
+                    <div className="text-xs text-muted">
                       ${line.unitPrice} × {line.quantity}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px]"
+                      className="rounded border border-brand-surface bg-white px-1.5 py-0.5 text-xs"
                       onClick={() => changeQuantity(line.id, line.quantity - 1)}
                     >
                       −
@@ -439,7 +523,7 @@ export const PosPage: React.FC = () => {
                     <span className="w-6 text-center tabular-nums">{line.quantity}</span>
                     <button
                       type="button"
-                      className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[11px]"
+                      className="rounded border border-brand-surface bg-white px-1.5 py-0.5 text-xs"
                       onClick={() => changeQuantity(line.id, line.quantity + 1)}
                     >
                       +
@@ -450,12 +534,12 @@ export const PosPage: React.FC = () => {
             )}
           </div>
           <div className="mt-2 border-t border-slate-100 pt-2">
-            <label className="mb-1 block text-[10px] font-medium text-slate-500">
+            <label className="mb-1 block text-xs font-medium text-muted">
               促銷試算用會員（可選；下拉帶 memberLevel，與 seed 一致）
             </label>
             {posCustomers.length > 0 && (
               <select
-                className="mb-1.5 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] text-slate-800"
+                className="mb-1.5 w-full rounded-lg border border-brand-surface bg-white px-2 py-1.5 text-xs text-content"
                 value={
                   posCustomers.some((c) => c.id === previewMemberRaw) ? previewMemberRaw : ''
                 }
@@ -475,19 +559,24 @@ export const PosPage: React.FC = () => {
               data-testid="e2e-pos-preview-customer"
               value={previewMemberRaw}
               onChange={(e) => setPreviewMemberRaw(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 font-mono text-[10px] text-slate-800 placeholder:text-slate-400"
+              className="w-full rounded-lg border border-brand-surface bg-white px-2 py-1.5 font-mono text-xs text-content placeholder:text-muted focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             />
             {previewCustomerId &&
               (() => {
                 const c = posCustomers.find((x) => x.id === previewCustomerId);
                 return c?.memberLevel ? (
-                  <div className="mt-1 text-[10px] font-semibold text-amber-800">
+                  <div className="mt-1 text-xs font-semibold text-amber-800">
                     等級：{c.memberLevel}
                   </div>
                 ) : null;
               })()}
           </div>
-          <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs text-slate-600">
+          <div className="mt-2 space-y-1 border-t border-brand-surface pt-2 text-xs text-muted">
+            {summary.totalQuantity > 0 && (
+              <div className="flex justify-between text-muted">
+                <span>共 {summary.totalQuantity} 件</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>小計</span>
               <span className="tabular-nums">
@@ -495,7 +584,7 @@ export const PosPage: React.FC = () => {
               </span>
             </div>
             {promoPreview && promoPreview.discount > 0 && (
-              <div className="flex justify-between text-[#28A745]">
+              <div className="flex justify-between text-brand-success">
                 <span>促銷折讓</span>
                 <span className="tabular-nums">-${promoPreview.discount.toLocaleString()}</span>
               </div>
@@ -506,7 +595,7 @@ export const PosPage: React.FC = () => {
                 <span className="tabular-nums">${summary.tax.toLocaleString()}</span>
               </div>
             )}
-            <div className="flex justify-between font-semibold text-slate-900">
+            <div className="flex justify-between font-semibold text-content">
               <span>應收</span>
               <span className="tabular-nums">
                 ${(promoPreview?.total ?? summary.total).toLocaleString()}
@@ -525,7 +614,7 @@ export const PosPage: React.FC = () => {
             前往結帳
           </Button>
           {lastOrderResult?.body && (
-            <div className="mt-2 rounded-lg bg-emerald-50 px-2 py-1.5 text-[10px] text-emerald-800">
+            <div className="mt-2 rounded-lg bg-brand-success/10 px-2 py-1.5 text-xs text-brand-success">
               最近單號 {lastOrderResult.body.orderNumber}
               {lastOrderResult.body.credit ? '（掛帳）' : ''}
             </div>
@@ -539,7 +628,9 @@ export const PosPage: React.FC = () => {
         items={items}
         totalAmount={promoPreview?.total ?? summary.total}
         storeId={storeId}
+        merchantId={apiMerchantId ?? ''}
         onOrderCreated={setLastOrderResult}
+        initialMemberInput={previewMemberRaw}
       />
     </div>
   );

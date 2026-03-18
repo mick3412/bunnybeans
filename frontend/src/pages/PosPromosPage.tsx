@@ -49,23 +49,25 @@ export const PosPromosPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-full bg-zinc-100 p-6" data-testid="e2e-pos-promos">
-      <h1 className="text-2xl font-bold text-slate-900">進行中促銷</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        與收銀門市同源 <span className="font-mono text-xs">merchantId</span>，僅列出狀態為進行中之規則（唯讀）。
-      </p>
-      <p className="mt-1 text-sm">
-        <Link to="/admin/promotions" className="font-medium text-sky-700 underline">
-          後台編輯促銷規則
-        </Link>
-      </p>
+    <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-pos-promos">
+      <div className="border-b border-brand-surface pb-2">
+        <h2 className="text-lg font-semibold text-content">進行中促銷</h2>
+        <p className="mt-1 text-sm text-muted">
+          與收銀門市同源 <span className="font-mono text-xs">merchantId</span>，僅列出狀態為進行中之規則（唯讀）。
+        </p>
+        <p className="mt-1 text-sm">
+          <Link to="/admin/promotions" className="font-medium text-brand-primary hover:underline">
+            後台編輯促銷規則
+          </Link>
+        </p>
+      </div>
 
-      {loading && <div className="mt-6 text-sm text-slate-500">載入中…</div>}
+      {loading && <div className="mt-6 text-sm text-muted">載入中…</div>}
       {err && !loading && (
         <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{err}</div>
       )}
       {!loading && !err && rows.length === 0 && (
-        <div className="mt-6 rounded-xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+        <div className="mt-6 rounded-xl border border-dashed border-brand-surface bg-table-head px-4 py-8 text-center text-sm text-muted">
           目前無進行中之促銷規則
         </div>
       )}
@@ -74,13 +76,13 @@ export const PosPromosPage: React.FC = () => {
           {rows.map((p) => (
             <li
               key={p.id}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+              className="rounded-xl border border-brand-surface bg-table-head px-4 py-3 shadow-sm"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-medium text-slate-900">{p.name}</div>
-                  <div className="mt-0.5 text-xs text-slate-600">{p.summary || '—'}</div>
-                  <div className="mt-1 text-[10px] text-slate-400">
+                  <div className="font-medium text-content">{p.name}</div>
+                  <div className="mt-0.5 text-xs text-muted">{p.summary || '—'}</div>
+                  <div className="mt-1 text-xs text-muted">
                     優先序 {p.priority}
                     {p.firstPurchaseOnly ? ' · 首購' : ''}
                     {p.exclusive ? ' · 互斥' : ''}

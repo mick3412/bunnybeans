@@ -1,10 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { usePersistentTableColumnWidths } from '../../shared/hooks/usePersistentTableColumnWidths';
 import {
   getProducts,
   createProduct,
   updateProduct,
   deleteProduct,
+  getProductTags,
+  batchUpdateProductPrice,
   importProductsCsv,
   createImportJob,
   getImportJob,
@@ -12,13 +15,19 @@ import {
   getBrands,
   getInventoryBalances,
   getWarehouses,
+  getExpiringInventory,
   type ProductFullDto,
   type ApiError,
+  type ExpiringBatchRow,
+  type ExpiringInventoryResult,
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
+import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { Button } from '../../shared/components/Button';
+import { StandardFloatBar } from '../../shared/components/StandardFloatBar';
 import { TextInput } from '../../shared/components/TextInput';
 import { useAdminToast } from './AdminToastContext';
+import { pollImportJob } from '../../shared/utils/pollImportJob';
 
 const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v2';
 const PRODUCTS_TABLE_COL_DEFAULTS = {
@@ -39,7 +48,10 @@ function warehouseColWidthPx(name: string): number {
 }
 
 export const AdminProductsPage: React.FC = () => {
+  const location = useLocation();
+  const merchantId = useDefaultMerchantId();
   const { showToast } = useAdminToast();
+  const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [products, setProducts] = useState<ProductFullDto[]>([]);
   const [stockByProduct, setStockByProduct] = useState<Record<string, number>>({});
   /** productId -> warehouseId -> onHandQty */
@@ -67,23 +79,34 @@ export const AdminProductsPage: React.FC = () => {
     null,
   );
   const [jobSubmitting, setJobSubmitting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSalePrice, setBulkSalePrice] = useState('');
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
   /** 右側商品表單抽屜：預設收起，點右緣或編輯時展開 */
   const [panelOpen, setPanelOpen] = useState(false);
+
+  /** 即將到期批次列表（依當前編輯商品查詢） */
+  const [expiringBatches, setExpiringBatches] = useState<ExpiringBatchRow[] | null>(null);
+  const [expiringLoading, setExpiringLoading] = useState(false);
+  const [expiringError, setExpiringError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     sku: '',
     name: '',
     description: '',
     specSize: '',
-    specColor: '',
-    weightGrams: '',
+    specCapacity: '',
+    specStyle: '',
+    expiryDescription: '',
+    specWeight: '',
     listPrice: '0',
     salePrice: '0',
     costPrice: '',
     categoryId: '',
     brandId: '',
-    tags: '',
+    tags: [] as string[],
   });
+  const [searchQ, setSearchQ] = useState('');
 
   const load = async () => {
     setErr(null);
@@ -130,6 +153,75 @@ export const AdminProductsPage: React.FC = () => {
     void load();
   }, []);
 
+  useEffect(() => {
+    if (!merchantId) return;
+    void (async () => {
+      const out = await getProductTags(merchantId);
+      setTagOptions(Array.isArray(out) ? out : []);
+    })();
+  }, [merchantId]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q');
+    if (q) {
+      setSearchQ(q);
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!editing?.id) {
+      setExpiringBatches(null);
+      setExpiringError(null);
+      setExpiringLoading(false);
+      return;
+    }
+    void (async () => {
+      setExpiringLoading(true);
+      setExpiringError(null);
+      const out = await getExpiringInventory({
+        productId: editing.id,
+        daysAhead: 30,
+        pageSize: 50,
+      });
+      setExpiringLoading(false);
+      const maybeError = out as unknown as ApiError;
+      if ('statusCode' in maybeError && typeof maybeError.statusCode === 'number') {
+        setExpiringError(maybeError.message);
+        setExpiringBatches(null);
+        return;
+      }
+      const data = out as unknown as ExpiringInventoryResult;
+      setExpiringBatches(Array.isArray(data.items) ? data.items : []);
+    })();
+  }, [editing?.id]);
+
+  const filteredProducts = useMemo(() => {
+    if (!searchQ.trim()) return products;
+    const q = searchQ.trim().toLowerCase();
+    return products.filter((p) => {
+      const sku = p.sku?.toLowerCase() ?? '';
+      const name = p.name?.toLowerCase() ?? '';
+      return sku.includes(q) || name.includes(q);
+    });
+  }, [products, searchQ]);
+
+  const allFilteredIds = useMemo(() => filteredProducts.map((p) => p.id), [filteredProducts]);
+  const selectedCount = selectedIds.size;
+  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedIds.has(id));
+
+  useEffect(() => {
+    // 避免搜尋切換後選到看不到的列
+    setSelectedIds((prev) => {
+      const next = new Set<string>();
+      const allow = new Set(allFilteredIds);
+      for (const id of prev) {
+        if (allow.has(id)) next.add(id);
+      }
+      return next;
+    });
+  }, [allFilteredIds]);
+
   const openCreate = () => {
     setCreating(true);
     setEditing(null);
@@ -138,14 +230,16 @@ export const AdminProductsPage: React.FC = () => {
       name: '',
       description: '',
       specSize: '',
-      specColor: '',
-      weightGrams: '',
+      specCapacity: '',
+      specStyle: '',
+      expiryDescription: '',
+      specWeight: '',
       listPrice: '0',
       salePrice: '0',
       costPrice: '',
       categoryId: '',
       brandId: '',
-      tags: '',
+      tags: [],
     });
   };
 
@@ -158,33 +252,32 @@ export const AdminProductsPage: React.FC = () => {
       name: row.name,
       description: row.description ?? '',
       specSize: row.specSize ?? '',
-      specColor: row.specColor ?? '',
-      weightGrams: row.weightGrams != null ? String(row.weightGrams) : '',
+      specCapacity: row.specCapacity ?? '',
+      specStyle: row.specStyle ?? row.specColor ?? '',
+      expiryDescription: row.expiryDescription ?? '',
+      specWeight: row.specWeight ?? (row.weightGrams != null ? `${row.weightGrams}g` : ''),
       listPrice: row.listPrice ?? '0',
       salePrice: row.salePrice ?? '0',
       costPrice: row.costPrice ?? '',
       categoryId: row.categoryId ?? '',
       brandId: row.brandId ?? '',
-      tags: (row.tags ?? []).join(', '),
+      tags: row.tags ?? [],
     });
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr(null);
-    const tags = form.tags
-      .split(/[,，]/)
-      .map((t) => t.trim())
-      .filter(Boolean);
-    const weightGrams =
-      form.weightGrams.trim() === '' ? null : parseInt(form.weightGrams, 10);
+    const tags = form.tags.map((t) => t.trim()).filter(Boolean);
     const body = {
       sku: form.sku.trim(),
       name: form.name.trim(),
       description: form.description.trim() || null,
       specSize: form.specSize.trim() || null,
-      specColor: form.specColor.trim() || null,
-      weightGrams: Number.isFinite(weightGrams as number) ? weightGrams : null,
+      specCapacity: form.specCapacity.trim() || null,
+      specStyle: form.specStyle.trim() || null,
+      specWeight: form.specWeight.trim() || null,
+      expiryDescription: form.expiryDescription.trim() || null,
       listPrice: form.listPrice.trim() || '0',
       salePrice: form.salePrice.trim() || '0',
       costPrice: form.costPrice.trim() || null,
@@ -259,143 +352,132 @@ export const AdminProductsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-w-0 max-w-[1600px]">
+    <div className="mx-auto min-w-0 max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-        <p className="max-w-xl text-sm text-slate-600">
+        <p className="max-w-xl text-sm text-[#64748b]">
           與 POS 共用主檔 API；庫存唯讀。預設僅總庫存；可展開各倉現量。新增請用右側表單「改為新增」或清空表單。
         </p>
         <div
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm"
+          className="rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 shadow-sm"
           data-testid="e2e-admin-products-import"
         >
-          <div className="text-xs font-semibold text-slate-700">CSV 批量匯入</div>
-          <p className="mt-1 text-[11px] text-slate-500">
-            表頭須含 <code className="rounded bg-slate-100 px-0.5">sku</code>；需{' '}
-            <code className="rounded bg-slate-100 px-0.5">VITE_ADMIN_API_KEY</code>
+          <div className="text-xs font-semibold text-muted">商品 CSV 匯入</div>
+          <p className="mt-0.5 text-[11px] text-[#64748b]">
+            表頭須含 <code className="rounded bg-[#f1f5f9] px-0.5">sku</code>；需{' '}
+            <code className="rounded bg-[#f1f5f9] px-0.5">VITE_ADMIN_API_KEY</code>。一般用同步、大檔用非同步。
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              className="max-w-[220px] text-xs file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1"
-              disabled={importSubmitting}
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = '';
-                if (!f) return;
-                setImportSubmitting(true);
-                setImportResult(null);
-                const out = await importProductsCsv(f);
-                setImportSubmitting(false);
-                if ('statusCode' in out) {
-                  const msg =
-                    out.statusCode === 401
-                      ? '需設定 VITE_ADMIN_API_KEY（與後端 ADMIN_API_KEY 相同）'
-                      : getErrorMessage(out);
-                  setErr(msg);
-                  showToast(msg, 'err');
-                  return;
-                }
-                setErr(null);
-                setImportResult(out);
-                showToast(`匯入完成：成功 ${out.ok} 筆${out.failed.length ? `，失敗 ${out.failed.length} 列` : ''}`);
-                await load();
-              }}
-            />
-            {importSubmitting && <span className="text-xs text-slate-500">上傳中…</span>}
+          <div className="mt-2 flex flex-wrap items-center gap-4">
+            <span className="flex items-center gap-2">
+              <span className="text-[11px] text-[#64748b]">一般</span>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-[#f1f5f9] file:px-2 file:py-0.5 file:text-xs"
+                disabled={importSubmitting}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!f) return;
+                  setImportSubmitting(true);
+                  setImportResult(null);
+                  const out = await importProductsCsv(f);
+                  setImportSubmitting(false);
+                  if ('statusCode' in out) {
+                    const msg =
+                      out.statusCode === 401
+                        ? '需設定 VITE_ADMIN_API_KEY（與後端 ADMIN_API_KEY 相同）'
+                        : getErrorMessage(out);
+                    setErr(msg);
+                    showToast(msg, 'err');
+                    return;
+                  }
+                  setErr(null);
+                  setImportResult(out);
+                  showToast(`匯入完成：成功 ${out.ok} 筆${out.failed.length ? `，失敗 ${out.failed.length} 列` : ''}`);
+                  await load();
+                }}
+              />
+              {importSubmitting && <span className="text-[11px] text-[#64748b]">上傳中…</span>}
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="text-[11px] text-[#64748b]">大檔</span>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-[#f1f5f9] file:px-2 file:py-0.5 file:text-xs"
+                disabled={jobSubmitting}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = '';
+                  if (!f) return;
+                  setJobSubmitting(true);
+                  setJobId(null);
+                  setJobStatus(null);
+                  setJobError(null);
+                  setJobResult(null);
+                  const out = await createImportJob('products_csv', f);
+                  setJobSubmitting(false);
+                  if ('statusCode' in out) {
+                    showToast(getErrorMessage(out), 'err');
+                    return;
+                  }
+                  setJobId(out.jobId);
+                  setJobStatus('pending');
+                  void pollImportJob({
+                    jobId: out.jobId,
+                    getImportJob,
+                    onStatus: (j) => {
+                      setJobStatus(j.status);
+                      if (j.status === 'done') {
+                        setJobResult(j.result);
+                        showToast(
+                          `Job 完成：ok ${(j.result as { ok?: number })?.ok ?? 0}`,
+                          (j.result as { failed?: unknown[] })?.failed?.length ? 'err' : 'ok',
+                        );
+                        void load();
+                      } else if (j.status === 'failed') {
+                        const msg = j.error ?? 'job failed';
+                        setJobError(msg);
+                        showToast(msg, 'err');
+                      }
+                    },
+                    onError: (msg) => {
+                      setJobError(msg);
+                      showToast(msg, 'err');
+                    },
+                  });
+                }}
+              />
+              {jobSubmitting && <span className="text-[11px] text-[#64748b]">建立 job…</span>}
+            </span>
           </div>
           {importResult && (
-            <div className="mt-2 border-t border-slate-100 pt-2 text-xs">
+            <div className="mt-1.5 border-t border-slate-100 pt-1.5 text-[11px]">
               <span className="font-medium text-emerald-700">成功 {importResult.ok} 筆</span>
               {importResult.failed.length > 0 && (
-                <div className="mt-1 max-h-32 overflow-y-auto rounded border border-red-100 bg-red-50/80 p-2">
-                  <div className="font-medium text-red-800">失敗列</div>
-                  <ul className="mt-1 list-inside list-disc text-red-900">
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-red-700">失敗 {importResult.failed.length} 列</summary>
+                  <ul className="mt-1 max-h-24 list-inside list-disc overflow-y-auto rounded border border-red-100 bg-red-50/80 p-1.5 text-red-900">
                     {importResult.failed.slice(0, 50).map((x) => (
-                      <li key={`${x.row}-${x.reason}`}>
-                        第 {x.row} 列：{x.reason}
-                      </li>
+                      <li key={`${x.row}-${x.reason}`}>第 {x.row} 列：{x.reason}</li>
                     ))}
+                    {importResult.failed.length > 50 && <li>…其餘 {importResult.failed.length - 50} 列</li>}
                   </ul>
-                  {importResult.failed.length > 50 && (
-                    <div className="text-red-700">…其餘 {importResult.failed.length - 50} 列</div>
-                  )}
-                </div>
+                </details>
               )}
             </div>
           )}
-        </div>
-        <div className="rounded-xl border border-violet-200 bg-violet-50/50 px-3 py-2 shadow-sm">
-          <div className="text-xs font-semibold text-violet-900">大檔非同步（POST /imports/jobs/products_csv）</div>
-          <p className="mt-1 text-[11px] text-violet-800/90">上傳後輪詢狀態至完成；適合同步逾時或超大 CSV。</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              className="max-w-[200px] text-xs"
-              disabled={jobSubmitting}
-              onChange={async (e) => {
-                const f = e.target.files?.[0];
-                e.target.value = '';
-                if (!f) return;
-                setJobSubmitting(true);
-                setJobId(null);
-                setJobStatus(null);
-                setJobError(null);
-                setJobResult(null);
-                const out = await createImportJob('products_csv', f);
-                setJobSubmitting(false);
-                if ('statusCode' in out) {
-                  showToast(getErrorMessage(out), 'err');
-                  return;
-                }
-                setJobId(out.jobId);
-                setJobStatus('pending');
-                const poll = async (id: string) => {
-                  for (let i = 0; i < 120; i++) {
-                    const j = await getImportJob(id);
-                    if ('statusCode' in j) {
-                      setJobError(getErrorMessage(j));
-                      return;
-                    }
-                    setJobStatus(j.status);
-                    if (j.status === 'done') {
-                      setJobResult(j.result);
-                      showToast(
-                        `Job 完成：ok ${(j.result as { ok?: number })?.ok ?? 0}`,
-                        (j.result as { failed?: unknown[] })?.failed?.length ? 'err' : 'ok',
-                      );
-                      await load();
-                      return;
-                    }
-                    if (j.status === 'failed') {
-                      setJobError(j.error ?? 'job failed');
-                      showToast(j.error ?? 'job failed', 'err');
-                      return;
-                    }
-                    await new Promise((r) => setTimeout(r, 500));
-                  }
-                  setJobError('輪詢逾時');
-                };
-                void poll(out.jobId);
-              }}
-            />
-            {jobSubmitting && <span className="text-xs">建立 job…</span>}
-          </div>
           {jobId && (
-            <div className="mt-2 text-xs text-violet-900">
-              jobId: <code className="rounded bg-white/80 px-1">{jobId.slice(0, 8)}…</code> status:{' '}
-              <strong>{jobStatus}</strong>
+            <div className="mt-1.5 border-t border-slate-100 pt-1.5 text-[11px] text-[#64748b]">
+              大檔 job: <code className="rounded bg-[#f1f5f9] px-0.5">{jobId.slice(0, 8)}…</code> {jobStatus}
               {jobResult && (
-                <span className="ml-2">
-                  ok {jobResult.ok ?? 0} failed {jobResult.failed?.length ?? 0}
-                </span>
+                <span className="ml-1.5">ok {jobResult.ok ?? 0} failed {jobResult.failed?.length ?? 0}</span>
               )}
             </div>
           )}
           {jobError && (
-            <div className="mt-2 rounded-lg border-2 border-red-400 bg-red-50 px-3 py-2 text-sm font-semibold text-red-900" role="alert">
-              非同步 job 失敗（api-design §6.6）：{jobError}
+            <div className="mt-1.5 rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-900" role="alert">
+              非同步失敗：{jobError}
             </div>
           )}
         </div>
@@ -420,7 +502,7 @@ export const AdminProductsPage: React.FC = () => {
       {!panelOpen && (
         <button
           type="button"
-          className="fixed right-0 top-1/2 z-[95] flex -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-[#7EACB5] bg-[#7EACB5] px-2.5 py-6 text-xs font-semibold text-white shadow-lg transition hover:bg-[#6d9ba4]"
+          className="fixed right-0 top-1/2 z-[95] flex -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-brand-primary bg-brand-primary px-2.5 py-6 text-xs font-semibold text-white shadow-lg transition hover:bg-brand-primary-hover"
           onClick={() => {
             openCreate();
             setPanelOpen(true);
@@ -433,12 +515,22 @@ export const AdminProductsPage: React.FC = () => {
       <div className="min-w-0 w-full">
         {/* 表格全寬 */}
         <div className="min-w-0 overflow-hidden">
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="mb-3 flex justify-end">
+            <TextInput
+              label="搜尋"
+              placeholder="SKU 或名稱"
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              className="w-56 !py-1.5"
+            />
+          </div>
+          <div className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
             <table
               className="table-fixed text-left text-sm"
               style={{ width: tableMinWidth, minWidth: '100%' }}
             >
               <colgroup>
+                <col style={{ width: 44 }} />
                 <col style={{ width: colW.sku }} />
                 <col style={{ width: colW.name }} />
                 <col style={{ width: colW.category }} />
@@ -452,13 +544,27 @@ export const AdminProductsPage: React.FC = () => {
                 <col style={{ width: colW.spec }} />
                 <col style={{ width: colW.actions }} />
               </colgroup>
-              <thead className="bg-slate-50 text-slate-600">
+              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
                 <tr>
+                  <th className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      aria-label="全選"
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSelectedIds(() => {
+                          if (!checked) return new Set();
+                          return new Set(allFilteredIds);
+                        });
+                      }}
+                    />
+                  </th>
                   {(
                     [
                       ['sku', 'SKU'],
                       ['name', '名稱'],
-                      ['category', '分類'],
+                      ['category', '類別'],
                       ['brand', '品牌'],
                       ['salePrice', '售價'],
                     ] as const
@@ -473,7 +579,7 @@ export const AdminProductsPage: React.FC = () => {
                         type="button"
                         tabIndex={-1}
                         aria-label={`調整「${label}」欄寬（拖曳後會記住）`}
-                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#7EACB5]/15 active:bg-[#7EACB5]/25"
+                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#0ea5e9]/15 active:bg-[#0ea5e9]/25"
                         onMouseDown={(e) => onResizeStart(key, e)}
                       />
                     </th>
@@ -486,7 +592,7 @@ export const AdminProductsPage: React.FC = () => {
                       <span>總庫存</span>
                       <button
                         type="button"
-                        className="text-[10px] font-normal text-[#7EACB5] hover:underline"
+                        className="text-[10px] font-normal text-[#0ea5e9] hover:underline"
                         onClick={() => setShowWhDetail((v) => !v)}
                       >
                         {showWhDetail ? '收合各倉' : '展開各倉'}
@@ -496,7 +602,7 @@ export const AdminProductsPage: React.FC = () => {
                       type="button"
                       tabIndex={-1}
                       aria-label="調整「總庫存」欄寬（拖曳後會記住）"
-                      className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#7EACB5]/15 active:bg-[#7EACB5]/25"
+                      className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#0ea5e9]/15 active:bg-[#0ea5e9]/25"
                       onMouseDown={(e) => onResizeStart('stock', e)}
                     />
                   </th>
@@ -529,7 +635,7 @@ export const AdminProductsPage: React.FC = () => {
                         type="button"
                         tabIndex={-1}
                         aria-label={`調整「${label}」欄寬（拖曳後會記住）`}
-                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#7EACB5]/15 active:bg-[#7EACB5]/25"
+                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#0ea5e9]/15 active:bg-[#0ea5e9]/25"
                         onMouseDown={(e) => onResizeStart(key, e)}
                       />
                     </th>
@@ -537,8 +643,24 @@ export const AdminProductsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {filteredProducts.map((p) => (
                   <tr key={p.id} className="border-t border-slate-100">
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(p.id)}
+                        aria-label={`選取 ${p.sku}`}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (checked) next.add(p.id);
+                            else next.delete(p.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
                     <td className="px-3 py-2 font-mono text-xs truncate" title={p.sku}>
                       {p.sku}
                     </td>
@@ -548,10 +670,10 @@ export const AdminProductsPage: React.FC = () => {
                     >
                       {p.name}
                     </td>
-                    <td className="px-3 py-2 truncate text-xs text-slate-700" title={categoryName(p.categoryId)}>
+                    <td className="px-3 py-2 truncate text-xs text-muted" title={categoryName(p.categoryId)}>
                       {categoryName(p.categoryId)}
                     </td>
-                    <td className="px-3 py-2 truncate text-xs text-slate-700" title={brandName(p.brandId)}>
+                    <td className="px-3 py-2 truncate text-xs text-muted" title={brandName(p.brandId)}>
                       {brandName(p.brandId)}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs">{p.salePrice ?? '0'}</td>
@@ -572,13 +694,15 @@ export const AdminProductsPage: React.FC = () => {
                           {stockByProductWarehouse[p.id]?.[w.id] ?? 0}
                         </td>
                       ))}
-                    <td className="px-3 py-2 text-xs text-slate-500 truncate">
-                      {[p.specSize, p.specColor].filter(Boolean).join(' / ') || '—'}
+                    <td className="px-3 py-2 text-xs text-[#64748b] truncate">
+                      {[p.specSize, p.specCapacity, p.specWeight, p.specStyle, p.expiryDescription]
+                        .filter(Boolean)
+                        .join(' / ') || '—'}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <button
                         type="button"
-                        className="mr-2 text-[#7EACB5] text-xs font-medium hover:underline"
+                        className="mr-2 text-[#0ea5e9] text-xs font-medium hover:underline"
                         onClick={() => openEdit(p)}
                       >
                         編輯
@@ -598,24 +722,88 @@ export const AdminProductsPage: React.FC = () => {
           </div>
         </div>
 
+        {/* FloatBar：批次改價 */}
+        <StandardFloatBar visible={selectedCount > 0} className="w-[min(720px,calc(100%-24px))]">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-content">已選 {selectedCount} 筆</span>
+            <div className="flex items-end gap-2">
+              <label className="text-xs text-muted">
+                <span className="mb-1 block">新售價</span>
+                <input
+                  type="number"
+                  min={0}
+                  className="h-9 w-40 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                  placeholder="例如 120"
+                  value={bulkSalePrice}
+                  onChange={(e) => setBulkSalePrice(e.target.value)}
+                />
+              </label>
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                disabled={bulkSubmitting || !bulkSalePrice.trim()}
+                onClick={async () => {
+                  const salePrice = bulkSalePrice.trim();
+                  if (!salePrice) return;
+                  setBulkSubmitting(true);
+                  const out = await batchUpdateProductPrice({
+                    productIds: Array.from(selectedIds),
+                    salePrice,
+                  });
+                  setBulkSubmitting(false);
+                  if ('statusCode' in out) {
+                    const sc = out.statusCode;
+                    if (sc === 404 || sc === 501) {
+                      showToast('批次改價 API 即將上線', 'err');
+                    } else {
+                      showToast(getErrorMessage(out), 'err');
+                    }
+                    return;
+                  }
+                  showToast(`已批次更新 ${out.updated} 筆`, 'ok');
+                  setSelectedIds(new Set());
+                  setBulkSalePrice('');
+                  await load();
+                }}
+              >
+                {bulkSubmitting ? '送出中…' : '批次改價'}
+              </Button>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setSelectedIds(new Set());
+                  setBulkSalePrice('');
+                }}
+              >
+                清除選取
+              </Button>
+            </div>
+          </div>
+        </StandardFloatBar>
+
         {/* 右側懸浮抽屜：向左展開 */}
         <aside
-          className={`fixed right-0 top-0 z-[100] flex h-full max-h-screen w-full max-w-[440px] flex-col border-l border-neutral-200 bg-white shadow-[-8px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out ${
+          className={`fixed right-0 top-0 z-[100] flex h-full max-h-screen w-full max-w-[440px] flex-col border-l border-[#e2e8f0] bg-white shadow-[-8px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out ${
             panelOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
           }`}
           aria-label="商品表單"
           aria-hidden={!panelOpen}
         >
           <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto p-4 pt-14">
-            <div className="absolute left-0 right-0 top-0 flex items-center justify-between gap-2 border-b border-neutral-100 bg-white px-3 py-2.5">
-              <span className="truncate text-sm font-semibold text-neutral-900">
+            <div className="absolute left-0 right-0 top-0 flex items-center justify-between gap-2 border-b border-[#e2e8f0] bg-white px-3 py-2.5">
+              <span className="truncate text-sm font-semibold text-content">
                 {editing && !creating ? `編輯：${editing.sku}` : '新增商品'}
               </span>
               <div className="flex shrink-0 items-center gap-2">
                 {editing && !creating && (
                   <button
                     type="button"
-                    className="text-xs font-medium text-[#7EACB5] hover:underline"
+                    className="text-xs font-medium text-[#0ea5e9] hover:underline"
                     onClick={openCreate}
                   >
                     改為新增
@@ -623,7 +811,7 @@ export const AdminProductsPage: React.FC = () => {
                 )}
                 <button
                   type="button"
-                  className="rounded-lg border border-neutral-200 px-2 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+                  className="rounded-lg border border-[#e2e8f0] px-2 py-1 text-xs font-medium text-[#64748b] hover:bg-[#f8fafc]"
                   onClick={() => setPanelOpen(false)}
                   aria-label="收起表單"
                 >
@@ -633,7 +821,7 @@ export const AdminProductsPage: React.FC = () => {
             </div>
               <div className="space-y-4">
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
                     基本
                   </p>
                   <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
@@ -652,14 +840,14 @@ export const AdminProductsPage: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
                     歸屬
                   </p>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">分類</label>
+                      <label className="mb-1 block text-xs font-medium text-[#64748b]">類別</label>
                       <select
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
                         value={form.categoryId}
                         onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                       >
@@ -672,9 +860,9 @@ export const AdminProductsPage: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-slate-600">品牌</label>
+                      <label className="mb-1 block text-xs font-medium text-[#64748b]">品牌</label>
                       <select
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
                         value={form.brandId}
                         onChange={(e) => setForm((f) => ({ ...f, brandId: e.target.value }))}
                       >
@@ -689,34 +877,127 @@ export const AdminProductsPage: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
-                    規格
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+                    規格與效期
                   </p>
+                  {editing && (
+                    <div className="mb-3 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-2">
+                      <div className="mb-1 text-[11px] font-semibold text-muted">庫存餘額（快捷）</div>
+                      <div className="flex flex-wrap gap-3 text-[11px]">
+                        <span className="rounded bg-white px-2 py-1 shadow-sm">
+                          <span className="text-muted">全倉</span>
+                          <span className="ml-2 font-mono font-semibold tabular-nums text-content">
+                            {stockByProduct[editing.id] ?? 0}
+                          </span>
+                        </span>
+                        {warehousesOrdered.slice(0, 6).map((w) => (
+                          <span key={w.id} className="rounded bg-white px-2 py-1 shadow-sm" title={w.name}>
+                            <span className="text-muted">{w.name}</span>
+                            <span className="ml-2 font-mono tabular-nums text-content">
+                              {stockByProductWarehouse[editing.id]?.[w.id] ?? 0}
+                            </span>
+                          </span>
+                        ))}
+                        {warehousesOrdered.length > 6 && (
+                          <span className="text-muted">…其餘 {warehousesOrdered.length - 6} 倉</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <TextInput
-                      label="規格尺寸"
+                      label="尺寸 (specSize)"
                       value={form.specSize}
                       onChange={(e) => setForm((f) => ({ ...f, specSize: e.target.value }))}
+                      placeholder="例如：S / M / L 或 30x40cm"
                     />
                     <TextInput
-                      label="款式"
-                      value={form.specColor}
-                      onChange={(e) => setForm((f) => ({ ...f, specColor: e.target.value }))}
+                      label="容量 (specCapacity)"
+                      value={form.specCapacity}
+                      onChange={(e) => setForm((f) => ({ ...f, specCapacity: e.target.value }))}
+                      placeholder="例如：500ml / 10kg"
                     />
-                  </div>
-                  <div className="mt-3">
                     <TextInput
-                      label="重量 (g)"
-                      value={form.weightGrams}
-                      onChange={(e) => setForm((f) => ({ ...f, weightGrams: e.target.value }))}
-                      inputMode="numeric"
-                      placeholder="0"
-                      hint="僅填整數（公克），可空白"
+                      label="重量 (specWeight)"
+                      value={form.specWeight}
+                      onChange={(e) => setForm((f) => ({ ...f, specWeight: e.target.value }))}
+                      placeholder="含單位自填，例如：500g 或 0.5kg"
+                    />
+                    <TextInput
+                      label="款式 (specStyle)"
+                      value={form.specStyle}
+                      onChange={(e) => setForm((f) => ({ ...f, specStyle: e.target.value }))}
+                      placeholder="例如：紅色／無香味"
+                    />
+                    <TextInput
+                      label="有效期限 (expiryDescription)"
+                      value={form.expiryDescription}
+                      onChange={(e) => setForm((f) => ({ ...f, expiryDescription: e.target.value }))}
+                      placeholder="例如：常溫 12 個月；實際以包裝標示為準"
                     />
                   </div>
+                    {editing && (
+                      <div className="mt-3 rounded-lg border border-dashed border-[#cbd5f5] bg-white/70 p-2">
+                        <div className="mb-1 flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold text-[#475569]">
+                            近 30 天即將到期批次
+                          </span>
+                          {expiringLoading && (
+                            <span className="text-[11px] text-[#94a3b8]">載入中…</span>
+                          )}
+                        </div>
+                        {expiringError && (
+                          <p className="text-[11px] text-red-600">
+                            無法載入批次：{expiringError}
+                          </p>
+                        )}
+                        {!expiringError &&
+                          !expiringLoading &&
+                          (!expiringBatches || expiringBatches.length === 0) && (
+                            <p className="text-[11px] text-[#94a3b8]">
+                              目前沒有設定效期的庫存批次。
+                            </p>
+                          )}
+                        {!expiringError && expiringBatches && expiringBatches.length > 0 && (
+                          <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-[#e2e8f0] bg-[#f8fafc]">
+                            <table className="w-full border-collapse text-[11px]">
+                              <thead className="bg-[#e2e8f0] text-[#475569]">
+                                <tr>
+                                  <th className="px-2 py-1 text-left">批號</th>
+                                  <th className="px-2 py-1 text-left">效期日</th>
+                                  <th className="px-2 py-1 text-right">庫存數</th>
+                                  <th className="px-2 py-1 text-left">倉庫</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {expiringBatches.map((b) => (
+                                  <tr
+                                    key={`${b.productId}-${b.warehouseId}-${b.batchCode ?? 'none'}-${b.expiryDate}`}
+                                    className="border-t border-[#e2e8f0]"
+                                  >
+                                    <td className="px-2 py-1 font-mono">
+                                      {b.batchCode || '—'}
+                                    </td>
+                                    <td className="px-2 py-1">
+                                      {b.expiryDate?.slice(0, 10)}
+                                    </td>
+                                    <td className="px-2 py-1 text-right font-mono">
+                                      {b.onHandQty}
+                                    </td>
+                                    <td className="px-2 py-1 text-xs text-[#64748b]">
+                                      {b.warehouseId}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
                     價格
                   </p>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -741,7 +1022,7 @@ export const AdminProductsPage: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-600">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
                     描述
                   </p>
                   <TextInput
@@ -751,13 +1032,34 @@ export const AdminProductsPage: React.FC = () => {
                   />
                 </div>
               </div>
-              <TextInput
-                label="標籤（逗號分隔）"
-                value={form.tags}
-                onChange={(e) => setForm((f) => ({ ...f, tags: e.target.value }))}
-                placeholder="促銷中, 熱賣"
-              />
-              <div className="flex flex-wrap gap-2 border-t border-neutral-200 pt-3">
+              <div className="space-y-2">
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+                  標籤（可多選）
+                </label>
+                <p className="text-[11px] text-[#94a3b8]">
+                  用來在報表與列表中快速篩選；選項來自 GET /product-tags。
+                </p>
+                <select
+                  multiple
+                  size={Math.min(6, tagOptions.length + 1)}
+                  className="w-full min-h-[100px] rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-content focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                  value={form.tags}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, (o) => o.value);
+                    setForm((f) => ({ ...f, tags: selected }));
+                  }}
+                >
+                  {tagOptions.map((tag) => (
+                    <option key={tag} value={tag}>
+                      {tag}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-[#94a3b8]">
+                  按住 Ctrl（Windows）或 Cmd（Mac）可多選
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 border-t border-[#e2e8f0] pt-3">
                 <Button type="submit">儲存</Button>
                 <Button type="button" variant="secondary" onClick={openCreate}>
                   {editing && !creating ? '取消編輯' : '清空表單'}

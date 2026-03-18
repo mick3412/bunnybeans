@@ -1,12 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import {
   getFinanceEvents,
+  getFinanceSummary,
   fetchCsvExport,
   type ApiError,
   type FinanceEventRow,
+  type FinanceSummaryByType,
+  type FinanceSummaryByPartyId,
 } from '../../modules/admin/adminApi';
+import { MiniLineChart } from '../../shared/components/MiniLineChart';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
+import { MiniBarChart } from '../../shared/components/MiniBarChart';
+import { ReferenceIdLink } from '../../shared/components/ReferenceIdLink';
+import { PartyViewSegmented } from '../../shared/components/PartyViewSegmented';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
 
 function toYmd(d: Date): string {
   const y = d.getFullYear();
@@ -15,7 +24,33 @@ function toYmd(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+const FINANCE_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: '全部類型' },
+  { value: 'SALE_RECEIVABLE', label: '銷售應收' },
+  { value: 'SALE_PAYMENT', label: '銷售實收' },
+  { value: 'SALE_REFUND', label: '銷售退款' },
+  { value: 'PURCHASE_PAYABLE', label: '採購應付' },
+  { value: 'PURCHASE_RETURN', label: '退供應商' },
+  { value: 'ADJUSTMENT', label: '人工調整' },
+];
+
+const FINANCE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  FINANCE_TYPE_OPTIONS.filter((o) => o.value).map((o) => [o.value, o.label]),
+);
+function financeTypeLabel(type: string): string {
+  return FINANCE_TYPE_LABELS[type] ?? type;
+}
+
 export const AdminReportsPage: React.FC = () => {
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const presetFromUrl = (searchParams.get('preset') as 'last30d' | 'all' | 'custom' | null) ?? 'last30d';
+  const fromFromUrl = searchParams.get('from') ?? '';
+  const toFromUrl = searchParams.get('to') ?? '';
+  const typeFromUrl = searchParams.get('type') ?? '';
+  const partyIdFromUrl = searchParams.get('partyId') ?? '';
+  const partyViewFromUrl = (searchParams.get('partyView') as 'all' | 'customer' | 'supplier' | 'other' | null) ?? 'all';
+
   const [rows, setRows] = useState<FinanceEventRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -23,24 +58,64 @@ export const AdminReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [preset, setPreset] = useState<'last30d' | 'all' | 'custom'>('last30d');
+  const [preset, setPreset] = useState<'last30d' | 'all' | 'custom'>(presetFromUrl);
   const [from, setFrom] = useState(() => {
+    if (fromFromUrl) return fromFromUrl;
     const t = new Date();
     t.setDate(t.getDate() - 30);
     return toYmd(t);
   });
-  const [to, setTo] = useState(() => toYmd(new Date()));
+  const [to, setTo] = useState(() => {
+    if (toFromUrl) return toFromUrl;
+    return toYmd(new Date());
+  });
+  const [typeFilter, setTypeFilter] = useState<string>(typeFromUrl);
+  const [partyId, setPartyId] = useState<string>(partyIdFromUrl);
+  const [partyView, setPartyView] = useState<'all' | 'customer' | 'supplier' | 'other'>(partyViewFromUrl);
+  const [summary, setSummary] = useState<FinanceSummaryByType | null>(null);
+  const [summaryByParty, setSummaryByParty] = useState<FinanceSummaryByPartyId | null>(null);
+  const [dailyTrend, setDailyTrend] = useState<{ date: string; receivable: number; payment: number }[]>([]);
+  const [prevDailyTrend, setPrevDailyTrend] = useState<{ date: string; receivable: number; payment: number }[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setErr(null);
-    const r = await getFinanceEvents({
-      preset: preset === 'last30d' ? 'last30d' : undefined,
-      from: preset === 'custom' && from.trim() ? `${from.trim()}T00:00:00.000Z` : undefined,
-      to: preset === 'custom' && to.trim() ? `${to.trim()}T23:59:59.999Z` : undefined,
-      page,
-      pageSize,
-    });
+    const fromParam = preset === 'custom' && from.trim() ? `${from.trim()}T00:00:00.000Z` : undefined;
+    const toParam = preset === 'custom' && to.trim() ? `${to.trim()}T23:59:59.999Z` : undefined;
+    const presetParam = preset === 'last30d' ? 'last30d' : undefined;
+
+    const partyIdForApi = (() => {
+      const pid = partyId.trim();
+      if (!pid) return undefined;
+      if (partyView === 'customer' && !pid.includes(':')) return `CUSTOMER:${pid}`;
+      if (partyView === 'supplier' && !pid.includes(':')) return `SUPPLIER:${pid}`;
+      return pid;
+    })();
+
+    const [r, sumType, sumParty] = await Promise.all([
+      getFinanceEvents({
+        preset: presetParam,
+        from: fromParam,
+        to: toParam,
+        page,
+        pageSize,
+        type: typeFilter || undefined,
+        partyId: partyIdForApi,
+      }),
+      getFinanceSummary({
+        preset: presetParam,
+        from: fromParam,
+        to: toParam,
+        groupBy: 'type',
+      }),
+      getFinanceSummary({
+        preset: presetParam,
+        from: fromParam,
+        to: toParam,
+        groupBy: 'partyId',
+      }),
+    ]);
+
     if (!r || typeof r !== 'object' || !('items' in r)) {
       setErr(getErrorMessage(r as ApiError));
       setRows([]);
@@ -49,8 +124,103 @@ export const AdminReportsPage: React.FC = () => {
       setRows(r.items);
       setTotal(r.total);
     }
+    if (sumType && typeof sumType === 'object' && 'byType' in sumType) {
+      setSummary(sumType as FinanceSummaryByType);
+    } else {
+      setSummary(null);
+    }
+    if (sumParty && typeof sumParty === 'object' && 'byParty' in sumParty) {
+      setSummaryByParty(sumParty as FinanceSummaryByPartyId);
+    } else {
+      setSummaryByParty(null);
+    }
     setLoading(false);
-  }, [page, pageSize, preset, from, to]);
+  }, [page, pageSize, preset, from, to, typeFilter, partyId, partyView]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const r = await getFinanceEvents({ preset: 'last30d', pageSize: 500 });
+      if (cancelled) return;
+      if (!r || 'statusCode' in r) {
+        setDailyTrend([]);
+        return;
+      }
+      const byDate: Record<string, { receivable: number; payment: number }> = {};
+      for (const ev of r.items) {
+        const d = ev.occurredAt.slice(0, 10);
+        if (!byDate[d]) byDate[d] = { receivable: 0, payment: 0 };
+        if (ev.type === 'SALE_RECEIVABLE') byDate[d].receivable += ev.amount;
+        else if (ev.type === 'SALE_PAYMENT') byDate[d].payment += ev.amount;
+      }
+      const sorted = Object.entries(byDate)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, v]) => ({ date, ...v }));
+      setDailyTrend(sorted);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    // 本期 vs 上期（同長度區間）：以「近 30 日」為最小可用版本
+    let cancelled = false;
+    (async () => {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - 30);
+      const prevTo = new Date(from);
+      prevTo.setDate(prevTo.getDate() - 1);
+      const prevFrom = new Date(prevTo);
+      prevFrom.setDate(prevFrom.getDate() - 30);
+      const r = await getFinanceEvents({
+        from: prevFrom.toISOString().slice(0, 10) + 'T00:00:00.000Z',
+        to: prevTo.toISOString().slice(0, 10) + 'T23:59:59.999Z',
+        pageSize: 500,
+      });
+      if (cancelled) return;
+      if (!r || 'statusCode' in r) {
+        setPrevDailyTrend([]);
+        return;
+      }
+      const byDate: Record<string, { receivable: number; payment: number }> = {};
+      for (const ev of r.items) {
+        const d = ev.occurredAt.slice(0, 10);
+        if (!byDate[d]) byDate[d] = { receivable: 0, payment: 0 };
+        if (ev.type === 'SALE_RECEIVABLE') byDate[d].receivable += ev.amount;
+        else if (ev.type === 'SALE_PAYMENT') byDate[d].payment += ev.amount;
+      }
+      const sorted = Object.entries(byDate)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, v]) => ({ date, ...v }));
+      setPrevDailyTrend(sorted);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('preset');
+    params.delete('from');
+    params.delete('to');
+    if (preset === 'last30d') {
+      params.set('preset', 'last30d');
+    } else if (preset === 'custom') {
+      if (from.trim()) params.set('from', from.trim());
+      if (to.trim()) params.set('to', to.trim());
+    } else if (preset === 'all') {
+      params.set('preset', 'all');
+    }
+    if (typeFilter) params.set('type', typeFilter);
+    else params.delete('type');
+    if (partyId.trim()) params.set('partyId', partyId.trim());
+    else params.delete('partyId');
+    if (partyView !== 'all') params.set('partyView', partyView);
+    else params.delete('partyView');
+    // 保留 merchantId（由 AdminLayout 管理/寫入）
+    setSearchParams(params, { replace: true });
+  }, [preset, from, to, typeFilter, partyId, partyView, searchParams, setSearchParams]);
 
   useEffect(() => {
     void load();
@@ -59,100 +229,277 @@ export const AdminReportsPage: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="max-w-6xl" data-testid="e2e-admin-reports">
-      <p className="mb-4 text-sm text-slate-600">
-        資料來源 <code className="rounded bg-slate-100 px-1">GET /finance/events</code>
-        ；可近 30 日、全部或自訂起訖。可匯出 CSV（與下列區間一致，需 VITE_ADMIN_API_KEY）。
-      </p>
-
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div>
-          <label className="mb-1 block text-sm text-slate-600">區間</label>
-          <select
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-            value={preset}
-            onChange={(e) => {
-              setPreset(e.target.value as 'last30d' | 'all' | 'custom');
-              setPage(1);
+    <StandardListLayout
+      title="金流報表"
+      description={
+        <>
+          資料來源 <code className="rounded bg-brand-canvas px-1 text-content">GET /finance/events</code>
+          ；可近 30 日、全部或自訂起訖。可匯出 CSV（與下列區間一致，需 VITE_ADMIN_API_KEY）。訂單報表與日期篩選請至「POS → 訂單查詢」。
+        </>
+      }
+      testId="e2e-admin-reports"
+      filters={
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1 block text-sm text-muted">區間</label>
+            <select
+              className="rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
+              value={preset}
+              onChange={(e) => {
+                setPreset(e.target.value as 'last30d' | 'all' | 'custom');
+                setPage(1);
+              }}
+            >
+              <option value="last30d">近 30 日</option>
+              <option value="all">全部（未篩日期）</option>
+              <option value="custom">自訂 from / to</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-muted">類型 (type)</label>
+            <select
+              className="rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
+              value={typeFilter}
+              onChange={(e) => {
+                setTypeFilter(e.target.value);
+                setPage(1);
+              }}
+            >
+              {FINANCE_TYPE_OPTIONS.map((o) => (
+                <option key={o.value || 'all'} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-muted">對象 (partyId)</label>
+            <input
+              type="text"
+              className="w-40 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
+              placeholder="ID（視角可自動加前綴）"
+              value={partyId}
+              onChange={(e) => {
+                setPartyId(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="min-w-[240px]">
+            <label className="mb-1 block text-sm text-muted">視角</label>
+            <PartyViewSegmented
+              value={partyView}
+              onChange={(v) => {
+                setPartyView(v);
+                setPage(1);
+              }}
+            />
+          </div>
+          {preset === 'custom' && (
+            <>
+              <div>
+                <label className="mb-1 block text-sm text-muted">from</label>
+                <input
+                  type="date"
+                  className="rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
+                  value={from}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-muted">to</label>
+                <input
+                  type="date"
+                  className="rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
+                  value={to}
+                  onChange={(e) => {
+                    setTo(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+            </>
+          )}
+          <Button type="button" size="sm" variant="secondary" onClick={() => void load()}>
+            重新載入
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={exporting}
+            onClick={async () => {
+              setExporting(true);
+              setErr(null);
+              const params = new URLSearchParams();
+              if (preset === 'last30d') params.set('preset', 'last30d');
+              if (preset === 'custom' && from.trim()) params.set('from', `${from.trim()}T00:00:00.000Z`);
+              if (preset === 'custom' && to.trim()) params.set('to', `${to.trim()}T23:59:59.999Z`);
+              if (typeFilter) params.set('type', typeFilter);
+              if (partyId.trim()) params.set('partyId', partyId.trim());
+              const q = `finance/events/export?${params.toString()}`;
+              const out = await fetchCsvExport(q, 'finance-events.csv');
+              setExporting(false);
+              if (out !== true) setErr(getErrorMessage(out as ApiError));
             }}
           >
-            <option value="last30d">近 30 日</option>
-            <option value="all">全部（未篩日期）</option>
-            <option value="custom">自訂 from / to</option>
-          </select>
+            {exporting ? '匯出中…' : '匯出 CSV'}
+          </Button>
         </div>
-        {preset === 'custom' && (
-          <>
-            <div>
-              <label className="mb-1 block text-sm text-slate-600">from</label>
-              <input
-                type="date"
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                value={from}
-                onChange={(e) => {
-                  setFrom(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm text-slate-600">to</label>
-              <input
-                type="date"
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
-                value={to}
-                onChange={(e) => {
-                  setTo(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-          </>
-        )}
-        <Button type="button" size="sm" variant="secondary" onClick={() => void load()}>
-          重新載入
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={exporting}
-          onClick={async () => {
-            setExporting(true);
-            setErr(null);
-            const params = new URLSearchParams();
-            if (preset === 'last30d') params.set('preset', 'last30d');
-            if (preset === 'custom' && from.trim()) params.set('from', `${from.trim()}T00:00:00.000Z`);
-            if (preset === 'custom' && to.trim()) params.set('to', `${to.trim()}T23:59:59.999Z`);
-            const q = `finance/events/export?${params.toString()}`;
-            const out = await fetchCsvExport(q, 'finance-events.csv');
-            setExporting(false);
-            if (out !== true) setErr(getErrorMessage(out as ApiError));
-          }}
-        >
-          {exporting ? '匯出中…' : '匯出 CSV'}
-        </Button>
-      </div>
+      }
+    >
 
       {err && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {err}
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <span>{err}</span>
+          <Button type="button" size="sm" variant="secondary" onClick={() => void load()}>
+            重試
+          </Button>
         </div>
       )}
 
+      {summary?.byType && Object.keys(summary.byType).length > 0 && (
+        <>
+          <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
+            <div className="mb-2 text-sm font-semibold text-muted">應收／應付摘要（區間內依類型加總）</div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              {Object.entries(summary.byType).map(([type, amount]) => (
+                <span key={type} className="rounded bg-white px-3 py-1.5 shadow-sm">
+                  <span className="text-muted">{financeTypeLabel(type)}</span>
+                  <span className="ml-2 tabular-nums font-medium text-content">{Number(amount).toLocaleString()}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+            <div className="mb-3 text-sm font-semibold text-muted">簡單圖表（依類型）</div>
+            <MiniBarChart
+              items={Object.entries(summary.byType).map(([type, amount]) => ({
+                label: financeTypeLabel(type),
+                value: Number(amount),
+              }))}
+            />
+          </div>
+          {dailyTrend.length > 0 && (
+            <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+              <div className="mb-3 text-sm font-semibold text-muted">應收 vs 實收趨勢（近 30 日）</div>
+              <MiniLineChart
+                series={[
+                  {
+                    name: '應收',
+                    items: dailyTrend.map((d) => ({ label: d.date, value: d.receivable })),
+                    stroke: '#0ea5e9',
+                  },
+                  {
+                    name: '實收',
+                    items: dailyTrend.map((d) => ({ label: d.date, value: d.payment })),
+                    stroke: '#16a34a',
+                  },
+                ]}
+                formatValue={(n) => n.toLocaleString()}
+              />
+            </div>
+          )}
+          {(dailyTrend.length > 0 || prevDailyTrend.length > 0) && (
+            <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+              <div className="mb-2 text-sm font-semibold text-muted">本期 vs 上期（近 30 日對比）</div>
+              <p className="mb-3 text-xs text-muted">
+                本期：近 30 日；上期：再往前 30 日（同長度區間）。折線呈現「實收（SALE_PAYMENT）」。
+              </p>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="mb-2 text-xs font-semibold text-content">本期</div>
+                  {dailyTrend.length ? (
+                    <MiniLineChart
+                      series={[
+                        {
+                          name: '實收',
+                          items: dailyTrend.map((d) => ({ label: d.date, value: d.payment })),
+                          stroke: '#16a34a',
+                        },
+                      ]}
+                      formatValue={(n) => n.toLocaleString()}
+                    />
+                  ) : (
+                    <div className="py-6 text-center text-xs text-muted">無資料</div>
+                  )}
+                </div>
+                <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <div className="mb-2 text-xs font-semibold text-content">上期</div>
+                  {prevDailyTrend.length ? (
+                    <MiniLineChart
+                      series={[
+                        {
+                          name: '實收',
+                          items: prevDailyTrend.map((d) => ({ label: d.date, value: d.payment })),
+                          stroke: '#16a34a',
+                        },
+                      ]}
+                      formatValue={(n) => n.toLocaleString()}
+                    />
+                  ) : (
+                    <div className="py-6 text-center text-xs text-muted">無資料</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {summaryByParty?.byParty && summaryByParty.byParty.length > 0 && (
+            <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm font-semibold text-muted">進階圖表（依對象彙總）</div>
+                <div className="text-xs text-muted">
+                  點對象可前往 <Link className="text-sky-700 hover:underline" to="/admin/balances">應收應付餘額</Link>
+                </div>
+              </div>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {summaryByParty.byParty.slice(0, 10).map((p) => {
+                  const [prefix, rawId] = p.partyId.includes(':') ? p.partyId.split(':', 2) : ['', p.partyId];
+                  const view =
+                    prefix === 'CUSTOMER' ? 'customer' : prefix === 'SUPPLIER' ? 'supplier' : 'other';
+                  const pid = rawId || p.partyId;
+                  const shortId = pid.length > 12 ? pid.slice(0, 8) + '…' : pid;
+                  return (
+                    <Link
+                      key={p.partyId}
+                      to={`/admin/balances?view=${encodeURIComponent(view)}&partyId=${encodeURIComponent(pid)}`}
+                      className="rounded-full bg-[#f8fafc] px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-[#e2e8f0] hover:bg-white"
+                      title={p.partyId}
+                    >
+                      {shortId}
+                    </Link>
+                  );
+                })}
+              </div>
+              <MiniBarChart
+                items={summaryByParty.byParty.map((p) => {
+                  const total = Object.values(p.amountsByType ?? {}).reduce((s, v) => s + v, 0);
+                  const shortId = p.partyId.length > 12 ? p.partyId.slice(0, 8) + '…' : p.partyId;
+                  return { label: shortId, value: total };
+                })}
+                formatValue={(n) => n.toLocaleString()}
+              />
+            </div>
+          )}
+        </>
+      )}
+
       {loading ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-12 text-center text-slate-500">
+        <div className="rounded-xl border border-[#e2e8f0] bg-white px-4 py-12 text-center text-muted">
           載入中…
         </div>
       ) : rows.length === 0 && !err ? (
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-12 text-center text-slate-500">
+        <div className="rounded-xl border border-[#e2e8f0] bg-white px-4 py-12 text-center text-muted">
           此條件下尚無金流事件
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-600">
+              <thead className="border-b border-brand-surface bg-table-head text-muted">
                 <tr>
                   <th className="px-4 py-2 whitespace-nowrap">時間</th>
                   <th className="px-4 py-2">類型</th>
@@ -165,16 +512,20 @@ export const AdminReportsPage: React.FC = () => {
               <tbody>
                 {rows.map((ev) => (
                   <tr key={ev.id} className="border-t border-slate-100">
-                    <td className="px-4 py-2 whitespace-nowrap text-xs text-slate-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-xs text-muted">
                       {new Date(ev.occurredAt).toLocaleString()}
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs">{ev.type}</td>
+                    <td className="px-4 py-2 text-xs">{financeTypeLabel(ev.type)}</td>
                     <td className="px-4 py-2 text-right tabular-nums font-medium">{ev.amount}</td>
                     <td className="px-4 py-2">{ev.currency}</td>
-                    <td className="max-w-[120px] truncate px-4 py-2 font-mono text-[10px] text-slate-500">
-                      {ev.referenceId ?? '—'}
+                    <td className="max-w-[140px] truncate px-4 py-2 font-mono text-xs text-muted">
+                      <ReferenceIdLink
+                        referenceId={ev.referenceId ?? null}
+                        fallback={ev.referenceId ?? '—'}
+                        returnTo={`${location.pathname}${location.search}`}
+                      />
                     </td>
-                    <td className="max-w-xs truncate px-4 py-2 text-xs text-slate-600">
+                    <td className="max-w-xs truncate px-4 py-2 text-xs text-muted">
                       {ev.note ?? '—'}
                     </td>
                   </tr>
@@ -183,7 +534,7 @@ export const AdminReportsPage: React.FC = () => {
             </table>
           </div>
           {total > pageSize && (
-            <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
+            <div className="mt-4 flex items-center justify-between text-sm text-muted">
               <span>
                 共 {total} 筆 · 第 {page} / {totalPages} 頁
               </span>
@@ -211,6 +562,6 @@ export const AdminReportsPage: React.FC = () => {
           )}
         </>
       )}
-    </div>
+    </StandardListLayout>
   );
 };
