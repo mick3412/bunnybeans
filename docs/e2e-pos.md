@@ -28,7 +28,7 @@ pnpm e2e:one
 |------|------|
 | 後端 | 預設 **http://localhost:3003**，`GET /health` 正常 |
 | 資料庫 | `DATABASE_URL` 正確，已執行 migration |
-| Seed | `pnpm --filter pos-erp-backend db:seed`（含「商品 A」、門市 S001） |
+| Seed | `pnpm --filter pos-erp-backend db:seed`（含「商品 A」、門市 S001）+ `pnpm --filter pos-erp-backend e2e:seed`（建立 E2E 客戶與 referenceId/條碼 fixture） |
 | 前端 API | 本機 E2E 時前端需連後端：專案根或 `frontend/.env` 設 `VITE_API_BASE_URL=http://localhost:3003`（勿結尾 `/`） |
 
 ---
@@ -59,11 +59,28 @@ pnpm e2e:one
 ## 指令
 
 ```bash
-# 終端 1：後端
+# 初始化（一次性或每次重灌 DB）
+pnpm --filter pos-erp-backend exec prisma migrate deploy
+pnpm --filter pos-erp-backend db:seed
+pnpm --filter pos-erp-backend e2e:seed
+
+# 終端 1：後端（常駐）
 pnpm --filter pos-erp-backend dev
 
 # 終端 2（可選，Playwright 會自動起 Vite；若已手動 dev 前端則重用）
 pnpm exec playwright test
+```
+
+## Full profile（E2E_PROFILE=full）
+
+當 `E2E_PROFILE=full` 時，代表資料/後端/seed 已就緒，**不允許長期 skip**。若缺 fixture 應直接 fail，並在錯誤訊息中指出缺少 DB/seed/後端/ADMIN_KEY 等條件。
+
+建議指令：
+
+```bash
+export E2E_PROFILE=full
+pnpm --filter pos-erp-frontend build
+pnpm exec playwright test e2e/admin-smoke.spec.ts e2e/admin-barcode-min.spec.ts e2e/admin-barcode-multi-match.spec.ts e2e/pos-exchange-settlement-journey.spec.ts e2e/admin-ops-report-clicks-full.spec.ts
 ```
 
 自訂前端網址：
@@ -92,11 +109,15 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 
 掛帳用客戶 UUID 固定為 **`e2e00001-0000-4000-8000-00000000c001`**（`code: E2E` 客戶）。請先執行 **`pnpm db:seed`**，再執行 **`pnpm e2e:seed`** 建立此客戶，然後跑掛帳 E2E。
 
+條碼 fixture（供 `GET /products/search-barcode` 與前端掃碼流程）固定為 **`q=E2E-BC-0001`**（由 `pnpm --filter pos-erp-backend e2e:seed` 確保存在）。
+
+多筆命中 fixture：建議後端 `e2e:seed` 提供 **`q=E2E-BC-MULTI`** 對應 >=2 筆商品，用於驗收「多筆命中需選擇」。
+
 ## CI（GitHub Actions）
 
 | 檔案 | 行為 |
 |------|------|
-| [`.github/workflows/backend-ci.yml`](../.github/workflows/backend-ci.yml) | Postgres 15 → `db push` → seed → **`pnpm --filter pos-erp-backend test`** |
+| [`.github/workflows/backend-ci.yml`](../.github/workflows/backend-ci.yml) | Postgres 15 → `ci:schema-migration-check` → `migrate deploy` → seed → **`pnpm --filter pos-erp-backend test`** |
 | [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) | **Job1 `backend-test`**（Postgres → db push → seed → **jest**）→ **Job2 `playwright`（needs job1）** → 獨立 DB → 後端 **:3003** → Playwright **`pnpm e2e`** |
 
 觸發：`push` / `pull_request` 至 `main` 或 `master`。E2E job 內 **`CI=1`** 時 Playwright 會自起 Vite（見 `playwright.config.ts`）。本機勿設 `CI=1` 若已佔用 5173。

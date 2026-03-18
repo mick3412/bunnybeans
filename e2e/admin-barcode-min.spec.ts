@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('條碼最小驗收', () => {
   test('POS 條碼 Enter 加入（或多筆命中可選）', async ({ page }) => {
     const defaultBarcode = 'E2E-BC-0001';
-    const requireFixtures = (process.env.E2E_REQUIRE_DB_FIXTURES ?? '').trim() === '1';
+    const full = (process.env.E2E_PROFILE ?? '').trim() === 'full';
+    const requireFixtures = full || (process.env.E2E_REQUIRE_DB_FIXTURES ?? '').trim() === '1';
     const barcode = defaultBarcode;
 
     await page.goto('/login');

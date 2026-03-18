@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('條碼多筆命中 UX', () => {
   test('POS 條碼多筆命中需選擇（可 skip）', async ({ page }) => {
     const barcode = 'E2E-BC-MULTI';
-    const requireFixtures = (process.env.E2E_REQUIRE_DB_FIXTURES ?? '').trim() === '1';
+    const full = (process.env.E2E_PROFILE ?? '').trim() === 'full';
+    const requireFixtures = full || (process.env.E2E_REQUIRE_DB_FIXTURES ?? '').trim() === '1';
 
     await page.goto('/login');
     await page.getByTestId('e2e-login-submit').click();
