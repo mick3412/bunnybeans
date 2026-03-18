@@ -151,6 +151,13 @@
 |------|------|
 | **後台** | 報表頁篩選活動／期間；與既有 **促銷規則** 列表並陳。觸發「等級重算／分群發券」按鈕呼叫 POST /crm/recalc-tiers、POST /crm/jobs/:kind（body 含 segmentId + couponId）；輪詢 **GET /crm/jobs/:id** 查狀態。選配：發券規則列表、新增／編輯規則（分群、券、啟用、排程）。 |
 
+### full profile 驗證（E2E / CI）
+在 `E2E_PROFILE=full` 時可用 `e2e/admin-dispatch-rules.spec.ts` 做「發券規則常駐」的端到端驗收：
+
+1. 後台開啟 `/admin/dispatch-rules`，確認 `E2E-RULE-ENABLED-0001` 在觸發後會顯示 `lastRunAt/lastRunCode/lastRunNote`（`lastRunCode` 為 `SENT/SKIPPED/FAILED` 之一）。
+2. 觸發 runner：人工可到 `/admin/ops/jobs?kind=crm-run-scheduled` 點「補跑」，E2E 會直接呼叫 POST `/ops/jobs/run`（`kind=crm-run-scheduled`）。
+3. 驗證對應關係：回到 `/admin/ops/jobs?kind=crm-run-scheduled`，確認 table 有 `crm-run-scheduled`，且訊息包含 `jobId=`（表示本輪規則已被導向執行）。
+
 ---
 
 ## 前後端分工原則（給 Agent 用）

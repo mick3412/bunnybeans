@@ -80,7 +80,7 @@ pnpm exec playwright test
 ```bash
 export E2E_PROFILE=full
 pnpm --filter pos-erp-frontend build
-pnpm exec playwright test e2e/admin-smoke.spec.ts e2e/admin-barcode-min.spec.ts e2e/admin-barcode-multi-match.spec.ts e2e/pos-exchange-settlement-journey.spec.ts e2e/admin-ops-report-clicks-full.spec.ts
+pnpm exec playwright test e2e/admin-smoke.spec.ts e2e/admin-barcode-min.spec.ts e2e/admin-barcode-multi-match.spec.ts e2e/pos-exchange-settlement-journey.spec.ts e2e/admin-ops-report-clicks-full.spec.ts e2e/admin-pos-reports.spec.ts e2e/admin-journey-exchange-loyalty.spec.ts e2e/admin-loyalty-smoke.spec.ts e2e/admin-balances.spec.ts e2e/admin-receiving-notes-smoke.spec.ts e2e/admin-expiring-inventory-smoke.spec.ts
 ```
 
 自訂前端網址：
@@ -104,6 +104,8 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 | `e2e/admin-loyalty-smoke.spec.ts` | 登入 → **`/admin/loyalty`** 側欄可見 **`e2e-admin-loyalty`**；**`/admin/loyalty/settings`** 設定頁區塊可見（需 **VITE_ADMIN_API_KEY**，無 Key 時 skip） |
 | `e2e/admin-replenishment.spec.ts` | 登入 → **`/admin/replenishment`** 補貨建議頁載入、倉庫選單、建議列表或空態 |
 | `e2e/admin-balances.spec.ts` | 登入 → **`/admin/balances`** 應收應付餘額頁載入、多方視角切換可見 |
+| `e2e/admin-receiving-notes-smoke.spec.ts` | 登入 → `/admin/receiving-notes`；打開 `E2E-RN-0001`；填退貨數量/原因→ 送出退回供應商；驗證 toast 與 `InventoryEvent RETURN_TO_SUPPLIER` note |
+| `e2e/admin-expiring-inventory-smoke.spec.ts` | 登入 → `/admin/inventory/expiring`；篩選 `E2E-EXP-BATCH-0001`；驗證 KPI 區塊與列表/空態渲染（full profile 時期望非空） |
 | `e2e/admin-dispatch-rules.spec.ts` | 登入 → **`/admin/dispatch-rules`** 發券規則頁載入、列表或空態 |
 | `e2e/admin-pos-reports.spec.ts` | 登入 → `/pos/reports`；驗證 summary KPI、時間區段 preset 切換（含 URL `preset` query）、熱銷品項／區間趨勢區塊或其空態文案，以及 top-items → `/admin/products?q=…` 與銷售明細單號 → `/pos/orders/:id` 的跳轉 |
 
@@ -123,6 +125,23 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 
 - 銷售：`referenceId=E2E-REPORT-SALE-001`（`SALE_RECEIVABLE` + `SALE_PAYMENT`；partyId=`customer:<E2E_CUSTOMER_ID>`）
 - 採購：`referenceId=E2E-REPORT-PUR-001`（`PURCHASE_PAYABLE` + `PURCHASE_REBATE`；partyId=`supplier:<supplierId>`）
+
+發券規則（dispatch-rules）fixtures（`E2E_PROFILE=full`，供 `e2e/admin-dispatch-rules.spec.ts` 驗收）：
+
+- segment：`E2E-SEGMENT-NORMAL-0001`
+- coupon：code `E2E-COUPON-0001`
+- dispatch rules：
+  - 應觸發（enabled & due）：`E2E-RULE-ENABLED-0001`（enabled=true，nextRunAt<=now）
+  - 應不觸發（disabled）：`E2E-RULE-DISABLED-0001`（enabled=false）
+  - 應不觸發（未到時間）：`E2E-RULE-FUTURE-0001`（nextRunAt>now）
+
+dispatch-rules full gate 驗收流程（不可默默 skip）：
+
+1. 確保 `E2E_PROFILE=full`，且後端/前端皆有 `VITE_ADMIN_API_KEY`（Ops job 觸發受保護）
+2. 後台登入後開啟 `/admin/dispatch-rules`
+3. 觸發 `crm-run-scheduled` runner（E2E 以 POST `/ops/jobs/run` kind=`crm-run-scheduled` 呼叫；人工可到 `/admin/ops/jobs?kind=crm-run-scheduled` 點「補跑」）
+4. 驗證 `E2E-RULE-ENABLED-0001` 的 `lastRunAt/lastRunCode/lastRunNote` 皆非空且合理（`lastRunCode` 應為 `SENT/SKIPPED/FAILED` 之一）
+5. 進入 `/admin/ops/jobs?kind=crm-run-scheduled`，確認出現 `crm-run-scheduled`，並且訊息包含 `jobId=`
 
 ## CI（GitHub Actions）
 

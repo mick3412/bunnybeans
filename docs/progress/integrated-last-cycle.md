@@ -1,16 +1,25 @@
 # 上一輪整合（規格 Agent 每輪覆寫）
 
-**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **009** · 前端 **009**  
+**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **010** · 前端 **010**  
 （路徑：[agent-collab/agent-log-backend.md](../agent-collab/agent-log-backend.md)、[agent-collab/agent-log-frontend.md](../agent-collab/agent-log-frontend.md)）
 
 ## 後端（收斂摘要）
 
-- **INSTRUCTIONS 009 已完成（click-audit 可觀測性彙總 + E2E full fixtures/CI + CRM runner 監控欄位）**：\n+  - **Click-audit 進階彙總**：summary 增 `topSources`（NOT_FOUND/MULTI_MATCH 排行）、`trendByDay`、`topReferenceIds`；list 增 `resultCode` filter（整合測試覆蓋）。\n+  - **E2E full profile**：`E2E_PROFILE=full` 的 `e2e:seed` 一次產出 barcode single/multi-match、換貨 settlement（含 SALE_REFUND）、金流報表用 events，並做 fail-fast 驗證。\n+  - **CI E2E**：新增 `.github/workflows/e2e-full.yml`（migrate deploy → db:seed → e2e:seed(full) → playwright）。\n+  - **CRM 常駐規則監控**：`CrmCouponDispatchRule` 新增 `lastRunAt/lastRunCode/lastRunNote`，runner 寫入並可由 ops/jobs 追蹤；補測試。\n+- **回歸**：`pnpm --filter pos-erp-backend test` 全綠；migrations 可 deploy。\n+- **RBAC**：維持長期 skip（客戶不需要）。
+- **INSTRUCTIONS 010 已完成（E2E full gate 強化 + click-audit v2 健康/修復提示 + 常駐規則保護）**：
+  - **CI E2E full gate**：強化 fail-fast 與固定 specs 清單，並確保 full fixtures 下關鍵 suite 不默默 skip。
+  - **Click-audit 視覺化 v2**：summary 追加 `health`（門檻判定 OK/WARN/ALERT）與 `fixHints[]`；list 增 `fixHint` 對應可操作修復路徑。
+  - **行銷常駐規則正式化保護**：dispatch runner 支援同期間防重 `SKIPPED` 與失敗最小重試（`nextRunAt` 後延）→ `FAILED`，並補對應測試。
+- **回歸**：`pnpm --filter pos-erp-backend test` 全綠；migrations 可 deploy。
+- **RBAC**：維持長期 skip（客戶不需要）。
 
 ## 前端（收斂摘要）
 
-- **INSTRUCTIONS 007 已完成（條碼多筆命中閉環＋click-audit resultCode 上報＋退供 UI 補全）**：\n+  - **條碼多筆命中 UX**：POS/庫存掃碼多筆命中提供選擇列表，並新增最小 E2E 覆蓋多筆命中。\n+  - **退供應商完整 UI**：驗收（COMPLETED）退供區塊補逐列原因輸入、送出後明細回顯。\n+  - **click-audit resultCode**：referenceId 點擊上報 `resultCode`，後台頁補欄位與 filter。\n+  - **commits**：本輪已提交多筆 atomic commits（詳見 agent-log 前端 007 條目）。\n+- **回歸**：`pnpm --filter pos-erp-frontend build` ✅；E2E 依 seed/環境條件 pass/skip（已明確列出 skip 原因）。
-- **INSTRUCTIONS 009 已完成（click-audit 視覺化 + full profile E2E 規則）**：\n+  - `/admin/ops/report-clicks` 增 resultCode 排行與趨勢，並在 drill-down 提供可操作導引。\n+  - 行銷常駐規則頁顯示最近一次執行摘要並可跳 `/admin/ops/jobs`。\n+  - E2E 規則：在 full profile 下改為「缺 fixture fail」而非長期 skip，並補 click-audit 視覺化 smoke。\n+- **commits**：本輪已提交 commits（詳見 agent-log 前端 009 條目）。\n+- **回歸**：build 維持全綠；E2E 仍可能因「金流報表資料/後端可連」而 skip（待 full fixtures 覆蓋）。
+- **INSTRUCTIONS 010 已完成（click-audit v2 健康/告警 + CI gate 強化 + 行銷常駐規則正式化 UX）**：
+  - **Click-audit 視覺化 v2**：`/admin/ops/report-clicks` 顯示 `health`（門檻 OK/WARN/ALERT）與對應修復告警。
+  - **修復路徑 drill-down**：每個 resultCode 提供 `fixHint` 與「下一步」按鈕導引。
+  - **行銷常駐規則 UX**：列表顯示 `lastRunAt/lastRunCode/lastRunNote`，並提供 run log 入口。
+- **回歸**：`pnpm --filter pos-erp-frontend build` ✅；E2E 依 full fixtures 設定 pass（缺 fixture 才能 skip）。
+- **RBAC**：維持長期 skip（客戶不需要）。
 
 ---
 
@@ -40,9 +49,7 @@
 | 來源 | 缺口 | 優先 |
 |------|------|------|
 | erp-roadmap / Phase 5 / admin-roles | **RBAC（長期 skip）**：客戶不需要角色/權限；維持現有 `AdminApiKeyGuard`（有/無管理金鑰）即可。本專案不落地 Role/Permission 資料模型與 permissions endpoint。 | 低 |
-| ops-roadmap / 可觀測性 | **ReportClickAudit 視覺化 v2（可用性指標化）**：既有排行/趨勢已完成；下一步補「門檻告警/健康分數」（例如 NOT_FOUND 比例）與 drill-down 的「修復路徑」（資料缺口/多筆命中/權限）。 | 中 |
-| e2e/ci | **E2E 變成可預期的 CI gate**：`e2e-full.yml` 已有；下一步把關鍵 suite（barcode multi-match、換貨 settlement、click-audit 視覺化、金流報表資料集）在 full fixtures 下改為必跑且不得 skip，並把「金流報表需資料」也納入 fixtures。 | 中 |
-| crm-member-roadmap（階段 G） | **發券規則常駐化（是否正式上線）**：已補 lastRun 欄位與 UI 摘要；下一步需決定是否上線（排程策略、重複發券防護、失敗重試/告警）並補驗收。 | 低 |
+| crm-member-roadmap（階段 G） | **發券規則常駐化「驗收」**：截至目前已補 lastRun 欄位與保護邏輯；下一步需要把「full fixtures 下的 dispatch-rules/runner 驗收」納入 E2E/CI（驗證 lastRunCode/lastRunNote、run log 導向一致）。 | 中 |
 
 ### 後續 Phase
 
