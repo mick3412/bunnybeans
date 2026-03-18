@@ -99,8 +99,8 @@ flowchart LR
 | 事項 | 路徑 |
 |------|------|
 | API 契約 | 新增章節於 `api-design-inventory-finance.md`；訂單匯出可寫入 `api-design-pos.md` |
-| 後端指令 | 規格 Agent 覆寫 `docs/tasks/BACKEND-INSTRUCTIONS.md`（P4 對齊 Phase A～B） |
-| 前端指令 | 覆寫 `docs/tasks/FRONTEND-INSTRUCTIONS.md`（P4 匯出／匯入 UI） |
+| 後端指令 | 規格 Agent 更新 `docs/tasks/instructions/` 中最新編號的後端 INSTRUCTIONS（P4 對齊 Phase A～B），並產生下一個編號 |
+| 前端指令 | 規格 Agent 更新 `docs/tasks/instructions/` 中最新編號的前端 INSTRUCTIONS（P4 匯出／匯入 UI），並產生下一個編號 |
 
 ---
 

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>會員管理 — POS/CRM/ERP Mockup</title>
+  <link rel="stylesheet" href="mockup.css" />
+  <link rel="stylesheet" href="mockup-dashboard.css" />
+</head>
+<body>
+  <div class="mockup-shell">
+    <nav class="mockup-sidebar">
+      <div class="mockup-sidebar-section">會員與集點</div>
+      <a href="index.html">總覽</a>
+      <a href="list.html" class="active">會員管理</a>
+      <a href="form.html">新增會員</a>
+      <a href="#">點數存摺</a>
+      <a href="#">系統設定</a>
+      <div class="mockup-sidebar-section">營運</div>
+      <a href="#">金流報表</a>
+      <div class="mockup-nav-divider"></div>
+      <a href="pos.html" class="mockup-nav-exit">前往 POS</a>
+    </nav>
+    <div class="mockup-main-wrap">
+      <header class="mockup-topbar">
+        <h1>會員管理</h1>
+        <span class="date">2026年3月15日</span>
+      </header>
+      <main class="mockup-content">
+        <div class="mu-section">
+          <h3 class="mu-section-title">會員摘要</h3>
+          <div class="mu-blocks">
+            <div class="mu-block-card"><div class="block-label">總人數</div><div class="block-value">156</div></div>
+            <div class="mu-block-card"><div class="block-label">金級</div><div class="block-value">12</div></div>
+            <div class="mu-block-card"><div class="block-label">銀級</div><div class="block-value">28</div></div>
+            <div class="mu-block-card"><div class="block-label">一般</div><div class="block-value">116</div></div>
+          </div>
+        </div>
+
+        <div class="mu-toolbar">
+          <div class="mu-form-group" style="margin-bottom:0;">
+            <input type="search" placeholder="搜尋姓名、電話或會員編號" style="max-width:18rem;" />
+          </div>
+          <select style="max-width:10rem; padding:0.5rem 0.75rem; font-size:0.875rem; border:1px solid var(--carbon-border); border-radius:0.5rem;">
+            <option>全部等級</option>
+            <option>金級</option>
+            <option>銀級</option>
+            <option>一般</option>
+          </select>
+          <a href="form.html" class="mu-btn mu-btn-primary">新增會員</a>
+        </div>
+
+        <div class="mu-section">
+          <h3 class="mu-section-title">會員列表</h3>
+          <div class="mu-table-wrap mu-table-sticky">
+            <table class="mu-table">
+              <thead>
+                <tr>
+                  <th>會員編號</th>
+                  <th>姓名</th>
+                  <th>電話</th>
+                  <th>等級</th>
+                  <th>點數餘額</th>
+                  <th>即將到期</th>
+                  <th>加入日</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>M001</td><td>林大戶</td><td>0912-345678</td>
+                  <td><span class="mu-tag mu-tag-success">金級</span></td><td>1,250</td><td>120</td><td>2024-01-15</td>
+                  <td><a href="form.html">編輯</a> · <a href="#">點數流水</a></td>
+                </tr>
+                <tr>
+                  <td>M002</td><td>王小明</td><td>0922-111222</td>
+                  <td><span class="mu-tag mu-tag-success">銀級</span></td><td>380</td><td>0</td><td>2024-03-02</td>
+                  <td><a href="form.html">編輯</a> · <a href="#">點數流水</a></td>
+                </tr>
+                <tr>
+                  <td>M003</td><td>陳小美</td><td>0933-444555</td>
+                  <td><span class="mu-tag mu-tag-success">銀級</span></td><td>520</td><td>50</td><td>2024-05-10</td>
+                  <td><a href="form.html">編輯</a> · <a href="#">點數流水</a></td>
+                </tr>
+                <tr>
+                  <td>M006</td><td>黃零點</td><td>0933-999888</td>
+                  <td><span class="mu-tag mu-tag-warning">一般</span></td><td>0</td><td>0</td><td>2025-02-20</td>
+                  <td><a href="form.html">編輯</a> · <a href="#">點數流水</a></td>
+                </tr>
+                <tr>
+                  <td>M007</td><td>李測試</td><td>0911-222333</td>
+                  <td><span class="mu-tag mu-tag-warning">一般</span></td><td>30</td><td>30</td><td>2025-03-01</td>
+                  <td><a href="form.html">編輯</a> · <a href="#">點數流水</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mu-float-bar">
+          <span class="mu-caption">共 5 筆（本頁）</span>
+          <a href="form.html" class="mu-btn mu-btn-primary">新增會員</a>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

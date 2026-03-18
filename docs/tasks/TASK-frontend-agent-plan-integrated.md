@@ -1,6 +1,6 @@
 # 前端 Agent 工作計劃（整合版 + 整體規劃）
 
-> **現行唯一開跑**：請只讀 **[FRONTEND-INSTRUCTIONS.md](FRONTEND-INSTRUCTIONS.md)** + **[agent-collab/AGENT-COLLABORATION.md](../agent-collab/AGENT-COLLABORATION.md)**；完成後追加 **agent-log-frontend.md**。  
+> **現行唯一開跑**：請只讀 **[tasks/instructions/](instructions/)**（開啟最新編號檔案）+ **[agent-collab/AGENT-COLLABORATION.md](../agent-collab/AGENT-COLLABORATION.md)**；完成後追加 **agent-log-frontend.md**。  
 > 本檔為歷史計畫表保留；後端對照見 [TASK-backend-agent-plan-integrated.md](TASK-backend-agent-plan-integrated.md)（同為參考）。
 
 > **給前端 Agent（舊慣例）**：可複習 [AGENT-DEV-INSTRUCTIONS.md](../AGENT-DEV-INSTRUCTIONS.md) §0、§1、§3.3、§5。  

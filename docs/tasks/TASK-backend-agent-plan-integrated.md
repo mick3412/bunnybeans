@@ -1,11 +1,11 @@
 # 後端 Agent 工作計劃（整合版）— 歷史參考
 
-> **現行唯一開跑**：請只讀 **[BACKEND-INSTRUCTIONS.md](BACKEND-INSTRUCTIONS.md)** + **[agent-collab/AGENT-COLLABORATION.md](../agent-collab/AGENT-COLLABORATION.md)**；完成後追加 **agent-log-backend.md**。  
+> **現行唯一開跑**：請只讀 **[tasks/instructions/](instructions/)**（開啟最新編號檔案）+ **[agent-collab/AGENT-COLLABORATION.md](../agent-collab/AGENT-COLLABORATION.md)**；完成後追加 **agent-log-backend.md**。  
 > 本檔為舊版「整合計畫」範本保留，**不再作為每輪任務來源**，避免與現行 INSTRUCTIONS 重複。
 
 | 項目 | 連結 |
 |------|------|
-| 後端本輪任務 | [BACKEND-INSTRUCTIONS.md](BACKEND-INSTRUCTIONS.md) |
+| 後端本輪任務（版本化） | [instructions/](instructions/) |
 | 協作流程 | [AGENT-COLLABORATION.md](../agent-collab/AGENT-COLLABORATION.md) |
 | 守則 | [AGENT-RULES.md](../AGENT-RULES.md) |
 | 整合摘要（規格覆寫） | [integrated-last-cycle.md](../progress/integrated-last-cycle.md) |

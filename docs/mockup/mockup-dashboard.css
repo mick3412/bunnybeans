@@ -1,0 +1,300 @@
+/**
+ * 儀表板／數據感風格覆寫
+ * 深色側欄＋淺色主區；KPI 用藍／綠／橙區分；表格與卡片邊框極細。
+ */
+:root {
+  --porcelain: #f1f5f9;
+  --carbon-black: #1e293b;
+  --bright-teal-blue: #0ea5e9;
+  --berry-crush: #dc2626;
+  --jungle-green: #16a34a;
+  --white: #ffffff;
+  --carbon-light: #f8fafc;
+  --carbon-border: #e2e8f0;
+  --jungle-light: rgba(22, 163, 74, 0.08);
+  --berry-light: rgba(220, 38, 38, 0.08);
+}
+
+body {
+  background: var(--porcelain);
+  color: var(--carbon-black);
+}
+
+.mockup-sidebar {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-right: none;
+}
+
+.mockup-sidebar-section {
+  color: rgba(241, 245, 249, 0.5);
+}
+
+.mockup-sidebar a {
+  color: rgba(241, 245, 249, 0.9);
+}
+
+.mockup-sidebar a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f1f5f9;
+}
+
+.mockup-sidebar a.active {
+  background: rgba(0, 0, 0, 0.2);
+  border-left-color: #38bdf8;
+  color: #f1f5f9;
+}
+
+.mockup-sidebar .mockup-nav-divider {
+  background: rgba(241, 245, 249, 0.15);
+}
+
+.mockup-topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mockup-content {
+  padding: 1.5rem 2rem;
+}
+
+/* KPI 卡：每張不同 accent（藍／綠／橙／灰） */
+.mu-kpi-grid {
+  gap: 1rem;
+}
+
+.mu-kpi-card {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid transparent;
+}
+
+.mu-kpi-card:nth-child(1) { border-left-color: #0ea5e9; }
+.mu-kpi-card:nth-child(2) { border-left-color: #16a34a; }
+.mu-kpi-card:nth-child(3) { border-left-color: #ea580c; }
+.mu-kpi-card:nth-child(4) { border-left-color: #64748b; }
+
+.mu-kpi-card .value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--carbon-black);
+  letter-spacing: -0.02em;
+}
+
+.mu-kpi-card .label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.mu-card {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.5rem;
+}
+
+.mu-btn-primary {
+  background: #0ea5e9;
+  color: var(--white);
+}
+
+.mu-btn-primary:hover {
+  filter: brightness(0.95);
+}
+
+.mu-btn-secondary {
+  border-color: var(--carbon-border);
+}
+
+.mu-btn-secondary:hover {
+  background: var(--carbon-light);
+}
+
+/* 表格：邊框極細 */
+.mu-table-wrap {
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.375rem;
+  background: var(--white);
+}
+
+.mu-table th {
+  background: #f8fafc;
+  color: var(--carbon-black);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mu-table td {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.875rem;
+}
+
+.mu-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.mu-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.mu-table tbody tr:hover {
+  background: #f1f5f9;
+}
+
+.mu-table a {
+  color: #0ea5e9;
+  font-weight: 500;
+}
+
+.mu-form-group input:focus,
+.mu-form-group select:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+}
+
+.pos-product-btn {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.pos-product-btn:hover {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.05);
+}
+
+.pos-cart,
+.pos-member-bar {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.pos-cart-total {
+  border-top: 1px solid var(--carbon-border);
+}
+
+.mu-tag-success { background: var(--jungle-light); color: #166534; }
+.mu-tag-warning { background: rgba(234, 88, 12, 0.12); color: #c2410c; }
+.mu-tag-info { background: rgba(14, 165, 233, 0.1); color: #0369a1; }
+
+/* ========== 多區塊、懸浮表格 ========== */
+
+/* 區塊標題（與主內容間距） */
+.mu-section {
+  margin-top: 1.5rem;
+}
+
+.mu-section:first-of-type {
+  margin-top: 0;
+}
+
+.mu-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--carbon-black);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+/* 雙欄版面 */
+.mu-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .mu-two-col { grid-template-columns: 1fr; }
+}
+
+/* 懸浮表格：捲動時表頭固定 */
+.mu-table-wrap.mu-table-sticky {
+  max-height: 20rem;
+  overflow: auto;
+}
+
+.mu-table-wrap.mu-table-sticky .mu-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  box-shadow: 0 1px 0 var(--carbon-border);
+}
+
+/* 懸浮摘要條（固定在主區底部或頂部下方） */
+.mu-float-bar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border-top: 1px solid var(--carbon-border);
+  padding: 0.75rem 2rem 1.5rem;
+  margin-top: 1.5rem;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  margin-bottom: -1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  z-index: 2;
+}
+
+/* 區塊卡片網格（2x2 或 3 欄） */
+.mu-blocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+
+.mu-block-card {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.mu-block-card .block-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.mu-block-card .block-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--carbon-black);
+}
+
+/* 圖表佔位（數據感） */
+.mu-chart-placeholder {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  min-height: 10rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+/* 篩選／操作列 */
+.mu-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.mu-toolbar .mu-form-group { margin-bottom: 0; }

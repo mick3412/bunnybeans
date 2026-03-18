@@ -61,6 +61,39 @@ Body: `merchantId`（必填，與所屬商家比對）+ 欲更新欄位。
 
 ### DELETE /promotion-rules/:id?merchantId=
 
+### GET /promotion-rules/effectiveness
+
+促銷成效追蹤：每條規則的觸發次數、折讓合計、帶動銷售額。
+
+**Query 參數**
+
+- `merchantId`（必填）：商家 UUID
+- `from`、`to`：ISO 日期區間（訂單 `createdAt`）
+- `preset?`：若未帶 from/to 時可選 `today`｜`last7d`｜`last30d`｜`currentMonth`｜`last60d`｜`lastHalfYear`，預設 `last30d`
+
+**成功回應**
+
+```json
+{
+  "from": "2026-03-01",
+  "to": "2026-03-31",
+  "period": { "preset": "last30d", "from": "2026-03-01", "to": "2026-03-31" },
+  "items": [
+    {
+      "ruleId": "uuid",
+      "ruleName": "滿千送百",
+      "triggerCount": 12,
+      "discountTotal": 1200,
+      "drivenRevenue": 15000
+    }
+  ]
+}
+```
+
+- `triggerCount`：區間內觸發次數（訂單數，每單計一次）
+- `discountTotal`：區間內該規則折讓金額合計
+- `drivenRevenue`：區間內有套用該規則之訂單的 `totalAmount` 合計（帶動銷售額）
+
 ### PATCH /promotion-rules/reorder/bulk
 
 Body: `{ merchantId, ids: string[] }` — 依陣列順序重寫 priority 1..n

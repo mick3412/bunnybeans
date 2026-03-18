@@ -134,18 +134,22 @@
 
 ## 階段 G — 行銷整合與報表（§7.2 剩餘）
 
-### 後端
+實作規格與**已採用決策**見 **[api-design.md §6.8.1、§6.8.2](api-design.md)**。
+
+### 後端（已採用）
 
 | 項目 | 說明 |
 |------|------|
-| **Job** | 生日券、回購券（cron 或手動觸發）。 |
-| **報表** | 活動參與筆數、用券數、點數發放成本（粗估）。 |
+| **Job 狀態** | **B** — 新增 **GET /crm/jobs/:id**，crm 專用 job 表（如 `CrmMarketingJob`）；response 含 status、result（sent/skipped/errors）、error。 |
+| **生日券／回購券** | **B2 + R3** — 皆改為**依分群發券**。Request body：merchantId、**segmentId**、couponId｜couponCode。不新增 Customer 生日欄位；「生日」可由營運建分群或名單。 |
+| **發券規則常駐（選配）** | 可新增「行銷發券規則」實體（啟用／停用、排程如每日／每週／每月），類似促銷活動設定；cron 掃啟用規則並執行發券。可含**發放規則**選項（分群、券、排程）供後台設定。 |
+| **報表** | 活動參與筆數、用券數、點數成本；候選 GET /loyalty/reports/activity，見 api-design §6.8.2。 |
 
 ### 前端
 
 | 項目 | 說明 |
 |------|------|
-| **後台** | 報表頁篩選活動／期間；與既有 **促銷規則** 列表並陳。 |
+| **後台** | 報表頁篩選活動／期間；與既有 **促銷規則** 列表並陳。觸發「等級重算／分群發券」按鈕呼叫 POST /crm/recalc-tiers、POST /crm/jobs/:kind（body 含 segmentId + couponId）；輪詢 **GET /crm/jobs/:id** 查狀態。選配：發券規則列表、新增／編輯規則（分群、券、啟用、排程）。 |
 
 ---
 

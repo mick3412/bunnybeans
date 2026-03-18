@@ -7,8 +7,7 @@
 | 用途 | 路徑 |
 |------|------|
 | 協作流程（整夾拖入） | [agent-collab/AGENT-COLLABORATION.md](agent-collab/AGENT-COLLABORATION.md) |
-| 後端本輪任務 | [tasks/BACKEND-INSTRUCTIONS.md](tasks/BACKEND-INSTRUCTIONS.md) |
-| 前端本輪任務 | [tasks/FRONTEND-INSTRUCTIONS.md](tasks/FRONTEND-INSTRUCTIONS.md) |
+| 後端／前端本輪任務（版本化） | [tasks/instructions/](tasks/instructions/) |
 | 後端 log（僅追加） | [agent-collab/agent-log-backend.md](agent-collab/agent-log-backend.md) |
 | 前端 log（僅追加） | [agent-collab/agent-log-frontend.md](agent-collab/agent-log-frontend.md) |
 | 整合摘要（規格每輪覆寫） | [progress/integrated-last-cycle.md](progress/integrated-last-cycle.md) |
@@ -46,4 +45,10 @@
 | 開發前置 Checklist | [pre-development-checklist.md](pre-development-checklist.md) |
 | 日報格式 | [daily-progress-format.md](daily-progress-format.md) |
 | **會員／CRM 全計畫** | [crm-member-roadmap.md](crm-member-roadmap.md) |
+| **庫存全計畫** | [inventory-roadmap.md](inventory-roadmap.md) |
+| **訂單全計畫** | [order-roadmap.md](order-roadmap.md) |
+| **採購全計畫** | [purchase-roadmap.md](purchase-roadmap.md) |
+| **商品主檔全計畫** | [product-roadmap.md](product-roadmap.md) |
+| **促銷全計畫** | [promotion-roadmap.md](promotion-roadmap.md) |
+| **作業監控全計畫** | [ops-roadmap.md](ops-roadmap.md) |
 | **Loyalty CRM 範本對齊** | [crm-loyalty-ui-plan.md](crm-loyalty-ui-plan.md) |

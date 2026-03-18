@@ -6,7 +6,7 @@
 **Agent／協作現行入口（路徑已對齊 repo）**：
 
 - [agent-collab/AGENT-COLLABORATION.md](agent-collab/AGENT-COLLABORATION.md) — 流程與整夾說明  
-- [tasks/BACKEND-INSTRUCTIONS.md](tasks/BACKEND-INSTRUCTIONS.md) · [FRONTEND-INSTRUCTIONS.md](tasks/FRONTEND-INSTRUCTIONS.md) — 每輪任務  
+- [tasks/instructions/](tasks/instructions/) — 每輪任務（版本化；開啟最新編號檔案）  
 - [progress/integrated-last-cycle.md](progress/integrated-last-cycle.md) — 整合摘要  
 - [README.md](README.md)（本 `docs/` 總索引）— 全索引  
 

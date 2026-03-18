@@ -1,0 +1,341 @@
+/* POS/CRM/ERP Mockup - 附圖五色：Porcelain / Bright Teal Blue / Berry Crush / Carbon Black / Jungle Green */
+:root {
+  --porcelain: #F7F7F2;
+  --carbon-black: #222725;
+  --bright-teal-blue: #197BBD;
+  --berry-crush: #AA4465;
+  --jungle-green: #0DAB76;
+  --white: #FFFFFF;
+  --carbon-light: rgba(34, 39, 37, 0.06);
+  --carbon-border: rgba(34, 39, 37, 0.18);
+  --jungle-light: rgba(13, 171, 118, 0.15);
+  --berry-light: rgba(170, 68, 101, 0.15);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", system-ui, ui-sans-serif, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--carbon-black);
+  background: var(--porcelain);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 殼層 */
+.mockup-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.mockup-sidebar {
+  width: 14rem;
+  min-width: 14rem;
+  background: var(--carbon-black);
+  color: var(--white);
+  padding: 1rem 0;
+}
+
+/* 大區塊：側欄區段標題 */
+.mockup-sidebar-section {
+  padding: 1rem 1.25rem 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+}
+
+.mockup-sidebar-section:first-child {
+  padding-top: 0.5rem;
+}
+
+/* 小區塊：側欄連結（隸屬大區塊下） */
+.mockup-sidebar a {
+  display: block;
+  padding: 0.5rem 1.25rem 0.5rem 1.5rem;
+  color: rgba(255,255,255,0.9);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+}
+
+.mockup-sidebar a:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--white);
+}
+
+.mockup-sidebar a.active {
+  background: rgba(0,0,0,0.2);
+  border-left-color: var(--bright-teal-blue);
+  color: var(--white);
+}
+
+.mockup-sidebar .mockup-nav-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.15);
+  margin: 0.75rem 1rem;
+}
+
+/* 獨立連結（非隸屬大區塊，可選加粗） */
+.mockup-sidebar .mockup-nav-exit {
+  font-weight: 600;
+}
+
+.mockup-main-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mockup-topbar {
+  background: var(--porcelain);
+  border-bottom: 1px solid var(--carbon-border);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mockup-topbar h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--carbon-black);
+}
+
+.mockup-topbar .date {
+  font-size: 0.75rem;
+  color: var(--carbon-black);
+  opacity: 0.8;
+}
+
+.mockup-content {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow: auto;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 字階 */
+.mu-h1 { font-size: 1.25rem; font-weight: 600; color: var(--carbon-black); margin: 0 0 1rem; }
+.mu-h2 { font-size: 1rem; font-weight: 600; color: var(--carbon-black); margin: 0 0 0.75rem; }
+.mu-h3 { font-size: 0.875rem; font-weight: 600; color: var(--carbon-black); margin: 0 0 0.5rem; }
+.mu-body { font-size: 0.875rem; font-weight: 400; color: var(--carbon-black); }
+.mu-caption { font-size: 0.75rem; color: var(--carbon-black); opacity: 0.85; }
+
+/* 按鈕 */
+.mu-btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.mu-btn-primary {
+  background: var(--bright-teal-blue);
+  color: var(--white);
+}
+
+.mu-btn-primary:hover { filter: brightness(0.95); }
+
+.mu-btn-secondary {
+  background: var(--white);
+  color: var(--carbon-black);
+  border: 1px solid var(--carbon-black);
+}
+
+.mu-btn-secondary:hover { background: var(--jungle-light); }
+
+.mu-btn-danger {
+  background: var(--berry-crush);
+  color: var(--white);
+}
+
+.mu-btn-danger:hover { filter: brightness(0.95); }
+
+/* 卡片 */
+.mu-card {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.mu-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .mu-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.mu-kpi-card {
+  background: var(--white);
+  border: 1px solid var(--jungle-light);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.mu-kpi-card .value { font-size: 1.5rem; font-weight: 600; color: var(--carbon-black); }
+.mu-kpi-card .label { font-size: 0.75rem; color: var(--carbon-black); opacity: 0.8; margin-top: 0.25rem; }
+
+/* 表格 */
+.mu-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.5rem;
+}
+
+.mu-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.mu-table th {
+  background: var(--carbon-light);
+  color: var(--carbon-black);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mu-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mu-table tbody tr:nth-child(even) { background: var(--jungle-light); }
+.mu-table tbody tr:hover { background: var(--jungle-light); }
+
+.mu-table a { color: var(--bright-teal-blue); text-decoration: none; }
+.mu-table a:hover { text-decoration: underline; }
+
+/* 表單 */
+.mu-form-group { margin-bottom: 1rem; }
+.mu-form-group label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--carbon-black);
+  margin-bottom: 0.35rem;
+}
+
+.mu-form-group input,
+.mu-form-group select {
+  width: 100%;
+  max-width: 20rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.5rem;
+  font-family: inherit;
+}
+
+.mu-form-group input:focus,
+.mu-form-group select:focus {
+  outline: none;
+  border-color: var(--bright-teal-blue);
+  box-shadow: 0 0 0 2px rgba(25, 123, 189, 0.25);
+}
+
+.mu-form-actions { margin-top: 1.25rem; display: flex; gap: 0.75rem; }
+
+/* 標籤 */
+.mu-tag {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.25rem;
+}
+
+.mu-tag-success { background: var(--jungle-light); color: var(--carbon-black); }
+.mu-tag-warning { background: var(--berry-light); color: var(--carbon-black); }
+.mu-tag-info { background: rgba(25, 123, 189, 0.15); color: var(--carbon-black); }
+
+/* ========== POS 專用 ========== */
+.pos-content {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 20rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .pos-content { grid-template-columns: 1fr; }
+}
+
+.pos-products {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.75rem;
+}
+
+.pos-product-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0.75rem;
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: var(--carbon-black);
+  text-align: center;
+}
+
+.pos-product-btn:hover {
+  border-color: var(--bright-teal-blue);
+  background: rgba(25, 123, 189, 0.06);
+}
+
+.pos-product-btn .name { font-weight: 600; }
+.pos-product-btn .price { font-size: 0.75rem; opacity: 0.85; margin-top: 0.25rem; }
+
+.pos-cart {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.pos-cart-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; }
+.pos-cart-items { font-size: 0.875rem; margin-bottom: 0.75rem; max-height: 12rem; overflow-y: auto; }
+.pos-cart-row { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid var(--carbon-border); }
+.pos-cart-total { font-size: 1rem; font-weight: 600; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 2px solid var(--carbon-black); }
+.pos-cart-actions { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.pos-member-bar {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.pos-member-bar label { margin-right: 0.5rem; }
+.pos-member-bar input { max-width: 12rem; display: inline-block; margin: 0; }

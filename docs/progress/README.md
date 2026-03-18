@@ -6,7 +6,7 @@
 |------|------|
 | **協作流程 + 後端／前端累積 log** | **[agent-collab/](../agent-collab/)**（整夾拖進對話） |
 | **上一輪整合摘要（規格 Agent 每輪覆寫）** | [integrated-last-cycle.md](integrated-last-cycle.md) |
-| **本輪任務** | [tasks/BACKEND-INSTRUCTIONS.md](../tasks/BACKEND-INSTRUCTIONS.md)、[FRONTEND-INSTRUCTIONS.md](../tasks/FRONTEND-INSTRUCTIONS.md) |
+| **本輪任務（版本化）** | [tasks/instructions/](../tasks/instructions/)（開啟最新編號檔案） |
 | **守則** | [AGENT-RULES.md](../AGENT-RULES.md)、[agent-collab/AGENT-COLLABORATION.md](../agent-collab/AGENT-COLLABORATION.md) |
 
 後端／前端完成一輪後，請在 **agent-collab** 內對應 **agent-log-*.md** 追加（HH:MM），勿再寫入本目錄根下的舊日檔。

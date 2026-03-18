@@ -4,8 +4,7 @@
 > | 項目 | 連結 |
 > |------|------|
 > | 協作流程 | [agent-collab/AGENT-COLLABORATION.md](agent-collab/AGENT-COLLABORATION.md) |
-> | 後端任務 | [tasks/BACKEND-INSTRUCTIONS.md](tasks/BACKEND-INSTRUCTIONS.md) |
-> | 前端任務 | [tasks/FRONTEND-INSTRUCTIONS.md](tasks/FRONTEND-INSTRUCTIONS.md) |
+> | 後端／前端任務（版本化） | [tasks/instructions/](tasks/instructions/) |
 > | 守則 | [AGENT-RULES.md](AGENT-RULES.md) |
 > | 整合摘要 | [progress/integrated-last-cycle.md](progress/integrated-last-cycle.md) |
 > | 全索引 | [docs/README.md](README.md) |

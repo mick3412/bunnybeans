@@ -8,7 +8,7 @@
 | **批量匯入／匯出** | CSV、async job、客戶 preview/apply | **觀測**：job **failed** + **error** 前後端一致（已有 §6.6）。**限流**：POST imports/jobs 文件化或簡單 rate limit。**大檔**：超時與進度若產品要再做。 |
 | **庫存／盤點** | events、balances、CSV import | **匯出**：與篩選條件一致。**盤點**：重複 referenceId 防呆（若尚未）。 |
 | **POS／訂單** | 結帳、列表、CSV export | **離線／重試**（若需要）。**促銷**：規則複雜度與效能。 |
-| **金流報表** | FinanceEvent list/export | **採購應付**接上後報表維度補一欄 type。 |
+| **金流報表** | FinanceEvent list/export | 報表維度與 type 篩選、彙總見 [finance-accounting-roadmap.md](../finance-accounting-roadmap.md) Phase 2／§九。 |
 | **Admin 體驗** | 多頁、部分需 Key | **統一錯誤 toast**、**401 引導**。**側欄**：採購區已掛則確認路由活躍狀態。 |
 | **基礎建設** | 無 DB 時曾跳過 migrate | **有 DB 時**：migrate deploy、seed、Guard／ADMIN_KEY、CI e2e 一鍵綠。 |
 

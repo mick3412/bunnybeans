@@ -31,6 +31,31 @@ pnpm e2e:one
 | Seed | `pnpm --filter pos-erp-backend db:seed`（含「商品 A」、門市 S001） |
 | 前端 API | 本機 E2E 時前端需連後端：專案根或 `frontend/.env` 設 `VITE_API_BASE_URL=http://localhost:3003`（勿結尾 `/`） |
 
+---
+
+## 報表穿透（referenceId）聯調驗收腳本（手動）
+
+> 目的：驗證 Finance/Loyalty 報表中的 `referenceId` 可一致「點擊穿透」回 POS 訂單或採購驗收單。
+
+### 前置
+
+- 後端已完成：`pnpm --filter pos-erp-backend exec prisma migrate deploy`（或本機 `db push`）後，跑 `pnpm --filter pos-erp-backend db:seed`
+- 前端已連到後端（`VITE_API_BASE_URL`）
+
+### 驗證步驟
+
+1. 開後台金流報表頁（例如 `/admin/reports` 或金流事件列表頁）
+2. 找到任一筆有 `referenceId` 的事件列（建議：`SALE_RECEIVABLE` 或 `PURCHASE_PAYABLE`）
+3. 點擊 `referenceId`
+4. 預期行為
+   - 若為銷售單：導向 `/pos/orders/:id`，且訂單明細可成功載入
+   - 若為驗收單：導向採購驗收單明細頁（若前端尚未有該頁，至少應顯示「無法辨識單據」而非假成功）
+   - 若無法辨識：顯示 toast/提示「無法辨識單據」
+
+### 排查
+
+- 若 referenceId 無法辨識：可用 `GET /ops/references/resolve?referenceId=...` 檢查後端解析結果（`posOrder` / `receivingNote` / `unknown`）
+
 ## 指令
 
 ```bash
@@ -56,12 +81,16 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 | `e2e/pos-refund.spec.ts` | 全額結帳 → 訂單明細 → 小額退款 → 金額欄清空（API 成功） |
 | `e2e/pos-return-stock.spec.ts` | 全額結帳 → 明細 → 退貨入庫 1 件 → 成功提示 |
 | `e2e/admin-smoke.spec.ts` | 庫存頁載入 + **金流報表** `/admin/reports` |
-| `e2e/admin-categories.spec.ts` | 登入 → **分類維護**頁可見 |
+| `e2e/admin-categories.spec.ts` | 登入 → **分類維護**頁可見、標籤區可見、**標籤新增**（需 **VITE_ADMIN_API_KEY**，無 Key 時 skip） |
 | `e2e/admin-bulk.spec.ts` | **批量 smoke**：商品匯入區塊、庫存匯出餘額（200，需 **VITE_ADMIN_API_KEY**）、盤點上傳區塊、POS 訂單列表「匯出」按鈕 |
 | `e2e/admin-customers-import.spec.ts` | 登入 → **`/admin/customers/import`** 可進入；**預覽** 則需 **VITE_ADMIN_API_KEY**（無 Key 時該則 **test.skip**） |
-| `e2e/admin-loyalty-smoke.spec.ts` | 登入 → **`/admin/loyalty`** 側欄可見 **`e2e-admin-loyalty`**；**`/admin/loyalty/settings`** 有 **`e2e-loyalty-settings`**（需後端 :3003 儀表板／設定才完整） |
+| `e2e/admin-loyalty-smoke.spec.ts` | 登入 → **`/admin/loyalty`** 側欄可見 **`e2e-admin-loyalty`**；**`/admin/loyalty/settings`** 設定頁區塊可見（需 **VITE_ADMIN_API_KEY**，無 Key 時 skip） |
+| `e2e/admin-replenishment.spec.ts` | 登入 → **`/admin/replenishment`** 補貨建議頁載入、倉庫選單、建議列表或空態 |
+| `e2e/admin-balances.spec.ts` | 登入 → **`/admin/balances`** 應收應付餘額頁載入、多方視角切換可見 |
+| `e2e/admin-dispatch-rules.spec.ts` | 登入 → **`/admin/dispatch-rules`** 發券規則頁載入、列表或空態 |
+| `e2e/admin-pos-reports.spec.ts` | 登入 → `/pos/reports`；驗證 summary KPI、時間區段 preset 切換（含 URL `preset` query）、熱銷品項／區間趨勢區塊或其空態文案，以及 top-items → `/admin/products?q=…` 與銷售明細單號 → `/pos/orders/:id` 的跳轉 |
 
-掛帳用客戶 UUID 固定為 **`e2e00001-0000-4000-8000-00000000c001`**（seed 每次 **`upsert`** 之 `code: E2E` 客戶）。請執行 **`pnpm --filter pos-erp-backend db:seed`** 後再跑掛帳 E2E，無需清空舊 C001。
+掛帳用客戶 UUID 固定為 **`e2e00001-0000-4000-8000-00000000c001`**（`code: E2E` 客戶）。請先執行 **`pnpm db:seed`**，再執行 **`pnpm e2e:seed`** 建立此客戶，然後跑掛帳 E2E。
 
 ## CI（GitHub Actions）
 

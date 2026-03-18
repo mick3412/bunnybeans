@@ -1,0 +1,142 @@
+/**
+ * 暖色／在地感風格覆寫
+ * 主背景偏米、暖灰；主色暖棕／深綠；成功與警示為暖調綠／紅。
+ */
+:root {
+  --porcelain: #F7F3ED;
+  --carbon-black: #3d3229;
+  --bright-teal-blue: #6b5344;
+  --berry-crush: #a0522d;
+  --jungle-green: #4a7c59;
+  --white: #FFFDF9;
+  --carbon-light: rgba(61, 50, 41, 0.06);
+  --carbon-border: #d4c9bc;
+  --jungle-light: rgba(74, 124, 89, 0.18);
+  --berry-light: rgba(160, 82, 45, 0.15);
+}
+
+body {
+  background: var(--porcelain);
+  color: var(--carbon-black);
+}
+
+.mockup-sidebar {
+  background: #3d3229;
+  color: #f5f0e8;
+  border-right: none;
+}
+
+.mockup-sidebar-section {
+  color: rgba(245, 240, 232, 0.55);
+}
+
+.mockup-sidebar a {
+  color: rgba(245, 240, 232, 0.92);
+}
+
+.mockup-sidebar a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f5f0e8;
+}
+
+.mockup-sidebar a.active {
+  background: rgba(0, 0, 0, 0.2);
+  border-left-color: #c4a574;
+  color: #f5f0e8;
+}
+
+.mockup-sidebar .mockup-nav-divider {
+  background: rgba(245, 240, 232, 0.2);
+}
+
+.mockup-sidebar .mockup-nav-exit {
+  color: #f5f0e8;
+}
+
+.mockup-topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mockup-topbar h1,
+.mockup-topbar .date {
+  color: var(--carbon-black);
+}
+
+.mu-card,
+.mu-kpi-card {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.mu-btn-primary {
+  background: #6b5344;
+  color: var(--white);
+}
+
+.mu-btn-primary:hover {
+  filter: brightness(0.92);
+}
+
+.mu-btn-secondary {
+  border-color: var(--carbon-border);
+  color: var(--carbon-black);
+}
+
+.mu-btn-secondary:hover {
+  background: #ede6dc;
+}
+
+.mu-table-wrap {
+  border: 1px solid var(--carbon-border);
+  background: var(--white);
+}
+
+.mu-table th {
+  background: #f0ebe3;
+  color: var(--carbon-black);
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mu-table tbody tr:nth-child(even) {
+  background: #faf8f5;
+}
+
+.mu-table tbody tr:hover {
+  background: #f5f0e8;
+}
+
+.mu-table a {
+  color: #6b5344;
+}
+
+.mu-form-group input:focus,
+.mu-form-group select:focus {
+  border-color: #6b5344;
+  box-shadow: 0 0 0 2px rgba(107, 83, 68, 0.2);
+}
+
+.pos-product-btn {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.pos-product-btn:hover {
+  border-color: #6b5344;
+  background: #faf8f5;
+}
+
+.pos-cart,
+.pos-member-bar {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.pos-cart-total {
+  border-top-color: var(--carbon-border);
+}
+
+.mu-tag-info {
+  background: rgba(107, 83, 68, 0.12);
+  color: var(--carbon-black);
+}

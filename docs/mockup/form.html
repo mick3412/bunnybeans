@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>新增會員 — POS/CRM/ERP Mockup</title>
+  <link rel="stylesheet" href="mockup.css" />
+  <link rel="stylesheet" href="mockup-dashboard.css" />
+</head>
+<body>
+  <div class="mockup-shell">
+    <nav class="mockup-sidebar">
+      <div class="mockup-sidebar-section">會員與集點</div>
+      <a href="index.html">總覽</a>
+      <a href="list.html">會員管理</a>
+      <a href="form.html" class="active">新增會員</a>
+      <a href="#">點數存摺</a>
+      <a href="#">系統設定</a>
+      <div class="mockup-sidebar-section">營運</div>
+      <a href="#">金流報表</a>
+      <div class="mockup-nav-divider"></div>
+      <a href="pos.html" class="mockup-nav-exit">前往 POS</a>
+    </nav>
+    <div class="mockup-main-wrap">
+      <header class="mockup-topbar">
+        <h1>新增會員</h1>
+        <span class="date">2026年3月15日</span>
+      </header>
+      <main class="mockup-content">
+        <div class="mu-two-col">
+          <div>
+            <div class="mu-card mu-section">
+              <h2 class="mu-h2">基本資料</h2>
+              <p class="mu-caption">必填：姓名；其餘選填。儲存後可於會員管理中編輯與查看點數流水。</p>
+              <form>
+                <div class="mu-form-group">
+                  <label for="name">姓名（必填）</label>
+                  <input id="name" type="text" placeholder="請輸入姓名" required />
+                </div>
+                <div class="mu-form-group">
+                  <label for="phone">電話</label>
+                  <input id="phone" type="tel" placeholder="請輸入電話" />
+                </div>
+                <div class="mu-form-group">
+                  <label for="email">電子信箱</label>
+                  <input id="email" type="email" placeholder="請輸入電子信箱" />
+                </div>
+                <div class="mu-form-group">
+                  <label for="level">會員等級</label>
+                  <select id="level">
+                    <option value="">請選擇</option>
+                    <option>一般</option>
+                    <option>銀級</option>
+                    <option>金級</option>
+                  </select>
+                </div>
+                <div class="mu-form-group">
+                  <label for="code">會員編號</label>
+                  <input id="code" type="text" placeholder="選填，系統可自動產生" />
+                </div>
+                <div class="mu-form-actions">
+                  <button type="submit" class="mu-btn mu-btn-primary">儲存</button>
+                  <a href="list.html" class="mu-btn mu-btn-secondary">取消</a>
+                </div>
+              </form>
+            </div>
+            <div class="mu-card mu-section">
+              <h3 class="mu-section-title">選填進階</h3>
+              <div class="mu-form-group">
+                <label for="join">加入日</label>
+                <input id="join" type="date" />
+              </div>
+              <div class="mu-form-group">
+                <label for="memo">備註</label>
+                <input id="memo" type="text" placeholder="內部備註，不顯示給會員" />
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="mu-card mu-section">
+              <h3 class="mu-section-title">填寫說明</h3>
+              <ul style="font-size:0.875rem; color:#64748b; margin:0; padding-left:1.25rem; line-height:1.6;">
+                <li>會員編號若不填，儲存後由系統自動產生（如 M008）。</li>
+                <li>電話與電子信箱用於 POS 結帳時辨識會員，建議至少填一項。</li>
+                <li>等級可於儲存後在會員列表中再修改。</li>
+                <li>新增後即可在點數存摺中看到該會員；點數由結帳時累積或折抵產生。</li>
+              </ul>
+            </div>
+            <div class="mu-card mu-section">
+              <h3 class="mu-section-title">快速統計</h3>
+              <div class="mu-blocks">
+                <div class="mu-block-card"><div class="block-label">本月新增</div><div class="block-value">8</div></div>
+                <div class="mu-block-card"><div class="block-label">待審核</div><div class="block-value">0</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

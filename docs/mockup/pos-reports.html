@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>報表 — POS Mockup</title>
+  <link rel="stylesheet" href="mockup.css" />
+  <link rel="stylesheet" href="mockup-dashboard.css" />
+</head>
+<body>
+  <div class="mockup-shell">
+    <nav class="mockup-sidebar">
+      <div class="mockup-sidebar-section">收銀台</div>
+      <a href="pos.html">收銀</a>
+      <a href="pos-orders.html">訂單</a>
+      <a href="pos-promos.html">促銷</a>
+      <a href="pos-reports.html" class="active">報表</a>
+      <div class="mockup-nav-divider"></div>
+      <a href="index.html" class="mockup-nav-exit">後台</a>
+    </nav>
+    <div class="mockup-main-wrap">
+      <header class="mockup-topbar">
+        <h1>報表</h1>
+        <span class="date">2026年3月15日</span>
+      </header>
+      <main class="mockup-content">
+        <div class="mu-section">
+          <h3 class="mu-section-title">銷售概況</h3>
+          <p class="mu-caption" style="margin-bottom:1rem;">本日／本門市；詳細金流與匯出請至後台金流報表。</p>
+          <div class="mu-kpi-grid">
+            <div class="mu-kpi-card"><div class="value">28</div><div class="label">本日筆數</div></div>
+            <div class="mu-kpi-card"><div class="value">6,840 元</div><div class="label">本日營業額</div></div>
+            <div class="mu-kpi-card"><div class="value">2</div><div class="label">掛帳筆數</div></div>
+            <div class="mu-kpi-card"><div class="value">500 元</div><div class="label">未收金額</div></div>
+          </div>
+        </div>
+
+        <div class="mu-two-col">
+          <div class="mu-section">
+            <h3 class="mu-section-title">本日趨勢（示意）</h3>
+            <div class="mu-chart-placeholder">圖表區：本日各時段營業額長條圖</div>
+          </div>
+          <div class="mu-section">
+            <h3 class="mu-section-title">近 7 日比較</h3>
+            <div class="mu-blocks">
+              <div class="mu-block-card"><div class="block-label">3/15 今日</div><div class="block-value">6,840</div></div>
+              <div class="mu-block-card"><div class="block-label">3/14</div><div class="block-value">5,120</div></div>
+              <div class="mu-block-card"><div class="block-label">3/13</div><div class="block-value">7,300</div></div>
+              <div class="mu-block-card"><div class="block-label">3/12</div><div class="block-value">4,880</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mu-section">
+          <h3 class="mu-section-title">本日訂單一覽</h3>
+          <div class="mu-table-wrap mu-table-sticky">
+            <table class="mu-table">
+              <thead>
+                <tr>
+                  <th>單號</th>
+                  <th>時間</th>
+                  <th>應收</th>
+                  <th>實收</th>
+                  <th>狀態</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><a href="#">ORD-20260315-003</a></td><td>14:32</td><td>350 元</td><td>350 元</td><td><span class="mu-tag mu-tag-success">已結清</span></td></tr>
+                <tr><td><a href="#">ORD-20260315-002</a></td><td>13:08</td><td>500 元</td><td>0 元</td><td><span class="mu-tag mu-tag-warning">掛帳</span></td></tr>
+                <tr><td><a href="#">ORD-20260315-001</a></td><td>11:20</td><td>280 元</td><td>280 元</td><td><span class="mu-tag mu-tag-success">已結清</span></td></tr>
+                <tr><td><a href="#">ORD-20260315-000</a></td><td>10:55</td><td>450 元</td><td>450 元</td><td><span class="mu-tag mu-tag-success">已結清</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="mu-float-bar">
+          <span class="mu-caption">本日共 4 筆（本頁）</span>
+          <a href="#" class="mu-btn mu-btn-primary">匯出 CSV</a>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

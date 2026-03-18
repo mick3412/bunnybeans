@@ -1,0 +1,137 @@
+/**
+ * Square POS 風格覆寫
+ * 套用於 mockup.css 之後，將整體改為 Square 產品常見風格：
+ * 淺灰底、白卡、主色藍 #006AFF、成功綠、淺色側欄。
+ */
+:root {
+  --porcelain: #F5F5F5;
+  --carbon-black: #1A1A1A;
+  --bright-teal-blue: #006AFF;
+  --berry-crush: #DC3545;
+  --jungle-green: #28A745;
+  --white: #FFFFFF;
+  --carbon-light: rgba(0, 0, 0, 0.04);
+  --carbon-border: #E5E5E5;
+  --jungle-light: rgba(40, 167, 69, 0.12);
+  --berry-light: rgba(220, 53, 69, 0.12);
+}
+
+body {
+  background: var(--porcelain);
+  color: var(--carbon-black);
+}
+
+/* 側欄：改為淺色（Square 常見為白／淺灰側欄） */
+.mockup-sidebar {
+  background: var(--white);
+  color: var(--carbon-black);
+  border-right: 1px solid var(--carbon-border);
+}
+
+.mockup-sidebar-section {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.mockup-sidebar a {
+  color: var(--carbon-black);
+}
+
+.mockup-sidebar a:hover {
+  background: var(--porcelain);
+  color: var(--carbon-black);
+}
+
+.mockup-sidebar a.active {
+  background: rgba(0, 106, 255, 0.08);
+  border-left-color: var(--bright-teal-blue);
+  color: var(--bright-teal-blue);
+  font-weight: 600;
+}
+
+.mockup-sidebar .mockup-nav-divider {
+  background: var(--carbon-border);
+}
+
+.mockup-sidebar .mockup-nav-exit {
+  color: var(--carbon-black);
+}
+
+.mockup-sidebar .mockup-nav-exit:hover {
+  background: var(--porcelain);
+}
+
+/* 頂欄：白底、細邊框 */
+.mockup-topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mockup-topbar h1,
+.mockup-topbar .date {
+  color: var(--carbon-black);
+}
+
+/* 卡片：白底、淡灰邊、可選輕陰影 */
+.mu-card,
+.mu-kpi-card {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.mu-btn-secondary:hover {
+  background: var(--carbon-light);
+}
+
+.mu-table-wrap {
+  border: 1px solid var(--carbon-border);
+  background: var(--white);
+}
+
+.mu-table th {
+  background: #FAFAFA;
+  color: var(--carbon-black);
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mu-table tbody tr:nth-child(even) {
+  background: var(--carbon-light);
+}
+
+.mu-table tbody tr:hover {
+  background: var(--carbon-light);
+}
+
+.mu-table a {
+  color: var(--bright-teal-blue);
+}
+
+.mu-form-group input:focus,
+.mu-form-group select:focus {
+  border-color: var(--bright-teal-blue);
+  box-shadow: 0 0 0 2px rgba(0, 106, 255, 0.2);
+}
+
+.pos-product-btn {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.pos-product-btn:hover {
+  border-color: var(--bright-teal-blue);
+  background: rgba(0, 106, 255, 0.06);
+}
+
+.pos-cart,
+.pos-member-bar {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.pos-cart-total {
+  border-top-color: var(--carbon-border);
+}
+
+.mu-tag-info {
+  background: rgba(0, 106, 255, 0.12);
+}

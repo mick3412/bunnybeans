@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>收銀 — 極簡／留白 Mockup</title>
+  <link rel="stylesheet" href="../mockup.css" />
+  <link rel="stylesheet" href="../mockup-minimal.css" />
+</head>
+<body>
+  <div class="mockup-shell">
+    <nav class="mockup-sidebar">
+      <div class="mockup-sidebar-section">收銀台</div>
+      <a href="pos.html" class="active">收銀</a>
+      <a href="../pos-orders.html">訂單</a>
+      <a href="../pos-promos.html">促銷</a>
+      <a href="../pos-reports.html">報表</a>
+      <div class="mockup-nav-divider"></div>
+      <a href="index.html" class="mockup-nav-exit">後台</a>
+      <div class="mockup-nav-divider"></div>
+      <a href="../pos.html" class="mockup-nav-exit">預設風格</a>
+    </nav>
+    <div class="mockup-main-wrap">
+      <header class="mockup-topbar">
+        <h1>收銀</h1>
+        <span class="date">2026年3月15日 · 極簡／留白</span>
+      </header>
+      <main class="mockup-content">
+        <div class="pos-member-bar">
+          <label>會員（選填）</label>
+          <input type="text" placeholder="電話、會員編號或 Email" />
+        </div>
+
+        <div class="pos-content">
+          <div>
+            <h3 class="mu-h3">商品</h3>
+            <div class="pos-products">
+              <button type="button" class="pos-product-btn">
+                <span class="name">商品 A</span>
+                <span class="price">100 元</span>
+              </button>
+              <button type="button" class="pos-product-btn">
+                <span class="name">商品 B</span>
+                <span class="price">250 元</span>
+              </button>
+              <button type="button" class="pos-product-btn">
+                <span class="name">商品 C</span>
+                <span class="price">80 元</span>
+              </button>
+              <button type="button" class="pos-product-btn">
+                <span class="name">加購 D</span>
+                <span class="price">50 元</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="pos-cart">
+            <div class="pos-cart-title">購物車</div>
+            <div class="pos-cart-items">
+              <div class="pos-cart-row"><span>商品 A × 2</span><span>200 元</span></div>
+              <div class="pos-cart-row"><span>商品 C × 1</span><span>80 元</span></div>
+            </div>
+            <div class="pos-cart-total">小計：280 元</div>
+            <div class="pos-cart-actions">
+              <button type="button" class="mu-btn mu-btn-primary" style="width:100%;">結帳</button>
+              <button type="button" class="mu-btn mu-btn-secondary" style="width:100%;">清空</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

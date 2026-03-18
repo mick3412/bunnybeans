@@ -8,8 +8,7 @@
 
 | 檔案 | 誰寫入 | 誰讀取 |
 |------|--------|--------|
-| [BACKEND-INSTRUCTIONS.md](BACKEND-INSTRUCTIONS.md) | 規格 Agent | 後端 Agent（可只丟本檔進對話） |
-| [FRONTEND-INSTRUCTIONS.md](FRONTEND-INSTRUCTIONS.md) | 規格 Agent | 前端 Agent |
+| [instructions/](instructions/) | 規格 Agent | 後端／前端 Agent（開啟**最新編號**檔案） |
 
 內容慣例：**P0～P4 表格**、**已交付／不做**、**完成後追加 agent-log**、文末**複製開場白**。
 

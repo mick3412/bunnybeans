@@ -136,6 +136,19 @@ interface PosOrderListResponse {
 | `/pos/orders/:id/return-to-stock` | POST | 同上（相容舊路徑） | **stable** |
 | `/pos/promotions/preview` | POST | 促銷試算（subtotal / discount / total） | **stable** |
 
+#### 報表穿透（referenceId 跨模組連結）
+
+- **PosOrder.id** 作為跨模組的 **referenceId**：
+  - **Finance**：`SALE_RECEIVABLE`、`SALE_PAYMENT`、`SALE_REFUND` 之 referenceId = PosOrder.id；可用 `GET /finance/events?referenceId={orderId}` 查該訂單對應金流。
+  - **Loyalty**：PointLedger 的 EARNED／BURNED 之 referenceId = PosOrder.id；點數存摺可依 referenceId 跳至 `GET /pos/orders/:id` 訂單明細。
+- 前端報表可依訂單 id 提供「穿透」至金流事件或點數存摺；反之從 Finance／Loyalty 報表點擊 referenceId 可連回 POS 訂單明細。
+
+> **統一規則（stable）**：PosOrder.id（UUID）是 POS/Finance/Loyalty 三個模組共用的單據 referenceId。
+
+> **來源保證（stable）**：
+> - `FinanceEvent.referenceId`（SALE_*）必為 `PosOrder.id`
+> - `PointLedger.referenceId`（EARNED/BURNED）必為 `PosOrder.id`
+
 ---
 
 ### 4. Endpoint 詳細規格
@@ -386,6 +399,29 @@ interface PosOrderListResponse {
 ```
 
 > 列表 `GET /pos/orders` 仍不含 `payments`／`paidAmount`／`credit`／`customerCode`（摘要僅 `customerId`、`customerName`）。明細含 `customerCode`。舊訂單無付款列時 `payments: []`、`paidAmount: 0`、`remainingAmount` 等於 `totalAmount`、`credit: true`（視為歷史賒帳或未紀錄實收，前端可再與營運確認）。
+
+---
+
+#### 4.4 POS 報表 API（stable）
+
+見 [POS-REPORTS-SUGGESTIONS.md](tasks/POS-REPORTS-SUGGESTIONS.md)。以下為已實作契約。
+
+**GET /pos/reports/summary**
+
+- **Query**（皆選填）：`preset`（today｜last7d｜last30d｜currentMonth｜last60d｜lastHalfYear，預設 today）、`from`、`to`（ISO 日期，與 preset 二擇一）、`storeId`。
+- **Response**：`period: { preset?, from, to }`、`totalRevenue`、`ordersCount`、`avgOrder`、`refundsCount`、`refundsTotal`、`byPaymentMethod?: Record<string, number>`、`byCategory?: { categoryId, categoryCode?, revenue }[]`、**`totalCost?`**（區間內銷貨成本：Σ quantity × Product.costPrice，costPrice 為 null 視為 0）、**`grossMargin?`**（totalRevenue − totalCost）、**`grossMarginRate?`**（毛利率 %，totalRevenue > 0 時 (grossMargin / totalRevenue) × 100）。
+
+**GET /pos/reports/top-items**
+
+- **Query**：`from`、`to`（未帶則預設 last30d）、`storeId?`、`limit?`（預設 20，上限 100）、`sortBy?`（quantity｜revenue）。
+- **Response**：`items: { productId, productName, sku, quantity, revenue }[]`、`from`、`to`。
+
+**GET /pos/reports/daily**
+
+- **Query**：`from`、`to`（未帶則預設 last30d）、`storeId?`。
+- **Response**：`byDay: { date, revenue, ordersCount }[]`、`from`、`to`。
+
+**報表錯誤碼**（見 [backend-error-format.md](backend-error-format.md)）：當同時帶 `from`、`to` 時，若 `from`＞`to` 或無法解析為日期 → **400 `REPORT_INVALID_RANGE`**；若區間超過 366 天 → **400 `REPORT_RANGE_TOO_LARGE`**。
 
 ---
 

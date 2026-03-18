@@ -1,0 +1,138 @@
+/**
+ * 極簡／留白風格覆寫
+ * 大量白與極淺灰、單一主色、裝飾極少、字階清楚、間距大。
+ */
+:root {
+  --porcelain: #FFFFFF;
+  --carbon-black: #1a1a1a;
+  --bright-teal-blue: #1a1a1a;
+  --berry-crush: #b91c1c;
+  --jungle-green: #15803d;
+  --white: #FFFFFF;
+  --carbon-light: #fafafa;
+  --carbon-border: #e5e5e5;
+  --jungle-light: rgba(21, 128, 61, 0.08);
+  --berry-light: rgba(185, 28, 28, 0.08);
+}
+
+body {
+  background: #fafafa;
+  color: var(--carbon-black);
+}
+
+.mockup-sidebar {
+  background: var(--white);
+  color: var(--carbon-black);
+  border-right: 1px solid var(--carbon-border);
+}
+
+.mockup-sidebar-section {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.mockup-sidebar a {
+  color: var(--carbon-black);
+}
+
+.mockup-sidebar a:hover {
+  background: #fafafa;
+  color: var(--carbon-black);
+}
+
+.mockup-sidebar a.active {
+  background: #fafafa;
+  border-left-color: var(--carbon-black);
+  color: var(--carbon-black);
+  font-weight: 600;
+}
+
+.mockup-sidebar .mockup-nav-divider {
+  background: var(--carbon-border);
+}
+
+.mockup-topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mockup-content {
+  padding: 2rem 2.5rem;
+}
+
+.mu-card,
+.mu-kpi-card {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.mu-btn-primary {
+  background: var(--carbon-black);
+  color: var(--white);
+}
+
+.mu-btn-primary:hover {
+  filter: brightness(0.85);
+}
+
+.mu-btn-secondary {
+  border-color: var(--carbon-border);
+}
+
+.mu-btn-secondary:hover {
+  background: #fafafa;
+}
+
+.mu-table-wrap {
+  border: 1px solid var(--carbon-border);
+  background: var(--white);
+}
+
+.mu-table th {
+  background: #fafafa;
+  border-bottom: 1px solid var(--carbon-border);
+}
+
+.mu-table tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.mu-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.mu-table a {
+  color: var(--carbon-black);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mu-form-group input:focus,
+.mu-form-group select:focus {
+  border-color: var(--carbon-black);
+  box-shadow: 0 0 0 1px var(--carbon-black);
+}
+
+.pos-product-btn {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.pos-product-btn:hover {
+  border-color: var(--carbon-black);
+  background: #fafafa;
+}
+
+.pos-cart,
+.pos-member-bar {
+  background: var(--white);
+  border: 1px solid var(--carbon-border);
+}
+
+.pos-cart-total {
+  border-top-color: var(--carbon-border);
+}
+
+.mu-tag-info {
+  background: var(--carbon-light);
+  color: var(--carbon-black);
+}
