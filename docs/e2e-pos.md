@@ -79,6 +79,7 @@ pnpm exec playwright test
 - 後台報表/清單的 `referenceId` 只有符合 UUID-like（純 hex）格式時，才會渲染成可點擊按鈕並呼叫 `/ops/references/resolve`。
 - UUID-like regex：`^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`
 - `E2E_PROFILE=full` 驗收要點：`/admin/reports`（或 finance events 列表）必須至少有 1 筆可穿透 `referenceId`，且 E2E smoke 點擊第一個 `訂單` 按鈕必須導向 `/pos/orders/:id`（不可因按鈕數量為 0 而 skip）。
+- `E2E_PROFILE=full` 回程要點：從 `/pos/orders/:id` 點「回到來源」必須回到正確的來源頁（例如 `/admin/reports`），且回程後頁面區塊可見、後續旅程頁（例如 `/admin/loyalty/reports` 活動成效報表）可繼續到達。
 
 建議指令：
 

@@ -1,14 +1,14 @@
 # 上一輪整合（規格 Agent 每輪覆寫）
 
-**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **010** · 前端 **010**  
+**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **012** · 前端 **010**  
 （路徑：[agent-collab/agent-log-backend.md](../agent-collab/agent-log-backend.md)、[agent-collab/agent-log-frontend.md](../agent-collab/agent-log-frontend.md)）
 
 ## 後端（收斂摘要）
 
-- **INSTRUCTIONS 010 已完成（E2E full gate 強化 + click-audit v2 健康/修復提示 + 常駐規則保護）**：
-  - **CI E2E full gate**：強化 fail-fast 與固定 specs 清單，並確保 full fixtures 下關鍵 suite 不默默 skip。
-  - **Click-audit 視覺化 v2**：summary 追加 `health`（門檻判定 OK/WARN/ALERT）與 `fixHints[]`；list 增 `fixHint` 對應可操作修復路徑。
-  - **行銷常駐規則正式化保護**：dispatch runner 支援同期間防重 `SKIPPED` 與失敗最小重試（`nextRunAt` 後延）→ `FAILED`，並補對應測試。
+- **INSTRUCTIONS 012 已完成（dispatch-rules 常駐化：full fixtures/runner 驗收 + lastRun/ops 導向一致性）**：
+  - **E2E full fixtures**：補齊 segment/coupon 與 enabled/邊界 rules（teardown 後可重放）。
+  - **Runner 驗收與對應**：補 integration 邊界（disabled/future/duplicate）與 API `lastRun*` 回傳一致性，並確保 `e2e/admin-dispatch-rules.spec.ts` full gate 不默默 skip。
+  - **Ops job 對應驗收**：runner 記錄能對應 `jobType=crm-run-scheduled`，E2E 能驗證導向 `/admin/ops/jobs` 的關聯。
 - **回歸**：`pnpm --filter pos-erp-backend test` 全綠；migrations 可 deploy。
 - **RBAC**：維持長期 skip（客戶不需要）。
 
@@ -20,6 +20,35 @@
   - **行銷常駐規則 UX**：列表顯示 `lastRunAt/lastRunCode/lastRunNote`，並提供 run log 入口。
 - **回歸**：`pnpm --filter pos-erp-frontend build` ✅；E2E 依 full fixtures 設定 pass（缺 fixture 才能 skip）。
 - **RBAC**：維持長期 skip（客戶不需要）。
+
+## 前端：Admin 後台側欄 Hub 化與子頁面結構變更 Log
+
+以下為你補充的結構化紀錄（Admin 後台為主），用於下一輪規格/驗收對齊：
+
+1. SideBar 分層（由多細項 → 3 層架構）
+   - Level 1（不可點）：只顯示分組標題，不連結（如：總覽／監控、商品/庫存、採購管理、財務、會員/行銷）
+   - Level 2（可點主入口）：只保留「Hub 入口」，點擊會切換到對應 Hub 路由（但不再露出所有 Level 3 細項）
+   - Level 3（原本的細項）：從側欄移除，改由 Hub 頁內用 tabs/區塊切換
+   - 參考：`frontend/src/pages/admin/AdminLayout.tsx`（側欄三層標註與入口只剩 Hub）
+
+2. 子頁面（Main 區塊）改為「Hub Page + In-page Tabs」
+   - 新增/使用 Hub Page 作為 Level 2 的單一容器（同一路由框架內切換內容）
+   - Hub 內依 activeTab 條件渲染（Level 3 切換不再跳到新路由）
+   - 參考：`frontend/src/shared/utils/useScopedSearchParams.ts`
+
+3. URL query 狀態管理改為「scope 命名避免鍵衝突」
+   - scoped key：`finance.hub.tab`、`inventory.query.hub.tab`、`product.hub.tab`、`ops.monitoring.hub.tab`、`member.hub.tab`、`marketing.hub.tab`
+   - `useScopedSearchParams(prefix)`：只讀取 prefix.*，更新只改該 scope，避免污染其他 Hub 參數
+   - 參考：`frontend/src/shared/utils/useScopedSearchParams.ts` + `frontend/src/pages/admin/AdminLayout.tsx` 的 hubs mapping
+
+4. App Route 改為「Hub 的 thin wrapper + backward compatibility」
+   - `App.tsx` 將原本多個 Level 3 直接對應路由改為渲染 Hub 並帶 `initialTab`
+   - 針對既有深連結（如 loyalty 子頁）保留 wrapper/redirect，落到對應 Hub + 正確 initialTab
+   - 參考：`frontend/src/App.tsx`（大量 initialTab wrapper routes）
+
+5. Header Title 改為依 hub tab 自動顯示
+   - `AdminLayout.tsx` 依 pathname 判斷所屬 Hub，再依 scoped tab 狀態輸出一致頁頭文案
+   - 參考：`frontend/src/pages/admin/AdminLayout.tsx` 的 `headerTitle()`
 
 ---
 
@@ -49,7 +78,8 @@
 | 來源 | 缺口 | 優先 |
 |------|------|------|
 | erp-roadmap / Phase 5 / admin-roles | **RBAC（長期 skip）**：客戶不需要角色/權限；維持現有 `AdminApiKeyGuard`（有/無管理金鑰）即可。本專案不落地 Role/Permission 資料模型與 permissions endpoint。 | 低 |
-| crm-member-roadmap（階段 G） | **發券規則常駐化「驗收」**：截至目前已補 lastRun 欄位與保護邏輯；下一步需要把「full fixtures 下的 dispatch-rules/runner 驗收」納入 E2E/CI（驗證 lastRunCode/lastRunNote、run log 導向一致）。 | 中 |
+| crm-member-roadmap（階段 G） | **發券規則常駐化：前端仍需完成驗收與 UI/UX**：需把 `/admin/dispatch-rules` 的 run log 導向可驗收、lastRun* 渲染/selector 穩定性補齊，並納入全站 UI/UX 再審視（按鈕/空態/錯誤態行動建議）。 | 中 |
+| ops-roadmap / Phase 4 | **報表穿透（referenceId）E2E 穩定性缺口**：`ReferenceIdLink` 目前只會在 UUID-like 時渲染可點擊按鈕；E2E seed 的 referenceId（POS order / receiving note）若不符 UUID-like，full profile 下無法穩定導向並導致只能 skip。需調整 E2E fixtures/seed 與 E2E 斷言策略，讓 full profile 下報表穿透不再依賴 skip。 | 高 |
 
 ### 後續 Phase
 
