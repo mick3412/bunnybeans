@@ -29,7 +29,7 @@ export class DispatchRuleRunnerService {
 
     for (const rule of rules) {
       try {
-        await this.crmJobService.createJob('segment-coupon', {
+        const job = await this.crmJobService.createJob('segment-coupon', {
           merchantId: rule.merchantId,
           segmentId: rule.segmentId,
           couponId: rule.couponId,
@@ -39,14 +39,43 @@ export class DispatchRuleRunnerService {
         const next = this.computeNextRunAt(now, rule.scheduleType);
         await this.prisma.crmCouponDispatchRule.update({
           where: { id: rule.id },
-          data: { nextRunAt: next },
+          data: {
+            nextRunAt: next,
+            lastRunAt: now,
+            lastRunCode: 'SENT',
+            lastRunNote: `jobId=${job.jobId}`,
+          },
         });
       } catch (e) {
-        errors.push(`${rule.id}: ${(e as Error).message}`);
+        const err = this.formatError(e);
+        errors.push(`${rule.id}: ${err}`);
+        await this.prisma.crmCouponDispatchRule.update({
+          where: { id: rule.id },
+          data: {
+            lastRunAt: now,
+            lastRunCode: 'FAILED',
+            lastRunNote: err.slice(0, 500),
+          },
+        });
       }
     }
 
     return { triggered, errors };
+  }
+
+  private formatError(e: unknown): string {
+    const anyE = e as any;
+    const res = anyE?.response;
+    const code = typeof res?.code === 'string' ? res.code : undefined;
+    const msg = typeof res?.message === 'string' ? res.message : undefined;
+    if (code && msg) return `${code} ${msg}`;
+    if (code) return code;
+    if (typeof anyE?.message === 'string' && anyE.message.trim()) return anyE.message;
+    try {
+      return JSON.stringify(res ?? anyE);
+    } catch {
+      return 'unknown error';
+    }
   }
 
   private computeNextRunAt(after: Date, scheduleType: string): Date {

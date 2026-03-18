@@ -46,6 +46,7 @@ export class OpsController {
       source: string;
       field?: string;
       referenceId: string;
+      resultCode?: string;
     },
   ) {
     return this.opsService.recordReportClickAudit({
@@ -53,6 +54,61 @@ export class OpsController {
       source: body.source,
       field: body.field,
       referenceId: body.referenceId,
+      resultCode: body.resultCode,
+    });
+  }
+
+  /** GET /ops/reports/click-audit — 點擊審計列表（Admin） */
+  @Get('reports/click-audit')
+  @UseGuards(AdminApiKeyGuard)
+  listReportClickAudit(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('source') source?: string,
+    @Query('resolvedKind') resolvedKind?: string,
+    @Query('resultCode') resultCode?: string,
+    @Query('success') success?: string,
+    @Query('referenceId') referenceId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('sort') sort?: 'createdAt',
+    @Query('order') order?: 'asc' | 'desc',
+  ) {
+    return this.opsService.listReportClickAudit({
+      from,
+      to,
+      source,
+      resolvedKind,
+      resultCode,
+      success,
+      referenceId,
+      page: page ? parseInt(page, 10) : undefined,
+      pageSize: pageSize ? parseInt(pageSize, 10) : undefined,
+      sort,
+      order,
+    });
+  }
+
+  /** GET /ops/reports/click-audit/summary — 點擊審計彙總（Admin） */
+  @Get('reports/click-audit/summary')
+  @UseGuards(AdminApiKeyGuard)
+  summaryReportClickAudit(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('source') source?: string,
+    @Query('resolvedKind') resolvedKind?: string,
+    @Query('success') success?: string,
+    @Query('days') days?: string,
+    @Query('top') top?: string,
+  ) {
+    return this.opsService.summaryReportClickAudit({
+      from,
+      to,
+      source,
+      resolvedKind,
+      success,
+      days: days ? parseInt(days, 10) : undefined,
+      top: top ? parseInt(top, 10) : undefined,
     });
   }
 

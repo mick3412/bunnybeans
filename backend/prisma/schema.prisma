@@ -148,10 +148,14 @@ model CrmCouponDispatchRule {
   scheduleType String
   cronExpr     String?
   nextRunAt    DateTime?
+  lastRunAt    DateTime?
+  lastRunCode  String?
+  lastRunNote  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   @@index([merchantId])
   @@index([merchantId, enabled])
+  @@index([merchantId, lastRunAt])
 }
 
 /// 關帳期間（§7.1）
@@ -178,6 +182,19 @@ model FinanceAuditLog {
   eventType String?
   createdAt DateTime @default(now())
   @@index([eventId])
+  @@index([createdAt])
+}
+
+/// 財務快照（最小版）：手動補跑 daily/monthly 後保存結果，供列表查詢
+model FinanceSnapshot {
+  id         String   @id @default(uuid())
+  asOfDate   DateTime @db.Date
+  type       String   // daily | monthly
+  path       String
+  summaryJson Json
+  createdAt  DateTime @default(now())
+
+  @@unique([asOfDate, type])
   @@index([createdAt])
 }
 
@@ -326,7 +343,7 @@ model Brand {
 model Product {
   id          String    @id @default(uuid())
   sku         String    @unique
-  barcode     String?   @unique
+  barcode     String?
   name        String
   description String?
   specSize    String?
@@ -356,6 +373,7 @@ model Product {
   posOrderItems         PosOrderItem[]
   purchaseOrderLines    PurchaseOrderLine[]
 
+  @@index([barcode])
   @@index([brandId])
   @@index([categoryId])
 }
@@ -611,12 +629,15 @@ model ReportClickAudit {
   source       String   // e.g. finance-events, loyalty-ledger, pos-reports
   field        String   // e.g. referenceId
   referenceId  String
+  /// 點擊結果分類（前端可回報；用於可觀測性與 UX 改善）
+  resultCode   String?
   resolvedKind String   // posOrder | receivingNote | unknown（先以字串存，避免未來擴充需 migration）
   success      Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   @@index([merchantId])
   @@index([source])
+  @@index([resultCode])
   @@index([resolvedKind])
   @@index([createdAt])
 }

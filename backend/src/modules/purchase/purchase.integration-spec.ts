@@ -280,6 +280,9 @@ describe('Purchase receiving + PURCHASE_PAYABLE (integration)', () => {
       console.warn('skip purchase spec: run migrate deploy for purchase migrations');
       return;
     }
+    // Avoid cross-test pollution: FinancePeriodClose may be created by other suites
+    // and block PURCHASE_PAYABLE writes in this test.
+    await prisma.financePeriodClose.deleteMany({});
 
     const m = await prisma.merchant.create({
       data: { code: `PM-EXP-${Date.now()}`, name: 'PM EXP' },
@@ -334,6 +337,17 @@ describe('Purchase receiving + PURCHASE_PAYABLE (integration)', () => {
       },
     ]);
     await rnSvc.complete(rn.id);
+
+    // ReceivingNote detail includes return/quality/batch/expiry fields for UI.
+    const detail: any = await rnSvc.getById(rn.id, m.id);
+    expect(detail?.lines?.length).toBeGreaterThanOrEqual(1);
+    const line = detail.lines.find((x: any) => x.id === lineId);
+    expect(line).toBeTruthy();
+    expect(line.qualifiedQty).toBe(7);
+    expect(line.returnedQty).toBe(0);
+    expect(line.returnReason ?? null).toBeNull();
+    expect(line.batchCode).toBe('B-PO-RN');
+    expect(line.expiryDate).toBeTruthy();
 
     // 查詢 expiring：若 DB 尚未 migrate 支援欄位，會回空；有 migrate 時應查得到。
     const inv = (await invSvc.getExpiring({

@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable, forwardRef } from '@nestjs/com
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { DispatchRuleRunnerService } from '../../crm/application/dispatch-rule-runner.service';
 import { FinanceService } from '../../finance/application/finance.service';
+import { Prisma } from '@prisma/client';
 
 export const OPS_JOB_TYPES = ['crm-run-scheduled', 'finance-period-close', 'finance-snapshot'] as const;
 
@@ -24,14 +25,15 @@ export class OpsService {
   }
 
   /** 紀錄定時 job 執行結果；供 run-scheduled／關帳／快照等呼叫 */
-  async recordRun(jobType: string, success: boolean, message?: string | null): Promise<void> {
-    await this.prisma.opsJobRunLog.create({
+  async recordRun(jobType: string, success: boolean, message?: string | null): Promise<{ id: string }> {
+    const row = await this.prisma.opsJobRunLog.create({
       data: {
         jobType,
         success,
         message: message?.slice(0, 2000) ?? null,
       },
     });
+    return { id: row.id };
   }
 
   /** OpsJobRunLog 列表：分頁、kind 篩選 */
@@ -138,6 +140,7 @@ export class OpsService {
     source: string;
     field?: string;
     referenceId: string;
+    resultCode?: string;
   }): Promise<{ id: string; resolvedKind: 'posOrder' | 'receivingNote' | 'unknown'; success: boolean; createdAt: string }> {
     const source = params.source?.trim();
     const referenceId = params.referenceId ?? '';
@@ -147,12 +150,16 @@ export class OpsService {
     const field = params.field?.trim() || 'referenceId';
     const resolved = await this.resolveReference(referenceId);
     const success = resolved.kind !== 'unknown';
+    const resultCode =
+      params.resultCode?.trim() ||
+      (success ? 'NAVIGATED' : 'NOT_FOUND');
     const row = await this.prisma.reportClickAudit.create({
       data: {
         merchantId: params.merchantId?.trim() || null,
         source,
         field,
         referenceId: referenceId ?? '',
+        resultCode,
         resolvedKind: resolved.kind,
         success,
       },
@@ -162,6 +169,231 @@ export class OpsService {
       resolvedKind: resolved.kind,
       success,
       createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  private parseOptionalBool(s?: string): boolean | undefined {
+    if (s == null) return undefined;
+    const v = s.trim().toLowerCase();
+    if (v === 'true' || v === '1') return true;
+    if (v === 'false' || v === '0') return false;
+    return undefined;
+  }
+
+  private parseRange(fromStr?: string, toStr?: string): { from?: Date; to?: Date } {
+    const fromS = fromStr?.trim();
+    const toS = toStr?.trim();
+    const from = fromS ? new Date(fromS) : undefined;
+    const to = toS ? new Date(toS) : undefined;
+    if (fromS && (!from || Number.isNaN(from.getTime()))) {
+      throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'invalid from/to' });
+    }
+    if (toS && (!to || Number.isNaN(to.getTime()))) {
+      throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'invalid from/to' });
+    }
+    if (from && to && from > to) {
+      throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'from must be <= to' });
+    }
+    return { from, to };
+  }
+
+  async listReportClickAudit(q: {
+    from?: string;
+    to?: string;
+    source?: string;
+    resolvedKind?: string;
+    resultCode?: string;
+    success?: string;
+    referenceId?: string;
+    page?: number;
+    pageSize?: number;
+    sort?: 'createdAt';
+    order?: 'asc' | 'desc';
+  }): Promise<{
+    items: Array<{
+      id: string;
+      merchantId: string | null;
+      source: string;
+      field: string;
+      referenceId: string;
+      resultCode: string | null;
+      resolvedKind: string;
+      success: boolean;
+      createdAt: string;
+    }>;
+    page: number;
+    pageSize: number;
+    total: number;
+  }> {
+    const { from, to } = this.parseRange(q.from, q.to);
+    const page = q.page && q.page > 0 ? q.page : 1;
+    const pageSize = q.pageSize && q.pageSize > 0 ? Math.min(q.pageSize, 200) : 50;
+    const where: Prisma.ReportClickAuditWhereInput = {};
+    if (from || to) {
+      where.createdAt = {
+        ...(from ? { gte: from } : {}),
+        ...(to ? { lte: to } : {}),
+      };
+    }
+    if (q.source?.trim()) where.source = q.source.trim();
+    if (q.resolvedKind?.trim()) where.resolvedKind = q.resolvedKind.trim();
+    if (q.resultCode?.trim()) (where as any).resultCode = q.resultCode.trim();
+    const ok = this.parseOptionalBool(q.success);
+    if (ok !== undefined) where.success = ok;
+    if (q.referenceId?.trim()) where.referenceId = q.referenceId.trim();
+
+    const orderBy: { createdAt: 'asc' | 'desc' } = { createdAt: q.order === 'asc' ? 'asc' : 'desc' };
+    const [rows, total] = await Promise.all([
+      this.prisma.reportClickAudit.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.reportClickAudit.count({ where }),
+    ]);
+    return {
+      items: rows.map((r) => ({
+        id: r.id,
+        merchantId: r.merchantId,
+        source: r.source,
+        field: r.field,
+        referenceId: r.referenceId,
+        resultCode: (r as any).resultCode ?? null,
+        resolvedKind: r.resolvedKind,
+        success: r.success,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      page,
+      pageSize,
+      total,
+    };
+  }
+
+  async summaryReportClickAudit(q: {
+    from?: string;
+    to?: string;
+    source?: string;
+    resolvedKind?: string;
+    success?: string;
+    days?: number;
+    top?: number;
+  }): Promise<{
+    total: number;
+    bySuccess: { success: boolean; count: number }[];
+    bySource: { source: string; count: number }[];
+    byResultCode: { resultCode: string | null; count: number }[];
+    byResolvedKind: { resolvedKind: string; count: number }[];
+    topSources: { source: string; notFound: number; multiMatch: number; total: number }[];
+    trendByDay: { day: string; total: number; failed: number }[];
+    topReferenceIds: { field: string; referenceId: string; count: number }[];
+  }> {
+    const { from, to } = this.parseRange(q.from, q.to);
+    const where: Prisma.ReportClickAuditWhereInput = {};
+    const top = q.top && q.top > 0 ? Math.min(q.top, 200) : 20;
+    if (from || to) {
+      where.createdAt = {
+        ...(from ? { gte: from } : {}),
+        ...(to ? { lte: to } : {}),
+      };
+    }
+    if (q.source?.trim()) where.source = q.source.trim();
+    if (q.resolvedKind?.trim()) where.resolvedKind = q.resolvedKind.trim();
+    const ok = this.parseOptionalBool(q.success);
+    if (ok !== undefined) where.success = ok;
+
+    // When from/to not specified, allow quick "recent N days" trend view.
+    const days = q.days && q.days > 0 ? Math.min(q.days, 180) : 14;
+    const trendFrom = !from && !to ? new Date(Date.now() - (days - 1) * 24 * 3600 * 1000) : undefined;
+
+    const [total, bySuccessRows, bySourceRows, byResultCodeRows, byKindRows, topSourcesRows, trendRows, topRefRows] =
+      await Promise.all([
+        this.prisma.reportClickAudit.count({ where }),
+        this.prisma.reportClickAudit.groupBy({ by: ['success'], where, _count: { _all: true } }),
+        this.prisma.reportClickAudit.groupBy({ by: ['source'], where, _count: { _all: true } }),
+        this.prisma.reportClickAudit.groupBy({ by: ['resultCode'], where, _count: { _all: true } } as any),
+        this.prisma.reportClickAudit.groupBy({ by: ['resolvedKind'], where, _count: { _all: true } }),
+        // topSources: rank sources by NOT_FOUND/MULTI_MATCH frequency (within current filters)
+        this.prisma.reportClickAudit.groupBy({
+          by: ['source', 'resultCode'],
+          where: {
+            ...where,
+            resultCode: { in: ['NOT_FOUND', 'MULTI_MATCH'] } as any,
+          } as any,
+          _count: { _all: true },
+        } as any),
+        // trendByDay: recent N days (or within from/to if specified)
+        (async () => {
+          // Don't read where.createdAt (union type); use parsed from/to directly.
+          const gte = from ?? trendFrom;
+          const lte = to;
+          const whereSql = Prisma.sql`
+            WHERE 1=1
+            ${gte ? Prisma.sql`AND "createdAt" >= ${gte}` : Prisma.empty}
+            ${lte ? Prisma.sql`AND "createdAt" <= ${lte}` : Prisma.empty}
+            ${where.source ? Prisma.sql`AND "source" = ${where.source}` : Prisma.empty}
+            ${where.resolvedKind ? Prisma.sql`AND "resolvedKind" = ${where.resolvedKind}` : Prisma.empty}
+            ${where.success !== undefined ? Prisma.sql`AND "success" = ${where.success}` : Prisma.empty}
+          `;
+          const rows = (await this.prisma.$queryRaw(Prisma.sql`
+            SELECT
+              to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') as day,
+              COUNT(*)::int as total,
+              SUM(CASE WHEN "success" = false THEN 1 ELSE 0 END)::int as failed
+            FROM "ReportClickAudit"
+            ${whereSql}
+            GROUP BY 1
+            ORDER BY 1 ASC
+          `)) as Array<{ day: string; total: number; failed: number }>;
+          return rows;
+        })(),
+        // topReferenceIds: most frequent failed referenceId/field (within current filters)
+        (async () => {
+          const whereSql = Prisma.sql`
+            WHERE 1=1
+            ${from ? Prisma.sql`AND "createdAt" >= ${from}` : Prisma.empty}
+            ${to ? Prisma.sql`AND "createdAt" <= ${to}` : Prisma.empty}
+            ${where.source ? Prisma.sql`AND "source" = ${where.source}` : Prisma.empty}
+            ${where.resolvedKind ? Prisma.sql`AND "resolvedKind" = ${where.resolvedKind}` : Prisma.empty}
+            AND "success" = false
+          `;
+          const rows = (await this.prisma.$queryRaw(Prisma.sql`
+            SELECT
+              "field" as field,
+              "referenceId" as "referenceId",
+              COUNT(*)::int as count
+            FROM "ReportClickAudit"
+            ${whereSql}
+            GROUP BY 1, 2
+            ORDER BY 3 DESC
+            LIMIT ${top}
+          `)) as Array<{ field: string; referenceId: string; count: number }>;
+          return rows;
+        })(),
+      ]);
+
+    const topSourcesMap = new Map<string, { source: string; notFound: number; multiMatch: number; total: number }>();
+    for (const r of topSourcesRows as any[]) {
+      const source = r.source as string;
+      const resultCode = (r as any).resultCode as string | null;
+      const count = (r as any)._count?._all ?? 0;
+      const cur = topSourcesMap.get(source) ?? { source, notFound: 0, multiMatch: 0, total: 0 };
+      if (resultCode === 'NOT_FOUND') cur.notFound += count;
+      if (resultCode === 'MULTI_MATCH') cur.multiMatch += count;
+      cur.total = cur.notFound + cur.multiMatch;
+      topSourcesMap.set(source, cur);
+    }
+    const topSources = [...topSourcesMap.values()].sort((a, b) => b.total - a.total).slice(0, top);
+
+    return {
+      total,
+      bySuccess: bySuccessRows.map((r) => ({ success: r.success, count: r._count._all })),
+      bySource: bySourceRows.map((r) => ({ source: r.source, count: r._count._all })),
+      byResultCode: (byResultCodeRows as any[]).map((r) => ({ resultCode: r.resultCode ?? null, count: r._count._all })),
+      byResolvedKind: byKindRows.map((r) => ({ resolvedKind: r.resolvedKind, count: r._count._all })),
+      topSources,
+      trendByDay: trendRows,
+      topReferenceIds: topRefRows as any,
     };
   }
 
@@ -178,10 +410,11 @@ export class OpsService {
     if (kind === 'crm-run-scheduled') {
       try {
         const result = await this.dispatchRuleRunner.runScheduled();
-        await this.recordRun(kind, result.errors.length === 0, result.errors.length ? result.errors.join('; ') : undefined);
-        return { ok: true, kind, result };
+        const runLog = await this.recordRun(kind, result.errors.length === 0, result.errors.length ? result.errors.join('; ') : undefined);
+        return { ok: true, kind, runLogId: runLog.id, result };
       } catch (e) {
-        await this.recordRun(kind, false, (e as Error).message);
+        const runLog = await this.recordRun(kind, false, (e as Error).message);
+        (e as { runLogId?: string }).runLogId = runLog.id;
         throw e;
       }
     }
@@ -190,10 +423,11 @@ export class OpsService {
       const snapshotType = body.snapshotType === 'monthly' ? 'monthly' : 'daily';
       try {
         const result = await this.finance.createSnapshot({ asOfDate, type: snapshotType });
-        await this.recordRun(kind, true);
-        return { ok: true, kind, result };
+        const runLog = await this.recordRun(kind, true);
+        return { ok: true, kind, runLogId: runLog.id, result };
       } catch (e) {
-        await this.recordRun(kind, false, (e as Error).message);
+        const runLog = await this.recordRun(kind, false, (e as Error).message);
+        (e as { runLogId?: string }).runLogId = runLog.id;
         throw e;
       }
     }

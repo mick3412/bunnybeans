@@ -12,6 +12,11 @@ const E2E_CUSTOMER_ID = 'e2e00001-0000-4000-8000-00000000c001';
 const E2E_ORDER_ID = 'e2e00002-0000-4000-8000-00000000o001';
 const E2E_RN_ID = 'e2e00003-0000-4000-8000-00000000rn01';
 const E2E_PO_ID = 'e2e00004-0000-4000-8000-00000000po01';
+const E2E_BARCODE_SINGLE = 'E2E-BC-0001';
+const E2E_BARCODE_MULTI = 'E2E-BC-0002';
+
+const E2E_EX_SOURCE_ORDER_ID = 'e2e00005-0000-4000-8000-00000000x001';
+const E2E_EX_DERIVED_ORDER_ID = 'e2e00006-0000-4000-8000-00000000x002';
 
 async function main() {
   const merchant = await prisma.merchant.findFirst({
@@ -69,6 +74,47 @@ async function main() {
   });
   if (!store || !warehouse || !supplier || !product) {
     throw new Error('缺少 store/warehouse/supplier/product。請先執行 pnpm db:seed');
+  }
+
+  const profile = (process.env.E2E_PROFILE ?? '').trim().toLowerCase();
+  const isFull = profile === 'full';
+
+  // ---- Barcode fixtures ----
+  // single: ensure exactly one product has barcode
+  await prisma.product.updateMany({
+    where: { barcode: E2E_BARCODE_SINGLE },
+    data: { barcode: null },
+  });
+  await prisma.product.update({
+    where: { id: product.id },
+    data: { barcode: E2E_BARCODE_SINGLE },
+  });
+
+  // multi: ensure >=2 products share same barcode (full profile only)
+  if (isFull) {
+    const existing = await prisma.product.findMany({
+      where: { barcode: E2E_BARCODE_MULTI },
+      select: { id: true },
+      take: 10,
+    });
+    if (existing.length < 2) {
+      // create 2 dedicated products to avoid disturbing seed data
+      await prisma.product.createMany({
+        data: [
+          {
+            sku: 'E2E-BC-MULTI-001',
+            name: 'E2E Barcode Multi 1',
+            barcode: E2E_BARCODE_MULTI,
+          },
+          {
+            sku: 'E2E-BC-MULTI-002',
+            name: 'E2E Barcode Multi 2',
+            barcode: E2E_BARCODE_MULTI,
+          },
+        ],
+        skipDuplicates: true,
+      });
+    }
   }
 
   // POS order + FinanceEvent + PointLedger
@@ -180,10 +226,149 @@ async function main() {
     },
   });
 
+  // ---- Full profile: Exchange settlement + finance events fixtures ----
+  if (isFull) {
+    // teardown (orders & finance events)
+    await prisma.financeEvent.deleteMany({ where: { referenceId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
+    await prisma.posOrderItem.deleteMany({ where: { orderId: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
+    await prisma.posOrder.deleteMany({ where: { id: { in: [E2E_EX_SOURCE_ORDER_ID, E2E_EX_DERIVED_ORDER_ID] } } });
+
+    // source order: paid 200
+    await prisma.posOrder.create({
+      data: {
+        id: E2E_EX_SOURCE_ORDER_ID,
+        orderNumber: 'E2E-EX-SOURCE-0001',
+        storeId: store.id,
+        customerId: E2E_CUSTOMER_ID,
+        subtotalAmount: 200,
+        discountAmount: 0,
+        totalAmount: 200,
+        items: { create: [{ productId: product.id, quantity: 2, unitPrice: 100 }] },
+        payments: { create: [{ method: 'CASH', amount: 200 }] },
+      },
+    });
+
+    // derived order: total 150, exchangeFromOrderId points to source
+    await prisma.posOrder.create({
+      data: {
+        id: E2E_EX_DERIVED_ORDER_ID,
+        orderNumber: 'E2E-EX-DERIVED-0001',
+        storeId: store.id,
+        customerId: E2E_CUSTOMER_ID,
+        exchangeFromOrderId: E2E_EX_SOURCE_ORDER_ID,
+        subtotalAmount: 150,
+        discountAmount: 0,
+        totalAmount: 150,
+        items: { create: [{ productId: product.id, quantity: 1, unitPrice: 150 }] },
+        payments: { create: [{ method: 'CASH', amount: 150 }] },
+      },
+    });
+
+    // finance events: receivable/payment + refund for exchange settlement traceability
+    await prisma.financeEvent.createMany({
+      data: [
+        {
+          occurredAt: new Date(),
+          type: 'SALE_RECEIVABLE',
+          partyId: `customer:${E2E_CUSTOMER_ID}`,
+          currency: 'TWD',
+          amount: 200,
+          taxAmount: 0,
+          referenceId: E2E_EX_SOURCE_ORDER_ID,
+          note: 'E2E exchange source receivable',
+        },
+        {
+          occurredAt: new Date(),
+          type: 'SALE_PAYMENT',
+          partyId: `customer:${E2E_CUSTOMER_ID}`,
+          currency: 'TWD',
+          amount: 200,
+          taxAmount: 0,
+          referenceId: E2E_EX_SOURCE_ORDER_ID,
+          note: 'E2E exchange source payment',
+        },
+        {
+          occurredAt: new Date(),
+          type: 'SALE_REFUND',
+          partyId: `customer:${E2E_CUSTOMER_ID}`,
+          currency: 'TWD',
+          amount: 50,
+          taxAmount: 0,
+          referenceId: E2E_EX_SOURCE_ORDER_ID,
+          note: 'E2E exchange refund (delta)',
+        },
+      ],
+    });
+
+    // additional finance events for reports visibility (stable window)
+    const reportDay = new Date();
+    reportDay.setHours(12, 0, 0, 0);
+    await prisma.financeEvent.createMany({
+      data: [
+        {
+          occurredAt: reportDay,
+          type: 'SALE_RECEIVABLE',
+          partyId: `customer:${E2E_CUSTOMER_ID}`,
+          currency: 'TWD',
+          amount: 300,
+          taxAmount: 0,
+          referenceId: 'E2E-REPORT-SALE-001',
+          note: 'E2E report sale receivable',
+        },
+        {
+          occurredAt: reportDay,
+          type: 'SALE_PAYMENT',
+          partyId: `customer:${E2E_CUSTOMER_ID}`,
+          currency: 'TWD',
+          amount: 300,
+          taxAmount: 0,
+          referenceId: 'E2E-REPORT-SALE-001',
+          note: 'E2E report sale payment',
+        },
+      ],
+      skipDuplicates: true,
+    });
+
+    // ---- fail-fast verification (for CI) ----
+    const singleCount = await prisma.product.count({ where: { barcode: E2E_BARCODE_SINGLE } });
+    if (singleCount !== 1) {
+      throw new Error(`E2E fixture invalid: barcode single count=${singleCount} (expected 1)`);
+    }
+    const multiCount = await prisma.product.count({ where: { barcode: E2E_BARCODE_MULTI } });
+    if (multiCount < 2) {
+      throw new Error(`E2E fixture invalid: barcode multi count=${multiCount} (expected >=2)`);
+    }
+    const [srcOrder, derivedOrder] = await Promise.all([
+      prisma.posOrder.findUnique({ where: { id: E2E_EX_SOURCE_ORDER_ID }, select: { id: true } }),
+      prisma.posOrder.findUnique({ where: { id: E2E_EX_DERIVED_ORDER_ID }, select: { id: true, exchangeFromOrderId: true } }),
+    ]);
+    if (!srcOrder || !derivedOrder || derivedOrder.exchangeFromOrderId !== E2E_EX_SOURCE_ORDER_ID) {
+      throw new Error('E2E fixture invalid: exchange orders missing or linkage broken');
+    }
+    const refundCount = await prisma.financeEvent.count({
+      where: { referenceId: E2E_EX_SOURCE_ORDER_ID, type: 'SALE_REFUND' },
+    });
+    if (refundCount < 1) {
+      throw new Error('E2E fixture invalid: SALE_REFUND missing for exchange source order');
+    }
+    const reportEventCount = await prisma.financeEvent.count({ where: { referenceId: 'E2E-REPORT-SALE-001' } });
+    if (reportEventCount < 2) {
+      throw new Error(`E2E fixture invalid: report finance events count=${reportEventCount} (expected >=2)`);
+    }
+  }
+
   console.log('E2E seed OK.');
   console.log('Customer id:', E2E_CUSTOMER_ID);
   console.log('POS order id (referenceId):', E2E_ORDER_ID);
   console.log('ReceivingNote id (referenceId):', E2E_RN_ID);
+  console.log('Barcode single fixture (q):', E2E_BARCODE_SINGLE);
+  if (isFull) {
+    console.log('Barcode multi fixture (q):', E2E_BARCODE_MULTI);
+    console.log('Exchange source order id:', E2E_EX_SOURCE_ORDER_ID);
+    console.log('Exchange derived order id:', E2E_EX_DERIVED_ORDER_ID);
+    console.log('E2E_PROFILE:', 'full');
+  }
 }
 
 main()

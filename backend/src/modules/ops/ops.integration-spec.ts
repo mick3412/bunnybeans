@@ -285,4 +285,168 @@ describe('OpsService listJobs (integration)', () => {
     await prisma.store.deleteMany({ where: { id: store.id } });
     await prisma.merchant.deleteMany({ where: { id: merchant.id } });
   }, 30000);
+
+  it('click-audit list and summary support filters (integration)', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const now = new Date();
+    const old = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+    const from = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const to = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString();
+
+    const a1 = await prisma.reportClickAudit.create({
+      data: {
+        merchantId: null,
+        source: 'finance-events',
+        field: 'referenceId',
+        referenceId: 'not-a-uuid',
+        resultCode: 'NOT_FOUND' as any,
+        resolvedKind: 'unknown',
+        success: false,
+        createdAt: now,
+      },
+    });
+    const a2 = await prisma.reportClickAudit.create({
+      data: {
+        merchantId: null,
+        source: 'finance-events',
+        field: 'referenceId',
+        referenceId: 'x',
+        resultCode: 'NAVIGATED' as any,
+        resolvedKind: 'posOrder',
+        success: true,
+        createdAt: now,
+      },
+    });
+    const a3 = await prisma.reportClickAudit.create({
+      data: {
+        merchantId: null,
+        source: 'loyalty-ledger',
+        field: 'referenceId',
+        referenceId: 'y',
+        resultCode: 'NOT_FOUND' as any,
+        resolvedKind: 'unknown',
+        success: false,
+        createdAt: old,
+      },
+    });
+
+    try {
+      const list = await opsService.listReportClickAudit({
+        from,
+        to,
+        source: 'finance-events',
+      });
+      expect(list.items.some((x) => x.id === a1.id)).toBe(true);
+      expect(list.items.some((x) => x.id === a2.id)).toBe(true);
+      expect(list.items.some((x) => x.id === a3.id)).toBe(false);
+
+      const onlyFail = await opsService.listReportClickAudit({
+        from,
+        to,
+        source: 'finance-events',
+        success: 'false',
+      });
+      expect(onlyFail.items.some((x) => x.id === a1.id)).toBe(true);
+      expect(onlyFail.items.some((x) => x.id === a2.id)).toBe(false);
+
+      const onlyNotFound = await opsService.listReportClickAudit({
+        from,
+        to,
+        source: 'finance-events',
+        resultCode: 'NOT_FOUND',
+      });
+      expect(onlyNotFound.items.some((x) => x.id === a1.id)).toBe(true);
+      expect(onlyNotFound.items.some((x) => x.id === a2.id)).toBe(false);
+
+      const sum = await opsService.summaryReportClickAudit({
+        from,
+        to,
+        source: 'finance-events',
+      });
+      expect(sum.total).toBeGreaterThanOrEqual(2);
+      expect(sum.bySource.find((r) => r.source === 'finance-events')?.count).toBeGreaterThanOrEqual(2);
+      expect(sum.bySuccess.find((r) => r.success === true)?.count).toBeGreaterThanOrEqual(1);
+      expect(sum.bySuccess.find((r) => r.success === false)?.count).toBeGreaterThanOrEqual(1);
+    } finally {
+      await prisma.reportClickAudit.deleteMany({ where: { id: { in: [a1.id, a2.id, a3.id] } } });
+    }
+  }, 20000);
+
+  it('runJob returns runLogId and listJobs can find it (integration)', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const out = await opsService.runJob({ kind: 'finance-snapshot', asOfDate: new Date().toISOString().slice(0, 10), snapshotType: 'daily' });
+    expect(out).toHaveProperty('runLogId');
+    const runLogId = (out as { runLogId: string }).runLogId;
+    const list = await opsService.listJobs({ page: 1, pageSize: 50, kind: 'finance-snapshot' });
+    expect(list.items.some((x) => x.id === runLogId)).toBe(true);
+  }, 20000);
+
+  it('click-audit supports resultCode and summary groups by resultCode (integration)', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const base = {
+      source: `e2e-${Date.now()}`,
+      field: 'referenceId',
+      merchantId: null as any,
+    };
+    const a = await opsService.recordReportClickAudit({
+      ...base,
+      referenceId: '',
+      resultCode: 'NOT_FOUND',
+    });
+    const b = await opsService.recordReportClickAudit({
+      ...base,
+      referenceId: '',
+      resultCode: 'MULTI_MATCH',
+    });
+    const c = await opsService.recordReportClickAudit({
+      ...base,
+      referenceId: '',
+      resultCode: 'PERMISSION',
+    });
+    const oldDay = new Date(Date.now() - 2 * 24 * 3600 * 1000);
+    const d = await prisma.reportClickAudit.create({
+      data: {
+        merchantId: null,
+        source: base.source,
+        field: base.field,
+        referenceId: 'old-ref',
+        resultCode: 'NOT_FOUND' as any,
+        resolvedKind: 'unknown',
+        success: false,
+        createdAt: oldDay,
+      },
+    });
+    try {
+      const list = await opsService.listReportClickAudit({
+        source: base.source,
+        page: 1,
+        pageSize: 50,
+      });
+      const ids = list.items.map((x) => x.id);
+      expect(ids).toEqual(expect.arrayContaining([a.id, b.id, c.id, d.id]));
+
+      const summary = await opsService.summaryReportClickAudit({ source: base.source, days: 7, top: 20 });
+      expect(summary.byResultCode.some((x) => x.resultCode === 'NOT_FOUND' && x.count >= 1)).toBe(true);
+      expect(summary.byResultCode.some((x) => x.resultCode === 'MULTI_MATCH' && x.count >= 1)).toBe(true);
+      expect(summary.byResultCode.some((x) => x.resultCode === 'PERMISSION' && x.count >= 1)).toBe(true);
+
+      // advanced summary: topSources + trendByDay + topReferenceIds
+      expect(summary.topSources.length).toBeGreaterThanOrEqual(1);
+      expect(summary.topSources[0]).toHaveProperty('source');
+      expect(summary.topSources.some((x) => x.source === base.source && (x.notFound + x.multiMatch) >= 2)).toBe(true);
+
+      const dayKeys = summary.trendByDay.map((x) => x.day);
+      expect(dayKeys).toEqual(expect.arrayContaining([oldDay.toISOString().slice(0, 10)]));
+
+      expect(summary.topReferenceIds.some((x) => x.field === 'referenceId' && x.referenceId === 'old-ref' && x.count >= 1)).toBe(true);
+
+      // at least 2 filter combinations
+      const summaryFailOnly = await opsService.summaryReportClickAudit({ source: base.source, success: 'false', days: 7, top: 20 });
+      expect(summaryFailOnly.bySuccess.some((x) => x.success === false && x.count >= 1)).toBe(true);
+      expect(summaryFailOnly.topReferenceIds.some((x) => x.referenceId === 'old-ref')).toBe(true);
+    } finally {
+      await prisma.reportClickAudit.deleteMany({ where: { id: { in: [a.id, b.id, c.id, d.id] } } });
+    }
+  }, 20000);
 });

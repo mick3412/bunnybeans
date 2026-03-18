@@ -6,6 +6,8 @@ import { CrmModule } from './crm.module';
 import { SegmentService } from './application/segment.service';
 import { TierRuleService } from './application/tier-rule.service';
 import { CrmJobService } from './application/crm-job.service';
+import { DispatchRuleRunnerService } from './application/dispatch-rule-runner.service';
+import { OpsService } from '../ops/application/ops.service';
 import { Prisma } from '@prisma/client';
 
 describe('SegmentService (integration)', () => {
@@ -14,6 +16,8 @@ describe('SegmentService (integration)', () => {
   let segmentService: SegmentService;
   let tierRuleService: TierRuleService;
   let crmJobService: CrmJobService;
+  let runner: DispatchRuleRunnerService;
+  let ops: OpsService;
 
   beforeAll(async () => {
     if (!process.env.DATABASE_URL) return;
@@ -28,6 +32,8 @@ describe('SegmentService (integration)', () => {
     segmentService = app.get(SegmentService);
     tierRuleService = app.get(TierRuleService);
     crmJobService = app.get(CrmJobService);
+    runner = app.get(DispatchRuleRunnerService);
+    ops = app.get(OpsService);
   });
   afterAll(async () => {
     if (app) await app.close();
@@ -300,4 +306,84 @@ describe('SegmentService (integration)', () => {
       await prisma.merchant.deleteMany({ where: { id: m.id } });
     }
   }, 15000);
+
+  it('dispatch-rule runner skeleton triggers jobs and writes OpsJobRunLog (integration)', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const m = await prisma.merchant.create({
+      data: { code: `CRM-DR-${Date.now()}`, name: 'Crm Dispatch Rule' },
+    });
+    const seg = await prisma.segment.create({
+      data: { merchantId: m.id, name: 'DR Seg' },
+    });
+    const coupon = await prisma.loyaltyCoupon.create({
+      data: { merchantId: m.id, code: `C-DR-${Date.now()}`, name: 'DR Coupon', discountType: 'FIXED', value: 10, active: true },
+    });
+    const rule = await prisma.crmCouponDispatchRule.create({
+      data: {
+        merchantId: m.id,
+        name: 'Daily Rule',
+        segmentId: seg.id,
+        couponId: coupon.id,
+        enabled: true,
+        scheduleType: 'daily',
+        cronExpr: '0 9 * * *',
+        nextRunAt: new Date(0),
+      },
+    });
+    const badRule = await prisma.crmCouponDispatchRule.create({
+      data: {
+        merchantId: m.id,
+        name: 'Bad Rule (missing coupon)',
+        segmentId: seg.id,
+        couponId: '',
+        enabled: true,
+        scheduleType: 'daily',
+        cronExpr: '0 9 * * *',
+        nextRunAt: new Date(0),
+      },
+    });
+    try {
+      const result = await runner.runScheduled();
+      await ops.recordRun('crm-run-scheduled', result.errors.length === 0, result.errors.length ? result.errors.join('; ') : undefined);
+
+      expect(result.triggered).toBeGreaterThanOrEqual(1);
+      expect(result.errors.length).toBeGreaterThanOrEqual(1);
+      expect(result.errors.some((x) => x.includes(badRule.id) && x.includes('CRM_JOB_COUPON_REQUIRED'))).toBe(true);
+      const job = await prisma.crmMarketingJob.findFirst({
+        where: { merchantId: m.id, segmentId: seg.id, couponId: coupon.id },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(job).toBeDefined();
+
+      const updated = await prisma.crmCouponDispatchRule.findUnique({ where: { id: rule.id } });
+      expect(updated?.nextRunAt).toBeDefined();
+      expect((updated?.nextRunAt?.getTime() ?? 0) > 0).toBe(true);
+      expect(updated?.lastRunCode).toBe('SENT');
+      expect(updated?.lastRunNote ?? '').toContain('jobId=');
+
+      const updatedBad = await prisma.crmCouponDispatchRule.findUnique({ where: { id: badRule.id } });
+      expect(updatedBad?.lastRunCode).toBe('FAILED');
+      expect(updatedBad?.lastRunNote ?? '').toContain('CRM_JOB_COUPON_REQUIRED');
+
+      const runLog = await prisma.opsJobRunLog.findFirst({
+        where: { jobType: 'crm-run-scheduled' },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(runLog).toBeDefined();
+      expect(runLog?.success).toBe(false);
+      expect(runLog?.message ?? '').toContain('CRM_JOB_COUPON_REQUIRED');
+
+      const list = await ops.listJobs({ kind: 'crm-run-scheduled', page: 1, pageSize: 20 });
+      expect(list.items.some((x) => x.id === runLog?.id)).toBe(true);
+    } finally {
+      await prisma.opsJobRunLog.deleteMany({ where: { jobType: 'crm-run-scheduled' } });
+      await prisma.crmMarketingJob.deleteMany({ where: { merchantId: m.id } });
+      await prisma.crmCouponDispatchRule.deleteMany({ where: { merchantId: m.id } });
+      await prisma.loyaltyCouponIssue.deleteMany({ where: { couponId: coupon.id } });
+      await prisma.loyaltyCoupon.deleteMany({ where: { merchantId: m.id } });
+      await prisma.segment.deleteMany({ where: { merchantId: m.id } });
+      await prisma.merchant.deleteMany({ where: { id: m.id } });
+    }
+  }, 20000);
 });

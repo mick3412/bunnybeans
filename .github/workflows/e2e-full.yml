@@ -1,0 +1,75 @@
+name: E2E (full fixtures)
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Playwright grep (optional)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 19 * * *' # daily 03:00 Asia/Taipei (UTC+8)
+
+jobs:
+  playwright-full:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: pos
+          POSTGRES_PASSWORD: pos
+          POSTGRES_DB: pos_e2e_full
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pos:pos@localhost:5432/pos_e2e_full
+      CI: '1'
+      E2E_BASE_URL: http://localhost:5173
+      VITE_API_BASE_URL: http://localhost:3003
+      VITE_ADMIN_API_KEY: ${{ secrets.ADMIN_API_KEY }}
+      E2E_PROFILE: full
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Migrate deploy
+        run: pnpm --filter pos-erp-backend exec prisma migrate deploy
+
+      - name: Seed + E2E fixtures (full) - fail fast
+        run: |
+          pnpm --filter pos-erp-backend db:seed
+          pnpm --filter pos-erp-backend e2e:seed
+
+      - run: pnpm exec playwright install chromium --with-deps
+
+      - name: Backend :3003
+        run: |
+          pnpm --filter pos-erp-backend dev &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3003/health && break
+            sleep 1
+          done
+          curl -sf http://localhost:3003/health
+
+      - name: E2E (suite)
+        run: |
+          if [ -n "${{ inputs.suite }}" ]; then
+            pnpm e2e -- --grep "${{ inputs.suite }}"
+          else
+            pnpm e2e
+          fi
