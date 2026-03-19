@@ -25,12 +25,12 @@ export type MemberCenterHubTabKey =
 
 const TAB_OPTIONS: Array<{ key: MemberCenterHubTabKey; label: string }> = [
   { key: 'dashboard', label: '儀表板' },
+  { key: 'members', label: '會員管理' },
   { key: 'pointLedger', label: '點數存摺' },
   { key: 'coupons', label: '優惠券' },
   { key: 'reports', label: '活動報表' },
   { key: 'settings', label: '集點設定' },
   { key: 'tierRules', label: '會員等級規則' },
-  { key: 'members', label: '會員管理' },
   { key: 'segments', label: '分群管理' },
   { key: 'dispatchRules', label: '發券規則' },
 ];
