@@ -30,7 +30,7 @@
   - 手動 code 拒絕：`curl -X POST http://localhost:3003/categories -H "Content-Type: application/json" -d '{"code":"Invalid!","name":"X"}'` → 400 `CATEGORY_CODE_INVALID`
   - 單一商家 balances 免 merchantId：`curl http://localhost:3003/finance/balances`（DB 僅一筆 Merchant 時 200）
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
-- commits：cd46d75a feat(backend): canonical code rules for Category/Brand/ProductTag；84bd7575 feat(backend): single-merchant fallback；0d687538 docs: INSTRUCTIONS-019 API contract, error codes, agent-log；342dd3f8 docs(agent-log): add commit SHAs
+- commits：cd46d75a feat(backend): canonical code rules for Category/Brand/ProductTag；84bd7575 feat(backend): single-merchant fallback；0d687538 docs: INSTRUCTIONS-019 API contract, error codes, agent-log；b7723663 docs(agent-log): add commit SHAs
 
 ### INSTRUCTIONS-018（full seed 回歸 + 錯誤碼契約一致性確認）
 - 做了：完成本輪 §1 #1~#5 檢查與回歸；`E2E_PROFILE=full pnpm --filter pos-erp-backend e2e:seed` 通過，`E2E_SEED_SUMMARY` 與 fail-fast 正常；檢查前端 `getErrorMessage` 與後端常用錯誤碼（401/403、`ADMIN_API_KEY_REQUIRED`、POS/INVENTORY/FINANCE）映射一致，無需新增後端錯誤碼或調整；確認目前前端變更僅使用既有 `expiryDescription` 欄位（後端已支援），且未採 slugify code 規則，故本輪不需後端 schema/API/validation 變更。
