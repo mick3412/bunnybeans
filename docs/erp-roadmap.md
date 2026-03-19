@@ -33,9 +33,9 @@
 
 ### 0.4 側欄導覽與頁面重複
 
-- **現況**：側欄有「會員管理」（`/admin/loyalty/members`）與「會員列表」（`/admin/customers`）兩個入口，功能高度重疊（都呈現會員 CRUD、篩選、合併等）。
-- **問題**：使用者困惑「該從哪裡管會員」；兩套畫面各自維護，E2E 也需覆蓋兩處。
-- **修正計畫**：Phase 1 先撰寫整合提案（`member-management-review.md` 新增一節），Phase 3 實施路由收斂（保留 `AdminCustomersPage` 為唯一入口，`LoyaltyMembersPage` 改為 redirect 或薄殼）。
+- **現況**：已收斂為單一入口 `/admin/customers`（`AdminCustomersPage`）；`/admin/loyalty/members` 已 redirect。
+- **問題**：（已解決）原先雙入口造成困惑。
+- **修正計畫**：（已完成）會員路由收斂；側欄「會員管理／會員列表」皆導向 `/admin/customers`。
 
 ### 0.5 類別管理頁 layout 問題
 
@@ -90,8 +90,8 @@
 
 | 任務 | 說明 |
 |------|------|
-| Party 模型正式化 | 新增 `Party`（kind: CUSTOMER｜SUPPLIER｜PLATFORM、refId、displayName）或以 DB view 解析 `partyId` 前綴。 |
-| Finance balances 升級 | `GET /finance/balances` 支援以 Party kind 為 filter 與 group，回傳含 `displayName`。 |
+| Party 模型正式化（決策：已採用） | **以 `Party` 資料表為 canonical**：以 `Party.merchantId` 做多商家隔離；以 `Party.kind`、`Party.displayName` 作為前端顯示的單一真實來源。`FinanceEvent.partyId` 對外採用 **小寫前綴**穩定 key（例如 `customer:{customerId}`、`supplier:{supplierId}`）。 |
+| Finance balances 升級 | `GET /finance/balances` 回傳 `displayName?`、`kind?`（由 `Party` 解析）；支援 `kind=customer|supplier` 篩選。 |
 | Finance summary 實作 | 正式實作 `GET /finance/summary`（groupBy=type｜partyId），與 `finance-accounting-roadmap.md` §4.4 對齊。 |
 | 補貨→PO 草稿 | `POST /purchase-orders/from-replenishment`（body: `{ suggestions: [{ productId, warehouseId, qty }] }`），建立 DRAFT PO。 |
 | 整合測試 | Party、summary、replenishment→PO 各補 integration-spec。 |
@@ -119,7 +119,7 @@
 
 | 任務 | 說明 |
 |------|------|
-| 會員管理路由收斂 | `AdminCustomersPage` 為唯一入口；`/admin/loyalty/members` redirect；修正 E2E。 |
+| 會員管理路由收斂 | （已完成）`AdminCustomersPage`（`/admin/customers`）為唯一入口；`/admin/loyalty/members` redirect。 |
 | 行銷活動總覽 | dispatch-rules 列表上方加「最近 job 結果」摘要；點擊可查看歷史。 |
 | 活動報表進階 | 每條 dispatch-rule / coupon 的成效卡片。 |
 

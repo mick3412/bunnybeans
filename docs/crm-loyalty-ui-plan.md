@@ -66,7 +66,7 @@ flowchart LR
 | P0 | 系統設定 | `/admin/loyalty/settings` | 表單綁 PATCH settings |
 | P0 | 點數存摺 | `/admin/loyalty/point-ledger` | Tab + 表 + 查看全部 → 同頁分頁 |
 | P1 | 儀表板 | `/admin/loyalty` | 四卡 + 兩表 |
-| P1 | 會員管理 | `/admin/loyalty/members` | 可重用 customerApi + 新欄位 |
+| P1 | 會員管理 | `/admin/customers`（主入口；原 `/admin/loyalty/members` 已 redirect） | 可重用 customerApi + 新欄位 |
 | P2 | 促銷活動 | `/admin/loyalty/promotions` | 包一層範本表頭；內部可 iframe 或重用 AdminPromotionsPage 資料 |
 | P2 | 優惠券 | `/admin/loyalty/coupons` | 全新頁 |
 
