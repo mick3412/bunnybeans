@@ -5,6 +5,7 @@ import {
   getPosTopItems,
   getPosDaily,
   listOrders,
+  getCategories,
   type ApiError,
   type PosReportsSummaryDto,
   type PosReportsPreset,
@@ -13,6 +14,7 @@ import {
   type PosOrderListResponse,
 } from '../modules/pos/posOrdersApi';
 import { getErrorMessage } from '../shared/errors/errorMessages';
+import { getPaymentMethodLabel } from '../shared/utils/paymentMethodLabels';
 import { MiniBarChart } from '../shared/components/MiniBarChart';
 import { MiniLineChart } from '../shared/components/MiniLineChart';
 import { useDefaultMerchantId } from '../shared/hooks/useDefaultMerchantId';
@@ -42,6 +44,23 @@ export const PosReportsPage: React.FC = () => {
   const [daily, setDaily] = useState<PosDailyRow[]>([]);
   const [dailyErr, setDailyErr] = useState<string | null>(null);
   const [dailyLoading, setDailyLoading] = useState<boolean>(false);
+  const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let c = false;
+    getCategories().then((r) => {
+      if (c) return;
+      if (Array.isArray(r)) {
+        const m: Record<string, string> = {};
+        r.forEach((cat) => {
+          if (cat.id) m[cat.id] = cat.name ?? cat.code ?? cat.id;
+          if (cat.code) m[cat.code] = cat.name ?? cat.code;
+        });
+        setCategoryNames(m);
+      }
+    });
+    return () => { c = true; };
+  }, []);
 
   const periodLabel = useMemo(() => {
     if (!data?.period) return '今日';
@@ -271,7 +290,7 @@ export const PosReportsPage: React.FC = () => {
                   const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
                   return (
                     <tr key={method} className="border-t border-brand-surface">
-                      <td className="px-3 py-1.5 text-content">{method}</td>
+                      <td className="px-3 py-1.5 text-content">{getPaymentMethodLabel(method)}</td>
                       <td className="px-3 py-1.5 tabular-nums">{money(String(amount))}</td>
                       <td className="px-3 py-1.5 text-muted">{pct}%</td>
                     </tr>
@@ -283,9 +302,11 @@ export const PosReportsPage: React.FC = () => {
         </div>
       )}
 
-      {topItemsErr && (
+      {(topItemsErr || dailyErr) && (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          熱銷品項載入失敗：{topItemsErr}
+          {topItemsErr && <div>熱銷品項：{topItemsErr}</div>}
+          {dailyErr && <div className={topItemsErr ? 'mt-1' : ''}>區間趨勢：{dailyErr}</div>}
+          <div className="mt-1 text-xs opacity-90">請確認商家已選、後端服務正常，必要時檢查 VITE_API_BASE_URL。</div>
         </div>
       )}
       {topItemsLoading && !topItemsErr && (
@@ -364,7 +385,9 @@ export const PosReportsPage: React.FC = () => {
                 {data.byCategory.map((row) => (
                   <tr key={row.categoryId ?? 'null'} className="border-t border-brand-surface">
                     <td className="px-3 py-1.5 text-content">
-                      {row.categoryCode ?? (row.categoryId ? row.categoryId : '未分類')}
+                      {row.categoryId
+                        ? (categoryNames[row.categoryId] ?? categoryNames[row.categoryCode ?? ''] ?? row.categoryCode ?? row.categoryId)
+                        : '未分類'}
                     </td>
                     <td className="px-3 py-1.5 tabular-nums">{money(String(row.revenue))}</td>
                   </tr>
@@ -421,11 +444,6 @@ export const PosReportsPage: React.FC = () => {
         </div>
       )}
 
-      {dailyErr && (
-        <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          區間趨勢載入失敗：{dailyErr}
-        </div>
-      )}
       {dailyLoading && !dailyErr && (
         <div className="mt-8 rounded-2xl border border-brand-surface bg-white p-4">
           <h3 className="mb-3 text-sm font-semibold text-content">區間趨勢（按日）</h3>
