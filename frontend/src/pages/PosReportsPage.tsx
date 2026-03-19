@@ -183,6 +183,8 @@ export const PosReportsPage: React.FC = () => {
             <h2 className="text-lg font-semibold text-content">業績概覽</h2>
             <p className="mt-1 text-sm text-muted">
               資料來源 GET /pos/reports/summary；區間：{periodLabel}
+              {' · '}
+              <Link className="text-brand-primary hover:underline" to="/admin/reports">金流報表</Link>
             </p>
           </div>
           <div className="flex items-center gap-2">

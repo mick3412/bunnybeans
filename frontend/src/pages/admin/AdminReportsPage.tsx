@@ -261,6 +261,8 @@ export const AdminReportsPage: React.FC = () => {
       description={
         <>
           資料來源 <code className="rounded bg-brand-canvas px-1 text-content">GET /finance/events</code>
+          {' · '}
+          <Link className="text-brand-primary hover:underline" to="/pos/reports">業績概覽（POS 報表）</Link>
         </>
       }
       testId="e2e-admin-reports"
