@@ -419,7 +419,8 @@ export const AdminOpsReportClicksPage: React.FC = () => {
                 setPage(1);
               }}
               className="w-44 rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm font-mono focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-              placeholder="例如：NOT_FOUND"
+              placeholder="例：NOT_FOUND"
+              data-testid="e2e-admin-ops-report-clicks-resultcode-input"
             />
           </div>
           <div>
