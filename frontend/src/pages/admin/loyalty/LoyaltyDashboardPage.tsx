@@ -26,7 +26,7 @@ function Card({
             ? 'kpi-card-accent-slate'
             : '';
   return (
-    <div className={`rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm ${accentClass}`}>
+    <div className={`rounded-xl border border-brand-surface bg-white p-4 shadow-sm ${accentClass}`}>
       <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{title}</div>
       <div className="mt-2 text-2xl font-semibold tabular-nums text-[#1e293b]">{value}</div>
       {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
@@ -38,8 +38,8 @@ function typeTag(t: string) {
   if (t === 'EARNED') return 'bg-emerald-100 text-emerald-800';
   if (t === 'BURNED') return 'bg-rose-100 text-rose-800';
   if (t === 'LOCKED') return 'bg-amber-100 text-amber-900';
-  if (t === 'EXPIRED') return 'bg-[#e2e8f0] text-muted';
-  return 'bg-[#f8fafc] text-muted';
+  if (t === 'EXPIRED') return 'bg-brand-surface text-muted';
+  return 'bg-table-head text-muted';
 }
 
 export const LoyaltyDashboardPage: React.FC = () => {
@@ -62,7 +62,7 @@ export const LoyaltyDashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-[#e2e8f0] pb-2">
+      <div className="border-b border-brand-surface pb-2">
         <h2 className="text-lg font-semibold text-[#1e293b]">會員集點與促銷總覽</h2>
         <p className="mt-1 text-sm text-muted">
           四張 KPI 與 GET /loyalty/dashboard 擴充欄位一致；近 30 日發放／兌回仍保留於後台統計
@@ -88,19 +88,19 @@ export const LoyaltyDashboardPage: React.FC = () => {
         <Card title="進行中活動" value={data?.ongoingPromotionsCount ?? '—'} sub="促銷規則 draft=false 且檔期內" accent="slate" />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-semibold text-[#1e293b]">最近點數異動</span>
             <Link
               to="/admin/loyalty/point-ledger"
-              className="text-xs font-medium text-[#0ea5e9] hover:underline"
+              className="text-xs font-medium text-brand-primary hover:underline"
             >
               查看存摺
             </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-xs">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
+              <thead className="border-b border-brand-surface bg-table-head text-muted">
                 <tr>
                   <th className="py-2 pr-2">會員</th>
                   <th className="py-2 pr-2">類型</th>
@@ -134,14 +134,14 @@ export const LoyaltyDashboardPage: React.FC = () => {
             </table>
           </div>
         </div>
-        <div className="rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
           <div className="mb-3 text-sm font-semibold text-[#1e293b]">進行中活動</div>
           <ul className="space-y-2 text-sm">
             {promos.length === 0 && <li className="text-muted">尚無進行中促銷（或皆為草稿）</li>}
             {promos.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2"
+                className="flex items-center justify-between gap-2 rounded-lg border border-brand-surface bg-table-head px-3 py-2"
               >
                 <span className="min-w-0 truncate font-medium text-content">{p.name}</span>
                 <span className="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
@@ -153,13 +153,13 @@ export const LoyaltyDashboardPage: React.FC = () => {
           </ul>
           <Link
             to={`/admin/promotions${merchantId ? `?merchantId=${encodeURIComponent(merchantId)}` : ''}`}
-            className="mt-3 inline-block text-xs font-medium text-[#0ea5e9] hover:underline"
+            className="mt-3 inline-block text-xs font-medium text-brand-primary hover:underline"
           >
             編輯促銷規則
           </Link>
         </div>
       </div>
-      <div className="rounded-lg border border-dashed border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-[11px] text-muted">
+      <div className="rounded-lg border border-dashed border-brand-surface bg-table-head px-3 py-2 text-[11px] text-muted">
         近 30 日發放 {data?.pointsIssued30d ?? '—'} 點 · 近 30 日兌回 {data?.pointsRedeemed30d ?? '—'} 點 ·
         持有點數會員 {data?.activeMembersWithPoints ?? '—'} 人
       </div>

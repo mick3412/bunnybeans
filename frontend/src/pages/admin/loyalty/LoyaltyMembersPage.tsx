@@ -184,7 +184,7 @@ export const LoyaltyMembersPage: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="border-b border-[#e2e8f0] pb-2">
+        <div className="border-b border-brand-surface pb-2">
           <p className="text-sm text-[#64748b]">含點數餘額／即將到期；新增與編輯需後端 §7</p>
         </div>
         <div className="flex items-center gap-2">
@@ -204,9 +204,9 @@ export const LoyaltyMembersPage: React.FC = () => {
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
       )}
-      <div className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+      <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs text-muted">
+          <thead className="border-b border-brand-surface bg-table-head text-xs text-muted">
             <tr>
               <th className="px-3 py-2">會員碼</th>
               <th className="px-3 py-2">姓名</th>
@@ -221,13 +221,13 @@ export const LoyaltyMembersPage: React.FC = () => {
           </thead>
           <tbody className="divide-y divide-neutral-100">
             {filtered.map((r) => (
-              <tr key={r.id} className="hover:bg-[#f8fafc]">
+              <tr key={r.id} className="hover:bg-table-head">
                 <td className="px-3 py-2 font-mono text-xs">{r.memberCode ?? '—'}</td>
                 <td className="px-3 py-2 font-medium">{r.name}</td>
                 <td className="px-3 py-2 tabular-nums">{r.phone ?? '—'}</td>
                 <td className="px-3 py-2">
                   {r.memberLevel ? (
-                    <span className="rounded bg-[#0ea5e9]/10 px-2 py-0.5 text-[11px] font-medium text-[#0ea5e9]">
+                    <span className="rounded bg-brand-primary/10 px-2 py-0.5 text-[11px] font-medium text-brand-primary">
                       {r.memberLevel}
                     </span>
                   ) : (
@@ -274,7 +274,7 @@ export const LoyaltyMembersPage: React.FC = () => {
             onClick={closeDrawer}
           />
           <aside
-            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-[#e2e8f0] bg-white shadow-xl"
+            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-brand-surface bg-white shadow-xl"
             aria-label={drawerMode === 'create' ? '新增會員' : '編輯會員'}
           >
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
@@ -283,7 +283,7 @@ export const LoyaltyMembersPage: React.FC = () => {
               </h3>
               <button
                 type="button"
-                className="rounded px-2 py-1 text-sm text-muted hover:bg-[#f1f5f9]"
+                className="rounded px-2 py-1 text-sm text-muted hover:bg-brand-canvas"
                 onClick={closeDrawer}
               >
                 關閉
@@ -292,7 +292,7 @@ export const LoyaltyMembersPage: React.FC = () => {
             <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
               {drawerMode === 'edit' && detail && (
                 <div className="space-y-3">
-                  <div className="rounded-lg bg-[#f8fafc] p-3 text-xs">
+                  <div className="rounded-lg bg-table-head p-3 text-xs">
                     <div className="font-medium text-muted">點數與效期</div>
                     <div className="mt-1 text-muted">
                       點數餘額 {detail.pointBalance ?? 0} · 即將到期 {detail.expiringSoon ?? '—'} · 到期日{' '}
@@ -300,28 +300,28 @@ export const LoyaltyMembersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-[#e2e8f0] bg-white p-3">
+                  <div className="rounded-lg border border-brand-surface bg-white p-3">
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold text-content">消費統計（預留）</div>
                       <span className="text-[11px] text-muted">預留</span>
                     </div>
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      <div className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                      <div className="rounded-md border border-brand-surface bg-table-head px-3 py-2">
                         <div className="text-[11px] font-medium text-muted">最近一筆</div>
                         <div className="mt-1 text-sm font-semibold tabular-nums text-content">—</div>
                         <div className="mt-0.5 text-[11px] text-muted">金額／時間</div>
                       </div>
-                      <div className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                      <div className="rounded-md border border-brand-surface bg-table-head px-3 py-2">
                         <div className="text-[11px] font-medium text-muted">累計金額</div>
                         <div className="mt-1 text-sm font-semibold tabular-nums text-content">—</div>
                         <div className="mt-0.5 text-[11px] text-muted">歷史訂單合計</div>
                       </div>
-                      <div className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                      <div className="rounded-md border border-brand-surface bg-table-head px-3 py-2">
                         <div className="text-[11px] font-medium text-muted">消費頻率</div>
                         <div className="mt-1 text-sm font-semibold tabular-nums text-content">—</div>
                         <div className="mt-0.5 text-[11px] text-muted">近 30 日 / 90 日</div>
                       </div>
-                      <div className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                      <div className="rounded-md border border-brand-surface bg-table-head px-3 py-2">
                         <div className="text-[11px] font-medium text-muted">偏好品類</div>
                         <div className="mt-1 text-sm font-semibold tabular-nums text-content">—</div>
                         <div className="mt-0.5 text-[11px] text-muted">Top 3</div>
@@ -329,14 +329,14 @@ export const LoyaltyMembersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-[#e2e8f0] bg-white p-3">
+                  <div className="rounded-lg border border-brand-surface bg-white p-3">
                     <div className="text-xs font-semibold text-content">偏好品類視覺化（預留）</div>
                     <div className="mt-2 space-y-2">
                       {['—', '—', '—'].map((label, idx) => (
                         <div key={idx} className="flex items-center gap-2">
                           <div className="w-16 truncate text-[11px] text-muted">{label}</div>
-                          <div className="h-2 flex-1 rounded-full bg-[#e2e8f0]">
-                            <div className="h-2 rounded-full bg-[#0ea5e9]/30" style={{ width: `${(3 - idx) * 20}%` }} />
+                          <div className="h-2 flex-1 rounded-full bg-brand-surface">
+                            <div className="h-2 rounded-full bg-brand-primary/30" style={{ width: `${(3 - idx) * 20}%` }} />
                           </div>
                           <div className="w-10 text-right text-[11px] tabular-nums text-muted">—%</div>
                         </div>

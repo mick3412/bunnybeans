@@ -120,21 +120,21 @@ export const AdminQuickReceivingPage: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4" data-testid="e2e-admin-quick-receiving">
-      <div className="rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm">
-        <div className="mb-4 border-b border-[#e2e8f0] pb-2">
+      <div className="rounded-2xl border border-brand-surface bg-white p-6 shadow-sm">
+        <div className="mb-4 border-b border-brand-surface pb-2">
           <h2 className="text-lg font-semibold text-content">快速進貨</h2>
           <p className="mt-1 text-sm text-muted" aria-hidden="true" />
         </div>
 
         {loading && (
-          <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-3 text-sm text-muted">載入資料中…</div>
+          <div className="rounded-lg border border-brand-surface bg-table-head px-3 py-3 text-sm text-muted">載入資料中…</div>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-2 block text-sm font-medium text-content">供應商</label>
             <select
-              className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+              className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2.5 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               value={supplierId}
               onChange={(e) => setSupplierId(e.target.value)}
             >
@@ -149,7 +149,7 @@ export const AdminQuickReceivingPage: React.FC = () => {
           <div>
             <label className="mb-2 block text-sm font-medium text-content">倉庫/門市</label>
             <select
-              className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+              className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2.5 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
             >
@@ -167,11 +167,11 @@ export const AdminQuickReceivingPage: React.FC = () => {
           <TextInput label="備註（選填）" value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="" />
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-[#e2e8f0]">
-          <div className="border-b border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-sm font-semibold text-content">品項</div>
+        <div className="mt-4 overflow-hidden rounded-xl border border-brand-surface">
+          <div className="border-b border-brand-surface bg-table-head px-4 py-3 text-sm font-semibold text-content">品項</div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-white text-xs font-semibold uppercase text-muted">
+              <thead className="border-b border-brand-surface bg-white text-xs font-semibold uppercase text-muted">
                 <tr>
                   <th className="px-4 py-3">商品</th>
                   <th className="px-4 py-3 text-right">數量</th>
@@ -184,7 +184,7 @@ export const AdminQuickReceivingPage: React.FC = () => {
                   <tr key={idx} className="border-b border-neutral-50">
                     <td className="px-4 py-2.5">
                       <select
-                        className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+                        className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         value={l.productId}
                         onChange={(e) =>
                           setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, productId: e.target.value } : x)))
@@ -202,7 +202,7 @@ export const AdminQuickReceivingPage: React.FC = () => {
                       <input
                         type="number"
                         min={1}
-                        className="h-9 w-24 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1 text-sm text-right tabular-nums focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                        className="h-9 w-24 rounded-lg border border-brand-surface bg-white px-2 py-1 text-sm text-right tabular-nums focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                         value={String(l.qty)}
                         onChange={(e) =>
                           setLines((prev) => prev.map((x, i) => (i === idx ? { ...x, qty: Number(e.target.value) } : x)))
@@ -213,7 +213,7 @@ export const AdminQuickReceivingPage: React.FC = () => {
                       <input
                         type="number"
                         min={0}
-                        className="h-9 w-28 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1 text-sm text-right tabular-nums focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                        className="h-9 w-28 rounded-lg border border-brand-surface bg-white px-2 py-1 text-sm text-right tabular-nums focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                         value={String(l.unitCost)}
                         onChange={(e) =>
                           setLines((prev) =>
@@ -225,7 +225,7 @@ export const AdminQuickReceivingPage: React.FC = () => {
                     <td className="px-2 py-2.5 text-right">
                       <button
                         type="button"
-                        className="rounded-md border border-[#e2e8f0] bg-white px-2 py-1 text-xs text-muted hover:border-[#0ea5e9]/30 disabled:opacity-40"
+                        className="rounded-md border border-brand-surface bg-white px-2 py-1 text-xs text-muted hover:border-brand-primary/30 disabled:opacity-40"
                         disabled={lines.length <= 1}
                         onClick={() => setLines((prev) => prev.filter((_, i) => i !== idx))}
                       >
@@ -237,10 +237,10 @@ export const AdminQuickReceivingPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-          <div className="flex flex-wrap items-center gap-2 border-t border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-brand-surface bg-table-head px-4 py-3">
             <button
               type="button"
-              className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm font-semibold text-content hover:border-[#0ea5e9]/30"
+              className="rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm font-semibold text-content hover:border-brand-primary/30"
               onClick={() => setLines((prev) => [...prev, { productId: '', qty: 1, unitCost: 0 }])}
             >
               + 新增一列

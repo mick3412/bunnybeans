@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../../shared/components/Button';
+import { Alert } from '../../shared/components/Alert';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import {
   listPurchaseOrders,
   listSuppliers,
@@ -44,10 +46,10 @@ function statusPill(s: PoStatus | string) {
     RECEIVED: 'bg-emerald-100 text-emerald-800',
     ORDERED: 'bg-orange-100 text-orange-800',
     PARTIALLY_RECEIVED: 'bg-brand-primary/10 text-brand-primary',
-    DRAFT: 'bg-[#e2e8f0] text-muted',
+    DRAFT: 'bg-brand-surface text-muted',
     CANCELLED: 'bg-red-100 text-red-800',
   };
-  return styles[s] ?? 'bg-[#f1f5f9] text-muted';
+  return styles[s] ?? 'bg-brand-canvas text-muted';
 }
 
 type LineDraft = { productId: string; qty: number; unitCost: number };
@@ -217,16 +219,16 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
   const totalDraft = newPo.lines.reduce((s, l) => s + l.qty * l.unitCost, 0);
 
   return (
-    <div className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm" data-testid="e2e-admin-purchase-orders">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm text-[#64748b]">建立與追蹤採購訂單</p>
-        </div>
+    <>
+    <StandardListLayout
+      title="採購單"
+      description="建立與追蹤採購訂單"
+      actions={
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => navigate('/admin/purchase-orders/quick-receiving')}
-            className="rounded-lg border border-[#e2e8f0] bg-white px-4 py-2.5 text-sm font-semibold text-content hover:border-brand-primary/30"
+            className="rounded-lg border border-brand-surface bg-white px-4 py-2.5 text-sm font-semibold text-content hover:border-brand-primary/30"
           >
             快速進貨
           </button>
@@ -238,53 +240,54 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
             + 新增採購單
           </button>
         </div>
-      </div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[240px] flex-1 max-w-md">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </span>
-          <input
-            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] py-2.5 pl-10 pr-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-            placeholder="搜尋單號 / 供應商..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-        </div>
-      </div>
-      <div className="mb-4 flex flex-wrap gap-1 border-b border-neutral-200">
-        {STATUS_TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-              status === t.key ? 'border-brand-primary text-brand-primary' : 'border-transparent text-muted hover:text-content'
-            }`}
-            onClick={() => setStatus(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      {listError && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          <span>載入失敗：{listError}</span>
-          <button type="button" className="rounded-md bg-red-100 px-3 py-1 font-medium hover:bg-red-200" onClick={() => load()}>
-            重試
-          </button>
-        </div>
-      )}
-      <div className="overflow-hidden rounded-xl border border-neutral-100">
-        {listLoading ? (
-          <div className="flex min-h-[200px] items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" aria-label="載入中" />
+      }
+      filters={
+        <div className="flex flex-col gap-4">
+          <div className="relative min-w-[240px] flex-1 max-w-md">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              className="w-full rounded-lg border border-brand-surface bg-table-head py-2.5 pl-10 pr-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+              placeholder="搜尋單號 / 供應商..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
           </div>
-        ) : (
-          <>
+          <div className="flex flex-wrap gap-1 border-b border-neutral-200">
+            {STATUS_TABS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+                  status === t.key ? 'border-brand-primary text-brand-primary' : 'border-transparent text-muted hover:text-content'
+                }`}
+                onClick={() => setStatus(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      }
+      loading={listLoading}
+      error={null}
+      aboveContent={listError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Alert variant="error">載入失敗：{listError}</Alert>
+          <Button size="sm" variant="secondary" onClick={() => void load()}>重試</Button>
+        </div>
+      ) : undefined}
+      empty={!listLoading && !listError && rows.length === 0}
+      emptyMessage="尚無採購單"
+      testId="e2e-admin-purchase-orders"
+    >
+      {!listLoading && rows.length > 0 && (
+      <div className="overflow-hidden rounded-xl border border-neutral-100">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold uppercase text-muted">
+              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
                 <tr>
                   <th className="px-4 py-3">單號</th>
                   <th className="px-4 py-3">供應商</th>
@@ -315,10 +318,9 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
-            {!listError && rows.length === 0 && <div className="py-16 text-center text-muted">尚無採購單</div>}
-          </>
-        )}
       </div>
+      )}
+    </StandardListLayout>
 
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDetail(null)}>
@@ -332,25 +334,25 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
             </div>
             <span className={`mt-2 inline-flex rounded-md px-2 py-0.5 text-xs font-semibold ${statusPill(detail.status)}`}>{statusLabel(detail.status)}</span>
             <p className="mt-2 text-sm text-muted">供應商：{detail.supplierName ?? '—'}</p>
-            <div className="mt-3 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+            <div className="mt-3 rounded-xl border border-brand-surface bg-table-head px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-content">驗收進度</span>
                 <span className="text-sm tabular-nums text-content">
                   {detailProgress.received} / {detailProgress.ordered}（{detailProgress.pct}%）
                 </span>
               </div>
-              <div className="mt-2 h-2 rounded-full bg-[#e2e8f0]">
+              <div className="mt-2 h-2 rounded-full bg-brand-surface">
                 <div className="h-2 rounded-full bg-brand-primary" style={{ width: `${detailProgress.pct}%` }} />
               </div>
             </div>
 
-            <div className="mt-3 rounded-xl border border-[#e2e8f0] bg-white px-4 py-3">
+            <div className="mt-3 rounded-xl border border-brand-surface bg-white px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-content">進貨追蹤</span>
                 {detailRnLoading && <span className="text-xs text-muted">載入驗收單…</span>}
               </div>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                <div className="rounded-lg border border-brand-surface bg-table-head px-3 py-2">
                   <div className="text-xs font-semibold text-content">採購單</div>
                   <div className="mt-1 text-xs text-muted">
                     狀態：{statusLabel(detail.status)}
@@ -358,7 +360,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                   </div>
                   <div className="mt-1 text-[11px] text-muted">完成率：{detailProgress.pct}%</div>
                 </div>
-                <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                <div className="rounded-lg border border-brand-surface bg-table-head px-3 py-2">
                   <div className="text-xs font-semibold text-content">驗收單</div>
                   <div className="mt-1 text-xs text-muted">
                     {detailRns.length === 0
@@ -370,7 +372,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
               {detailRns.length > 0 && (
                 <div className="mt-2 overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
+                    <thead className="border-b border-brand-surface bg-table-head text-muted">
                       <tr>
                         <th className="px-2 py-2 text-left">驗收單號</th>
                         <th className="px-2 py-2">狀態</th>
@@ -402,7 +404,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                       ? 'bg-orange-100 text-orange-800'
                                       : rn.status === 'RETURNED'
                                         ? 'bg-red-100 text-red-800'
-                                        : 'bg-[#e2e8f0] text-muted',
+                                        : 'bg-brand-surface text-muted',
                               ].join(' ')}
                             >
                               {rn.status === 'COMPLETED'
@@ -428,7 +430,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
               )}
             </div>
             <table className="mt-4 w-full text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc]">
+              <thead className="border-b border-brand-surface bg-table-head">
                 <tr>
                   <th className="px-2 py-2 text-left">品名</th>
                   <th className="px-2 py-2">SKU</th>
@@ -648,6 +650,6 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };

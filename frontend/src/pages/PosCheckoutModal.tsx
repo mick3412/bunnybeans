@@ -156,7 +156,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
       !parsed.customerEmail
     ) {
       setErrorMessage(
-        '掛帳須指定客戶：請輸入會員 ID（UUID）、手機或 Email（須與後台客戶資料一致且同一商號內唯一）。',
+        '掛帳須指定客戶：需要會員資訊。',
       );
       setErrorCode('POS_CREDIT_REQUIRES_CUSTOMER');
       return;
@@ -235,16 +235,13 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
           </button>
         </div>
 
-        <div className="mb-3 space-y-3 rounded-xl bg-[#f8fafc] p-3 text-xs">
-          <div className="border-b border-[#e2e8f0] pb-2">
+        <div className="mb-3 space-y-3 rounded-xl bg-table-head p-3 text-xs">
+          <div className="border-b border-brand-surface pb-2">
             <div className="mb-1 text-[11px] font-semibold text-muted">關聯會員（選填）</div>
-            <p className="mb-2 text-[10px] text-muted">
-              可從下拉選會員帶入，或手動輸入會員 ID（UUID）、手機、Email。未填則不綁定。掛帳時須能對應到一筆客戶。
-            </p>
             <div className="relative">
               <TextInput
                 label="會員識別"
-                placeholder={merchantId ? '搜尋會員（手機／姓名／Email）或輸入 UUID' : 'UUID、手機或 Email，選填'}
+                placeholder="UUID、手機或 Email（選填）"
                 value={memberInput}
                 onChange={(e) => setMemberInput(e.target.value)}
                 className="!py-1.5 !text-xs"
@@ -254,7 +251,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
                 <p className="absolute left-0 top-full mt-0.5 text-[10px] text-muted">搜尋中…</p>
               )}
               {merchantId && memberSearchResults.length > 0 && (
-                <ul className="absolute left-0 right-0 top-full z-10 mt-0.5 max-h-40 overflow-y-auto rounded border border-[#e2e8f0] bg-white shadow-lg">
+                <ul className="absolute left-0 right-0 top-full z-10 mt-0.5 max-h-40 overflow-y-auto rounded border border-brand-surface bg-white shadow-lg">
                   {memberSearchResults.map((c) => (
                     <li key={c.id}>
                       <button
@@ -281,15 +278,14 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
             )}
           </div>
 
-          <div className="border-b border-[#e2e8f0] pb-2">
+          <div className="border-b border-brand-surface pb-2">
             <div className="mb-1 text-[11px] font-semibold text-muted">點數折抵（BURNED）</div>
-            <p className="mb-2 text-[10px] text-muted">選定會員後可輸入欲折抵點數，送出時將自該會員點數扣減（後端 BURNED）。</p>
             <input
               type="number"
               min={0}
               step={1}
               inputMode="numeric"
-              className="w-24 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1.5 text-right text-xs text-[#1e293b] focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+              className="w-24 rounded-lg border border-brand-surface bg-white px-2 py-1.5 text-right text-xs text-[#1e293b] focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               value={pointsToRedeem > 0 ? pointsToRedeem : ''}
               placeholder="0"
               onChange={(e) => {
@@ -341,7 +337,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
                   type="text"
                   inputMode="numeric"
                   data-testid="e2e-checkout-received"
-                  className="w-32 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1 text-right text-xs text-[#1e293b] focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+                  className="w-32 rounded-lg border border-brand-surface bg-white px-2 py-1 text-right text-xs text-[#1e293b] focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                   value={receivedAmount.toString()}
                   onChange={(e) => changeReceived(e.target.value)}
                 />
@@ -358,8 +354,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
             )}
             {allowCredit && (
               <div className="rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
-                掛帳／部分收款：實收 ${paidInPayments.toLocaleString()}，未收 ${unpaidAmount.toLocaleString()}。請在上方輸入
-                <strong> 會員 UUID</strong>。
+                掛帳／部分收款：實收 ${paidInPayments.toLocaleString()}，未收 ${unpaidAmount.toLocaleString()}。需要會員資訊。
               </div>
             )}
           </div>

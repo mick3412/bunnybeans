@@ -290,12 +290,12 @@ export const AdminReplenishmentPage: React.FC = () => {
           <div className="overflow-hidden rounded-xl border border-brand-surface">
           <div className="table-sticky-head overflow-x-auto bg-white">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold uppercase text-muted">
+              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
                 <tr>
                   <th className="px-3 py-2">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-[#cbd5e1] text-brand-primary focus:ring-1 focus:ring-[#0ea5e9]"
+                      className="h-4 w-4 rounded border-[#cbd5e1] text-brand-primary focus:ring-1 focus:ring-brand-primary"
                       checked={allSelected}
                       aria-label="全選 / 全不選"
                       onChange={toggleAll}
@@ -315,12 +315,12 @@ export const AdminReplenishmentPage: React.FC = () => {
                 {rows.map((r) => (
                   <tr
                     key={`${r.productId}-${r.warehouseId}`}
-                    className="border-b border-slate-100 hover:bg-[#f8fafc]"
+                    className="border-b border-slate-100 hover:bg-table-head"
                   >
                     <td className="px-3 py-2">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-[#cbd5e1] text-brand-primary focus:ring-1 focus:ring-[#0ea5e9]"
+                        className="h-4 w-4 rounded border-[#cbd5e1] text-brand-primary focus:ring-1 focus:ring-brand-primary"
                         checked={selectedKeys.has(`${r.productId}-${r.warehouseId}`)}
                         onChange={() => toggleRow(`${r.productId}-${r.warehouseId}`)}
                         data-testid="e2e-admin-replenishment-suggestion-checkbox"
@@ -355,7 +355,7 @@ export const AdminReplenishmentPage: React.FC = () => {
             aria-hidden
             onClick={() => setShowPoDraft(false)}
           />
-          <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-[#e2e8f0] bg-white shadow-xl">
+          <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-brand-surface bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
               <div>
                 <h2 className="text-sm font-semibold text-content">補貨採購草稿（預覽）</h2>
@@ -365,7 +365,7 @@ export const AdminReplenishmentPage: React.FC = () => {
               </div>
               <button
                 type="button"
-                className="rounded px-2 py-1 text-sm text-muted hover:bg-[#f1f5f9]"
+                className="rounded px-2 py-1 text-sm text-muted hover:bg-brand-canvas"
                 onClick={() => setShowPoDraft(false)}
               >
                 關閉
@@ -376,12 +376,12 @@ export const AdminReplenishmentPage: React.FC = () => {
                 <p className="text-xs text-muted">尚未選擇任何建議，可在列表勾選後再回到此視窗。</p>
               ) : (
                 <>
-                  <div className="rounded-lg bg-[#f8fafc] p-3 text-xs text-muted">
+                  <div className="rounded-lg bg-table-head p-3 text-xs text-muted">
                     將下列品項整理成同一倉庫的採購草稿，實際建立採購單時可在「採購單」頁面依供應商與商品再做調整。
                   </div>
-                  <div className="rounded-xl border border-[#e2e8f0] bg-white">
+                  <div className="rounded-xl border border-brand-surface bg-white">
                     <table className="w-full text-left text-xs">
-                      <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-[11px] uppercase text-muted">
+                      <thead className="border-b border-brand-surface bg-table-head text-[11px] uppercase text-muted">
                         <tr>
                           <th className="px-3 py-2">商品</th>
                           <th className="px-3 py-2">SKU</th>

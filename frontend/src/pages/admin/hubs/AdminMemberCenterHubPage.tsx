@@ -4,35 +4,26 @@ import { Button } from '../../../shared/components/Button';
 import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
 import { LoyaltyDashboardPage } from '../loyalty/LoyaltyDashboardPage';
 import { LoyaltyPointLedgerPage } from '../loyalty/LoyaltyPointLedgerPage';
-import { LoyaltyCouponsPage } from '../loyalty/LoyaltyCouponsPage';
 import { LoyaltySettingsPage } from '../loyalty/LoyaltySettingsPage';
 import { LoyaltyTierRulesPage } from '../loyalty/LoyaltyTierRulesPage';
 import { LoyaltyReportActivityPage } from '../LoyaltyReportActivityPage';
-import { AdminSegmentsPage } from '../AdminSegmentsPage';
-import { AdminDispatchRulesPage } from '../AdminDispatchRulesPage';
 import { AdminCustomersPage } from '../AdminCustomersPage';
 
 export type MemberCenterHubTabKey =
   | 'dashboard'
   | 'members'
   | 'pointLedger'
-  | 'coupons'
   | 'reports'
   | 'settings'
-  | 'tierRules'
-  | 'segments'
-  | 'dispatchRules';
+  | 'tierRules';
 
 const TAB_OPTIONS: Array<{ key: MemberCenterHubTabKey; label: string }> = [
   { key: 'dashboard', label: '儀表板' },
   { key: 'members', label: '會員管理' },
   { key: 'pointLedger', label: '點數存摺' },
-  { key: 'coupons', label: '優惠券' },
   { key: 'reports', label: '活動報表' },
   { key: 'settings', label: '集點設定' },
   { key: 'tierRules', label: '會員等級規則' },
-  { key: 'segments', label: '分群管理' },
-  { key: 'dispatchRules', label: '發券規則' },
 ];
 
 function tabButtonClass(active: boolean) {
@@ -40,7 +31,7 @@ function tabButtonClass(active: boolean) {
     'rounded-full px-3 py-1.5 text-xs font-semibold transition',
     active
       ? '!bg-[#1e293b] !text-white shadow-sm ring-2 ring-brand-primary/40'
-      : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
+      : 'bg-white text-[#64748b] ring-1 ring-brand-surface hover:bg-table-head',
   ].join(' ');
 }
 
@@ -55,13 +46,10 @@ export function AdminMemberCenterHubPage(props: { initialTab?: MemberCenterHubTa
     const p = location.pathname;
     if (p === '/admin/loyalty') return 'dashboard';
     if (p === '/admin/loyalty/point-ledger') return 'pointLedger';
-    if (p === '/admin/loyalty/coupons') return 'coupons';
     if (p === '/admin/loyalty/reports') return 'reports';
     if (p === '/admin/loyalty/settings') return 'settings';
     if (p === '/admin/loyalty/tier-rules') return 'tierRules';
     if (p === '/admin/customers') return 'members';
-    if (p === '/admin/segments') return 'segments';
-    if (p === '/admin/dispatch-rules') return 'dispatchRules';
     return null;
   }, [location.pathname]);
 
@@ -74,12 +62,9 @@ export function AdminMemberCenterHubPage(props: { initialTab?: MemberCenterHubTa
       dashboard: '/admin/loyalty',
       members: '/admin/customers',
       pointLedger: '/admin/loyalty/point-ledger',
-      coupons: '/admin/loyalty/coupons',
       reports: '/admin/loyalty/reports',
       settings: '/admin/loyalty/settings',
       tierRules: '/admin/loyalty/tier-rules',
-      segments: '/admin/segments',
-      dispatchRules: '/admin/dispatch-rules',
     }),
     [],
   );
@@ -105,10 +90,7 @@ export function AdminMemberCenterHubPage(props: { initialTab?: MemberCenterHubTa
 
   const ActivePage = useMemo(() => {
     if (activeTab === 'members') return AdminCustomersPage;
-    if (activeTab === 'segments') return AdminSegmentsPage;
-    if (activeTab === 'dispatchRules') return AdminDispatchRulesPage;
     if (activeTab === 'pointLedger') return LoyaltyPointLedgerPage;
-    if (activeTab === 'coupons') return LoyaltyCouponsPage;
     if (activeTab === 'reports') return LoyaltyReportActivityPage;
     if (activeTab === 'settings') return LoyaltySettingsPage;
     if (activeTab === 'tierRules') return LoyaltyTierRulesPage;

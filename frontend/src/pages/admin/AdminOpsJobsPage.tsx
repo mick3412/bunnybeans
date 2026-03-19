@@ -97,11 +97,11 @@ export const AdminOpsJobsPage: React.FC = () => {
 
   return (
     <div
-      className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm"
+      className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm"
       data-testid="e2e-admin-ops-jobs"
     >
       <p className="mb-4 text-sm text-[#64748b]">
-        營運工作執行紀錄（OpsJobRunLog）：資料來源 <code className="rounded bg-[#f1f5f9] px-1">GET /ops/jobs</code>。
+        營運工作執行紀錄（OpsJobRunLog）：資料來源 <code className="rounded bg-brand-canvas px-1">GET /ops/jobs</code>。
       </p>
       {err && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -116,7 +116,7 @@ export const AdminOpsJobsPage: React.FC = () => {
         <div>
           <label className="mr-2 text-xs text-[#64748b]">類型</label>
           <select
-            className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+            className="rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             value={kind}
             onChange={(e) => {
               setKind(e.target.value);
@@ -134,7 +134,7 @@ export const AdminOpsJobsPage: React.FC = () => {
           <label className="mr-2 text-xs text-[#64748b]">起始日期</label>
           <input
             type="date"
-            className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+            className="rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             value={from}
             onChange={(e) => {
               setFrom(e.target.value);
@@ -146,7 +146,7 @@ export const AdminOpsJobsPage: React.FC = () => {
           <label className="mr-2 text-xs text-[#64748b]">截止日期</label>
           <input
             type="date"
-            className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+            className="rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             value={to}
             onChange={(e) => {
               setTo(e.target.value);
@@ -179,7 +179,7 @@ export const AdminOpsJobsPage: React.FC = () => {
         <div>
           <label className="mr-2 text-xs text-[#64748b]">每頁</label>
           <select
-            className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm"
+            className="rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm"
             value={pageSize}
             onChange={(e) => {
               setPageSize(Number(e.target.value));
@@ -221,10 +221,10 @@ export const AdminOpsJobsPage: React.FC = () => {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
+      <div className="overflow-hidden rounded-xl border border-brand-surface">
         {loading ? (
           <div className="flex min-h-[200px] items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#0ea5e9] border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
           </div>
         ) : items.length === 0 ? (
           <div className="py-12 text-center text-sm text-[#64748b]">
@@ -243,7 +243,7 @@ export const AdminOpsJobsPage: React.FC = () => {
         ) : (
           <div className="table-sticky-head overflow-x-auto bg-white">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold uppercase text-[#64748b]">
+              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-[#64748b]">
                 <tr>
                   <th className="w-[220px] px-3 py-2 text-left">作業類型</th>
                   <th className="w-[220px] px-3 py-2 text-right">最近一次執行</th>
@@ -258,7 +258,7 @@ export const AdminOpsJobsPage: React.FC = () => {
                     key={r.id}
                     id={`runlog-${r.id}`}
                     className={[
-                      'border-b border-[#e2e8f0] hover:bg-[#f8fafc]',
+                      'border-b border-brand-surface hover:bg-table-head',
                       lastTriggeredRunLogId === r.id ? 'bg-brand-primary/5' : '',
                     ].join(' ')}
                   >
@@ -296,7 +296,7 @@ export const AdminOpsJobsPage: React.FC = () => {
         )}
 
         {total > 0 && (
-          <div className="flex items-center justify-between border-t border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-sm text-[#64748b]">
+          <div className="flex items-center justify-between border-t border-brand-surface bg-table-head px-3 py-2 text-sm text-[#64748b]">
             <span>
               共 {total} 筆 · 第 {page} / {totalPages} 頁
             </span>
@@ -326,12 +326,12 @@ export const AdminOpsJobsPage: React.FC = () => {
 
       {runOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-xl">
+          <div className="w-full max-w-md rounded-2xl border border-brand-surface bg-white p-4 shadow-xl">
             <div className="mb-3 flex items-center justify-between">
               <div className="text-sm font-semibold text-content">手動補跑</div>
               <button
                 type="button"
-                className="rounded px-2 py-1 text-xs text-muted hover:bg-[#f1f5f9]"
+                className="rounded px-2 py-1 text-xs text-muted hover:bg-brand-canvas"
                 onClick={() => setRunOpen(false)}
               >
                 關閉
@@ -341,7 +341,7 @@ export const AdminOpsJobsPage: React.FC = () => {
               <div>
                 <label className="mb-1 block text-xs font-semibold text-muted">種類</label>
                 <select
-                  className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
                   value={runKind}
                   onChange={(e) => setRunKind(e.target.value as typeof runKind)}
                 >
@@ -355,7 +355,7 @@ export const AdminOpsJobsPage: React.FC = () => {
                     <label className="mb-1 block text-xs font-semibold text-muted">asOfDate（選填，YYYY-MM-DD）</label>
                     <input
                       type="date"
-                      className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
                       value={asOfDate}
                       onChange={(e) => setAsOfDate(e.target.value)}
                     />
@@ -363,7 +363,7 @@ export const AdminOpsJobsPage: React.FC = () => {
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-muted">快照類型</label>
                     <select
-                      className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
                       value={snapshotType}
                       onChange={(e) => setSnapshotType(e.target.value as 'daily' | 'monthly')}
                     >
@@ -373,9 +373,6 @@ export const AdminOpsJobsPage: React.FC = () => {
                   </div>
                 </>
               )}
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                需 Admin Key；請確認此操作會觸發後端 job 執行並寫入 OpsJobRunLog。
-              </div>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"

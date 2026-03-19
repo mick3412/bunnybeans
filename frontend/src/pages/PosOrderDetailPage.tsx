@@ -276,14 +276,14 @@ export const PosOrderDetailPage: React.FC = () => {
                 <h2 className="text-sm font-semibold text-content">換貨（MVP）</h2>
                 <button
                   type="button"
-                  className="rounded px-2 py-1 text-xs text-muted hover:bg-[#f1f5f9]"
+                  className="rounded px-2 py-1 text-xs text-muted hover:bg-brand-canvas"
                   onClick={() => setExchangeOpen(false)}
                 >
                   關閉
                 </button>
               </div>
               <div className="space-y-3 text-sm">
-                <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="rounded-xl border border-brand-surface bg-table-head p-3">
                   <div className="mt-2">
                     <Button
                       type="button"
@@ -299,7 +299,7 @@ export const PosOrderDetailPage: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="rounded-xl border border-brand-surface bg-table-head p-3">
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button type="button" size="sm" variant="primary" onClick={() => navigate('/pos')}>
                       前往收銀
@@ -467,7 +467,7 @@ export const PosOrderDetailPage: React.FC = () => {
                 );
               })()}
 
-              <div className="rounded-lg border border-[#e2e8f0] bg-slate-50/90 px-3 py-2 sm:px-4">
+              <div className="rounded-lg border border-brand-surface bg-slate-50/90 px-3 py-2 sm:px-4">
                 <div className="text-[10px] font-semibold uppercase text-muted">消費者</div>
                 <div className="mt-1 space-y-0.5 text-content">
                   <div>
@@ -539,7 +539,7 @@ export const PosOrderDetailPage: React.FC = () => {
                           type="button"
                           onClick={() => setPayMethod(m)}
                           className={`rounded px-2 py-1 text-[10px] font-medium ${
-                            payMethod === m ? 'bg-sky-600 text-white' : 'bg-white text-muted ring-1 ring-[#e2e8f0]'
+                            payMethod === m ? 'bg-sky-600 text-white' : 'bg-white text-muted ring-1 ring-brand-surface'
                           }`}
                         >
                           {paymentMethodLabel(m)}
@@ -551,7 +551,7 @@ export const PosOrderDetailPage: React.FC = () => {
                       inputMode="decimal"
                       placeholder="金額"
                       data-testid="e2e-detail-pay-amount"
-                      className="h-8 w-24 rounded border border-[#e2e8f0] px-2 text-right tabular-nums"
+                      className="h-8 w-24 rounded border border-brand-surface px-2 text-right tabular-nums"
                       value={payAmount}
                       onChange={(e) => setPayAmount(e.target.value)}
                     />
@@ -571,7 +571,7 @@ export const PosOrderDetailPage: React.FC = () => {
               )}
 
               {displayPaid >= 0.01 && (
-                <div id="refund" className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                <div id="refund" className="rounded-lg border border-brand-surface bg-table-head px-3 py-2">
                   <div className="mb-1 text-[11px] font-semibold text-[#1e293b]">退款（沖帳）</div>
                   <p className="mb-2 text-[10px] text-[#64748b]">
                     已實收範圍內登記退款，不超過實收合計；全賒未收單不可退。
@@ -582,14 +582,14 @@ export const PosOrderDetailPage: React.FC = () => {
                       inputMode="decimal"
                       placeholder="退款金額"
                       data-testid="e2e-detail-refund-amount"
-                      className="h-8 w-24 rounded border border-[#e2e8f0] bg-white px-2 text-right tabular-nums"
+                      className="h-8 w-24 rounded border border-brand-surface bg-white px-2 text-right tabular-nums"
                       value={refundAmount}
                       onChange={(e) => setRefundAmount(e.target.value)}
                     />
                     <input
                       type="text"
                       placeholder="備註（選填）"
-                      className="h-8 min-w-[120px] flex-1 rounded border border-[#e2e8f0] bg-white px-2 text-[11px]"
+                      className="h-8 min-w-[120px] flex-1 rounded border border-brand-surface bg-white px-2 text-[11px]"
                       value={refundNote}
                       onChange={(e) => setRefundNote(e.target.value)}
                     />
@@ -666,7 +666,7 @@ export const PosOrderDetailPage: React.FC = () => {
                 <div className="-mx-1 overflow-x-auto sm:mx-0">
                   <table className="w-full min-w-[520px] border-collapse text-left">
                     <thead>
-                      <tr className="border-b border-[#e2e8f0] text-[11px] text-muted">
+                      <tr className="border-b border-brand-surface text-[11px] text-muted">
                         <th className="py-1.5">分類</th>
                         <th className="py-1.5">品牌</th>
                         <th className="py-1.5">品名</th>
@@ -706,7 +706,7 @@ export const PosOrderDetailPage: React.FC = () => {
                   </table>
                 </div>
               </div>
-              <div className="space-y-2 border-t border-[#e2e8f0] pt-2 text-sm">
+              <div className="space-y-2 border-t border-brand-surface pt-2 text-sm">
                 <div className="flex justify-between font-semibold">
                   <span>應收金額</span>
                   <span className="tabular-nums">${order.totalAmount.toLocaleString()}</span>

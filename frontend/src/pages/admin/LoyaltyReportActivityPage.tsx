@@ -141,7 +141,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
         </div>
       )}
       {!loading && !err && !data ? (
-        <EmptyState message="尚未查詢" description="請選擇區間後按「查詢」。" />
+        <EmptyState message="尚未查詢" description="" />
       ) : null}
       {data && (
         <div className="space-y-4">
@@ -196,11 +196,11 @@ export const LoyaltyReportActivityPage: React.FC = () => {
             )}
           </div>
           {data.byDispatchRule && data.byDispatchRule.length > 0 && (
-            <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4">
+            <div className="rounded-2xl border border-brand-surface bg-white p-4">
               <div className="mb-3 text-sm font-semibold text-[#1e293b]">依發券規則</div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-[#e2e8f0] text-[#64748b]">
+                  <thead className="border-b border-brand-surface text-[#64748b]">
                     <tr>
                       <th className="px-3 py-2">規則名稱</th>
                       <th className="px-3 py-2 text-right">job 執行次數</th>
@@ -209,7 +209,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
                   </thead>
                   <tbody>
                     {data.byDispatchRule.map((r) => (
-                      <tr key={r.ruleId} className="border-t border-[#e2e8f0]">
+                      <tr key={r.ruleId} className="border-t border-brand-surface">
                         <td className="px-3 py-2">{r.ruleName || r.ruleId}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.jobRunsCount}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{r.sentCount ?? '—'}</td>
@@ -221,11 +221,11 @@ export const LoyaltyReportActivityPage: React.FC = () => {
             </div>
           )}
           {data.byCoupon && data.byCoupon.length > 0 && (
-            <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4">
+            <div className="rounded-2xl border border-brand-surface bg-white p-4">
               <div className="mb-3 text-sm font-semibold text-[#1e293b]">依券成效（發送數／使用數）</div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-[#e2e8f0] text-[#64748b]">
+                  <thead className="border-b border-brand-surface text-[#64748b]">
                     <tr>
                       <th className="px-3 py-2">券號／名稱</th>
                       <th className="px-3 py-2 text-right">發送數</th>
@@ -234,7 +234,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
                   </thead>
                   <tbody>
                     {data.byCoupon.map((c) => (
-                      <tr key={c.couponId} className="border-t border-[#e2e8f0]">
+                      <tr key={c.couponId} className="border-t border-brand-surface">
                         <td className="px-3 py-2">
                           <Link
                             to={`/admin/loyalty/coupons?q=${encodeURIComponent(c.couponCode || c.name || c.couponId)}`}
@@ -253,7 +253,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
             </div>
           )}
           {data.couponUsageByCoupon && data.couponUsageByCoupon.length > 0 && !data.byCoupon?.length && (
-            <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4">
+            <div className="rounded-2xl border border-brand-surface bg-white p-4">
               <div className="mb-2 text-sm font-semibold text-[#1e293b]">依券用券數</div>
               <MiniBarChart
                 items={data.couponUsageByCoupon.map((row) => ({

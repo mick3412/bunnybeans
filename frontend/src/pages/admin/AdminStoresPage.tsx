@@ -85,7 +85,7 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
   };
 
   const H = embedded ? 'h2' : 'h1';
-  const fieldClass = 'h-9 rounded-lg border border-[#e2e8f0] px-2 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20';
+  const fieldClass = 'h-9 rounded-lg border border-brand-surface px-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
   return (
     <div className={embedded ? '' : 'mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm'}>
       <H className="mb-2 text-lg font-semibold text-content">門市</H>

@@ -168,12 +168,12 @@ export const AdminDashboardPage: React.FC = () => {
   return (
     <div className="mx-auto max-w-7xl">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div className="border-b border-[#e2e8f0] pb-2">
+        <div className="border-b border-brand-surface pb-2">
           <h2 className="text-lg font-semibold text-content">營運總覽</h2>
           <p className="mt-1 text-sm text-muted">即時庫存與銷售指標</p>
         </div>
         {enrichedHint && (
-          <span className="rounded-full border border-[#e2e8f0] bg-white px-3 py-1 text-xs text-muted shadow-sm">
+          <span className="rounded-full border border-brand-surface bg-white px-3 py-1 text-xs text-muted shadow-sm">
             {enrichedHint}
           </span>
         )}

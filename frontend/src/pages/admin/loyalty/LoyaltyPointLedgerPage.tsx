@@ -25,8 +25,8 @@ function typeStyle(t: string) {
   if (t === 'EARNED') return 'bg-emerald-100 text-emerald-800';
   if (t === 'BURNED') return 'bg-rose-100 text-rose-800';
   if (t === 'LOCKED') return 'bg-amber-100 text-amber-900';
-  if (t === 'EXPIRED') return 'bg-[#e2e8f0] text-muted';
-  return 'bg-[#f1f5f9] text-muted';
+  if (t === 'EXPIRED') return 'bg-brand-surface text-muted';
+  return 'bg-brand-canvas text-muted';
 }
 
 export const LoyaltyPointLedgerPage: React.FC = () => {
@@ -83,7 +83,7 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="border-b border-[#e2e8f0] pb-2">
+      <div className="border-b border-brand-surface pb-2">
         <p className="text-sm text-[#64748b]">
           Append-only 流水；預設<strong>全店最近筆數</strong>，可改選單一會員
         </p>
@@ -118,7 +118,7 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
               type="button"
               onClick={() => setTab(t)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                tab === t ? 'bg-slate-900 text-white' : 'bg-white text-muted ring-1 ring-[#e2e8f0]'
+                tab === t ? 'bg-slate-900 text-white' : 'bg-white text-muted ring-1 ring-brand-surface'
               }`}
             >
               {TYPE_LABELS[t] ?? t}
@@ -129,9 +129,9 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
       )}
-      <div className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+      <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs text-muted">
+          <thead className="border-b border-brand-surface bg-table-head text-xs text-muted">
             <tr>
               <th className="px-3 py-2">交易 ID</th>
               {!customerId && <th className="px-3 py-2">會員</th>}
@@ -155,7 +155,7 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
               </tr>
             )}
             {filtered.map((row) => (
-              <tr key={row.id} className="hover:bg-[#f8fafc]">
+              <tr key={row.id} className="hover:bg-table-head">
                 <td className="px-3 py-2 font-mono text-[11px] text-muted">{row.id.slice(0, 12)}…</td>
                 {!customerId && (
                   <td className="max-w-[120px] truncate px-3 py-2 font-medium" title={row.customerName ?? ''}>

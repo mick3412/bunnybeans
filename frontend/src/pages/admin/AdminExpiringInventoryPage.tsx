@@ -10,6 +10,7 @@ import {
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useAdminToast } from './AdminToastContext';
 import { Alert } from '../../shared/components/Alert';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
 
 const fieldClass =
   'rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
@@ -135,8 +136,11 @@ export const AdminExpiringInventoryPage: React.FC = () => {
   }, [data?.items]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4" data-testid="e2e-admin-expiring-inventory">
-      <div className={cardClass}>
+    <StandardListLayout
+      title="即期庫存"
+      description="查詢即將到期的庫存批次，依倉庫與天數篩選"
+      testId="e2e-admin-expiring-inventory"
+      filters={
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[220px]">
             <label className="mb-1 block text-xs font-semibold text-muted">倉庫</label>
@@ -189,27 +193,33 @@ export const AdminExpiringInventoryPage: React.FC = () => {
             {loading ? '載入中…' : `共 ${total} 筆`}
           </div>
         </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-brand-surface bg-table-head p-3">
-            <div className="text-[11px] text-muted">批次筆數（本頁）</div>
-            <div className="text-lg font-semibold text-content tabular-nums">{data?.items?.length ?? 0}</div>
+      }
+      aboveContent={
+        !err && (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-brand-surface bg-table-head p-3">
+              <div className="text-[11px] text-muted">批次筆數（本頁）</div>
+              <div className="text-lg font-semibold text-content tabular-nums">{data?.items?.length ?? 0}</div>
+            </div>
+            <div className="rounded-xl border border-brand-surface bg-table-head p-3">
+              <div className="text-[11px] text-muted">商品數（本頁）</div>
+              <div className="text-lg font-semibold text-content tabular-nums">{kpi.uniqueProducts}</div>
+            </div>
+            <div className="rounded-xl border border-brand-surface bg-table-head p-3">
+              <div className="text-[11px] text-muted">最早到期日（本頁）</div>
+              <div className="text-lg font-semibold text-content tabular-nums">{kpi.earliest}</div>
+            </div>
           </div>
-          <div className="rounded-xl border border-brand-surface bg-table-head p-3">
-            <div className="text-[11px] text-muted">商品數（本頁）</div>
-            <div className="text-lg font-semibold text-content tabular-nums">{kpi.uniqueProducts}</div>
-          </div>
-          <div className="rounded-xl border border-brand-surface bg-table-head p-3">
-            <div className="text-[11px] text-muted">最早到期日（本頁）</div>
-            <div className="text-lg font-semibold text-content tabular-nums">{kpi.earliest}</div>
-          </div>
-        </div>
-
-        {err && (
-          <div className="mt-4"><Alert variant="error">{err}</Alert></div>
-        )}
-
-        <div className="mt-4 overflow-x-auto rounded-xl border border-brand-surface">
+        )
+      }
+      loading={loading}
+      error={err}
+      empty={!loading && !err && filteredItems.length === 0}
+      emptyMessage="目前沒有即將到期的批次"
+    >
+      {!loading && !err && filteredItems.length > 0 && (
+        <>
+        <div className="overflow-x-auto rounded-xl border border-brand-surface">
           <table className="w-full border-collapse text-sm">
             <thead className="bg-table-head text-xs text-muted">
               <tr>
@@ -250,13 +260,6 @@ export const AdminExpiringInventoryPage: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {!loading && filteredItems.length === 0 && (
-                <tr>
-                  <td className="px-3 py-8 text-center text-sm text-[#64748b]" colSpan={7}>
-                    目前沒有即將到期的批次
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -265,7 +268,7 @@ export const AdminExpiringInventoryPage: React.FC = () => {
           <button
             type="button"
             className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
-              canPrev ? 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]' : 'cursor-not-allowed border-[#e2e8f0] bg-[#f8fafc] text-[#94a3b8]'
+              canPrev ? 'border-brand-surface bg-white hover:bg-table-head' : 'cursor-not-allowed border-brand-surface bg-table-head text-[#94a3b8]'
             }`}
             disabled={!canPrev}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -278,7 +281,7 @@ export const AdminExpiringInventoryPage: React.FC = () => {
           <button
             type="button"
             className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
-              canNext ? 'border-[#e2e8f0] bg-white hover:bg-[#f8fafc]' : 'cursor-not-allowed border-[#e2e8f0] bg-[#f8fafc] text-[#94a3b8]'
+              canNext ? 'border-brand-surface bg-white hover:bg-table-head' : 'cursor-not-allowed border-brand-surface bg-table-head text-[#94a3b8]'
             }`}
             disabled={!canNext}
             onClick={() => setPage((p) => p + 1)}
@@ -286,8 +289,9 @@ export const AdminExpiringInventoryPage: React.FC = () => {
             下一頁
           </button>
         </div>
-      </div>
-    </div>
+        </>
+      )}
+    </StandardListLayout>
   );
 };
 

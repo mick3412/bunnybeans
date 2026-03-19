@@ -202,7 +202,7 @@ export const AdminSuppliersPage: React.FC = () => {
           </div>
         ) : (
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold uppercase tracking-wide text-muted">
+          <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase tracking-wide text-muted">
             <tr>
               <th className="px-4 py-3">編號</th>
               <th className="px-4 py-3">供應商名稱</th>
@@ -222,7 +222,7 @@ export const AdminSuppliersPage: React.FC = () => {
                 <td className="px-4 py-3.5">
                   <span
                     className={`inline-flex rounded-md px-2.5 py-0.5 text-xs font-semibold ${
-                      s.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-[#e2e8f0] text-muted'
+                      s.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-brand-surface text-muted'
                     }`}
                   >
                     {s.status === 'ACTIVE' ? '啟用' : '停用'}

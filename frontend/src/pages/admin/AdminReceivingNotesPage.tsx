@@ -25,6 +25,8 @@ import {
   type PoLineDto,
 } from '../../modules/admin/purchaseApi';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
+import { Alert } from '../../shared/components/Alert';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useAdminToast } from './AdminToastContext';
 
 const RN_STATUS: { key: string; label: string }[] = [
@@ -305,11 +307,11 @@ export const AdminReceivingNotesPage: React.FC = () => {
   const pendingQty = (l: PoLineDto) => Math.max(0, l.qtyOrdered - l.qtyReceived);
 
   return (
-    <div className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm" data-testid="e2e-admin-receiving-notes">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm text-[#64748b]">驗收入庫與差異處理</p>
-        </div>
+    <>
+    <StandardListLayout
+      title="進貨驗收／退供"
+      description="驗收入庫與差異處理"
+      actions={
         <button
           type="button"
           onClick={openCreate}
@@ -317,53 +319,54 @@ export const AdminReceivingNotesPage: React.FC = () => {
         >
           + 新增驗收單
         </button>
-      </div>
-      <div className="mb-4">
-        <div className="relative min-w-[240px] max-w-md flex-1">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </span>
-          <input
-            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] py-2.5 pl-10 pr-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-            placeholder="搜尋驗收單號 / 採購單號 / 供應商..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-        </div>
-      </div>
-      <div className="mb-4 flex flex-wrap gap-1 border-b border-neutral-200">
-        {RN_STATUS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            className={`border-b-2 px-3 py-2 text-sm font-medium ${
-              status === t.key ? 'border-brand-primary text-brand-primary' : 'border-transparent text-muted hover:text-content'
-            }`}
-            onClick={() => setStatus(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      {listError && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          <span>載入失敗：{listError}</span>
-          <button type="button" className="rounded-md bg-red-100 px-3 py-1 font-medium hover:bg-red-200" onClick={() => load()}>
-            重試
-          </button>
-        </div>
-      )}
-      <div className="overflow-hidden rounded-xl border border-neutral-100">
-        {listLoading ? (
-          <div className="flex min-h-[200px] items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" aria-label="載入中" />
+      }
+      filters={
+        <div className="flex flex-col gap-4">
+          <div className="relative min-w-[240px] max-w-md flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+            <input
+              className="w-full rounded-lg border border-brand-surface bg-table-head py-2.5 pl-10 pr-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+              placeholder="搜尋驗收單號 / 採購單號 / 供應商..."
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
           </div>
-        ) : (
-          <>
+          <div className="flex flex-wrap gap-1 border-b border-neutral-200">
+            {RN_STATUS.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                className={`border-b-2 px-3 py-2 text-sm font-medium ${
+                  status === t.key ? 'border-brand-primary text-brand-primary' : 'border-transparent text-muted hover:text-content'
+                }`}
+                onClick={() => setStatus(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      }
+      loading={listLoading}
+      error={null}
+      aboveContent={listError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Alert variant="error">載入失敗：{listError}</Alert>
+          <Button size="sm" variant="secondary" onClick={() => void load()}>重試</Button>
+        </div>
+      ) : undefined}
+      empty={!listLoading && !listError && rows.length === 0}
+      emptyMessage="尚無驗收單"
+      testId="e2e-admin-receiving-notes"
+    >
+      {!listLoading && rows.length > 0 && (
+      <div className="overflow-hidden rounded-xl border border-neutral-100">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold uppercase text-muted">
+              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
                 <tr>
                   <th className="px-4 py-3">驗收單號</th>
                   <th className="px-4 py-3">採購單號</th>
@@ -398,10 +401,9 @@ export const AdminReceivingNotesPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
-            {!listError && rows.length === 0 && <div className="py-16 text-center text-muted">尚無驗收單</div>}
-          </>
-        )}
       </div>
+      )}
+    </StandardListLayout>
 
       {createOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -453,7 +455,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
             </div>
 
             {selectedPo && selectedPo.lines.length > 0 && (
-              <div className="mt-6 overflow-hidden rounded-xl border border-neutral-200 bg-[#f8fafc] p-4">
+              <div className="mt-6 overflow-hidden rounded-xl border border-neutral-200 bg-table-head p-4">
                 <h3 className="text-sm font-semibold text-content">驗收品項</h3>
                 <table className="mt-3 w-full text-sm">
                   <thead className="border-b border-neutral-200 text-left text-xs text-muted">
@@ -772,7 +774,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
               </div>
             )}
             <table className="mt-4 w-full text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc]">
+              <thead className="border-b border-brand-surface bg-table-head">
                 <tr>
                   <th className="px-2 py-2 text-left">訂購（待收）</th>
                   <th className="px-2 py-2 text-right">實收</th>
@@ -1098,6 +1100,6 @@ export const AdminReceivingNotesPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };

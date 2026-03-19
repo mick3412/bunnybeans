@@ -23,9 +23,9 @@ import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { useAdminToast } from './AdminToastContext';
 
 const fieldClass =
-  'h-8 rounded-lg border border-[#e2e8f0] px-2 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20';
+  'h-8 rounded-lg border border-brand-surface px-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
 
-const cardClass = 'rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm';
+const cardClass = 'rounded-xl border border-brand-surface bg-white p-4 shadow-sm';
 
 type MasterRow = { id: string; code: string; name: string };
 
@@ -137,8 +137,8 @@ function MasterSection(props: {
           新增
         </Button>
       </div>
-      <div className="max-h-64 overflow-y-auto rounded-lg border border-[#e2e8f0]">
-        <ul className="divide-y divide-[#e2e8f0] text-sm">
+      <div className="max-h-64 overflow-y-auto rounded-lg border border-brand-surface">
+        <ul className="divide-y divide-brand-surface text-sm">
           {rows.map((r) => (
             <li key={r.id} className="flex items-center justify-between gap-2 px-3 py-2">
               {editingId === r.id ? (

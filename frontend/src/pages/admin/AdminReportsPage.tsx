@@ -416,7 +416,7 @@ export const AdminReportsPage: React.FC = () => {
 
       {summary?.byType && Object.keys(summary.byType).length > 0 && (
         <>
-          <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
+          <div className="mb-4 rounded-xl border border-brand-surface bg-table-head p-4">
             <div className="mb-2 text-sm font-semibold text-muted">應收／應付摘要（區間內依類型加總）</div>
             <div className="flex flex-wrap gap-4 text-sm">
               {Object.entries(summary.byType).map(([type, amount]) => (
@@ -427,7 +427,7 @@ export const AdminReportsPage: React.FC = () => {
               ))}
             </div>
           </div>
-          <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+          <div className="mb-4 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
             <div className="mb-3 text-sm font-semibold text-muted">簡單圖表（依類型）</div>
             <MiniBarChart
               items={Object.entries(summary.byType).map(([type, amount]) => ({
@@ -437,20 +437,20 @@ export const AdminReportsPage: React.FC = () => {
             />
           </div>
           {financeTrend?.items && financeTrend.items.length > 0 && (
-            <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+            <div className="mb-4 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-muted">金流趨勢</span>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className={`rounded px-2 py-1 text-xs font-medium ${financeTrendGroupBy === 'day' ? 'bg-brand-primary text-white' : 'bg-[#f1f5f9] text-muted hover:bg-[#e2e8f0]'}`}
+                    className={`rounded px-2 py-1 text-xs font-medium ${financeTrendGroupBy === 'day' ? 'bg-brand-primary text-white' : 'bg-brand-canvas text-muted hover:bg-brand-surface'}`}
                     onClick={() => setFinanceTrendGroupBy('day')}
                   >
                     依日
                   </button>
                   <button
                     type="button"
-                    className={`rounded px-2 py-1 text-xs font-medium ${financeTrendGroupBy === 'week' ? 'bg-brand-primary text-white' : 'bg-[#f1f5f9] text-muted hover:bg-[#e2e8f0]'}`}
+                    className={`rounded px-2 py-1 text-xs font-medium ${financeTrendGroupBy === 'week' ? 'bg-brand-primary text-white' : 'bg-brand-canvas text-muted hover:bg-brand-surface'}`}
                     onClick={() => setFinanceTrendGroupBy('week')}
                   >
                     依週
@@ -465,7 +465,7 @@ export const AdminReportsPage: React.FC = () => {
                       label: i.periodStart,
                       value: i.amountsByType?.SALE_RECEIVABLE ?? 0,
                     })),
-                    stroke: '#0ea5e9',
+                    stroke: 'var(--color-brand-primary)',
                   },
                   {
                     name: getFinanceEventTypeLabel('SALE_PAYMENT'),
@@ -473,7 +473,7 @@ export const AdminReportsPage: React.FC = () => {
                       label: i.periodStart,
                       value: i.amountsByType?.SALE_PAYMENT ?? 0,
                     })),
-                    stroke: '#16a34a',
+                    stroke: 'var(--color-brand-success)',
                   },
                   {
                     name: getFinanceEventTypeLabel('PURCHASE_PAYABLE'),
@@ -489,19 +489,19 @@ export const AdminReportsPage: React.FC = () => {
             </div>
           )}
           {dailyTrend.length > 0 && (
-            <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+            <div className="mb-4 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
               <div className="mb-3 text-sm font-semibold text-muted">應收 vs 實收趨勢（近 30 日）</div>
               <MiniLineChart
                 series={[
                   {
                     name: '應收',
                     items: dailyTrend.map((d) => ({ label: d.date, value: d.receivable })),
-                    stroke: '#0ea5e9',
+                    stroke: 'var(--color-brand-primary)',
                   },
                   {
                     name: '實收',
                     items: dailyTrend.map((d) => ({ label: d.date, value: d.payment })),
-                    stroke: '#16a34a',
+                    stroke: 'var(--color-brand-success)',
                   },
                 ]}
                 formatValue={(n) => n.toLocaleString()}
@@ -509,13 +509,13 @@ export const AdminReportsPage: React.FC = () => {
             </div>
           )}
           {(dailyTrend.length > 0 || prevDailyTrend.length > 0) && (
-            <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+            <div className="mb-4 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
               <div className="mb-2 text-sm font-semibold text-muted">本期 vs 上期（近 30 日對比）</div>
               <p className="mb-3 text-xs text-muted">
                 本期：近 30 日；上期：再往前 30 日（同長度區間）。折線呈現「實收（銷售實收）」。
               </p>
               <div className="grid gap-3 lg:grid-cols-2">
-                <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="rounded-lg border border-brand-surface bg-table-head p-3">
                   <div className="mb-2 text-xs font-semibold text-content">本期</div>
                   {dailyTrend.length ? (
                     <MiniLineChart
@@ -523,7 +523,7 @@ export const AdminReportsPage: React.FC = () => {
                         {
                           name: '實收',
                           items: dailyTrend.map((d) => ({ label: d.date, value: d.payment })),
-                          stroke: '#16a34a',
+                          stroke: 'var(--color-brand-success)',
                         },
                       ]}
                       formatValue={(n) => n.toLocaleString()}
@@ -532,7 +532,7 @@ export const AdminReportsPage: React.FC = () => {
                     <div className="py-6 text-center text-xs text-muted">無資料</div>
                   )}
                 </div>
-                <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                <div className="rounded-lg border border-brand-surface bg-table-head p-3">
                   <div className="mb-2 text-xs font-semibold text-content">上期</div>
                   {prevDailyTrend.length ? (
                     <MiniLineChart
@@ -540,7 +540,7 @@ export const AdminReportsPage: React.FC = () => {
                         {
                           name: '實收',
                           items: prevDailyTrend.map((d) => ({ label: d.date, value: d.payment })),
-                          stroke: '#16a34a',
+                          stroke: 'var(--color-brand-success)',
                         },
                       ]}
                       formatValue={(n) => n.toLocaleString()}
@@ -553,7 +553,7 @@ export const AdminReportsPage: React.FC = () => {
             </div>
           )}
           {summaryByParty?.byParty && summaryByParty.byParty.length > 0 && (
-            <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+            <div className="mb-4 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="text-sm font-semibold text-muted">進階圖表（依對象彙總）</div>
                 <div className="text-xs text-muted">
@@ -569,7 +569,7 @@ export const AdminReportsPage: React.FC = () => {
                     <Link
                       key={p.partyId}
                       to={`/admin/balances?view=${encodeURIComponent(view)}&partyId=${encodeURIComponent(p.partyId)}`}
-                      className="rounded-full bg-[#f8fafc] px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-[#e2e8f0] hover:bg-white"
+                      className="rounded-full bg-table-head px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-brand-surface hover:bg-white"
                       title={p.partyId}
                       data-testid="e2e-reports-party-drilldown"
                     >
@@ -592,11 +592,11 @@ export const AdminReportsPage: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="rounded-xl border border-[#e2e8f0] bg-white px-4 py-12 text-center text-muted">
+        <div className="rounded-xl border border-brand-surface bg-white px-4 py-12 text-center text-muted">
           載入中…
         </div>
       ) : rows.length === 0 && !err ? (
-        <div className="rounded-xl border border-[#e2e8f0] bg-white px-4 py-12 text-center text-muted">
+        <div className="rounded-xl border border-brand-surface bg-white px-4 py-12 text-center text-muted">
           此條件下尚無金流事件
         </div>
       ) : (

@@ -172,14 +172,14 @@ export const AdminCustomerImportPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm" data-testid="e2e-admin-customers-import">
+    <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-admin-customers-import">
       <p className="mb-2 text-sm text-[#64748b]" aria-hidden="true" />
       {err && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {err}
         </div>
       )}
-      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4 shadow-sm">
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-brand-surface bg-table-head p-4 shadow-sm">
         <input
           ref={fileInputRef}
           key={inputKey.current}
@@ -280,9 +280,9 @@ export const AdminCustomerImportPage: React.FC = () => {
               {applyLoading ? '套用中…' : '套用寫入'}
             </Button>
           </div>
-          <div className="table-sticky-head overflow-x-auto rounded-lg border border-[#e2e8f0] bg-white">
+          <div className="table-sticky-head overflow-x-auto rounded-lg border border-brand-surface bg-white">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs text-[#64748b]">
+              <thead className="border-b border-brand-surface bg-table-head text-xs text-[#64748b]">
                 <tr>
                   <th className="px-2 py-2">列</th>
                   <th className="px-2 py-2">name</th>
@@ -309,7 +309,7 @@ export const AdminCustomerImportPage: React.FC = () => {
                       </td>
                       <td className="px-2 py-1.5">
                         <select
-                          className="rounded border border-[#e2e8f0] px-1 py-0.5 text-xs"
+                          className="rounded border border-brand-surface px-1 py-0.5 text-xs"
                           value={d?.action ?? 'skip'}
                           onChange={(e) => {
                             const action = e.target.value as CustomerImportApplyDecision['action'];

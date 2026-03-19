@@ -216,6 +216,12 @@ export const AdminProductsPage: React.FC = () => {
       return sku.includes(q) || name.includes(q);
     });
   }, [products, searchQ]);
+
+  const categoryName = (id: string | null | undefined) =>
+    id ? categories.find((c) => c.id === id)?.name ?? '—' : '—';
+  const brandName = (id: string | null | undefined) =>
+    id ? brands.find((b) => b.id === id)?.name ?? '—' : '—';
+
   const sortedProducts = useMemo(() => {
     const rows = [...filteredProducts];
     const num = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0));
@@ -394,11 +400,6 @@ export const AdminProductsPage: React.FC = () => {
     colW.spec +
     colW.actions;
 
-  const categoryName = (id: string | null | undefined) =>
-    id ? categories.find((c) => c.id === id)?.name ?? '—' : '—';
-  const brandName = (id: string | null | undefined) =>
-    id ? brands.find((b) => b.id === id)?.name ?? '—' : '—';
-
   const onDelete = async (id: string) => {
     if (!confirm('確定刪除此商品？（若有庫存事件請確認）')) return;
     const out = await deleteProduct(id);
@@ -414,12 +415,12 @@ export const AdminProductsPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto min-w-0 max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm">
+    <div className="mx-auto min-w-0 max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <p className="max-w-xl text-sm text-[#64748b]">
           與 POS 共用主檔 API；庫存唯讀。
         </p>
-        <details className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-1.5" data-testid="e2e-admin-products-import">
+        <details className="rounded-lg border border-brand-surface bg-table-head px-3 py-1.5" data-testid="e2e-admin-products-import">
           <summary className="cursor-pointer text-xs font-medium text-muted hover:text-content">CSV 匯入</summary>
           <div className="mt-2 flex flex-wrap items-center gap-3 pb-1">
             <span className="flex items-center gap-2">
@@ -427,7 +428,7 @@ export const AdminProductsPage: React.FC = () => {
               <input
                 type="file"
                 accept=".csv,text/csv"
-                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-[#f1f5f9] file:px-2 file:py-0.5 file:text-xs"
+                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-brand-canvas file:px-2 file:py-0.5 file:text-xs"
                 disabled={importSubmitting}
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
@@ -456,7 +457,7 @@ export const AdminProductsPage: React.FC = () => {
               <input
                 type="file"
                 accept=".csv,text/csv"
-                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-[#f1f5f9] file:px-2 file:py-0.5 file:text-xs"
+                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-brand-canvas file:px-2 file:py-0.5 file:text-xs"
                 disabled={jobSubmitting}
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
@@ -576,7 +577,7 @@ export const AdminProductsPage: React.FC = () => {
               className="w-56 !py-1.5"
             />
           </div>
-          <div className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+          <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
             <table
               className="table-fixed text-left text-sm"
               style={{ width: tableMinWidth, minWidth: '100%' }}
@@ -599,9 +600,9 @@ export const AdminProductsPage: React.FC = () => {
                 <col style={{ width: colW.spec }} />
                 <col style={{ width: colW.actions }} />
               </colgroup>
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
+              <thead className="border-b border-brand-surface bg-table-head text-muted">
                 <tr>
-                  <th className="sticky left-0 z-[1] bg-[#f8fafc] px-3 py-2">
+                  <th className="sticky left-0 z-[1] bg-table-head px-3 py-2">
                     <input
                       type="checkbox"
                       checked={allSelected}
@@ -630,8 +631,8 @@ export const AdminProductsPage: React.FC = () => {
                       key={key}
                       className={[
                         'relative px-3 py-2 select-none',
-                        key === 'sku' ? 'sticky z-[1] bg-[#f8fafc]' : '',
-                        key === 'name' ? 'sticky z-[1] bg-[#f8fafc]' : '',
+                        key === 'sku' ? 'sticky z-[1] bg-table-head' : '',
+                        key === 'name' ? 'sticky z-[1] bg-table-head' : '',
                         key === 'listPrice' || key === 'salePrice' || key === 'costPrice' ? 'text-right' : '',
                       ].join(' ')}
                       style={{
@@ -667,7 +668,7 @@ export const AdminProductsPage: React.FC = () => {
                         type="button"
                         tabIndex={-1}
                         aria-label={`調整「${label}」欄寬（拖曳後會記住）`}
-                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#0ea5e9]/15 active:bg-[#0ea5e9]/25"
+                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-brand-primary/15 active:bg-brand-primary/25"
                         onMouseDown={(e) => onResizeStart(key, e)}
                       />
                     </th>
@@ -695,7 +696,7 @@ export const AdminProductsPage: React.FC = () => {
                       </button>
                       <button
                         type="button"
-                        className="text-[10px] font-normal text-[#0ea5e9] hover:underline"
+                        className="text-[10px] font-normal text-brand-primary hover:underline"
                         onClick={() => setShowWhDetail((v) => !v)}
                       >
                         {showWhDetail ? '收合各倉' : '展開各倉'}
@@ -705,7 +706,7 @@ export const AdminProductsPage: React.FC = () => {
                       type="button"
                       tabIndex={-1}
                       aria-label="調整「總庫存」欄寬（拖曳後會記住）"
-                      className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#0ea5e9]/15 active:bg-[#0ea5e9]/25"
+                      className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-brand-primary/15 active:bg-brand-primary/25"
                       onMouseDown={(e) => onResizeStart('stock', e)}
                     />
                   </th>
@@ -743,7 +744,7 @@ export const AdminProductsPage: React.FC = () => {
                       type="button"
                       tabIndex={-1}
                       aria-label="調整「效期」欄寬（拖曳後會記住）"
-                      className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#0ea5e9]/15 active:bg-[#0ea5e9]/25"
+                      className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-brand-primary/15 active:bg-brand-primary/25"
                       onMouseDown={(e) => onResizeStart('expiry', e)}
                     />
                   </th>
@@ -757,7 +758,7 @@ export const AdminProductsPage: React.FC = () => {
                       key={key}
                       className={[
                         'relative px-3 py-2 select-none',
-                        key === 'actions' ? 'sticky right-0 z-[1] bg-[#f8fafc] text-right' : '',
+                        key === 'actions' ? 'sticky right-0 z-[1] bg-table-head text-right' : '',
                       ].join(' ')}
                       style={{ width: colW[key] }}
                     >
@@ -766,7 +767,7 @@ export const AdminProductsPage: React.FC = () => {
                           <span>規格</span>
                           <button
                             type="button"
-                            className="text-[10px] font-normal text-[#0ea5e9] hover:underline"
+                            className="text-[10px] font-normal text-brand-primary hover:underline"
                             onClick={() => setShowSpecDetail((v) => !v)}
                           >
                             {showSpecDetail ? '收合規格' : '展開規格'}
@@ -779,7 +780,7 @@ export const AdminProductsPage: React.FC = () => {
                         type="button"
                         tabIndex={-1}
                         aria-label={`調整「${label}」欄寬（拖曳後會記住）`}
-                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#0ea5e9]/15 active:bg-[#0ea5e9]/25"
+                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-brand-primary/15 active:bg-brand-primary/25"
                         onMouseDown={(e) => onResizeStart(key, e)}
                       />
                     </th>
@@ -788,8 +789,8 @@ export const AdminProductsPage: React.FC = () => {
               </thead>
               <tbody>
                 {sortedProducts.map((p) => (
-                  <tr key={p.id} className="group border-t border-slate-100 hover:bg-[#f8fafc]">
-                    <td className="sticky left-0 z-[1] bg-white px-3 py-2 group-hover:bg-[#f8fafc]">
+                  <tr key={p.id} className="group border-t border-slate-100 hover:bg-table-head">
+                    <td className="sticky left-0 z-[1] bg-white px-3 py-2 group-hover:bg-table-head">
                       <input
                         type="checkbox"
                         checked={selectedIds.has(p.id)}
@@ -806,14 +807,14 @@ export const AdminProductsPage: React.FC = () => {
                       />
                     </td>
                     <td
-                      className="sticky z-[1] bg-white px-3 py-2 font-mono text-xs truncate group-hover:bg-[#f8fafc]"
+                      className="sticky z-[1] bg-white px-3 py-2 font-mono text-xs truncate group-hover:bg-table-head"
                       style={{ left: 44 }}
                       title={p.sku}
                     >
                       {p.sku}
                     </td>
                     <td
-                      className="sticky z-[1] bg-white px-3 py-2 truncate group-hover:bg-[#f8fafc]"
+                      className="sticky z-[1] bg-white px-3 py-2 truncate group-hover:bg-table-head"
                       style={{ left: 44 + colW.sku }}
                       title={p.name + (p.description ? ` — ${p.description}` : '')}
                     >
@@ -872,10 +873,10 @@ export const AdminProductsPage: React.FC = () => {
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td className="sticky right-0 z-[1] bg-white px-3 py-2 whitespace-nowrap text-right group-hover:bg-[#f8fafc]">
+                    <td className="sticky right-0 z-[1] bg-white px-3 py-2 whitespace-nowrap text-right group-hover:bg-table-head">
                       <button
                         type="button"
-                        className="mr-2 text-[#0ea5e9] text-xs font-medium hover:underline"
+                        className="mr-2 text-brand-primary text-xs font-medium hover:underline"
                         onClick={() => openEdit(p)}
                       >
                         編輯
@@ -962,14 +963,14 @@ export const AdminProductsPage: React.FC = () => {
 
         {/* 右側懸浮抽屜：向左展開 */}
         <aside
-          className={`fixed right-0 top-0 z-[100] flex h-full max-h-screen w-full max-w-[440px] flex-col border-l border-[#e2e8f0] bg-white shadow-[-8px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out ${
+          className={`fixed right-0 top-0 z-[100] flex h-full max-h-screen w-full max-w-[440px] flex-col border-l border-brand-surface bg-white shadow-[-8px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out ${
             panelOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
           }`}
           aria-label="商品表單"
           aria-hidden={!panelOpen}
         >
           <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto p-4 pt-14">
-            <div className="absolute left-0 right-0 top-0 flex items-center justify-between gap-2 border-b border-[#e2e8f0] bg-white px-3 py-2.5">
+            <div className="absolute left-0 right-0 top-0 flex items-center justify-between gap-2 border-b border-brand-surface bg-white px-3 py-2.5">
               <span className="truncate text-sm font-semibold text-content">
                 {editing && !creating ? `編輯：${editing.sku}` : '新增商品'}
               </span>
@@ -977,7 +978,7 @@ export const AdminProductsPage: React.FC = () => {
                 {editing && !creating && (
                   <button
                     type="button"
-                    className="text-xs font-medium text-[#0ea5e9] hover:underline"
+                    className="text-xs font-medium text-brand-primary hover:underline"
                     onClick={openCreate}
                   >
                     改為新增
@@ -985,7 +986,7 @@ export const AdminProductsPage: React.FC = () => {
                 )}
                 <button
                   type="button"
-                  className="rounded-lg border border-[#e2e8f0] px-2 py-1 text-xs font-medium text-[#64748b] hover:bg-[#f8fafc]"
+                  className="rounded-lg border border-brand-surface px-2 py-1 text-xs font-medium text-[#64748b] hover:bg-table-head"
                   onClick={() => setPanelOpen(false)}
                   aria-label="收起表單"
                 >
@@ -1021,7 +1022,7 @@ export const AdminProductsPage: React.FC = () => {
                     <div>
                       <label className="mb-1 block text-xs font-medium text-[#64748b]">類別</label>
                       <select
-                        className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                        className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                         value={form.categoryId}
                         onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                       >
@@ -1036,7 +1037,7 @@ export const AdminProductsPage: React.FC = () => {
                     <div>
                       <label className="mb-1 block text-xs font-medium text-[#64748b]">品牌</label>
                       <select
-                        className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                        className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                         value={form.brandId}
                         onChange={(e) => setForm((f) => ({ ...f, brandId: e.target.value }))}
                       >
@@ -1055,7 +1056,7 @@ export const AdminProductsPage: React.FC = () => {
                     規格與效期
                   </p>
                   {editing && (
-                    <div className="mb-3 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-2">
+                    <div className="mb-3 rounded-lg border border-brand-surface bg-table-head p-2">
                       <div className="mb-1 text-[11px] font-semibold text-muted">庫存餘額（快捷）</div>
                       <div className="flex flex-wrap gap-3 text-[11px]">
                         <span className="rounded bg-white px-2 py-1 shadow-sm">
@@ -1133,9 +1134,9 @@ export const AdminProductsPage: React.FC = () => {
                             </p>
                           )}
                         {!expiringError && expiringBatches && expiringBatches.length > 0 && (
-                          <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-[#e2e8f0] bg-[#f8fafc]">
+                          <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-brand-surface bg-table-head">
                             <table className="w-full border-collapse text-[11px]">
-                              <thead className="bg-[#e2e8f0] text-[#475569]">
+                              <thead className="bg-brand-surface text-[#475569]">
                                 <tr>
                                   <th className="px-2 py-1 text-left">批號</th>
                                   <th className="px-2 py-1 text-left">效期日</th>
@@ -1147,7 +1148,7 @@ export const AdminProductsPage: React.FC = () => {
                                 {expiringBatches.map((b) => (
                                   <tr
                                     key={`${b.productId}-${b.warehouseId}-${b.batchCode ?? 'none'}-${b.expiryDate}`}
-                                    className="border-t border-[#e2e8f0]"
+                                    className="border-t border-brand-surface"
                                   >
                                     <td className="px-2 py-1 font-mono">
                                       {b.batchCode || '—'}
@@ -1216,7 +1217,7 @@ export const AdminProductsPage: React.FC = () => {
                 <select
                   multiple
                   size={Math.min(6, tagOptions.length + 1)}
-                  className="w-full min-h-[100px] rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm text-content focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                  className="w-full min-h-[100px] rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm text-content focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                   value={form.tags}
                   onChange={(e) => {
                     const selected = Array.from(e.target.selectedOptions, (o) => o.value);
@@ -1233,7 +1234,7 @@ export const AdminProductsPage: React.FC = () => {
                   按住 Ctrl（Windows）或 Cmd（Mac）可多選
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2 border-t border-[#e2e8f0] pt-3">
+              <div className="flex flex-wrap gap-2 border-t border-brand-surface pt-3">
                 <Button type="submit">儲存</Button>
                 <Button type="button" variant="secondary" onClick={openCreate}>
                   {editing && !creating ? '取消編輯' : '清空表單'}

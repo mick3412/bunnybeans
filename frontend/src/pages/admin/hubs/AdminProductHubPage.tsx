@@ -17,7 +17,7 @@ function tabButtonClass(active: boolean) {
     'rounded-full px-3 py-1.5 text-xs font-semibold transition',
     active
       ? '!bg-[#1e293b] !text-white shadow-sm ring-2 ring-brand-primary/40'
-      : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
+      : 'bg-white text-[#64748b] ring-1 ring-brand-surface hover:bg-table-head',
   ].join(' ');
 }
 

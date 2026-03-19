@@ -30,12 +30,12 @@ export const AdminSegmentExportPage: React.FC = () => {
 
   return (
     <div
-      className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm"
+      className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm"
       data-testid="e2e-admin-segment-export"
     >
       <p className="mb-4 text-sm text-muted">
         依分群 ID 匯出名單 CSV（id, name, phone, memberLevel）。資料來源{' '}
-        <code className="rounded bg-[#f1f5f9] px-1 text-content">GET /crm/segments/:id/export</code>，需
+        <code className="rounded bg-brand-canvas px-1 text-content">GET /crm/segments/:id/export</code>，需
         VITE_ADMIN_API_KEY。
       </p>
 
@@ -44,7 +44,7 @@ export const AdminSegmentExportPage: React.FC = () => {
           <label className="mb-1 block text-sm text-muted">分群 ID</label>
           <input
             type="text"
-            className="w-64 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm font-mono"
+            className="w-64 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm font-mono"
             placeholder="Segment UUID"
             value={segmentId}
             onChange={(e) => setSegmentId(e.target.value)}

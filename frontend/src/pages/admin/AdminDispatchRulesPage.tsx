@@ -273,8 +273,8 @@ export const AdminDispatchRulesPage: React.FC = () => {
               type="button"
               className={`rounded-xl border px-3 py-1.5 text-sm font-medium ${
                 enabledFilter === f.key
-                  ? 'border-[#0ea5e9] bg-[#0ea5e9]/10 text-[#0ea5e9]'
-                  : 'border-[#e2e8f0] bg-white text-[#64748b] hover:border-[#cbd5e1]'
+                  ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                  : 'border-brand-surface bg-white text-[#64748b] hover:border-[#cbd5e1]'
               }`}
               onClick={() => setEnabledFilter(f.key)}
             >
@@ -285,7 +285,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
         <Button
           type="button"
           variant="primary"
-          className="rounded-xl px-4 shadow-md shadow-[#0ea5e9]/20"
+          className="rounded-xl px-4 shadow-md shadow-brand-primary/20"
           onClick={openNew}
           disabled={!merchantId}
         >
@@ -293,10 +293,10 @@ export const AdminDispatchRulesPage: React.FC = () => {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
+      <div className="overflow-hidden rounded-xl border border-brand-surface">
         <div className="table-sticky-head overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]">
+            <thead className="border-b border-brand-surface bg-table-head text-[#64748b]">
               <tr>
                 <th className="px-4 py-2 font-semibold">名稱</th>
                 <th className="px-4 py-2 font-semibold">分群</th>
@@ -325,19 +325,19 @@ export const AdminDispatchRulesPage: React.FC = () => {
               )}
               {!loading &&
                 rules.map((row) => (
-                  <tr key={row.id} className="border-t border-[#e2e8f0] hover:bg-[#f8fafc]">
+                  <tr key={row.id} className="border-t border-brand-surface hover:bg-table-head">
                     <td className="px-4 py-2 font-medium">{row.name}</td>
                     <td className="px-4 py-2 text-[#475569]">{segmentName(row.segmentId)}</td>
                     <td className="px-4 py-2 text-[#475569]">{couponLabel(row.couponId)}</td>
                     <td className="px-4 py-2">
-                      <span className="rounded bg-[#f1f5f9] px-2 py-0.5 text-xs">
+                      <span className="rounded bg-brand-canvas px-2 py-0.5 text-xs">
                         {SCHEDULE_OPTIONS.find((o) => o.value === row.scheduleType)?.label ?? row.scheduleType}
                       </span>
                     </td>
                     <td className="px-4 py-2">
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          row.enabled ? 'bg-[#16a34a]/12 text-[#16a34a] ring-1 ring-[#16a34a]/20' : 'bg-[#f1f5f9] text-[#64748b] ring-1 ring-[#e2e8f0]'
+                          row.enabled ? 'bg-brand-success/12 text-brand-success ring-1 ring-brand-success/20' : 'bg-brand-canvas text-[#64748b] ring-1 ring-brand-surface'
                         }`}
                       >
                         {row.enabled ? '啟用' : '停用'}
@@ -385,14 +385,14 @@ export const AdminDispatchRulesPage: React.FC = () => {
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          className="text-[#0ea5e9] hover:underline disabled:opacity-50"
+                          className="text-brand-primary hover:underline disabled:opacity-50"
                           onClick={() => openEdit(row)}
                         >
                           編輯
                         </button>
                         <button
                           type="button"
-                          className="text-[#0ea5e9] hover:underline disabled:opacity-50"
+                          className="text-brand-primary hover:underline disabled:opacity-50"
                           onClick={() => handleToggleEnabled(row)}
                           disabled={togglingId === row.id}
                         >
@@ -417,7 +417,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
 
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" aria-modal="true">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-brand-surface bg-white p-6 shadow-xl">
             <h3 className="mb-4 text-lg font-semibold text-[#1e293b]">
               {editingId ? '編輯發券規則' : '新增發券規則'}
             </h3>
@@ -426,7 +426,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 <label className="mb-1 block text-xs font-medium text-[#64748b]">名稱 *</label>
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="例：生日禮券"
@@ -435,7 +435,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
               <div>
                 <label className="mb-1 block text-xs font-medium text-[#64748b]">分群 *</label>
                 <select
-                  className="w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"
                   value={formSegmentId}
                   onChange={(e) => setFormSegmentId(e.target.value)}
                 >
@@ -449,7 +449,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
               <div>
                 <label className="mb-1 block text-xs font-medium text-[#64748b]">優惠券 *</label>
                 <select
-                  className="w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"
                   value={formCouponId}
                   onChange={(e) => setFormCouponId(e.target.value)}
                 >
@@ -466,7 +466,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                   id="form-enabled"
                   checked={formEnabled}
                   onChange={(e) => setFormEnabled(e.target.checked)}
-                  className="h-4 w-4 rounded border-[#e2e8f0] text-[#0ea5e9]"
+                  className="h-4 w-4 rounded border-brand-surface text-brand-primary"
                 />
                 <label htmlFor="form-enabled" className="text-sm text-[#475569]">
                   啟用
@@ -475,7 +475,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
               <div>
                 <label className="mb-1 block text-xs font-medium text-[#64748b]">排程類型 *</label>
                 <select
-                  className="w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"
                   value={formScheduleType}
                   onChange={(e) => setFormScheduleType(e.target.value)}
                 >
@@ -490,7 +490,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 <label className="mb-1 block text-xs font-medium text-[#64748b]">Cron 表達式（選填）</label>
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-sm font-mono"
+                  className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm font-mono"
                   value={formCronExpr}
                   onChange={(e) => setFormCronExpr(e.target.value)}
                   placeholder="例：0 9 * * *"
@@ -500,7 +500,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 <label className="mb-1 block text-xs font-medium text-[#64748b]">下次執行時間（選填）</label>
                 <input
                   type="datetime-local"
-                  className="w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"
                   value={formNextRunAt}
                   onChange={(e) => setFormNextRunAt(e.target.value)}
                 />

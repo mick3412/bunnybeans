@@ -81,7 +81,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
     const thresholdNum = Number(form.threshold);
     const lookbackNum = Number(form.lookbackDays || '365');
     if (!form.name.trim() || !form.targetLevel.trim() || !Number.isFinite(thresholdNum)) {
-      showToast('請填寫名稱、等級與門檻金額', 'err');
+      showToast('缺少名稱、等級或門檻金額', 'err');
       return;
     }
     setSaving(true);
@@ -135,7 +135,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-[#e2e8f0] pb-2">
+      <div className="border-b border-brand-surface pb-2">
         <h2 className="text-lg font-semibold text-[#1e293b]">會員等級規則</h2>
         <p className="mt-1 text-sm text-muted">
           依「區間消費金額」自動升級會員等級；目前僅支援 SPEND_SUM 規則，依門檻由高到低套用。
@@ -147,7 +147,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
         </div>
       )}
       <div className="grid gap-4 lg:grid-cols-[3fr,2fr]">
-        <div className="rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-semibold text-[#1e293b]">規則列表</span>
             <Button type="button" variant="secondary" onClick={runRecalc} disabled={saving}>
@@ -156,7 +156,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
           </div>
           <div className="table-sticky-head overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold uppercase text-muted">
+              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
                 <tr>
                   <th className="px-3 py-2">名稱</th>
                   <th className="px-3 py-2 text-right">門檻金額</th>
@@ -190,7 +190,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
                     <td className="px-3 py-2 text-right text-xs">
                       <button
                         type="button"
-                        className="mr-2 text-[#0ea5e9] hover:underline"
+                        className="mr-2 text-brand-primary hover:underline"
                         onClick={() => onEdit(r)}
                       >
                         編輯
@@ -209,7 +209,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
             </table>
           </div>
         </div>
-        <div className="rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm font-semibold text-[#1e293b]">
               {editing ? '編輯等級規則' : '新增等級規則'}
@@ -217,7 +217,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
             {editing && (
               <button
                 type="button"
-                className="text-xs font-medium text-[#0ea5e9] hover:underline"
+                className="text-xs font-medium text-brand-primary hover:underline"
                 onClick={resetForm}
               >
                 改為新增
@@ -229,14 +229,14 @@ export const LoyaltyTierRulesPage: React.FC = () => {
               label="規則名稱"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="例如：一年內累積滿 3 萬升 VIP"
+              placeholder=""
             />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextInput
                 label="目標等級代碼"
                 value={form.targetLevel}
                 onChange={(e) => setForm((f) => ({ ...f, targetLevel: e.target.value }))}
-                placeholder="例如：VIP / GOLD"
+                placeholder=""
               />
               <TextInput
                 label="觀察天數（lookbackDays）"
@@ -254,7 +254,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
             <p className="mt-1 text-[11px] text-muted">
               規則類型目前固定為「區間消費總額（SPEND_SUM）」：在觀察天數內，金額達門檻者會被升級到指定等級；若多條規則同時符合，套用門檻較高者。
             </p>
-            <div className="flex gap-2 border-t border-[#e2e8f0] pt-3">
+            <div className="flex gap-2 border-t border-brand-surface pt-3">
               <Button type="button" onClick={() => void save()} disabled={saving}>
                 {saving ? '儲存中…' : '儲存規則'}
               </Button>

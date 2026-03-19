@@ -22,9 +22,9 @@ type Act = {
 };
 
 const input =
-  'mt-1.5 w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm text-content shadow-sm placeholder:text-muted focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20';
+  'mt-1.5 w-full rounded-xl border border-brand-surface bg-white px-3 py-2.5 text-sm text-content shadow-sm placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
 const select =
-  'mt-1.5 w-full rounded-xl border border-[#e2e8f0] bg-white px-3 py-2.5 text-sm shadow-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20';
+  'mt-1.5 w-full rounded-xl border border-brand-surface bg-white px-3 py-2.5 text-sm shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
 const card = 'rounded-2xl border border-neutral-100 bg-white p-5 shadow-sm';
 const label = 'text-xs font-semibold uppercase tracking-wide text-muted';
 const sectionTitle = 'text-sm font-semibold text-content';
@@ -185,11 +185,11 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
 
   const save = async (activate: boolean) => {
     if (!merchantId || !name.trim()) {
-      setErr('請填促銷名稱；若從列表進入請帶 merchantId');
+      setErr('缺少促銷名稱或 merchantId');
       return;
     }
     if (!actions.length) {
-      setErr('請至少新增一項行動（THEN）');
+      setErr('至少需要一項行動（THEN）');
       return;
     }
     setSaving(true);
@@ -247,11 +247,11 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
   };
 
   const header = embed ? (
-    <header className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#e2e8f0] bg-white px-3 py-2">
+    <header className="sticky top-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-brand-surface bg-white px-3 py-2">
       <button
         type="button"
         onClick={onClose}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#e2e8f0] text-muted hover:bg-[#f8fafc]"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-brand-surface text-muted hover:bg-table-head"
         aria-label="關閉"
       >
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,12 +268,12 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
       </div>
     </header>
   ) : (
-    <header className="sticky top-0 z-10 border-b border-[#e2e8f0] bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-10 border-b border-brand-surface bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <Link
             to={`/admin/promotions${merchantId ? `?merchantId=${merchantId}` : ''}`}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#e2e8f0] bg-white text-muted shadow-sm transition hover:border-[#e2e8f0] hover:bg-[#f8fafc]"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-brand-surface bg-white text-muted shadow-sm transition hover:border-brand-surface hover:bg-table-head"
             aria-label="返回"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -290,7 +290,7 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
             variant="secondary"
             size="sm"
             disabled={saving}
-            className="rounded-xl border-[#e2e8f0]"
+            className="rounded-xl border-brand-surface"
             onClick={() => save(false)}
           >
             存草稿
@@ -300,7 +300,7 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
             variant="primary"
             size="sm"
             disabled={saving}
-            className="rounded-xl px-4 shadow-sm shadow-[#0ea5e9]/25"
+            className="rounded-xl px-4 shadow-sm shadow-brand-primary/25"
             onClick={() => save(true)}
           >
             啟用促銷
@@ -323,8 +323,8 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* 左欄 */}
           <div className="space-y-5">
-          <div className={`${card} border-[#e2e8f0] bg-gradient-to-b from-white to-[#f8fafc]`}>
-            <div className="flex items-center gap-2 text-[#0ea5e9]">
+          <div className={`${card} border-brand-surface bg-gradient-to-b from-white to-table-head`}>
+            <div className="flex items-center gap-2 text-brand-primary">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -428,7 +428,7 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
                 <h2 className={sectionTitle}>條件 (IF)</h2>
                 <button
                   type="button"
-                  className="text-sm font-medium text-[#0ea5e9] hover:text-brand-primary-hover"
+                  className="text-sm font-medium text-brand-primary hover:text-brand-primary-hover"
                   onClick={() =>
                     setConditions((c) => [...c, { type: 'SPEND', op: '>=', value: 0 }])
                   }
@@ -555,7 +555,7 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
                 <h2 className={sectionTitle}>行動 (THEN)</h2>
                 <button
                   type="button"
-                  className="text-sm font-medium text-[#0ea5e9] hover:text-brand-primary-hover"
+                  className="text-sm font-medium text-brand-primary hover:text-brand-primary-hover"
                   onClick={() =>
                     setActions((a) => [...a, { type: 'WHOLE_PERCENT', discountPercent: 10 }])
                   }
@@ -691,7 +691,7 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
                                 <input
                                   type="number"
                                   placeholder="1000"
-                                  className="ml-1 w-20 rounded-lg border border-[#e2e8f0] px-2 py-1.5 text-sm"
+                                  className="ml-1 w-20 rounded-lg border border-brand-surface px-2 py-1.5 text-sm"
                                   value={t.threshold}
                                   onChange={(e) => {
                                     const tiers = [...(a.tiers ?? [])];
@@ -710,7 +710,7 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
                                 <input
                                   type="number"
                                   placeholder="10"
-                                  className="ml-1 w-16 rounded-lg border border-[#e2e8f0] px-2 py-1.5 text-sm"
+                                  className="ml-1 w-16 rounded-lg border border-brand-surface px-2 py-1.5 text-sm"
                                   value={t.discountPercent}
                                   onChange={(e) => {
                                     const tiers = [...(a.tiers ?? [])];

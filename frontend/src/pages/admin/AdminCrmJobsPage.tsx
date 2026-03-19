@@ -24,11 +24,11 @@ const KIND_OPTIONS: { value: string; label: string }[] = [
 const PAGE_SIZES = [10, 20, 50];
 
 function statusLabel(s: string) {
-  if (s === 'pending') return { text: '待處理', cls: 'bg-[#f8fafc] text-muted ring-1 ring-[#e2e8f0]' };
+  if (s === 'pending') return { text: '待處理', cls: 'bg-table-head text-muted ring-1 ring-brand-surface' };
   if (s === 'running') return { text: '執行中', cls: 'bg-sky-50 text-sky-800 ring-1 ring-sky-200' };
   if (s === 'done') return { text: '完成', cls: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200' };
   if (s === 'failed') return { text: '失敗', cls: 'bg-rose-50 text-rose-800 ring-1 ring-rose-200' };
-  return { text: s, cls: 'bg-[#f8fafc] text-muted ring-1 ring-[#e2e8f0]' };
+  return { text: s, cls: 'bg-table-head text-muted ring-1 ring-brand-surface' };
 }
 
 export const AdminCrmJobsPage: React.FC = () => {
@@ -261,10 +261,10 @@ export const AdminCrmJobsPage: React.FC = () => {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
+      <div className="overflow-hidden rounded-xl border border-brand-surface">
         {loading ? (
           <div className="flex min-h-[200px] items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#0ea5e9] border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
           </div>
         ) : items.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted">
@@ -278,7 +278,7 @@ export const AdminCrmJobsPage: React.FC = () => {
         ) : (
           <div className="table-sticky-head overflow-x-auto bg-white">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold text-[#64748b]">
+              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold text-[#64748b]">
                 <tr>
                   <th className="w-[220px] px-3 py-2 text-right">時間</th>
                   <th className="px-3 py-2">種類</th>
@@ -292,7 +292,7 @@ export const AdminCrmJobsPage: React.FC = () => {
                 {items.map((r) => {
                   const st = statusLabel(r.status);
                   return (
-                    <tr key={r.id} className="border-b border-[#e2e8f0] hover:bg-[#f8fafc]">
+                    <tr key={r.id} className="border-b border-brand-surface hover:bg-table-head">
                       <td className="px-3 py-2 whitespace-nowrap tabular-nums text-right text-xs text-muted">
                         {new Date(r.createdAt).toLocaleString('zh-TW')}
                       </td>
@@ -325,7 +325,7 @@ export const AdminCrmJobsPage: React.FC = () => {
         )}
 
         {total > 0 && (
-          <div className="flex items-center justify-between border-t border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-sm text-muted">
+          <div className="flex items-center justify-between border-t border-brand-surface bg-table-head px-3 py-2 text-sm text-muted">
             <span>
               共 {total} 筆 · 第 {page} / {totalPages} 頁
             </span>
@@ -356,8 +356,8 @@ export const AdminCrmJobsPage: React.FC = () => {
       {drawerOpen && drawerJobId && (
         <div className="fixed inset-0 z-40">
           <div className="absolute inset-0 bg-black/40" onClick={closeDrawer} aria-hidden />
-          <div className="absolute right-0 top-0 h-full w-[min(520px,100vw)] border-l border-[#e2e8f0] bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-[#e2e8f0] bg-[#f8fafc] px-4 py-3">
+          <div className="absolute right-0 top-0 h-full w-[min(520px,100vw)] border-l border-brand-surface bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-brand-surface bg-table-head px-4 py-3">
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-content">Job 結果</div>
                 <div className="mt-0.5 font-mono text-[11px] text-muted">{drawerJobId}</div>
@@ -390,11 +390,11 @@ export const AdminCrmJobsPage: React.FC = () => {
                     })()}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-[#e2e8f0] bg-white p-3">
+                    <div className="rounded-xl border border-brand-surface bg-white p-3">
                       <div className="text-xs font-semibold text-muted">sent</div>
                       <div className="mt-1 text-2xl font-bold tabular-nums text-content">{drawerJob.result?.sent ?? 0}</div>
                     </div>
-                    <div className="rounded-xl border border-[#e2e8f0] bg-white p-3">
+                    <div className="rounded-xl border border-brand-surface bg-white p-3">
                       <div className="text-xs font-semibold text-muted">skipped</div>
                       <div className="mt-1 text-2xl font-bold tabular-nums text-content">{drawerJob.result?.skipped ?? 0}</div>
                     </div>
@@ -405,7 +405,7 @@ export const AdminCrmJobsPage: React.FC = () => {
                     </div>
                   )}
                   {(drawerJob.result?.errors?.length ?? 0) > 0 && (
-                    <details className="mt-3 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                    <details className="mt-3 rounded-xl border border-brand-surface bg-table-head p-3">
                       <summary className="cursor-pointer text-sm font-semibold text-content">
                         錯誤列表（最多 50）
                       </summary>

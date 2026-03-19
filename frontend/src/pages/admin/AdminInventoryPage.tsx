@@ -304,7 +304,7 @@ export const AdminInventoryPage: React.FC = () => {
   const totalPages = events ? Math.max(1, Math.ceil(events.total / pageSize)) : 1;
 
   return (
-    <div className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm" data-testid="e2e-admin-inventory">
+    <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-admin-inventory">
       <p className="mb-4 text-sm text-[#64748b]">
         選擇倉庫後檢視即時庫存與事件歷史（append-only）。
       </p>
@@ -322,7 +322,7 @@ export const AdminInventoryPage: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           <label className="shrink-0 text-sm font-medium text-muted">倉庫</label>
           <select
-            className="h-9 min-w-[140px] shrink-0 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+            className="h-9 min-w-[140px] shrink-0 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             value={warehouseId}
             onChange={(e) => {
               setWarehouseId(e.target.value);
@@ -371,7 +371,7 @@ export const AdminInventoryPage: React.FC = () => {
                 type="file"
                 accept=".csv,text/csv"
                 disabled={importSubmitting || !hasAdminKey}
-                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-[#e2e8f0] file:px-2 file:py-0.5 file:text-xs"
+                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-brand-surface file:px-2 file:py-0.5 file:text-xs"
                 title={!hasAdminKey ? adminKeyRequiredMsg : undefined}
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
@@ -419,7 +419,7 @@ export const AdminInventoryPage: React.FC = () => {
                 type="file"
                 accept=".csv,text/csv"
                 disabled={jobSubmitting || !hasAdminKey}
-                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-[#e2e8f0] file:px-2 file:py-0.5 file:text-xs"
+                className="max-w-[160px] text-xs file:mr-1.5 file:rounded file:border-0 file:bg-brand-surface file:px-2 file:py-0.5 file:text-xs"
                 title={!hasAdminKey ? adminKeyRequiredMsg : undefined}
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
@@ -481,7 +481,7 @@ export const AdminInventoryPage: React.FC = () => {
         </div>
       </div>
       {(importResult || jobId || jobError) && (
-        <div className="mb-6 flex flex-wrap items-start gap-3 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+        <div className="mb-6 flex flex-wrap items-start gap-3 rounded-lg border border-brand-surface bg-table-head px-3 py-2">
           {importResult && (
             <span className="text-[11px] font-medium text-emerald-700">
               成功 {importResult.ok} 列
@@ -519,7 +519,7 @@ export const AdminInventoryPage: React.FC = () => {
           className={`rounded-full px-4 py-2 text-sm font-medium transition ${
             view === 'balances'
               ? 'bg-[#1e293b] text-white shadow-sm'
-              : 'bg-white text-[#64748b] shadow-sm ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]'
+              : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
           }`}
           onClick={() => setView('balances')}
         >
@@ -530,7 +530,7 @@ export const AdminInventoryPage: React.FC = () => {
           className={`rounded-full px-4 py-2 text-sm font-medium transition ${
             view === 'slowMoving'
               ? 'bg-[#1e293b] text-white shadow-sm'
-              : 'bg-white text-[#64748b] shadow-sm ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]'
+              : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
           }`}
           onClick={() => setView('slowMoving')}
         >
@@ -543,8 +543,8 @@ export const AdminInventoryPage: React.FC = () => {
 
       {view === 'balances' ? (
         <>
-          <section className="table-sticky-head mb-8 overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
-            <div className="border-b border-[#e2e8f0] px-4 py-3 text-sm font-semibold text-content">
+          <section className="table-sticky-head mb-8 overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
+            <div className="border-b border-brand-surface px-4 py-3 text-sm font-semibold text-content">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span>庫存餘額</span>
                 <div className="flex items-center gap-2">
@@ -567,7 +567,7 @@ export const AdminInventoryPage: React.FC = () => {
                       'rounded-full px-3 py-1.5 text-xs font-semibold transition',
                       stocktakeMode === 'list'
                         ? 'bg-[#1e293b] text-white shadow-sm'
-                        : 'bg-white text-[#64748b] shadow-sm ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
+                        : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head',
                     ].join(' ')}
                     onClick={() => setStocktakeMode('list')}
                   >
@@ -677,7 +677,7 @@ export const AdminInventoryPage: React.FC = () => {
             )}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]">
+                <thead className="border-b border-brand-surface bg-table-head text-[#64748b]">
                   <tr>
                     <th className="px-4 py-2 w-10">
                       <input
@@ -709,7 +709,7 @@ export const AdminInventoryPage: React.FC = () => {
                     </tr>
                   ) : (
                     balances.map((row) => (
-                      <tr key={`${row.productId}-${row.warehouseId}`} className="border-t border-[#e2e8f0]">
+                      <tr key={`${row.productId}-${row.warehouseId}`} className="border-t border-brand-surface">
                         <td className="px-4 py-2">
                           <input
                             type="checkbox"
@@ -733,7 +733,7 @@ export const AdminInventoryPage: React.FC = () => {
                           <input
                             type="number"
                             min={0}
-                            className="h-8 w-28 rounded-lg border border-[#e2e8f0] bg-white px-2 py-1 text-sm text-right tabular-nums focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                            className="h-8 w-28 rounded-lg border border-brand-surface bg-white px-2 py-1 text-sm text-right tabular-nums focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                             value={
                               Number.isFinite(actualQtyByProductId[row.productId] as number)
                                 ? String(actualQtyByProductId[row.productId])
@@ -959,13 +959,13 @@ export const AdminInventoryPage: React.FC = () => {
               </div>
           </StandardFloatBar>
 
-          <section className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
-            <div className="border-b border-[#e2e8f0] px-4 py-3 text-sm font-semibold text-content">
+          <section className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
+            <div className="border-b border-brand-surface px-4 py-3 text-sm font-semibold text-content">
               異動明細
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]">
+                <thead className="border-b border-brand-surface bg-table-head text-[#64748b]">
                   <tr>
                     <th className="px-4 py-2">時間</th>
                     <th className="px-4 py-2">類型</th>
@@ -982,7 +982,7 @@ export const AdminInventoryPage: React.FC = () => {
                     </tr>
                   ) : (
                     events.items.map((ev) => (
-                      <tr key={ev.id} className="border-t border-[#e2e8f0]">
+                      <tr key={ev.id} className="border-t border-brand-surface">
                         <td className="px-4 py-2 text-xs whitespace-nowrap">
                           {new Date(ev.occurredAt).toLocaleString()}
                         </td>
@@ -998,7 +998,7 @@ export const AdminInventoryPage: React.FC = () => {
               </table>
             </div>
             {events && events.total > pageSize && (
-              <div className="flex items-center justify-between border-t border-[#e2e8f0] px-4 py-3 text-sm">
+              <div className="flex items-center justify-between border-t border-brand-surface px-4 py-3 text-sm">
                 <span className="text-[#64748b]">
                   共 {events.total} 筆 · 第 {page} / {totalPages} 頁
                 </span>
@@ -1006,7 +1006,7 @@ export const AdminInventoryPage: React.FC = () => {
                   <button
                     type="button"
                     disabled={page <= 1}
-                    className="rounded border border-[#e2e8f0] px-3 py-1 disabled:opacity-40"
+                    className="rounded border border-brand-surface px-3 py-1 disabled:opacity-40"
                     onClick={() => setPage((p) => p - 1)}
                   >
                     上一頁
@@ -1014,7 +1014,7 @@ export const AdminInventoryPage: React.FC = () => {
                   <button
                     type="button"
                     disabled={page >= totalPages}
-                    className="rounded border border-[#e2e8f0] px-3 py-1 disabled:opacity-40"
+                    className="rounded border border-brand-surface px-3 py-1 disabled:opacity-40"
                     onClick={() => setPage((p) => p + 1)}
                   >
                     下一頁
@@ -1025,8 +1025,8 @@ export const AdminInventoryPage: React.FC = () => {
           </section>
         </>
       ) : (
-        <section className="rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
-          <div className="border-b border-[#e2e8f0] px-4 py-3">
+        <section className="rounded-xl border border-brand-surface bg-white shadow-sm">
+          <div className="border-b border-brand-surface px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-semibold text-content">滯銷品</div>
@@ -1074,7 +1074,7 @@ export const AdminInventoryPage: React.FC = () => {
                 <input
                   type="number"
                   min={1}
-                  className="h-9 w-28 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                  className="h-9 w-28 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                   value={slowParams.lookbackDays}
                   onChange={(e) => setSlowParams((p) => ({ ...p, lookbackDays: Number(e.target.value) }))}
                 />
@@ -1084,7 +1084,7 @@ export const AdminInventoryPage: React.FC = () => {
                 <input
                   type="number"
                   min={0}
-                  className="h-9 w-32 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                  className="h-9 w-32 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                   value={slowParams.salesThreshold}
                   onChange={(e) => setSlowParams((p) => ({ ...p, salesThreshold: Number(e.target.value) }))}
                 />
@@ -1094,7 +1094,7 @@ export const AdminInventoryPage: React.FC = () => {
                 <input
                   type="number"
                   min={0}
-                  className="h-9 w-32 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+                  className="h-9 w-32 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                   value={slowParams.onHandThreshold}
                   onChange={(e) => setSlowParams((p) => ({ ...p, onHandThreshold: Number(e.target.value) }))}
                 />
@@ -1123,7 +1123,7 @@ export const AdminInventoryPage: React.FC = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-[#64748b]">
+              <thead className="border-b border-brand-surface bg-table-head text-[#64748b]">
                 <tr>
                   <th className="px-4 py-2">SKU</th>
                   <th className="px-4 py-2">品名</th>
@@ -1141,7 +1141,7 @@ export const AdminInventoryPage: React.FC = () => {
                   </tr>
                 ) : (
                   slowItems.map((row) => (
-                    <tr key={`${row.productId}-${row.warehouseId ?? 'all'}`} className="border-t border-[#e2e8f0]">
+                    <tr key={`${row.productId}-${row.warehouseId ?? 'all'}`} className="border-t border-brand-surface">
                       <td className="px-4 py-2 font-mono text-xs">{row.sku ?? row.productId.slice(0, 8)}</td>
                       <td className="px-4 py-2">{row.name ?? '—'}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{row.soldQty}</td>

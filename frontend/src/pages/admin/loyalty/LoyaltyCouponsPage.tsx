@@ -65,7 +65,7 @@ export const LoyaltyCouponsPage: React.FC = () => {
 
   const add = async () => {
     if (!merchantId || !code.trim() || !name.trim()) {
-      showToast('請填券碼與名稱', 'err');
+      showToast('缺少券碼或名稱', 'err');
       return;
     }
     const out = await createLoyaltyCoupon(merchantId, {
@@ -96,7 +96,7 @@ export const LoyaltyCouponsPage: React.FC = () => {
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
       )}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
         <span className="text-xs font-semibold text-muted">搜尋／篩選</span>
         <TextInput
           label="券號／名稱"
@@ -119,7 +119,7 @@ export const LoyaltyCouponsPage: React.FC = () => {
           </select>
         </div>
       </div>
-      <div className="rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
         <div className="mb-3 text-xs font-semibold text-muted">新增（需 Admin Key）</div>
         <div className="flex flex-wrap gap-3">
           <TextInput label="券碼" value={code} onChange={(e) => setCode(e.target.value)} className="w-36" />
@@ -143,9 +143,9 @@ export const LoyaltyCouponsPage: React.FC = () => {
           </div>
         </div>
       </div>
-      <div className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+      <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs text-muted">
+          <thead className="border-b border-brand-surface bg-table-head text-xs text-muted">
             <tr>
               <th className="px-3 py-2">券碼</th>
               <th className="px-3 py-2">名稱</th>
