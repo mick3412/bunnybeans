@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 019（應收 merchantId、金流快照中文、集點版面、側欄營運/業績、訂單管理按鈕移除、熱銷品/區間趨勢、點擊審計 testid、跨層 E2E）
+- 做了：`getFinanceBalances` 新增 merchantId 並在餘額頁傳遞；金流快照全中文化；集點規則版面對齊 StandardListLayout；會員中心 hub 將「會員管理」tab 移到儀表板右側；訂單管理頁移除「回到收銀」「庫存(後台)」按鈕；側欄「總覽」→「營運」、新增「業績」入口 `/admin/performance`；PosReportsPage 熱銷品／區間趨勢在 merchantId 未設定時不呼叫 API、顯示友善錯誤、並行載入；點擊審計結果代碼輸入框補 `data-testid="e2e-admin-ops-report-clicks-resultcode-input"`；admin-categories E2E 新增類別 code 跨層驗證、e2e-pos 文件同步。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 待 dev server 啟動後執行（localhost:5174）。
+- commits：adeda9f1 pass merchantId to getFinanceBalances；99a6f44d localize finance snapshots；185ffb90 align LoyaltySettingsPage；0ff1dd48 move 會員管理 tab；40ee8553 remove orders list buttons；f664daf8 sidebar 營運+業績；c65d84cd guard merchantId for topItems/daily；d0727b48 click-audit resultCode testid；eea23dd9 e2e category code + docs
+
+---
+
 ### INSTRUCTIONS 018（fixed suite 穩定化 + 主檔代碼同步 + 點擊審計中文化 + 商品總覽表格可讀性）
 - 做了：`AdminCustomerImportPage` 修正 preview/apply 區塊 testid 與 JSX；`AdminCategoriesPage` 擴充 master sections testid，並落地「名稱變更自動生成 code（a-z0-9-）+ 重複自動補 suffix；手動改 code 後停止自動同步」；`AdminOpsReportClicksPage` 將結果代碼/解析類型以中文呈現並保留原始碼；`AdminProductsPage` 強化表格可讀性（新增定價/售價/成本/效期欄、數字欄右對齊、規格展開/收合、操作靠右），並將 401 文案改走 `getErrorMessage`；`docs/e2e-pos.md` 同步更新 customers-import 定位點。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`CI=0 E2E_PROFILE=full E2E_BASE_URL=http://localhost:5174 pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-customers-import.spec.ts e2e/admin-bulk.spec.ts e2e/admin-replenishment.spec.ts` ✅（8 passed / 4 skipped：缺 Admin key 的用例）
