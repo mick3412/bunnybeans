@@ -5,6 +5,7 @@ import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useAdminToast } from './AdminToastContext';
+import { getFinanceEventTypeLabel } from '../../shared/utils/financeEventTypeLabels';
 
 const PAGE_SIZES = [50, 100, 200];
 
@@ -172,7 +173,7 @@ export const AdminFinanceAuditPage: React.FC = () => {
       error={err}
       empty={!loading && !err && items.length === 0}
       emptyMessage="尚無稽核紀錄"
-      emptyDescription="請先設定篩選條件後查詢，或確認後端 Audit Log 已寫入。"
+      emptyDescription=""
       testId="e2e-admin-finance-audit"
     >
       <div className="overflow-hidden rounded-xl border border-brand-surface bg-white">
@@ -194,7 +195,9 @@ export const AdminFinanceAuditPage: React.FC = () => {
                   <td className="max-w-[180px] truncate px-4 py-2 font-mono text-xs text-content" title={row.eventId}>
                     {row.eventId.length > 10 ? `${row.eventId.slice(0, 8)}…` : row.eventId}
                   </td>
-                  <td className="px-4 py-2 text-content">{row.eventType ?? '—'}</td>
+                  <td className="px-4 py-2 text-content" title={row.eventType ?? undefined} aria-label={row.eventType ?? undefined}>
+                    {row.eventType ? getFinanceEventTypeLabel(row.eventType) : '—'}
+                  </td>
                   <td className="px-4 py-2 text-muted">{row.source ?? '—'}</td>
                   <td className="px-4 py-2 text-muted">{row.amount != null ? `金額：${row.amount}` : '—'}</td>
                   <td className="px-4 py-2 tabular-nums text-muted">{row.createdAt ?? '—'}</td>

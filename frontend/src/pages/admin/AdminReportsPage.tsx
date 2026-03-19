@@ -17,6 +17,7 @@ import { ReferenceIdLink } from '../../shared/components/ReferenceIdLink';
 import { PartyViewSegmented } from '../../shared/components/PartyViewSegmented';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
+import { FINANCE_EVENT_TYPE_LABELS, getFinanceEventTypeLabel } from '../../shared/utils/financeEventTypeLabels';
 
 function toYmd(d: Date): string {
   const y = d.getFullYear();
@@ -27,20 +28,8 @@ function toYmd(d: Date): string {
 
 const FINANCE_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: '全部類型' },
-  { value: 'SALE_RECEIVABLE', label: '銷售應收' },
-  { value: 'SALE_PAYMENT', label: '銷售實收' },
-  { value: 'SALE_REFUND', label: '銷售退款' },
-  { value: 'PURCHASE_PAYABLE', label: '採購應付' },
-  { value: 'PURCHASE_RETURN', label: '退供應商' },
-  { value: 'ADJUSTMENT', label: '人工調整' },
+  ...Object.entries(FINANCE_EVENT_TYPE_LABELS).map(([value, label]) => ({ value, label })),
 ];
-
-const FINANCE_TYPE_LABELS: Record<string, string> = Object.fromEntries(
-  FINANCE_TYPE_OPTIONS.filter((o) => o.value).map((o) => [o.value, o.label]),
-);
-function financeTypeLabel(type: string): string {
-  return FINANCE_TYPE_LABELS[type] ?? type;
-}
 
 export const AdminReportsPage: React.FC = () => {
   const location = useLocation();
@@ -402,7 +391,7 @@ export const AdminReportsPage: React.FC = () => {
             <div className="flex flex-wrap gap-4 text-sm">
               {Object.entries(summary.byType).map(([type, amount]) => (
                 <span key={type} className="rounded bg-white px-3 py-1.5 shadow-sm">
-                  <span className="text-muted">{financeTypeLabel(type)}</span>
+                  <span className="text-muted">{getFinanceEventTypeLabel(type)}</span>
                   <span className="ml-2 tabular-nums font-medium text-content">{Number(amount).toLocaleString()}</span>
                 </span>
               ))}
@@ -412,7 +401,7 @@ export const AdminReportsPage: React.FC = () => {
             <div className="mb-3 text-sm font-semibold text-muted">簡單圖表（依類型）</div>
             <MiniBarChart
               items={Object.entries(summary.byType).map(([type, amount]) => ({
-                label: financeTypeLabel(type),
+                label: getFinanceEventTypeLabel(type),
                 value: Number(amount),
               }))}
             />
@@ -441,7 +430,7 @@ export const AdminReportsPage: React.FC = () => {
             <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
               <div className="mb-2 text-sm font-semibold text-muted">本期 vs 上期（近 30 日對比）</div>
               <p className="mb-3 text-xs text-muted">
-                本期：近 30 日；上期：再往前 30 日（同長度區間）。折線呈現「實收（SALE_PAYMENT）」。
+                本期：近 30 日；上期：再往前 30 日（同長度區間）。折線呈現「實收（銷售實收）」。
               </p>
               <div className="grid gap-3 lg:grid-cols-2">
                 <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-3">
@@ -549,7 +538,7 @@ export const AdminReportsPage: React.FC = () => {
                     <td className="px-4 py-2 whitespace-nowrap text-xs text-muted">
                       {new Date(ev.occurredAt).toLocaleString()}
                     </td>
-                    <td className="px-4 py-2 text-xs">{financeTypeLabel(ev.type)}</td>
+                    <td className="px-4 py-2 text-xs">{getFinanceEventTypeLabel(ev.type)}</td>
                     <td className="px-4 py-2 text-right tabular-nums font-medium">{ev.amount}</td>
                     <td className="px-4 py-2">{ev.currency}</td>
                     <td className="max-w-[140px] truncate px-4 py-2 font-mono text-xs text-muted">
