@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 022（會員路由收斂、Party 視圖、常用區塊刪除）
+- 做了：① LoyaltyMembersPage 註記為 legacy（redirect 已存在，側欄/Hub 單一入口 `/admin/customers`）。② Party 視圖：`partyDisplay.ts` 共用 util，AdminFinanceBalancesPage／AdminReportsPage 優先 displayName、kind 標籤，相容 customer:/supplier: 小寫前綴；byParty drill-down 傳完整 partyId 至 balances。③ PosPage 常用區塊編輯模式下產品標籤顯示刪除符號（－），點擊可移除。④ admin-balances E2E 新增金流報表 drill-down 驗證。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 本機 port 衝突未跑（需手動執行 `e2e/admin-categories.spec.ts`、`e2e/admin-ops-report-clicks-full.spec.ts`、`e2e/admin-balances.spec.ts`）。
+- commits：ff85cdf8 chore LoyaltyMembersPage legacy；1e87bcb5 feat Party 視圖；bcba5abd feat POS 常用區塊刪除符號；8da69512 test e2e drill-down
+
+---
+
 ### INSTRUCTIONS 021（庫存 header、商品總覽、類別文案、訂單門市名稱、業績中文、CSV 縮小、sticky + 補做收尾）
 - 做了：AdminInventoryPage CSV 匯入區塊縮小放右上角與倉庫同列；AdminCategoriesPage 移除全域/標籤區冗長提示、代碼（可選）→代碼；商品主檔→商品總覽（tab/頁標）；AdminProductsPage CSV 改 details 收合，補上 SKU／名稱／操作欄 freeze 與欄位排序；PosOrdersListPage 門市欄顯示名稱（非 ID）；業績概覽付款方式（CASH→現金 等）、分類中文、熱銷/區間載入錯誤合併顯示與可操作提示；補做 PosPage 常用區塊編輯模式（編輯/完成、+/-）與商品卡名稱置中+規格副標；PosOrderDetailPage 版面改為與標準卡片樣式一致；`docs/member-management-review.md` 補充會員路由收斂提案；Party 視圖維持依 kind 分頁與 displayName 顯示（已就緒）。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`CI=0 E2E_PROFILE=full pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-ops-report-clicks-full.spec.ts` ✅（3 passed / 2 skipped）。
