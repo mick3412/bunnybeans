@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../shared/database/database.module';
-import { InventoryModule } from '../inventory/inventory.module';
 import { FinanceModule } from '../finance/finance.module';
-import { PromotionModule } from '../promotion/promotion.module';
+import { InventoryModule } from '../inventory/inventory.module';
 import { LoyaltyModule } from '../loyalty/loyalty.module';
+import { MerchantModule } from '../merchant/merchant.module';
+import { PromotionModule } from '../promotion/promotion.module';
 import { PosController } from './interface/pos.controller';
 import { PosReportsController } from './interface/pos-reports.controller';
 import { PosPromotionsController } from './interface/pos-promotions.controller';
@@ -15,6 +16,7 @@ import { PosRepository } from './infrastructure/pos.repository';
   imports: [
     DatabaseModule,
     InventoryModule,
+    MerchantModule,
     FinanceModule,
     PromotionModule,
     LoyaltyModule,

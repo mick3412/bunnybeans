@@ -13,6 +13,7 @@ import {
 import type { Response } from 'express';
 import { FinanceEventType } from '@prisma/client';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
+import { MerchantService } from '../../merchant/application/merchant.service';
 import { OpsService } from '../../ops/application/ops.service';
 import { FinanceService, RecordFinanceEventInput } from '../application/finance.service';
 
@@ -20,6 +21,7 @@ import { FinanceService, RecordFinanceEventInput } from '../application/finance.
 export class FinanceController {
   constructor(
     private readonly service: FinanceService,
+    private readonly merchantService: MerchantService,
     private readonly opsService: OpsService,
   ) {}
 
@@ -51,15 +53,21 @@ export class FinanceController {
   }
 
   @Get('balances')
-  getBalances(
+  async getBalances(
     @Query('merchantId') merchantId?: string,
     @Query('partyId') _partyId?: string,
     @Query('kind') _kind?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
-    if (!merchantId?.trim()) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId required' });
+    let resolved = merchantId?.trim();
+    if (!resolved) {
+      try {
+        const current = await this.merchantService.getCurrentMerchant();
+        resolved = current.id;
+      } catch {
+        throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId required' });
+      }
     }
     const kind =
       _kind === 'customer'
@@ -68,7 +76,7 @@ export class FinanceController {
           ? ('supplier' as const)
           : undefined;
     return this.service.getBalances({
-      merchantId: merchantId.trim(),
+      merchantId: resolved,
       partyId: _partyId,
       kind,
       page: page != null ? parseInt(page, 10) : undefined,
