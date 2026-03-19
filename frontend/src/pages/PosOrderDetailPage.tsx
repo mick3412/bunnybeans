@@ -248,9 +248,9 @@ export const PosOrderDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-100">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-surface bg-white/80 px-3 py-3 backdrop-blur sm:px-6">
-        <div className="text-sm font-semibold text-content">訂單明細</div>
+    <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-brand-surface pb-2">
+        <h2 className="text-lg font-semibold text-content">訂單明細</h2>
         <div className="flex flex-wrap gap-2">
           {returnTo && (
             <Button type="button" size="sm" variant="secondary" onClick={() => navigate(returnTo)}>
@@ -267,14 +267,13 @@ export const PosOrderDetailPage: React.FC = () => {
             收銀
           </Button>
         </div>
-      </header>
-
-      <main className="min-h-0 flex-1 px-3 pb-4 pt-3 sm:px-4">
+      </div>
+      <div className="min-h-0">
         {exchangeOpen && (
           <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true">
             <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-content">換貨導引（MVP）</h2>
+                <h2 className="text-sm font-semibold text-content">換貨（MVP）</h2>
                 <button
                   type="button"
                   className="rounded px-2 py-1 text-xs text-muted hover:bg-[#f1f5f9]"
@@ -285,10 +284,6 @@ export const PosOrderDetailPage: React.FC = () => {
               </div>
               <div className="space-y-3 text-sm">
                 <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                  <div className="text-xs font-semibold text-content">Step 1：先做退貨入庫</div>
-                  <div className="mt-1 text-xs text-muted">
-                    退貨入庫會把庫存加回（RETURN_FROM_CUSTOMER），與退款分開；退款請在本頁「退款（沖帳）」處理。
-                  </div>
                   <div className="mt-2">
                     <Button
                       type="button"
@@ -305,10 +300,6 @@ export const PosOrderDetailPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                  <div className="text-xs font-semibold text-content">Step 2：去收銀建立新單</div>
-                  <div className="mt-1 text-xs text-muted">
-                    完成退貨入庫後，回到收銀台重新加購要換出的商品並結帳。若需差額，依門市規則用補款/退款處理。
-                  </div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button type="button" size="sm" variant="primary" onClick={() => navigate('/pos')}>
                       前往收銀
@@ -318,14 +309,11 @@ export const PosOrderDetailPage: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="text-[11px] text-muted">
-                  提示：此為最小流程導引，暫不建立「換貨單」關聯；人工可用原單 id 與新單 id 追查。
-                </div>
               </div>
             </div>
           </div>
         )}
-        <div className="mx-auto w-full max-w-3xl rounded-2xl bg-white p-3 shadow-sm shadow-slate-200 sm:p-4">
+        <div className="w-full rounded-xl border border-brand-surface bg-white p-4">
           {error && (
             <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">
               {error}
@@ -415,7 +403,7 @@ export const PosOrderDetailPage: React.FC = () => {
                         ) : null}
                       </div>
                     ) : (
-                      <div className="mt-2 text-[11px] text-muted">提示：若後端提供 settlement 資訊，這裡會顯示差額與補款/退款狀態。</div>
+                      null
                     )}
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
                       <div className="min-w-0 rounded-lg bg-table-head px-3 py-2">
@@ -474,7 +462,7 @@ export const PosOrderDetailPage: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    {returnTo ? <div className="mt-2 text-[11px] text-muted">回退：可用右上角「回到來源」。</div> : null}
+                    {returnTo ? <div className="mt-2 text-[11px] text-muted" aria-hidden="true" /> : null}
                   </div>
                 );
               })()}
@@ -744,7 +732,7 @@ export const PosOrderDetailPage: React.FC = () => {
             </div>
           ) : null}
         </div>
-      </main>
+      </div>
     </div>
   );
 };
