@@ -1664,10 +1664,15 @@ export async function getFinanceEvents(params?: {
   return out.data;
 }
 
-/** GET /finance/summary — 依 type 或 partyId 彙總區間內金額；groupBy=type 回傳 byType；groupBy=partyId 回傳 byParty */
+/** GET /finance/summary — 依 type、partyId、day、week 彙總區間內金額 */
 export type FinanceSummaryByType = { byType: Record<string, number> };
 export type FinanceSummaryByPartyId = {
   byParty: Array<{ partyId: string; amountsByType: Record<string, number> }>;
+};
+/** groupBy=day|week 時後端回傳 */
+export type FinanceSummaryTrend = {
+  bucket: 'day' | 'week';
+  items: { periodStart: string; amountsByType: Record<string, number> }[];
 };
 
 /** GET /finance/balances — 應收／應付餘額（Phase 4）；query 可選 partyId、kind=customer|supplier */
@@ -1698,14 +1703,14 @@ export async function getFinanceSummary(params: {
   preset?: string;
   from?: string;
   to?: string;
-  groupBy: 'type' | 'partyId';
-}): Promise<FinanceSummaryByType | FinanceSummaryByPartyId | ApiError> {
+  groupBy: 'type' | 'partyId' | 'day' | 'week';
+}): Promise<FinanceSummaryByType | FinanceSummaryByPartyId | FinanceSummaryTrend | ApiError> {
   const q = new URLSearchParams();
   if (params.preset) q.set('preset', params.preset);
   if (params.from) q.set('from', params.from);
   if (params.to) q.set('to', params.to);
   q.set('groupBy', params.groupBy);
-  const out = await request<FinanceSummaryByType | FinanceSummaryByPartyId>(
+  const out = await request<FinanceSummaryByType | FinanceSummaryByPartyId | FinanceSummaryTrend>(
     `finance/summary?${q.toString()}`,
   );
   if (!out.ok) return out.error;

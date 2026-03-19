@@ -207,6 +207,13 @@ export async function getCategories(traceId?: string): Promise<CategoryDto[] | A
   return Array.isArray(out.data) ? out.data : [];
 }
 
+export interface MemberContributionDto {
+  memberRevenue: number;
+  memberOrdersCount: number;
+  guestRevenue: number;
+  guestOrdersCount: number;
+}
+
 export interface PosReportsSummaryDto {
   totalRevenue: string;
   ordersCount: number;
@@ -222,6 +229,8 @@ export interface PosReportsSummaryDto {
   grossMargin?: string;
   /** 毛利率 % */
   grossMarginRate?: number | null;
+  /** 會員 vs 匿名客營收與訂單數 */
+  memberContribution?: MemberContributionDto;
 }
 
 export type PosReportsPreset =
@@ -288,14 +297,73 @@ export interface PosDailyRow {
   ordersCount: number;
 }
 
+/** 統一圖表格式：{ label, value }[] */
+export type PosDailyChartItem = { label: string; value: number };
+
 export async function getPosDaily(
-  params: { from: string; to: string; storeId?: string; merchantId?: string },
+  params: {
+    from: string;
+    to: string;
+    storeId?: string;
+    merchantId?: string;
+    groupBy?: 'day' | 'week' | 'month';
+  },
   traceId?: string,
-): Promise<PosDailyRow[] | ApiError> {
+): Promise<PosDailyChartItem[] | ApiError> {
   const q = new URLSearchParams({ from: params.from, to: params.to });
   if (params.storeId) q.set('storeId', params.storeId);
   if (params.merchantId) q.set('merchantId', params.merchantId);
-  const out = await request<PosDailyRow[]>(`pos/reports/daily?${q.toString()}`, {
+  if (params.groupBy) q.set('groupBy', params.groupBy);
+  const out = await request<
+    | PosDailyRow[]
+    | { byDay?: PosDailyRow[] }
+    | { items: { periodStart: string; revenue: number; ordersCount: number }[]; from?: string; to?: string; groupBy?: string }
+  >(`pos/reports/daily?${q.toString()}`, {
+    traceId: traceId ?? genTraceId(),
+  });
+  if (!out.ok) return out.error;
+  const data = out.data;
+  // 後端 groupBy=day 或未指定時回傳 byDay / 陣列；groupBy=week|month 時回傳 { items }
+  if (Array.isArray(data)) {
+    return (data as PosDailyRow[]).map((r) => ({ label: r.date, value: r.revenue }));
+  }
+  const byDay = (data as { byDay?: PosDailyRow[] }).byDay;
+  if (Array.isArray(byDay)) {
+    return byDay.map((r) => ({ label: r.date, value: r.revenue }));
+  }
+  const items = (data as { items?: { periodStart: string; revenue: number }[] }).items;
+  if (Array.isArray(items)) {
+    return items.map((r) => ({ label: r.periodStart, value: r.revenue }));
+  }
+  return [];
+}
+
+export interface OrderValueDistributionBucket {
+  label: string;
+  min: number;
+  max: number;
+  count: number;
+  revenue: number;
+}
+
+export async function getPosOrderValueDistribution(
+  params: {
+    preset?: PosReportsPreset;
+    from?: string;
+    to?: string;
+    storeId?: string;
+    merchantId?: string;
+  },
+  traceId?: string,
+): Promise<{ buckets: OrderValueDistributionBucket[] } | ApiError> {
+  const q = new URLSearchParams();
+  if (params.preset) q.set('preset', params.preset);
+  if (params.from) q.set('from', params.from);
+  if (params.to) q.set('to', params.to);
+  if (params.storeId) q.set('storeId', params.storeId);
+  if (params.merchantId) q.set('merchantId', params.merchantId);
+  const path = `pos/reports/order-value-distribution${q.toString() ? `?${q.toString()}` : ''}`;
+  const out = await request<{ buckets: OrderValueDistributionBucket[] }>(path, {
     traceId: traceId ?? genTraceId(),
   });
   if (!out.ok) return out.error;
