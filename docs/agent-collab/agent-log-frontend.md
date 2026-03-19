@@ -15,6 +15,11 @@
 
 ---
 
+### INSTRUCTIONS 018（fixed suite 穩定化 + 主檔代碼同步 + 點擊審計中文化 + 商品總覽表格可讀性）
+- 做了：`AdminCustomerImportPage` 修正 preview/apply 區塊 testid 與 JSX；`AdminCategoriesPage` 擴充 master sections testid，並落地「名稱變更自動生成 code（a-z0-9-）+ 重複自動補 suffix；手動改 code 後停止自動同步」；`AdminOpsReportClicksPage` 將結果代碼/解析類型以中文呈現並保留原始碼；`AdminProductsPage` 強化表格可讀性（新增定價/售價/成本/效期欄、數字欄右對齊、規格展開/收合、操作靠右），並將 401 文案改走 `getErrorMessage`；`docs/e2e-pos.md` 同步更新 customers-import 定位點。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`CI=0 E2E_PROFILE=full E2E_BASE_URL=http://localhost:5174 pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-customers-import.spec.ts e2e/admin-bulk.spec.ts e2e/admin-replenishment.spec.ts` ✅（8 passed / 4 skipped：缺 Admin key 的用例）
+- commits：4bdcdb8b frontend: stabilize fixed suite selectors and code sync；f1218d60 frontend: improve products table readability and click-audit labels
+
 ### AD-HOC 補記（補齊：Tab/UI/Promotions/表格/財務導航）
 - 做了：
   - Admin Hub 選中態視覺修正：6 個 hub 的 tab 選中態加上強制底色/字色與外框（`!bg... !text-white ... ring-2 ring-brand-primary/40`），避免「選中後白字看不出目前 tab」。
