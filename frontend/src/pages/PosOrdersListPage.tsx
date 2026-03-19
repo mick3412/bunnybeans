@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../shared/components/Button';
 import { listOrders, getStores } from '../modules/pos/posOrdersApi';
 import { fetchCsvExport } from '../modules/admin/adminApi';
@@ -29,6 +29,12 @@ export const PosOrdersListPage: React.FC = () => {
   const [includeLines, setIncludeLines] = useState(false);
   const navigate = useNavigate();
   const hasAdminKey = Boolean((import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim());
+
+  const storeNameMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    stores.forEach((s) => { m[s.id] = s.name; });
+    return m;
+  }, [stores]);
 
   const load = useCallback(
     async (pageNum: number, opts?: { resetPage?: boolean }) => {
@@ -257,7 +263,7 @@ export const PosOrdersListPage: React.FC = () => {
                           {order.orderNumber}
                         </td>
                         <td className="truncate px-2 py-2 text-muted" title={order.storeId}>
-                          {order.storeId}
+                          {storeNameMap[order.storeId] ?? order.storeId?.slice(0, 8) ?? '—'}
                         </td>
                         <td className="truncate px-2 py-2 text-muted" title={customerLabel(order)}>
                           {customerLabel(order)}
