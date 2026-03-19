@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 020（點數存摺 tab 中文、門市/倉庫對齊、業績頁共用、金流類型/稽核中文、快照 UI、側欄應收應付、POS/後台 Tab）
+- 做了：點數存摺 tab 已是中文（全部／贈點／扣點／鎖定／已過期），無變更；門市/倉庫頁表格與新增表單對齊（label、table-sticky-head、rounded-xl）；業績頁與 PosReportsPage 共用，補充註記；新增 `financeEventTypeLabels.ts` 共用 mapping（PURCHASE_REBATE→採購折讓 等），AdminReportsPage／AdminFinanceAuditPage 類型欄位改中文（稽核保留 title/aria 原值）；金流快照篩選區重組（類型+重新整理、手動補跑區塊、每頁）；側欄「應收應付餘額」→「應收應付」；移除 Logo，改 POS／後台 Tab 切換。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`CI=0 E2E_PROFILE=full pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-ops-report-clicks-full.spec.ts` ✅（3 passed / 2 skipped）。
+- commits：c45b49d4 FinanceEventType Chinese labels；075f8585 sidebar 應收應付+POS/後台 Tab；48d74541 stores/warehouses layout；3413f670 finance snapshots filter；8510dc24 AdminPerformancePage doc
+
+---
+
 ### INSTRUCTIONS 019（應收 merchantId、金流快照中文、集點版面、側欄營運/業績、訂單管理按鈕移除、熱銷品/區間趨勢、點擊審計 testid、跨層 E2E）
 - 做了：`getFinanceBalances` 新增 merchantId 並在餘額頁傳遞；金流快照全中文化；集點規則版面對齊 StandardListLayout；會員中心 hub 將「會員管理」tab 移到儀表板右側；訂單管理頁移除「回到收銀」「庫存(後台)」按鈕；側欄「總覽」→「營運」、新增「業績」入口 `/admin/performance`；PosReportsPage 熱銷品／區間趨勢在 merchantId 未設定時不呼叫 API、顯示友善錯誤、並行載入；點擊審計結果代碼輸入框補 `data-testid="e2e-admin-ops-report-clicks-resultcode-input"`；admin-categories E2E 新增類別 code 跨層驗證、e2e-pos 文件同步。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`CI=0 E2E_PROFILE=full pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-ops-report-clicks-full.spec.ts` ✅（admin-categories 2 passed / 2 skipped 缺 ADMIN_KEY；admin-ops-report-clicks-full 1 passed）。
