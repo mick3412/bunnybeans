@@ -1680,10 +1680,12 @@ export interface FinanceBalanceItem {
 }
 
 export async function getFinanceBalances(params?: {
+  merchantId?: string;
   partyId?: string;
   kind?: 'customer' | 'supplier';
 }): Promise<{ items: FinanceBalanceItem[] } | ApiError> {
   const q = new URLSearchParams();
+  if (params?.merchantId?.trim()) q.set('merchantId', params.merchantId.trim());
   if (params?.partyId != null && params.partyId.trim() !== '') q.set('partyId', params.partyId.trim());
   if (params?.kind) q.set('kind', params.kind);
   const qs = q.toString();

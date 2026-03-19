@@ -58,6 +58,7 @@ export const AdminFinanceBalancesPage: React.FC = () => {
     const kindParam =
       view === 'customer' ? ('customer' as const) : view === 'supplier' ? ('supplier' as const) : undefined;
     const out = await getFinanceBalances({
+      merchantId: merchantId ?? undefined,
       partyId: partyIdFilter.trim() || undefined,
       kind: kindParam,
     });
@@ -68,7 +69,7 @@ export const AdminFinanceBalancesPage: React.FC = () => {
       setItems([]);
     }
     setLoading(false);
-  }, [partyIdFilter, view]);
+  }, [merchantId, partyIdFilter, view]);
 
   const filteredItems = useMemo(() => {
     if (view === 'all') return items;
@@ -110,7 +111,7 @@ export const AdminFinanceBalancesPage: React.FC = () => {
     >
       <p className="mb-4 text-sm text-muted">
         資料來源 <code className="rounded bg-[#f1f5f9] px-1 text-content">GET /finance/balances</code>
-        ；依金流事件重算應收／應付餘額。可從「角色／來源視角」檢視平台與各對象往來，並可選填單一 partyId 鎖定特定客戶或供應商。
+        ；依金流事件重算應收／應付餘額。
       </p>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
