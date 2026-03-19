@@ -22,7 +22,7 @@
   - **#3 補貨閉環驗收**：purchase.integration-spec「from-replenishment: creates DRAFT PO from suggestions」已涵蓋勾選建議→建 PO 草稿 API 流程。
   - **#4 活動成效報表擴充**：GET /loyalty/reports/activity 已回傳 byDispatchRule、byCoupon、revenueFromPointRedemption；loyalty.integration-spec 已覆蓋。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
-- commits：無後端程式變更；僅 agent-log 本則。
+- commits：7ee95d50 docs(agent-log): add INSTRUCTIONS-023 backend entry。
 
 ### INSTRUCTIONS-021（迴歸 + 選配註記）
 - 做了：依 `BACKEND-INSTRUCTIONS 021.md` §1 完成 #1；#2、#3 選配註記。
