@@ -52,7 +52,7 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
 
   const handleCreate = async () => {
     if (!merchantId || !code.trim() || !name.trim()) {
-      setErr('請填代碼與名稱（若無商家請先 seed）');
+      setErr('缺少代碼或名稱');
       return;
     }
     setErr(null);
@@ -109,8 +109,8 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
   const H = embedded ? 'h2' : 'h1';
   const fieldClass = 'h-9 rounded-lg border border-[#e2e8f0] px-2 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20';
   return (
-    <div className={embedded ? '' : 'mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm'}>
-      <H className="mb-2 text-xl font-bold text-content">倉庫</H>
+    <div className={embedded ? '' : 'mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm'}>
+      <H className="mb-2 text-lg font-semibold text-content">倉庫</H>
       <p className="mb-4 text-sm text-muted">
         CRUD；商家自動使用預設；門市可選（對應後端 storeId）。
       </p>
@@ -119,38 +119,47 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
           {err}
         </div>
       )}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <input
-          className={`${fieldClass} w-24`}
-          placeholder="代碼"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-        />
-        <input
-          className={`${fieldClass} min-w-[140px] flex-1`}
-          placeholder="名稱"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <select
-          className={`${fieldClass} max-w-[180px]`}
-          value={storeId}
-          onChange={(e) => setStoreId(e.target.value)}
-        >
-          <option value="">門市（可空）</option>
-          {storesForMerchant.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.code} — {s.name}
-            </option>
-          ))}
-        </select>
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="mb-1 block text-xs text-muted">代碼</label>
+          <input
+            className={`${fieldClass} w-24`}
+            placeholder="代碼"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted">名稱</label>
+          <input
+            className={`${fieldClass} min-w-[140px]`}
+            placeholder="名稱"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted">門市（可空）</label>
+          <select
+            className={`${fieldClass} max-w-[180px]`}
+            value={storeId}
+            onChange={(e) => setStoreId(e.target.value)}
+          >
+            <option value="">—</option>
+            {storesForMerchant.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.code} — {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <Button type="button" size="sm" variant="primary" onClick={() => void handleCreate()}>
           新增
         </Button>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-[#e2e8f0]">
+      <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white">
         <table className="w-full min-w-[500px] text-left text-sm">
-          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
+          <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
             <tr>
               <th className="px-4 py-2 font-medium">代碼</th>
               <th className="px-4 py-2 font-medium">名稱</th>
@@ -160,7 +169,7 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
           </thead>
           <tbody>
             {rows.map((w) => (
-              <tr key={w.id} className="border-t border-[#e2e8f0]">
+              <tr key={w.id} className="border-t border-brand-surface hover:bg-brand-canvas">
                 {editId === w.id ? (
                   <>
                     <td className="px-4 py-2">
