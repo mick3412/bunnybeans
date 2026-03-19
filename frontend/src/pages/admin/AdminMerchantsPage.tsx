@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '../../shared/components/Button';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import {
   listMerchants,
   createMerchant,
@@ -12,6 +13,7 @@ import { getErrorMessage } from '../../shared/errors/errorMessages';
 
 export const AdminMerchantsPage: React.FC = () => {
   const [rows, setRows] = useState<MerchantDto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -20,10 +22,16 @@ export const AdminMerchantsPage: React.FC = () => {
   const [editName, setEditName] = useState('');
 
   const load = useCallback(async () => {
+    setLoading(true);
     setErr(null);
     const r = await listMerchants();
-    if (!Array.isArray(r)) setErr(getErrorMessage(r as ApiError));
-    else setRows(r);
+    setLoading(false);
+    if (!Array.isArray(r)) {
+      setErr(getErrorMessage(r as ApiError));
+      setRows([]);
+    } else {
+      setRows(r);
+    }
   }, []);
 
   useEffect(() => {
@@ -32,7 +40,7 @@ export const AdminMerchantsPage: React.FC = () => {
 
   const handleCreate = async () => {
     if (!code.trim() || !name.trim()) {
-      setErr('請填代碼與名稱');
+      setErr('缺少代碼或名稱');
       return;
     }
     setErr(null);
@@ -76,36 +84,39 @@ export const AdminMerchantsPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm">
-      <p className="mb-4 text-sm text-[#64748b]">CRUD；代碼須唯一。</p>
-      {err && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {err}
+    <StandardListLayout
+      title="商家"
+      description="CRUD；代碼須唯一。"
+      loading={loading}
+      error={err}
+      empty={!loading && !err && rows.length === 0}
+      emptyMessage="尚無商家"
+      aboveContent={
+        <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
+          <div className="mb-2 text-xs font-semibold text-muted">新增商家</div>
+          <div className="flex flex-wrap items-end gap-2">
+            <input
+              className="h-9 rounded border border-brand-surface px-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+              placeholder="代碼"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+            <input
+              className="h-9 min-w-[200px] flex-1 rounded border border-brand-surface px-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+              placeholder="名稱"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <Button type="button" size="sm" variant="primary" onClick={() => void handleCreate()}>
+              新增
+            </Button>
+          </div>
         </div>
-      )}
-      <div className="mb-6 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
-        <div className="mb-2 text-xs font-semibold text-muted">新增商家</div>
-        <div className="flex flex-wrap items-end gap-2">
-          <input
-            className="h-9 rounded border border-[#e2e8f0] px-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
-            placeholder="代碼"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
-          <input
-            className="h-9 min-w-[200px] flex-1 rounded border border-[#e2e8f0] px-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
-            placeholder="名稱"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Button type="button" size="sm" variant="primary" onClick={() => void handleCreate()}>
-            新增
-          </Button>
-        </div>
-      </div>
-      <div className="table-sticky-head overflow-hidden rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+      }
+    >
+      <div className="table-sticky-head overflow-hidden rounded-xl border border-brand-surface bg-white shadow-sm">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
+          <thead className="border-b border-brand-surface bg-table-head text-muted">
             <tr>
               <th className="px-4 py-2">代碼</th>
               <th className="px-4 py-2">名稱</th>
@@ -120,19 +131,19 @@ export const AdminMerchantsPage: React.FC = () => {
                   <>
                     <td className="px-4 py-2">
                       <input
-                        className="w-full rounded border border-[#e2e8f0] px-1 text-sm focus:border-[#0ea5e9]"
+                        className="w-full rounded border border-brand-surface px-1 text-sm focus:border-brand-primary"
                         value={editCode}
                         onChange={(e) => setEditCode(e.target.value)}
                       />
                     </td>
                     <td className="px-4 py-2">
                       <input
-                        className="w-full rounded border border-[#e2e8f0] px-1 text-sm focus:border-[#0ea5e9]"
+                        className="w-full rounded border border-brand-surface px-1 text-sm focus:border-brand-primary"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                       />
                     </td>
-                    <td className="px-4 py-2 font-mono text-[10px] text-[#64748b]">{m.id}</td>
+                    <td className="px-4 py-2 font-mono text-[10px] text-muted">{m.id}</td>
                     <td className="px-4 py-2">
                       <Button type="button" size="sm" variant="primary" onClick={() => void saveEdit()}>
                         儲存
@@ -152,7 +163,7 @@ export const AdminMerchantsPage: React.FC = () => {
                   <>
                     <td className="px-4 py-2 font-medium">{m.code}</td>
                     <td className="px-4 py-2">{m.name}</td>
-                    <td className="px-4 py-2 font-mono text-[10px] text-[#64748b]">{m.id}</td>
+                    <td className="px-4 py-2 font-mono text-[10px] text-muted">{m.id}</td>
                     <td className="px-4 py-2">
                       <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(m)}>
                         編輯
@@ -174,6 +185,6 @@ export const AdminMerchantsPage: React.FC = () => {
           </tbody>
         </table>
       </div>
-    </div>
+    </StandardListLayout>
   );
 };
