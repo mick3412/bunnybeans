@@ -8,7 +8,7 @@ import { AdminCategoriesPage } from '../AdminCategoriesPage';
 export type ProductHubTabKey = 'products' | 'categories';
 
 const TAB_OPTIONS: Array<{ key: ProductHubTabKey; label: string }> = [
-  { key: 'products', label: '商品主檔' },
+  { key: 'products', label: '商品總覽' },
   { key: 'categories', label: '類別管理' },
 ];
 

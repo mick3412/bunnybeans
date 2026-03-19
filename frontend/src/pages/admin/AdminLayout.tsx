@@ -44,7 +44,7 @@ function headerTitle(
   }
   if (pathname.startsWith('/admin/products')) {
     if (productTab === 'categories') return '類別管理';
-    return '商品主檔';
+    return '商品總覽';
   }
   if (pathname.startsWith('/admin/categories')) return '類別管理';
   if (pathname.startsWith('/admin/warehouses')) return '倉庫/門市';
