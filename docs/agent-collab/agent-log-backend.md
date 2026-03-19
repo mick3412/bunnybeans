@@ -18,7 +18,7 @@
 ### INSTRUCTIONS-018（full seed 回歸 + 錯誤碼契約一致性確認）
 - 做了：完成本輪 §1 #1~#5 檢查與回歸；`E2E_PROFILE=full pnpm --filter pos-erp-backend e2e:seed` 通過，`E2E_SEED_SUMMARY` 與 fail-fast 正常；檢查前端 `getErrorMessage` 與後端常用錯誤碼（401/403、`ADMIN_API_KEY_REQUIRED`、POS/INVENTORY/FINANCE）映射一致，無需新增後端錯誤碼或調整；確認目前前端變更僅使用既有 `expiryDescription` 欄位（後端已支援），且未採 slugify code 規則，故本輪不需後端 schema/API/validation 變更。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`E2E_PROFILE=full pnpm --filter pos-erp-backend e2e:seed` 通過並輸出 `E2E_SEED_SUMMARY`。
-- commits：待補（本條目 commit 後回填）
+- commits：5f3f4390 docs(agent-log): add INSTRUCTIONS-018 backend entry
 
 ### INSTRUCTIONS-017（full gate fail-fast：expiring/receiving-note + CI triage log）
 - 做了：`.github/workflows/e2e-full.yml` 擴充 fail-fast 的 `Expected fixture keys`（包含 dispatch、barcode、exchange、referenceId、replenishment、expiring、receiving note、finance report refs，並補 disabled/future 負向 keys）；`backend/scripts/e2e-seed.ts` 在 `E2E_PROFILE=full` 增加 `E2E_SEED_SUMMARY` console log，並新增/強化 fail-fast 驗證：`E2E-EXP-BATCH-0001` expiring inventory（`PURCHASE_IN` + expiryDate 落在 `daysAhead=30` + SUM(quantity)>0）與 `E2E-RN-0001` receiving note return-to-supplier 最小可退量（`qualifiedQty` 可退且 returnable>=1，並確保關聯 PO/warehouse/product 存在）；同時補強錯誤訊息包含 fixture key 與實際 count/值。
