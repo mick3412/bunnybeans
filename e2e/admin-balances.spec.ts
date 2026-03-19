@@ -21,4 +21,20 @@ test.describe('後台 應收應付餘額頁', () => {
       container.getByText(/全部|會員|供應商|其他/).first(),
     ).toBeVisible();
   });
+
+  test('金流報表依對象彙總 drill-down 可導向餘額頁', async ({ page }) => {
+    await loginAdmin(page);
+    await page.goto('/admin/reports');
+    const reportsRoot = page.getByTestId('e2e-admin-reports');
+    await expect(reportsRoot).toBeVisible({ timeout: 15_000 });
+
+    const drillLink = reportsRoot.getByTestId('e2e-reports-party-drilldown').first();
+    if (!(await drillLink.isVisible().catch(() => false))) {
+      test.skip(true, '金流報表依對象彙總無資料，需有 party 事件');
+      return;
+    }
+    await drillLink.click();
+    await expect(page).toHaveURL(/\/admin\/balances/);
+    expect(page.url()).toContain('partyId=');
+  });
 });
