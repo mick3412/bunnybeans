@@ -15,10 +15,11 @@
 
 ---
 
-### INSTRUCTIONS 023（會員路由收斂收尾、業績報表緊湊、營運總覽、餘額頁 StandardListLayout、按鈕主色）
+### INSTRUCTIONS 023（會員路由收斂收尾、業績報表緊湊、營運總覽、餘額頁 StandardListLayout、按鈕主色 + 進階項目 10-15）
 - 做了：① 會員路由：docs/crm-loyalty-ui-plan.md、erp-roadmap.md 更新為 /admin/customers 主入口（E2E 無 loyalty/members 引用）。② PosReportsPage：毛利／付款方式／分類銷售合併為三欄緊湊區塊；topItems/daily 載入失敗時顯示 merchantId、VITE_API_BASE_URL 除錯資訊與可操作提示。③ AdminDashboardPage：KPI 卡片縮小（text-xl、6 欄）、待辦中心移至頁面最下方且待辦項縮小。④ AdminFinanceBalancesPage 改用 StandardListLayout（title、description、filters、table 結構與 AdminReportsPage 一致）。⑤ 採購單／進貨驗收／供應商頁與 AdminSegmentExportPage 硬編碼 #0ea5e9 改為 brand-primary。⑥ 補貨閉環：驗證 AdminReplenishmentPage 已有勾選→建立採購草稿→navigate purchase-orders。⑦ 應收應付：022 已有 Party kind tabs；backend 無 platform kind，註記已就緒。⑧ dispatch-rules 已有 job 摘要、AdminSegmentExportPage 按鈕改 brand-primary。
+- **進階項目 10-15**：⑩ 金流報表與 POS 業績 cross-link（AdminReportsPage ↔ PosReportsPage）。⑪ dispatch-rules 最近 job 結果摘要已存在。⑫ 訂定 docs/frontend-layout-rules.md（列表 max-w-6xl）；QuickReceiving、WarehousesStores 收斂。⑬ AdminSegmentsPage 改用 StandardListLayout。⑭ 發券規則、即期庫存頁文字色與邊框統一（text-content/text-muted、border-brand-surface、Alert）。⑮ 空狀態／錯誤／載入：AdminSegmentsPage 用 EmptyState+Alert；發券規則、即期庫存用 Alert。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 佔用可後補）。
-- commits：178ce69f docs 會員路由收斂；2243f96a PosReportsPage 緊湊+錯誤；4eff875a AdminDashboard 緊湊+待辦底部；97c5ea73 AdminFinanceBalancesPage StandardListLayout；3bc1f584 按鈕 brand-primary；1c1f9070 agent-log
+- commits：178ce69f docs 會員路由收斂；2243f96a PosReportsPage 緊湊+錯誤；4eff875a AdminDashboard 緊湊+待辦底部；97c5ea73 AdminFinanceBalancesPage StandardListLayout；3bc1f584 按鈕 brand-primary；8e5d0e9d 金流與 POS cross-link；e340f4cb max-width 收斂；741a6169 AdminSegmentsPage StandardListLayout；0fbf670e 發券規則/即期庫存 token 統一；66a15586 docs agent-log 進階項目
 
 ---
 
