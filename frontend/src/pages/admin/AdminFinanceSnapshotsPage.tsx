@@ -81,26 +81,29 @@ export const AdminFinanceSnapshotsPage: React.FC = () => {
       title="金流快照"
       description={description}
       filters={
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="mb-1 block text-xs text-muted">類型</label>
-            <select
-              className="rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-              value={type}
-              onChange={(e) => {
-                setType(e.target.value as 'daily' | 'monthly' | '');
-                setPage(1);
-              }}
-            >
-              <option value="">全部</option>
-              <option value="daily">每日</option>
-              <option value="monthly">每月</option>
-            </select>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="mb-1 block text-xs text-muted">類型</label>
+              <select
+                className="rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                value={type}
+                onChange={(e) => {
+                  setType(e.target.value as 'daily' | 'monthly' | '');
+                  setPage(1);
+                }}
+              >
+                <option value="">全部</option>
+                <option value="daily">每日</option>
+                <option value="monthly">每月</option>
+              </select>
+            </div>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
+              {loading ? '載入中…' : '重新整理'}
+            </Button>
           </div>
-          <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
-            {loading ? '載入中…' : '重新整理'}
-          </Button>
-          <div className="flex flex-wrap items-end gap-2 rounded-xl border border-brand-surface bg-white px-3 py-2">
+          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-brand-surface bg-brand-canvas/50 px-4 py-3">
+            <span className="text-xs font-medium text-muted">手動補跑</span>
             <div>
               <label className="mb-1 block text-xs text-muted">快照日期</label>
               <input
@@ -140,13 +143,13 @@ export const AdminFinanceSnapshotsPage: React.FC = () => {
                 })();
               }}
             >
-              {creating ? '建立中…' : '手動補跑'}
+              {creating ? '建立中…' : '執行補跑'}
             </Button>
             <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/admin/ops/jobs?kind=finance-snapshot')}>
               到 Job 監控
             </Button>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <label className="text-xs text-muted">每頁</label>
             <select
               value={pageSize}
