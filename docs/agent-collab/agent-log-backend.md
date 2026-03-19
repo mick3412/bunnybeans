@@ -15,6 +15,15 @@
 
 ---
 
+### INSTRUCTIONS-023（迴歸 + 已實作確認）
+- 做了：依 `BACKEND-INSTRUCTIONS 023.md` §1 完成 #1～#4。**#2～#4 已於前期實作**，本輪確認無需變更。
+  - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（135 passed）。
+  - **#2 Party 多方視圖落實**：POS 建單／補款／退款已寫入 `customer:{id}`；驗收／退供寫入 `supplier:{id}`；finance.integration-spec「getBalances is isolated by merchantId」驗證跨商家隔離與 kind／displayName。
+  - **#3 補貨閉環驗收**：purchase.integration-spec「from-replenishment: creates DRAFT PO from suggestions」已涵蓋勾選建議→建 PO 草稿 API 流程。
+  - **#4 活動成效報表擴充**：GET /loyalty/reports/activity 已回傳 byDispatchRule、byCoupon、revenueFromPointRedemption；loyalty.integration-spec 已覆蓋。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
+- commits：無後端程式變更；僅 agent-log 本則。
+
 ### INSTRUCTIONS-021（迴歸 + 選配註記）
 - 做了：依 `BACKEND-INSTRUCTIONS 021.md` §1 完成 #1；#2、#3 選配註記。
   - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（135 passed）。
