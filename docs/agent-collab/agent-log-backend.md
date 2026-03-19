@@ -21,7 +21,7 @@
   - **#2 Party 多方視圖（選配）**：本輪不納入。**已於前期實作**：Party view 解析 partyId；GET /finance/balances 支援 kind 篩選（customer/supplier）與 displayName；api-design-inventory-finance 已對齊。待下輪規格決策若需擴充。
   - **#3 業績概覽 API 排查（選配）**：本輪無前端回報「熱銷品項／區間趨勢載入失敗」。019 已補 GET /pos/reports/top-items、daily 單一商家 merchantId fallback；integration-spec 已覆蓋。無需變更。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
-- commits：f3f66275 docs(agent-log): add INSTRUCTIONS-021 backend entry。
+- commits：3fd62bf7 docs(agent-log): add INSTRUCTIONS-021 backend entry。
 
 ### INSTRUCTIONS-020（finance-accounting-roadmap 對齊 + E2E full profile 審查）
 - 做了：依 `BACKEND-INSTRUCTIONS 020.md` §1 完成 #1～#3。
