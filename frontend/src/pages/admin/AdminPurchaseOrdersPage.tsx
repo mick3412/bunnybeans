@@ -43,7 +43,7 @@ function statusPill(s: PoStatus | string) {
   const styles: Record<string, string> = {
     RECEIVED: 'bg-emerald-100 text-emerald-800',
     ORDERED: 'bg-orange-100 text-orange-800',
-    PARTIALLY_RECEIVED: 'bg-[#0ea5e9]/10 text-[#0ea5e9]',
+    PARTIALLY_RECEIVED: 'bg-brand-primary/10 text-brand-primary',
     DRAFT: 'bg-[#e2e8f0] text-muted',
     CANCELLED: 'bg-red-100 text-red-800',
   };
@@ -186,12 +186,12 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
 
   const createPo = async () => {
     if (!newPo.supplierId || !defaultWh) {
-      showToast('請選供應商', 'err');
+      showToast('缺少供應商', 'err');
       return;
     }
     const validLines = newPo.lines.filter((l) => l.productId && l.qty > 0);
     if (!validLines.length) {
-      showToast('請至少一列訂購品項', 'err');
+      showToast('至少需要一列訂購品項', 'err');
       return;
     }
     const orderNumber = `PO-${Date.now().toString().slice(-8)}`;
@@ -226,7 +226,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate('/admin/purchase-orders/quick-receiving')}
-            className="rounded-lg border border-[#e2e8f0] bg-white px-4 py-2.5 text-sm font-semibold text-content hover:border-[#0ea5e9]/30"
+            className="rounded-lg border border-[#e2e8f0] bg-white px-4 py-2.5 text-sm font-semibold text-content hover:border-brand-primary/30"
           >
             快速進貨
           </button>
@@ -247,7 +247,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
             </svg>
           </span>
           <input
-            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] py-2.5 pl-10 pr-3 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] py-2.5 pl-10 pr-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
             placeholder="搜尋單號 / 供應商..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -260,7 +260,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
             key={t.key}
             type="button"
             className={`border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-              status === t.key ? 'border-[#0ea5e9] text-[#0ea5e9]' : 'border-transparent text-[#64748b] hover:text-[#1e293b]'
+              status === t.key ? 'border-brand-primary text-brand-primary' : 'border-transparent text-muted hover:text-content'
             }`}
             onClick={() => setStatus(t.key)}
           >
@@ -279,7 +279,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
       <div className="overflow-hidden rounded-xl border border-neutral-100">
         {listLoading ? (
           <div className="flex min-h-[200px] items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#0ea5e9] border-t-transparent" aria-label="載入中" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" aria-label="載入中" />
           </div>
         ) : (
           <>
@@ -305,7 +305,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                       <span className={`inline-flex rounded-md px-2.5 py-0.5 text-xs font-semibold ${statusPill(p.status)}`}>{statusLabel(p.status)}</span>
                     </td>
                     <td className="px-2 py-3.5 text-muted" onClick={(e) => e.stopPropagation()}>
-                      <button type="button" className="p-1 hover:text-[#0ea5e9]" onClick={() => openDetail(p.id)} aria-label="詳情">
+                      <button type="button" className="p-1 hover:text-brand-primary" onClick={() => openDetail(p.id)} aria-label="詳情">
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
@@ -340,7 +340,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 </span>
               </div>
               <div className="mt-2 h-2 rounded-full bg-[#e2e8f0]">
-                <div className="h-2 rounded-full bg-[#0ea5e9]" style={{ width: `${detailProgress.pct}%` }} />
+                <div className="h-2 rounded-full bg-brand-primary" style={{ width: `${detailProgress.pct}%` }} />
               </div>
             </div>
 
@@ -397,7 +397,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                 rn.status === 'COMPLETED'
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : rn.status === 'IN_PROGRESS'
-                                    ? 'bg-[#0ea5e9]/10 text-[#0ea5e9]'
+                                    ? 'bg-brand-primary/10 text-brand-primary'
                                     : rn.status === 'PENDING'
                                       ? 'bg-orange-100 text-orange-800'
                                       : rn.status === 'RETURNED'
@@ -509,7 +509,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                       供應商 <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                       value={newPo.supplierId}
                       onChange={(e) => setNewPo({ ...newPo, supplierId: e.target.value })}
                     >
@@ -523,7 +523,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                     <label className="mb-2 block text-sm font-medium text-neutral-700">預計到貨日</label>
                     <input
                       type="date"
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                       value={newPo.expectedDate}
                       onChange={(e) => setNewPo({ ...newPo, expectedDate: e.target.value })}
                     />
@@ -552,7 +552,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                             <tr key={idx} className="border-b border-neutral-100 last:border-0">
                               <td className="px-3 py-2.5">
                                 <select
-                                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+                                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                                   value={line.productId}
                                   onChange={(e) => {
                                     const lines = [...newPo.lines];
@@ -570,7 +570,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                 <input
                                   type="number"
                                   min={1}
-                                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm tabular-nums transition-colors focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:placeholder:text-neutral-400"
+                                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm tabular-nums transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:placeholder:text-neutral-400"
                                   value={line.qty}
                                   onChange={(e) => {
                                     const lines = [...newPo.lines];
@@ -583,7 +583,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                 <input
                                   type="number"
                                   min={0}
-                                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm tabular-nums transition-colors focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20 focus:placeholder:text-neutral-400"
+                                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm tabular-nums transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:placeholder:text-neutral-400"
                                   value={line.unitCost}
                                   onChange={(e) => {
                                     const lines = [...newPo.lines];
@@ -612,7 +612,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                     </div>
                     <button
                       type="button"
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-[#0ea5e9] hover:text-[#0ea5e9] hover:bg-[#0ea5e9]/5 transition-colors"
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand-primary hover:text-brand-primary hover:bg-brand-primary/5 transition-colors"
                       onClick={() => setNewPo({ ...newPo, lines: [...newPo.lines, { productId: '', qty: 1, unitCost: 0 }] })}
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
@@ -626,7 +626,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-neutral-700">備註</label>
                   <textarea
-                    className="w-full min-h-[80px] resize-y rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+                    className="w-full min-h-[80px] resize-y rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                     rows={3}
                     placeholder="選填"
                     value={newPo.remark}

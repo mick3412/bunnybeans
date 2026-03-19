@@ -256,7 +256,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
 
   const createRn = async () => {
     if (!newRn.purchaseOrderId || !selectedPo) {
-      showToast('請選採購單', 'err');
+      showToast('缺少採購單', 'err');
       return;
     }
     const lineInputs = (selectedPo.lines ?? []).map((l) => ({
@@ -326,7 +326,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
             </svg>
           </span>
           <input
-            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] py-2.5 pl-10 pr-3 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20"
+            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] py-2.5 pl-10 pr-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
             placeholder="搜尋驗收單號 / 採購單號 / 供應商..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -339,7 +339,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
             key={t.key}
             type="button"
             className={`border-b-2 px-3 py-2 text-sm font-medium ${
-              status === t.key ? 'border-[#0ea5e9] text-[#0ea5e9]' : 'border-transparent text-[#64748b] hover:text-[#1e293b]'
+              status === t.key ? 'border-brand-primary text-brand-primary' : 'border-transparent text-muted hover:text-content'
             }`}
             onClick={() => setStatus(t.key)}
           >
@@ -358,7 +358,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
       <div className="overflow-hidden rounded-xl border border-neutral-100">
         {listLoading ? (
           <div className="flex min-h-[200px] items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#0ea5e9] border-t-transparent" aria-label="載入中" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" aria-label="載入中" />
           </div>
         ) : (
           <>
@@ -384,11 +384,11 @@ export const AdminReceivingNotesPage: React.FC = () => {
                     <td className="px-4 py-3.5 text-center">{(r.lines ?? []).length}</td>
                     <td className="px-4 py-3.5">{r.inspectorName ?? '—'}</td>
                     <td className="px-4 py-3.5">
-                      <span className="inline-flex rounded-md bg-[#0ea5e9]/10 px-2.5 py-0.5 text-xs font-semibold text-[#0ea5e9]">{rnLabel(r.status)}</span>
+                      <span className="inline-flex rounded-md bg-brand-primary/10 px-2.5 py-0.5 text-xs font-semibold text-brand-primary">{rnLabel(r.status)}</span>
                     </td>
                     <td className="px-4 py-3.5 text-muted">{r.receivedAt?.slice(0, 10) ?? '—'}</td>
                     <td className="px-2 py-3.5 text-muted" onClick={(e) => e.stopPropagation()}>
-                      <button type="button" className="p-1 hover:text-[#0ea5e9]" onClick={() => openDetail(r.id)} aria-label="詳情">
+                      <button type="button" className="p-1 hover:text-brand-primary" onClick={() => openDetail(r.id)} aria-label="詳情">
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
@@ -438,7 +438,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                   ))}
                 </select>
                 {receivablePOs.length === 0 && (
-                  <p className="mt-2 text-sm text-amber-700">尚無可驗收採購單，請先將採購單下單（已下單或部分到貨）。</p>
+                  <p className="mt-2 text-sm text-amber-700">尚無可驗收採購單。</p>
                 )}
               </div>
               <div>
@@ -527,7 +527,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setCreateOpen(false)}
-                className="rounded-lg border-2 border-[#0ea5e9] bg-white px-5 py-2.5 text-sm font-semibold text-[#0ea5e9] hover:bg-[#0ea5e9]/5"
+                className="rounded-lg border-2 border-brand-primary bg-white px-5 py-2.5 text-sm font-semibold text-brand-primary hover:bg-brand-primary/5"
               >
                 取消
               </button>
@@ -1039,10 +1039,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                         </tbody>
                       </table>
                     </div>
-                    <div className="mt-2 text-[11px] text-amber-800">
-                      注意：原因目前僅作前端備註展示；後端事件仍會寫入庫存 <span className="font-mono">RETURN_TO_SUPPLIER</span> 與金流{' '}
-                      <span className="font-mono">PURCHASE_RETURN</span>。
-                    </div>
+                    <div className="mt-2 text-[11px] text-amber-800">原因為前端備註展示。</div>
                   </div>
                 ) : null}
                 {detail.purchaseOrderId && (

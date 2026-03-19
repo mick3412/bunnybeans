@@ -108,7 +108,7 @@ export const AdminSuppliersPage: React.FC = () => {
 
   const save = async () => {
     if (!form.code.trim() || !form.name.trim() || !form.contactPerson.trim()) {
-      showToast('請填編號、名稱、聯絡人', 'err');
+      showToast('缺少編號、名稱或聯絡人', 'err');
       return;
     }
     if (editing) {
@@ -198,7 +198,7 @@ export const AdminSuppliersPage: React.FC = () => {
       <div className="table-sticky-head overflow-hidden rounded-xl border border-brand-surface">
         {listLoading ? (
           <div className="flex min-h-[200px] items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#0ea5e9] border-t-transparent" aria-label="載入中" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" aria-label="載入中" />
           </div>
         ) : (
         <table className="w-full text-left text-sm">
@@ -232,7 +232,7 @@ export const AdminSuppliersPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      className="rounded p-1.5 text-[#0ea5e9] hover:bg-[#0ea5e9]/10"
+                      className="rounded p-1.5 text-brand-primary hover:bg-brand-primary/10"
                       aria-label="編輯"
                       onClick={() => openEdit(s)}
                     >
@@ -263,7 +263,7 @@ export const AdminSuppliersPage: React.FC = () => {
         </table>
         )}
         {!listLoading && !listError && rows.length === 0 && (
-          <EmptyState message="尚無供應商，請先新增供應商。" />
+          <EmptyState message="尚無供應商" />
         )}
       </div>
 

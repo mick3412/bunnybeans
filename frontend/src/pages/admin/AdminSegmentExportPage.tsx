@@ -12,7 +12,7 @@ export const AdminSegmentExportPage: React.FC = () => {
   const handleExport = async () => {
     const id = segmentId.trim();
     if (!id) {
-      setErr('請輸入分群 ID');
+      setErr('缺少分群 ID');
       return;
     }
     setExporting(true);
@@ -52,7 +52,7 @@ export const AdminSegmentExportPage: React.FC = () => {
         </div>
         <button
           type="button"
-          className="rounded-lg border border-[#0ea5e9] bg-[#0ea5e9] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#0284c7] disabled:opacity-50"
+          className="rounded-lg border border-brand-primary bg-brand-primary px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-primary-hover disabled:opacity-50"
           disabled={exporting}
           onClick={() => void handleExport()}
         >
