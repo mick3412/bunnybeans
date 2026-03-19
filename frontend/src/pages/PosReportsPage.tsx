@@ -4,14 +4,16 @@ import {
   getPosReportsSummary,
   getPosTopItems,
   getPosDaily,
+  getPosOrderValueDistribution,
   listOrders,
   getCategories,
   type ApiError,
   type PosReportsSummaryDto,
   type PosReportsPreset,
   type PosTopItemRow,
-  type PosDailyRow,
+  type PosDailyChartItem,
   type PosOrderListResponse,
+  type OrderValueDistributionBucket,
 } from '../modules/pos/posOrdersApi';
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import { getPaymentMethodLabel } from '../shared/utils/paymentMethodLabels';
@@ -41,9 +43,13 @@ export const PosReportsPage: React.FC = () => {
   const [topItems, setTopItems] = useState<PosTopItemRow[]>([]);
   const [topItemsErr, setTopItemsErr] = useState<string | null>(null);
   const [topItemsLoading, setTopItemsLoading] = useState<boolean>(false);
-  const [daily, setDaily] = useState<PosDailyRow[]>([]);
+  const [daily, setDaily] = useState<PosDailyChartItem[]>([]);
   const [dailyErr, setDailyErr] = useState<string | null>(null);
   const [dailyLoading, setDailyLoading] = useState<boolean>(false);
+  const [dailyGroupBy, setDailyGroupBy] = useState<'day' | 'week' | 'month'>('day');
+  const [orderValueDist, setOrderValueDist] = useState<OrderValueDistributionBucket[]>([]);
+  const [orderValueDistErr, setOrderValueDistErr] = useState<string | null>(null);
+  const [orderValueDistLoading, setOrderValueDistLoading] = useState<boolean>(false);
   const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -134,7 +140,7 @@ export const PosReportsPage: React.FC = () => {
       } else {
         const [top, d] = await Promise.all([
           getPosTopItems({ from, to, limit: 10, sortBy: 'revenue', merchantId }),
-          getPosDaily({ from, to, merchantId }),
+          getPosDaily({ from, to, merchantId, groupBy: dailyGroupBy }),
         ]);
         if (!cancelled) {
           if (Array.isArray(top)) {
@@ -173,7 +179,32 @@ export const PosReportsPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [data, merchantId]);
+  }, [data, merchantId, dailyGroupBy]);
+
+  useEffect(() => {
+    if (!data?.period || !merchantId) return;
+    const { preset: p, from: f, to: t } = data.period;
+    let cancelled = false;
+    (async () => {
+      setOrderValueDistLoading(true);
+      setOrderValueDistErr(null);
+      const out = await getPosOrderValueDistribution({
+        preset: (p as PosReportsPreset) || undefined,
+        from: f,
+        to: t,
+        merchantId,
+      });
+      if (cancelled) return;
+      if ('buckets' in out && Array.isArray(out.buckets)) {
+        setOrderValueDist(out.buckets);
+      } else {
+        setOrderValueDistErr(getErrorMessage(out as ApiError));
+        setOrderValueDist([]);
+      }
+      setOrderValueDistLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [data?.period, merchantId]);
 
   return (
     <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-pos-reports">
@@ -255,6 +286,36 @@ export const PosReportsPage: React.FC = () => {
         ) : null}
       </div>
 
+      {data?.memberContribution && (
+        <div className="mt-6 rounded-xl border border-brand-surface bg-white p-4">
+          <h3 className="mb-3 text-sm font-semibold text-content">會員營收貢獻</h3>
+          {(data.memberContribution.memberRevenue > 0 || data.memberContribution.guestRevenue > 0 || data.memberContribution.memberOrdersCount > 0 || data.memberContribution.guestOrdersCount > 0) ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <div className="mb-2 text-xs font-medium text-muted">營收</div>
+                <MiniBarChart
+                  items={[
+                    { label: '會員', value: data.memberContribution.memberRevenue },
+                    { label: '匿名客', value: data.memberContribution.guestRevenue },
+                  ]}
+                  formatValue={(n) => money(String(n))}
+                />
+              </div>
+              <div>
+                <div className="mb-2 text-xs font-medium text-muted">訂單筆數</div>
+                <MiniBarChart
+                  items={[
+                    { label: '會員', value: data.memberContribution.memberOrdersCount },
+                    { label: '匿名客', value: data.memberContribution.guestOrdersCount },
+                  ]}
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted">此區間尚無訂單</p>
+          )}
+        </div>
+      )}
       {data && (data.grossMargin != null || (data.byPaymentMethod && Object.keys(data.byPaymentMethod).length > 0) || (data.byCategory && data.byCategory.length > 0)) && (
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           {/* 毛利分析 */}
@@ -451,11 +512,64 @@ export const PosReportsPage: React.FC = () => {
       )}
       {daily.length > 0 && !dailyLoading && (
         <div className="mt-8 rounded-2xl border border-brand-surface bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-content">日營收趨勢</h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-content">營收趨勢</h3>
+            <select
+              className="rounded-lg border border-brand-surface bg-white px-2 py-1 text-xs"
+              value={dailyGroupBy}
+              onChange={(e) => setDailyGroupBy(e.target.value as 'day' | 'week' | 'month')}
+            >
+              <option value="day">依日</option>
+              <option value="week">依週</option>
+              <option value="month">依月</option>
+            </select>
+          </div>
           <MiniLineChart
-            items={daily.map((row) => ({ label: row.date, value: row.revenue }))}
+            items={daily}
             formatValue={(n) => money(String(n))}
           />
+        </div>
+      )}
+
+      {orderValueDistLoading && (
+        <div className="mt-8 rounded-2xl border border-brand-surface bg-white p-4">
+          <h3 className="mb-3 text-sm font-semibold text-content">客單價分布</h3>
+          <div className="space-y-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="h-3 w-16 rounded bg-slate-200" />
+                <div className="h-2 flex-1 rounded-full bg-slate-200" />
+                <div className="h-3 w-10 rounded bg-slate-200" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {!orderValueDistLoading && orderValueDistErr && (
+        <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          客單價分布載入失敗：{orderValueDistErr}
+        </div>
+      )}
+      {!orderValueDistLoading && !orderValueDistErr && orderValueDist.length > 0 && (
+        <div className="mt-8 rounded-2xl border border-brand-surface bg-white p-4">
+          <h3 className="mb-3 text-sm font-semibold text-content">客單價分布</h3>
+          <MiniBarChart
+            items={orderValueDist.map((b) => ({ label: b.label, value: b.count }))}
+            formatValue={(n) => String(n)}
+          />
+          <div className="mt-3 text-xs text-muted">各區間營收：</div>
+          <div className="mt-1 flex flex-wrap gap-2 text-xs">
+            {orderValueDist.map((b) => (
+              <span key={b.label} className="rounded bg-brand-surface px-2 py-0.5">
+                {b.label}: {money(String(b.revenue))}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {!orderValueDistLoading && !orderValueDistErr && orderValueDist.length === 0 && data && data.ordersCount === 0 && (
+        <div className="mt-8 rounded-2xl border border-dashed border-brand-surface bg-white p-4 text-sm text-muted">
+          客單價分布：此區間尚無訂單
         </div>
       )}
     </div>
