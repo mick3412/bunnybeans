@@ -17,7 +17,7 @@
 
 ### INSTRUCTIONS 019（應收 merchantId、金流快照中文、集點版面、側欄營運/業績、訂單管理按鈕移除、熱銷品/區間趨勢、點擊審計 testid、跨層 E2E）
 - 做了：`getFinanceBalances` 新增 merchantId 並在餘額頁傳遞；金流快照全中文化；集點規則版面對齊 StandardListLayout；會員中心 hub 將「會員管理」tab 移到儀表板右側；訂單管理頁移除「回到收銀」「庫存(後台)」按鈕；側欄「總覽」→「營運」、新增「業績」入口 `/admin/performance`；PosReportsPage 熱銷品／區間趨勢在 merchantId 未設定時不呼叫 API、顯示友善錯誤、並行載入；點擊審計結果代碼輸入框補 `data-testid="e2e-admin-ops-report-clicks-resultcode-input"`；admin-categories E2E 新增類別 code 跨層驗證、e2e-pos 文件同步。
-- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 待 dev server 啟動後執行（localhost:5174）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`CI=0 E2E_PROFILE=full pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-ops-report-clicks-full.spec.ts` ✅（admin-categories 2 passed / 2 skipped 缺 ADMIN_KEY；admin-ops-report-clicks-full 1 passed）。
 - commits：adeda9f1 pass merchantId to getFinanceBalances；99a6f44d localize finance snapshots；185ffb90 align LoyaltySettingsPage；0ff1dd48 move 會員管理 tab；40ee8553 remove orders list buttons；f664daf8 sidebar 營運+業績；c65d84cd guard merchantId for topItems/daily；d0727b48 click-audit resultCode testid；eea23dd9 e2e category code + docs
 
 ---
