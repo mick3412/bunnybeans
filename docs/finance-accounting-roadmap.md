@@ -116,7 +116,7 @@
 
 ---
 
-## 六、應收應付彙總（規劃）
+## 六、應收應付彙總（已實作）
 
 ### 6.1 概念（對齊 inventory-finance-immutability）
 
@@ -125,14 +125,14 @@
   - 應付 = Σ(PURCHASE_PAYABLE) − Σ(PURCHASE_RETURN) − Σ(PURCHASE_REBATE) 等。
 - **匯總表為投影**：可為快取或實體表，但須由服務依事件更新，不提供手動改寫 API。
 
-### 6.2 API 規劃
+### 6.2 API（已實作）
 
-- **GET /finance/summary**（見 §4.4）：可支援 `groupBy=type`（依事件型別加總）或 `groupBy=partyId`（依對象餘額），回應結構在實作前於 api-design-inventory-finance 或本檔補齊。
-- **GET /finance/balances**（選配）：依 partyId 查詢應收／應付餘額；若實作，需與事件表可重算一致。
+- **GET /finance/summary**：已支援 `groupBy=type`、`groupBy=partyId`、`groupBy=day`、`groupBy=week`；見 api-design-inventory-finance。
+- **GET /finance/balances**：已實作；依 merchantId（必填或單一商家時自動帶入）查詢應收／應付餘額；支援 partyId、kind（customer/supplier）、分頁；與事件表可重算一致。
 
 ---
 
-## 七、關帳與審計（選配／中長期）
+## 七、關帳與審計（已實作）
 
 | 項目 | 說明 |
 |------|------|
@@ -235,8 +235,8 @@
 | 寫入來源 — 採購驗收 | **已實作** | ReceivingNote complete 寫 PURCHASE_PAYABLE。 |
 | 寫入來源 — 退供應商 | **已實作** | return-to-supplier 寫 PURCHASE_RETURN。 |
 | GET /finance/summary | **已實作** | 支援 groupBy=type、groupBy=partyId、preset、from/to；回傳 byType 或 byParty 彙總。 |
-| 應收應付餘額表／API | **已實作** | GET /finance/balances 已實作；回傳 `{ items: [{ partyId, receivable, payable }] }`，支援 `?partyId=` 查詢；integration-spec 已涵蓋 partyId 彙總與篩選。 |
-| 關帳／Audit | **未實作** | 僅設計概念見 immutability 文件。 |
+| 應收應付餘額表／API | **已實作** | GET /finance/balances；回傳 `{ items: [{ partyId, receivable, payable, displayName?, kind? }] }`；支援 partyId、kind、分頁；**單一商家 merchantId fallback**：未傳 merchantId 且 DB 僅一筆 Merchant 時自動使用。 |
+| 關帳／Periods／Audit／Snapshot | **已實作** | GET/POST /finance/periods（close/unlock）、GET /finance/audit-log、POST /finance/snapshots、GET /finance/snapshots（list/get/download）；integration-spec 已涵蓋。 |
 
 ### 9.2 前端
 
