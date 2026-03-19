@@ -30,9 +30,9 @@ test.describe('後台 補貨建議頁', () => {
     await page.goto('/admin/replenishment');
     const container = page.getByTestId('e2e-admin-replenishment');
     await expect(container).toBeVisible({ timeout: 15_000 });
-    // 有建議時為表格、無建議時為「目前沒有需要補貨的商品。」
+    // 有建議時為表格、無建議時為 empty state 區塊
     await expect(
-      container.locator('table').or(container.getByText('目前沒有需要補貨的商品。')),
+      container.locator('table').or(container.getByTestId('e2e-admin-replenishment-empty')),
     ).toBeVisible({ timeout: 10_000 });
   });
 

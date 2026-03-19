@@ -104,11 +104,11 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 | `e2e/pos-refund.spec.ts` | 全額結帳 → 訂單明細 → 小額退款 → 金額欄清空（API 成功） |
 | `e2e/pos-return-stock.spec.ts` | 全額結帳 → 明細 → 退貨入庫 1 件 → 成功提示 |
 | `e2e/admin-smoke.spec.ts` | 庫存頁載入 + **金流報表** `/admin/reports` |
-| `e2e/admin-categories.spec.ts` | 登入 → **分類維護**頁可見、標籤區可見；**標籤新增**（需 **VITE_ADMIN_API_KEY**，無 Key 時 skip） |
+| `e2e/admin-categories.spec.ts` | 登入 → **分類維護**頁可見、標籤區可見；**標籤新增**（需 **VITE_ADMIN_API_KEY**，無 Key 時 skip；以 `e2e-admin-categories-tags-create-name-input` / `e2e-admin-categories-tags-create-add-btn` 定位） |
 | `e2e/admin-bulk.spec.ts` | **批量 smoke**：商品匯入區塊、庫存匯出餘額（需 **VITE_ADMIN_API_KEY** 且回 200）、盤點上傳區塊、POS 訂單列表「匯出」按鈕 |
 | `e2e/admin-customers-import.spec.ts` | 登入 → **`/admin/customers/import`** 可進入；**預覽** POST `/customers/import/preview`（需 **VITE_ADMIN_API_KEY**，無 Key 時該則 **test.skip**；使用 `e2e-admin-customers-import-file` / `e2e-admin-customers-import-run-preview-btn` / `e2e-admin-customers-import-filehash-preview` 定位） |
 | `e2e/admin-loyalty-smoke.spec.ts` | 登入 → **`/admin/loyalty`** 側欄可見 **`e2e-admin-loyalty`**；**`/admin/loyalty/settings`** 設定頁區塊可見（需 **VITE_ADMIN_API_KEY**，無 Key 時 skip） |
-| `e2e/admin-replenishment.spec.ts` | 登入 → **`/admin/replenishment`** 補貨建議頁載入、倉庫選單、建議列表或空態；若有建議且有 **VITE_ADMIN_API_KEY** 則可建立採購草稿（不應長期空；使用 `e2e-admin-replenishment-suggestion-checkbox` / `e2e-admin-replenishment-supplier-select` / `e2e-admin-replenishment-create-draft-btn` 定位） |
+| `e2e/admin-replenishment.spec.ts` | 登入 → **`/admin/replenishment`** 補貨建議頁載入、倉庫選單、建議列表或空態；空態以 `e2e-admin-replenishment-empty` 斷言；若有建議且有 **VITE_ADMIN_API_KEY** 則可建立採購草稿（使用 `e2e-admin-replenishment-suggestion-checkbox` / `e2e-admin-replenishment-supplier-select` / `e2e-admin-replenishment-create-draft-btn` 定位） |
 | `e2e/admin-balances.spec.ts` | 登入 → **`/admin/balances`** 應收應付餘額頁載入、多方視角切換可見 |
 | `e2e/admin-receiving-notes-smoke.spec.ts` | 登入 → `/admin/receiving-notes`；打開 `E2E-RN-0001`；填退貨數量/原因→ 送出退回供應商；驗證 toast 與 `InventoryEvent RETURN_TO_SUPPLIER` note |
 | `e2e/admin-expiring-inventory-smoke.spec.ts` | 登入 → `/admin/inventory/expiring`；篩選 `E2E-EXP-BATCH-0001`；驗證 KPI 區塊與列表/空態渲染（full profile 時期望非空） |

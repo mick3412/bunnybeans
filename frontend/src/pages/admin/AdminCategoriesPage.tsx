@@ -97,8 +97,15 @@ function MasterSection(props: {
           value={create.name}
           onChange={(e) => create.setName(e.target.value)}
           onKeyDown={(e) => isEnter(e) && create.onCreate()}
+          data-testid={testId ? `${testId}-create-name-input` : undefined}
         />
-        <Button type="button" size="sm" variant="primary" onClick={() => create.onCreate()}>
+        <Button
+          type="button"
+          size="sm"
+          variant="primary"
+          onClick={() => create.onCreate()}
+          data-testid={testId ? `${testId}-create-add-btn` : undefined}
+        >
           新增
         </Button>
       </div>

@@ -36,8 +36,8 @@ test.describe('後台 分類頁', () => {
     const tagsSection = page.getByTestId('e2e-admin-categories-tags');
     await expect(tagsSection).toBeVisible({ timeout: 15_000 });
     const tagName = `E2E-TAG-${Date.now()}`;
-    await tagsSection.getByPlaceholder('新增標籤名稱').fill(tagName);
-    await tagsSection.getByRole('button', { name: '新增' }).click();
+    await tagsSection.getByTestId('e2e-admin-categories-tags-create-name-input').fill(tagName);
+    await tagsSection.getByTestId('e2e-admin-categories-tags-create-add-btn').click();
     await expect(tagsSection.getByText(tagName)).toBeVisible({ timeout: 5_000 });
   });
 });

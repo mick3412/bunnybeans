@@ -286,7 +286,10 @@ export const AdminReplenishmentPage: React.FC = () => {
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#0ea5e9] border-t-transparent" />
           </div>
         ) : rows.length === 0 ? (
-          <div className="py-12 text-center text-sm text-[#64748b]">
+          <div
+            className="py-12 text-center text-sm text-[#64748b]"
+            data-testid="e2e-admin-replenishment-empty"
+          >
             目前沒有需要補貨的商品。
           </div>
         ) : (
