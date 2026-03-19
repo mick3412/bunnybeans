@@ -70,20 +70,20 @@ export const AdminFinanceSnapshotsPage: React.FC = () => {
   const description = useMemo(() => {
     return (
       <span>
-        Finance snapshots 用於對帳/回溯。若你的環境尚未提供 snapshots list，這頁會顯示權限/未就緒錯誤。資料來源{' '}
-        <code className="rounded bg-table-head px-1">GET /finance/snapshots</code>（需 Admin key）。
+        金流快照用於對帳與回溯。若環境尚未提供快照列表，此頁會顯示權限或未就緒錯誤。資料來源{' '}
+        <code className="rounded bg-table-head px-1">GET /finance/snapshots</code>（需 Admin 金鑰）。
       </span>
     );
   }, []);
 
   return (
     <StandardListLayout
-      title="Finance snapshots（快照）"
+      title="金流快照"
       description={description}
       filters={
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-xs text-muted">type</label>
+            <label className="mb-1 block text-xs text-muted">類型</label>
             <select
               className="rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
               value={type}
@@ -93,8 +93,8 @@ export const AdminFinanceSnapshotsPage: React.FC = () => {
               }}
             >
               <option value="">全部</option>
-              <option value="daily">daily</option>
-              <option value="monthly">monthly</option>
+              <option value="daily">每日</option>
+              <option value="monthly">每月</option>
             </select>
           </div>
           <Button type="button" variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
@@ -102,7 +102,7 @@ export const AdminFinanceSnapshotsPage: React.FC = () => {
           </Button>
           <div className="flex flex-wrap items-end gap-2 rounded-xl border border-brand-surface bg-white px-3 py-2">
             <div>
-              <label className="mb-1 block text-xs text-muted">asOfDate</label>
+              <label className="mb-1 block text-xs text-muted">快照日期</label>
               <input
                 type="date"
                 className="h-9 rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
@@ -111,14 +111,14 @@ export const AdminFinanceSnapshotsPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-muted">產出 type</label>
+              <label className="mb-1 block text-xs text-muted">產出類型</label>
               <select
                 className="h-9 rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                 value={createType}
                 onChange={(e) => setCreateType(e.target.value as 'daily' | 'monthly')}
               >
-                <option value="daily">daily</option>
-                <option value="monthly">monthly</option>
+                <option value="daily">每日</option>
+                <option value="monthly">每月</option>
               </select>
             </div>
             <Button
@@ -177,10 +177,10 @@ export const AdminFinanceSnapshotsPage: React.FC = () => {
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
               <tr>
-                <th className="px-4 py-2">asOfDate</th>
-                <th className="px-4 py-2">type</th>
-                <th className="px-4 py-2">path</th>
-                <th className="px-4 py-2">createdAt</th>
+                <th className="px-4 py-2">快照日期</th>
+                <th className="px-4 py-2">類型</th>
+                <th className="px-4 py-2">檔案路徑</th>
+                <th className="px-4 py-2">建立時間</th>
                 <th className="px-4 py-2">操作</th>
               </tr>
             </thead>
@@ -206,7 +206,7 @@ export const AdminFinanceSnapshotsPage: React.FC = () => {
                             .catch(() => showToast('複製失敗', 'err'));
                         }}
                       >
-                        複製 path
+                        複製路徑
                       </Button>
                       <Button
                         type="button"
@@ -221,11 +221,11 @@ export const AdminFinanceSnapshotsPage: React.FC = () => {
                             }
                             const text = JSON.stringify((out as { summary?: unknown }).summary ?? {}, null, 2);
                             await navigator.clipboard.writeText(text);
-                            showToast('已複製 summary JSON');
+                            showToast('已複製摘要 JSON');
                           })().catch(() => showToast('複製失敗', 'err'));
                         }}
                       >
-                        查看/複製 summary
+                        查看／複製摘要
                       </Button>
                       <Button
                         type="button"
