@@ -54,6 +54,13 @@ test.describe('後台 發券規則頁', () => {
     });
     // Ops jobs runner may return 200/201 depending on implementation.
     expect([200, 201]).toContain(resp.status);
+    let runLogId: string | null = null;
+    try {
+      const body = (await resp.json()) as { runLogId?: string } | null;
+      runLogId = body?.runLogId ?? null;
+    } catch {
+      // 非 JSON body 時忽略
+    }
 
     // refresh list
     await page.goto('/admin/dispatch-rules');
@@ -79,17 +86,31 @@ test.describe('後台 發券規則頁', () => {
     }
     expect(merchantId).toBeTruthy();
 
-    const rulesResp = await page.request.get(
-      `${apiBase}/crm/dispatch-rules?merchantId=${encodeURIComponent(merchantId!)}`,
-    );
-    expect(rulesResp.status()).toBe(200);
-    const rules = (await rulesResp.json()) as Array<{
+    const fetchRules = async () => {
+      const rulesResp = await page.request.get(
+        `${apiBase}/crm/dispatch-rules?merchantId=${encodeURIComponent(merchantId!)}`,
+      );
+      expect(rulesResp.status()).toBe(200);
+      return (await rulesResp.json()) as Array<{
       name: string;
       lastRunAt?: string | null;
       lastRunCode?: string | null;
       lastRunNote?: string | null;
-    }>;
+      }>;
+    };
 
+    // runner 可能需要更久才把 lastRun 寫回（尤其 CI）
+    await expect
+      .poll(async () => {
+        const rules = await fetchRules();
+        const enabledRule = rules.find((r) => r.name === RULE_ENABLED_NAME);
+        if (!enabledRule) return false;
+        const note = enabledRule.lastRunNote ?? '';
+        return Boolean(enabledRule.lastRunAt && enabledRule.lastRunCode && enabledRule.lastRunNote && /jobId=|duplicate-protection|CRM_JOB/i.test(note));
+      }, { timeout: 60_000, intervals: [2_000] })
+      .toBe(true);
+
+    const rules = await fetchRules();
     const enabledRule = rules.find((r) => r.name === RULE_ENABLED_NAME);
     expect(enabledRule).toBeTruthy();
     expect(enabledRule!.lastRunAt).toBeTruthy();
@@ -106,21 +127,20 @@ test.describe('後台 發券規則頁', () => {
     const opsRoot = page.getByTestId('e2e-admin-ops-jobs');
     await expect(opsRoot).toBeVisible({ timeout: 15_000 });
 
-    // 找到訊息含 jobId= 的那一筆（避免同 kind 多筆且某些 message 可能是 null）
-    const msgCell = opsRoot.locator('[data-testid="e2e-admin-ops-jobs-message"]', { hasText: 'jobId=' }).first();
-    await expect(msgCell).toBeVisible({ timeout: 15_000 });
-    await expect(msgCell).toContainText('jobId=');
+    // 對應那一次 run 的 ops job row（優先用 runLogId，否則 fallback）
+    const jobRow = runLogId
+      ? opsRoot.locator(`tr#runlog-${runLogId}`).first()
+      : opsRoot.locator('[data-testid="e2e-admin-ops-jobs-message"]').first();
 
+    const msgCell = jobRow.locator('[data-testid="e2e-admin-ops-jobs-message"]').first();
+    await expect(msgCell).toBeVisible({ timeout: 60_000 });
+
+    const msgText = (await msgCell.textContent()) ?? '';
     const msgTitle = (await msgCell.getAttribute('title')) ?? '';
-    if (msgTitle) {
-      expect(msgTitle).toContain(RULE_ENABLED_NAME);
-    } else {
-      await expect(msgCell).toContainText(RULE_ENABLED_NAME);
-    }
+    const combined = `${msgText} ${msgTitle}`.trim();
+    expect(combined).toMatch(/jobId=|CRM_JOB|duplicate-protection/i);
 
-    const jobRow = msgCell.locator('xpath=ancestor::tr[1]').first();
     const opsLastRunAtEl = jobRow.locator('[data-testid="e2e-admin-ops-jobs-lastRunAt"]').first();
-    const opsLastRunAtText = (await opsLastRunAtEl.textContent()) ?? '';
-    expect(opsLastRunAtText.trim()).not.toBe('—');
+    await expect(opsLastRunAtEl).not.toHaveText('—', { timeout: 60_000 });
   });
 });

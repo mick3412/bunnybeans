@@ -217,9 +217,6 @@ export const AdminDispatchRulesPage: React.FC = () => {
       className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm"
       data-testid="e2e-admin-dispatch-rules"
     >
-      <p className="mb-4 text-sm text-[#64748b]">
-        發券規則：依分群與排程自動發送優惠券。資料來源 <code className="rounded bg-[#f1f5f9] px-1">GET/POST/PATCH/DELETE /crm/dispatch-rules</code>；需 VITE_ADMIN_API_KEY。
-      </p>
       <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
         <h3 className="mb-2 text-sm font-semibold text-[#1e293b]">最近 job 狀態</h3>
         <p className="mb-2 text-xs text-[#64748b]">
@@ -232,20 +229,20 @@ export const AdminDispatchRulesPage: React.FC = () => {
             <table className="w-full min-w-[360px] text-left text-sm">
               <thead className="border-b border-[#e2e8f0] text-[#64748b]">
                 <tr>
-                  <th className="px-3 py-1.5">Job 類型</th>
-                  <th className="px-3 py-1.5">最近執行</th>
-                  <th className="px-3 py-1.5">結果</th>
-                  <th className="px-3 py-1.5">訊息</th>
+                  <th className="w-[220px] px-3 py-1.5 text-left">Job 類型</th>
+                  <th className="w-[220px] px-3 py-1.5 text-right">最近執行</th>
+                  <th className="w-[120px] px-3 py-1.5 text-center">結果</th>
+                  <th className="px-3 py-1.5 text-left">訊息</th>
                 </tr>
               </thead>
               <tbody>
                 {jobStatus.map((j) => (
                   <tr key={j.jobType} className="border-t border-[#e2e8f0]">
                     <td className="px-3 py-1.5 font-medium">{j.jobType}</td>
-                    <td className="px-3 py-1.5 text-[#64748b]">
+                    <td className="px-3 py-1.5 tabular-nums text-right text-[#64748b]">
                       {j.lastRunAt ? new Date(j.lastRunAt).toLocaleString('zh-TW') : '—'}
                     </td>
-                    <td className="px-3 py-1.5">
+                    <td className="px-3 py-1.5 text-center">
                       <span
                         className={`rounded px-2 py-0.5 text-xs font-medium ${
                           j.success ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
@@ -254,7 +251,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                         {j.success ? '成功' : '失敗'}
                       </span>
                     </td>
-                    <td className="max-w-[200px] truncate px-3 py-1.5 text-xs text-[#64748b]">
+                    <td className="max-w-[280px] truncate px-3 py-1.5 text-left text-xs text-[#64748b]">
                       {j.message ?? '—'}
                     </td>
                   </tr>

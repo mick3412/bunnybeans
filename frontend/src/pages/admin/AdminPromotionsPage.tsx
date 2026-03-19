@@ -278,48 +278,7 @@ export const AdminPromotionsPage: React.FC = () => {
                         <path d="M10 6h4v2h-4V6zm0 5h4v2h-4v-2zm0 5h4v2h-4v-2z" />
                       </svg>
                     </button>
-                    <div className="mr-1 flex flex-col gap-1">
-                      <button
-                        type="button"
-                        disabled={sorting || rows.findIndex((x) => x.id === r.id) <= 0}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2e8f0] bg-white text-muted hover:border-[#0ea5e9]/30 disabled:opacity-50"
-                        title="上移"
-                        aria-label="上移"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const idx = rows.findIndex((x) => x.id === r.id);
-                          if (idx <= 0) return;
-                          const next = rows.slice();
-                          const tmp = next[idx - 1];
-                          next[idx - 1] = next[idx];
-                          next[idx] = tmp;
-                          void applyReorder(next);
-                        }}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        disabled={sorting || rows.findIndex((x) => x.id === r.id) >= rows.length - 1}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#e2e8f0] bg-white text-muted hover:border-[#0ea5e9]/30 disabled:opacity-50"
-                        title="下移"
-                        aria-label="下移"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const idx = rows.findIndex((x) => x.id === r.id);
-                          if (idx < 0 || idx >= rows.length - 1) return;
-                          const next = rows.slice();
-                          const tmp = next[idx + 1];
-                          next[idx + 1] = next[idx];
-                          next[idx] = tmp;
-                          void applyReorder(next);
-                        }}
-                      >
-                        ↓
-                      </button>
-                    </div>
+                    {/* 只保留拖曳調整排序；不再提供上移/下移按鈕 */}
                     <span className="text-base font-semibold text-[#1e293b] group-hover:text-[#0ea5e9]">
                       {r.name}
                     </span>

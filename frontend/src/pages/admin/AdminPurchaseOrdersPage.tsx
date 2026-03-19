@@ -365,7 +365,6 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                       ? '尚無驗收單'
                       : `共 ${detailRns.length} 筆（${detailRns.filter((x) => x.status === 'COMPLETED').length} 筆已完成）`}
                   </div>
-                  <div className="mt-1 text-[11px] text-muted">可點擊驗收單前往詳情</div>
                 </div>
               </div>
               {detailRns.length > 0 && (
@@ -375,7 +374,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                       <tr>
                         <th className="px-2 py-2 text-left">驗收單號</th>
                         <th className="px-2 py-2">狀態</th>
-                        <th className="px-2 py-2">時間</th>
+                        <th className="px-2 py-2 text-right">時間</th>
                         <th className="w-20 px-2 py-2" />
                       </tr>
                     </thead>
@@ -417,7 +416,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                       : rn.status}
                             </span>
                           </td>
-                          <td className="px-2 py-2 text-xs text-muted">
+                          <td className="px-2 py-2 text-right text-xs text-muted">
                             {rn.receivedAt ? rn.receivedAt.slice(0, 10) : '—'}
                           </td>
                           <td className="px-2 py-2 text-right text-xs text-muted">前往</td>

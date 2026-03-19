@@ -15,6 +15,15 @@ const KIND_OPTIONS: { value: string; label: string }[] = [
 
 const PAGE_SIZES = [10, 20, 50];
 
+function formatJobTypeLabel(jobType: string) {
+  const m: Record<string, string> = {
+    'crm-run-scheduled': 'CRM 排程發券',
+    'finance-period-close': '金流關帳',
+    'finance-snapshot': '金流快照',
+  };
+  return m[jobType] ?? jobType;
+}
+
 export const AdminOpsJobsPage: React.FC = () => {
   const { showToast } = useAdminToast();
   const canWrite = hasAdminApiKey();
@@ -92,7 +101,7 @@ export const AdminOpsJobsPage: React.FC = () => {
       data-testid="e2e-admin-ops-jobs"
     >
       <p className="mb-4 text-sm text-[#64748b]">
-        Job 執行紀錄（OpsJobRunLog）。資料來源 <code className="rounded bg-[#f1f5f9] px-1">GET /ops/jobs</code>。
+        營運工作執行紀錄（OpsJobRunLog）：資料來源 <code className="rounded bg-[#f1f5f9] px-1">GET /ops/jobs</code>。
       </p>
       {err && (
         <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -122,7 +131,7 @@ export const AdminOpsJobsPage: React.FC = () => {
           </select>
         </div>
         <div>
-          <label className="mr-2 text-xs text-[#64748b]">from</label>
+          <label className="mr-2 text-xs text-[#64748b]">起始日期</label>
           <input
             type="date"
             className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
@@ -134,7 +143,7 @@ export const AdminOpsJobsPage: React.FC = () => {
           />
         </div>
         <div>
-          <label className="mr-2 text-xs text-[#64748b]">to</label>
+          <label className="mr-2 text-xs text-[#64748b]">截止日期</label>
           <input
             type="date"
             className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
@@ -236,11 +245,11 @@ export const AdminOpsJobsPage: React.FC = () => {
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold uppercase text-[#64748b]">
                 <tr>
-                  <th className="px-3 py-2">jobType</th>
-                  <th className="px-3 py-2">lastRunAt</th>
-                  <th className="px-3 py-2">success</th>
-                  <th className="px-3 py-2">message</th>
-                  <th className="px-3 py-2">createdAt</th>
+                  <th className="w-[220px] px-3 py-2 text-left">作業類型</th>
+                  <th className="w-[220px] px-3 py-2 text-right">最近一次執行</th>
+                  <th className="w-[120px] px-3 py-2 text-center">結果</th>
+                  <th className="px-3 py-2 text-left">訊息</th>
+                  <th className="w-[220px] px-3 py-2 text-right">建立時間</th>
                 </tr>
               </thead>
               <tbody>
@@ -253,14 +262,14 @@ export const AdminOpsJobsPage: React.FC = () => {
                       lastTriggeredRunLogId === r.id ? 'bg-brand-primary/5' : '',
                     ].join(' ')}
                   >
-                    <td className="px-3 py-2 font-medium text-[#1e293b]">{r.jobType}</td>
+                    <td className="px-3 py-2 font-medium text-[#1e293b]">{formatJobTypeLabel(r.jobType)}</td>
                     <td
-                      className="px-3 py-2 tabular-nums text-[#64748b]"
+                      className="px-3 py-2 tabular-nums text-right text-[#64748b]"
                       data-testid="e2e-admin-ops-jobs-lastRunAt"
                     >
                       {r.lastRunAt ? new Date(r.lastRunAt).toLocaleString('zh-TW') : '—'}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 text-center">
                       <span
                         className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
                           r.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -270,13 +279,13 @@ export const AdminOpsJobsPage: React.FC = () => {
                       </span>
                     </td>
                     <td
-                      className="max-w-xs truncate px-3 py-2 text-[#64748b]"
+                      className="max-w-[360px] truncate px-3 py-2 text-left text-[#64748b]"
                       title={r.message ?? undefined}
                       data-testid="e2e-admin-ops-jobs-message"
                     >
                       {r.message || '—'}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-[#64748b]">
+                    <td className="px-3 py-2 tabular-nums text-right text-[#64748b]">
                       {new Date(r.createdAt).toLocaleString('zh-TW')}
                     </td>
                   </tr>
@@ -352,14 +361,14 @@ export const AdminOpsJobsPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-muted">snapshotType</label>
+                    <label className="mb-1 block text-xs font-semibold text-muted">快照類型</label>
                     <select
                       className="w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
                       value={snapshotType}
                       onChange={(e) => setSnapshotType(e.target.value as 'daily' | 'monthly')}
                     >
-                      <option value="daily">daily</option>
-                      <option value="monthly">monthly</option>
+                      <option value="daily">每日</option>
+                      <option value="monthly">每月</option>
                     </select>
                   </div>
                 </>

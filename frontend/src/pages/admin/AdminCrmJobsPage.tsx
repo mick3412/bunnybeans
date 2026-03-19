@@ -269,7 +269,6 @@ export const AdminCrmJobsPage: React.FC = () => {
         ) : items.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted">
             <div className="font-medium text-content">沒有紀錄</div>
-            <div className="mt-1 text-xs text-muted">提示：需傳 merchantId 且需 Admin Key</div>
             <div className="mt-3">
               <Button type="button" variant="secondary" size="sm" onClick={() => void load()}>
                 重試
@@ -281,12 +280,12 @@ export const AdminCrmJobsPage: React.FC = () => {
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold text-[#64748b]">
                 <tr>
-                  <th className="px-3 py-2">時間</th>
+                  <th className="w-[220px] px-3 py-2 text-right">時間</th>
                   <th className="px-3 py-2">種類</th>
-                  <th className="px-3 py-2">狀態</th>
+                  <th className="w-[110px] px-3 py-2 text-center">狀態</th>
                   <th className="px-3 py-2 font-mono text-xs">segmentId</th>
                   <th className="px-3 py-2 font-mono text-xs">couponId</th>
-                  <th className="px-3 py-2">操作</th>
+                  <th className="w-[140px] px-3 py-2 text-right">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -294,20 +293,20 @@ export const AdminCrmJobsPage: React.FC = () => {
                   const st = statusLabel(r.status);
                   return (
                     <tr key={r.id} className="border-b border-[#e2e8f0] hover:bg-[#f8fafc]">
-                      <td className="px-3 py-2 whitespace-nowrap text-xs text-muted">
+                      <td className="px-3 py-2 whitespace-nowrap tabular-nums text-right text-xs text-muted">
                         {new Date(r.createdAt).toLocaleString('zh-TW')}
                       </td>
                       <td className="px-3 py-2">
                         <div className="text-sm font-medium text-content">{r.kind}</div>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 text-center">
                         <span className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${st.cls}`}>
                           {st.text}
                         </span>
                       </td>
                       <td className="px-3 py-2 font-mono text-[11px] text-muted">{r.segmentId.slice(0, 10)}…</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-muted">{r.couponId.slice(0, 10)}…</td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 text-right">
                         <Button
                           type="button"
                           size="sm"
