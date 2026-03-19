@@ -15,6 +15,45 @@
 
 ---
 
+### AD-HOC 補記（補齊：Tab/UI/Promotions/表格/財務導航）
+- 做了：
+  - Admin Hub 選中態視覺修正：6 個 hub 的 tab 選中態加上強制底色/字色與外框（`!bg... !text-white ... ring-2 ring-brand-primary/40`），避免「選中後白字看不出目前 tab」。
+  - Ops Monitoring 導覽釐清與修正：
+    - 「留下總覽」是指側欄：`AdminLayout` 側欄移除「Job 監控」入口，保留「總覽」。
+    - 仍維持頁內 tabs（overview/jobs/clicks）可用，並修正 hub 的 URL/tab 同步避免 tab 失效。
+  - Promotions 排序 UX：移除「上移/下移」按鈕，只保留拖曳把手；並釐清「只有 ALL tab 可調整順序」根因為後端重排需全量 ids（非 all 分頁是子集會被拒絕）。
+  - 全站表格可讀性起手式：
+    - `frontend/src/styles.css` 補全域表格規則（table 寬度、th 預設左對齊、td 垂直置中、`td.tabular-nums` 右對齊）。
+    - 針對部分 admin 表格逐欄調整寬度/對齊（數字/時間右對齊、狀態置中、訊息左對齊並 truncate）。
+  - 財務中心 tab/側欄跳轉錯頁修正：`AdminFinanceHubPage` 以 pathname 強制同步 tab，避免先前殘留 `finance.hub.tab` 導致點側欄無法回到正確頁。
+  - 採購頁內 tab 整合：新增 `/admin/procurement`（採購單／進貨驗收／退供／補貨建議），並保留 `/admin/purchase-orders`、`/admin/receiving-notes`、`/admin/replenishment` 既有路由導向到同一 hub；側欄新增「採購總覽」入口。
+  - Hub tabs 可叫回修正（pathname 優先）：商品/庫存/會員/行銷/Ops/採購 hubs 加入 pathname 同步，避免切 tab 後點側欄落在舊 tab。
+  - 修正金流報表頁 runtime：`AdminReportsPage` 補回 `useMemo` import（避免 `/admin/reports` 白屏）。
+  - 金流報表視角 group：`AdminReportsPage` 未填 `partyId` 時，`會員視角/供應商視角/其他對象` 直接以前綴 (`CUSTOMER:`/`SUPPLIER:`) 進行 group 過濾（列表與依對象彙總），提升閱讀性。
+- 測試/驗收：
+  - `pnpm --filter pos-erp-frontend build` ✅
+  - `CI=0 E2E_PROFILE=full E2E_BASE_URL=http://localhost:5174 pnpm exec playwright test e2e/admin-dispatch-rules.spec.ts` ✅
+  - `CI=0 E2E_PROFILE= pnpm exec playwright test e2e/admin-smoke.spec.ts` ✅（金流報表段落依資料情況 skip；full profile 下可能因 fixture 不足 fail-fast）
+- commits：尚未提交（工作區變更）
+
+### AD-HOC（未經 INSTRUCTIONS 派遣：財務/側欄/點擊審計修正）
+- 做了：
+  - `/admin/ops/report-clicks`（ReportClickAudit）頁面全中文化（表格欄位/趨勢表/篩選 label/健康分數文案），並以 `aria-label="resultCode"` 保留 E2E 可定位欄位名稱。
+  - 後台側欄「商品/庫存」底下兩個入口改名：`商品主檔` → `商品總覽`、`庫存` → `庫存總覽`。
+  - 金流報表與稽核紀錄更全中文顯示：
+    - `AdminReportsPage`：表格欄位 `referenceId` → `參考單據`（穿透按鈕仍維持「訂單」）。
+    - `AdminFinanceAuditPage`：頁標改「稽核紀錄」，`eventId/actor` 改中文欄名，摘要 `amount=...` → `金額：...`，eventId 內容縮短顯示（保留 title）。
+  - 修正財務分頁卡住/跳轉錯頁：
+    - `AdminReportsPage`：修正 URL 同步 effect 的重入更新，避免切「視角」造成卡住。
+    - `AdminFinanceHubPage`：以 pathname 強制同步 hub tab，避免切換 tab 後點側欄仍落在舊 tab（`finance.hub.tab` 殘留）而顯示錯頁。
+  - 金流報表視角預設 group：
+    - `AdminReportsPage`：未填 `partyId` 時，`會員視角/供應商視角/其他對象` 直接以 `partyId` 前綴（`CUSTOMER:`/`SUPPLIER:`）做 group 過濾（列表與依對象彙總）。
+- 測試/驗收：
+  - `pnpm --filter pos-erp-frontend build` ✅
+  - `CI=0 E2E_PROFILE=full E2E_BASE_URL=http://localhost:5174 pnpm exec playwright test e2e/admin-ops-report-clicks-full.spec.ts` ✅
+  - `CI=0 E2E_PROFILE= pnpm exec playwright test e2e/admin-smoke.spec.ts` ✅（金流報表段落依資料情況 skip）
+- commits：尚未提交（工作區變更）
+
 ### INSTRUCTIONS 017（admin-categories 標籤新增 testid + replenishment 空態 testid）
 - 做了：① `admin-categories` 的標籤新增 input/新增按鈕補上唯一 `data-testid`（`e2e-admin-categories-tags-create-name-input` / `e2e-admin-categories-tags-create-add-btn`），並更新對應 E2E locator；② `admin-replenishment` 空態改用 `e2e-admin-replenishment-empty` 斷言，避免文案漂移導致固定 full-profile suite 失敗；③ 更新 `docs/e2e-pos.md` 對應四個 spec 驗收摘要的定位欄位。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`export CI=0 E2E_PROFILE=full E2E_BASE_URL=http://localhost:5174 pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-customers-import.spec.ts e2e/admin-bulk.spec.ts e2e/admin-replenishment.spec.ts` ✅（4 skipped / 8 passed）。
