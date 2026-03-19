@@ -16,6 +16,7 @@ import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { useAdminToast } from './AdminToastContext';
 import { Button } from '../../shared/components/Button';
+import { Alert } from '../../shared/components/Alert';
 import { useNavigate } from 'react-router-dom';
 
 const SCHEDULE_OPTIONS: { value: string; label: string }[] = [
@@ -131,7 +132,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!merchantId || !formName.trim() || !formSegmentId || !formCouponId) {
-      showToast('請填寫名稱、分群、優惠券', 'err');
+      showToast('缺少名稱、分群或優惠券', 'err');
       return;
     }
     if (!['manual', 'daily', 'weekly', 'monthly'].includes(formScheduleType)) {
@@ -214,20 +215,20 @@ export const AdminDispatchRulesPage: React.FC = () => {
 
   return (
     <div
-      className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm"
+      className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm"
       data-testid="e2e-admin-dispatch-rules"
     >
-      <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
-        <h3 className="mb-2 text-sm font-semibold text-[#1e293b]">最近 job 狀態</h3>
-        <p className="mb-2 text-xs text-[#64748b]">
+      <div className="mb-4 rounded-xl border border-brand-surface bg-table-head p-4">
+        <h3 className="mb-2 text-sm font-semibold text-content">最近 job 狀態</h3>
+        <p className="mb-2 text-xs text-muted">
           資料來源 <code className="rounded bg-white px-1">GET /ops/jobs/status</code>
         </p>
         {jobStatus.length === 0 ? (
-          <p className="text-sm text-[#64748b]">尚無執行紀錄</p>
+          <p className="text-sm text-muted">尚無執行紀錄</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[360px] text-left text-sm">
-              <thead className="border-b border-[#e2e8f0] text-[#64748b]">
+              <thead className="border-b border-brand-surface text-muted">
                 <tr>
                   <th className="w-[220px] px-3 py-1.5 text-left">Job 類型</th>
                   <th className="w-[220px] px-3 py-1.5 text-right">最近執行</th>
@@ -237,9 +238,9 @@ export const AdminDispatchRulesPage: React.FC = () => {
               </thead>
               <tbody>
                 {jobStatus.map((j) => (
-                  <tr key={j.jobType} className="border-t border-[#e2e8f0]">
+                  <tr key={j.jobType} className="border-t border-brand-surface">
                     <td className="px-3 py-1.5 font-medium">{j.jobType}</td>
-                    <td className="px-3 py-1.5 tabular-nums text-right text-[#64748b]">
+                    <td className="px-3 py-1.5 tabular-nums text-right text-muted">
                       {j.lastRunAt ? new Date(j.lastRunAt).toLocaleString('zh-TW') : '—'}
                     </td>
                     <td className="px-3 py-1.5 text-center">
@@ -251,7 +252,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                         {j.success ? '成功' : '失敗'}
                       </span>
                     </td>
-                    <td className="max-w-[280px] truncate px-3 py-1.5 text-left text-xs text-[#64748b]">
+                    <td className="max-w-[280px] truncate px-3 py-1.5 text-left text-xs text-muted">
                       {j.message ?? '—'}
                     </td>
                   </tr>
@@ -262,7 +263,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
         )}
       </div>
       {err && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
+        <div className="mb-4"><Alert variant="error">{err}</Alert></div>
       )}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap gap-2">

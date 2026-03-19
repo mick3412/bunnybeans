@@ -9,10 +9,11 @@ import {
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useAdminToast } from './AdminToastContext';
+import { Alert } from '../../shared/components/Alert';
 
 const fieldClass =
-  'rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:outline-none focus:ring-2 focus:ring-[#0ea5e9]/20';
-const cardClass = 'rounded-2xl border border-[#e2e8f0] bg-white p-5 shadow-sm';
+  'rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
+const cardClass = 'rounded-2xl border border-brand-surface bg-white p-5 shadow-sm';
 
 function yyyyMmDd(s: string) {
   return (s ?? '').slice(0, 10);
@@ -138,7 +139,7 @@ export const AdminExpiringInventoryPage: React.FC = () => {
       <div className={cardClass}>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[220px]">
-            <label className="mb-1 block text-xs font-semibold text-[#475569]">倉庫</label>
+            <label className="mb-1 block text-xs font-semibold text-muted">倉庫</label>
             <select
               className={`${fieldClass} min-w-[220px]`}
               value={warehouseId}
@@ -156,7 +157,7 @@ export const AdminExpiringInventoryPage: React.FC = () => {
             </select>
           </div>
           <div className="min-w-[160px]">
-            <label className="mb-1 block text-xs font-semibold text-[#475569]">天數（即將到期）</label>
+            <label className="mb-1 block text-xs font-semibold text-muted">天數（即將到期）</label>
             <select
               className={`${fieldClass} min-w-[160px]`}
               value={daysAhead}
@@ -173,7 +174,7 @@ export const AdminExpiringInventoryPage: React.FC = () => {
             </select>
           </div>
           <div className="min-w-[240px] flex-1">
-            <label className="mb-1 block text-xs font-semibold text-[#475569]">搜尋</label>
+            <label className="mb-1 block text-xs font-semibold text-muted">搜尋</label>
             <input
               className={`${fieldClass} w-full`}
               placeholder="SKU / 商品名 / 批號"
@@ -184,35 +185,33 @@ export const AdminExpiringInventoryPage: React.FC = () => {
               }}
             />
           </div>
-          <div className="ml-auto text-xs text-[#64748b] tabular-nums">
+          <div className="ml-auto text-xs text-muted tabular-nums">
             {loading ? '載入中…' : `共 ${total} 筆`}
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
-            <div className="text-[11px] text-[#64748b]">批次筆數（本頁）</div>
-            <div className="text-lg font-semibold text-[#0f172a] tabular-nums">{data?.items?.length ?? 0}</div>
+          <div className="rounded-xl border border-brand-surface bg-table-head p-3">
+            <div className="text-[11px] text-muted">批次筆數（本頁）</div>
+            <div className="text-lg font-semibold text-content tabular-nums">{data?.items?.length ?? 0}</div>
           </div>
-          <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
-            <div className="text-[11px] text-[#64748b]">商品數（本頁）</div>
-            <div className="text-lg font-semibold text-[#0f172a] tabular-nums">{kpi.uniqueProducts}</div>
+          <div className="rounded-xl border border-brand-surface bg-table-head p-3">
+            <div className="text-[11px] text-muted">商品數（本頁）</div>
+            <div className="text-lg font-semibold text-content tabular-nums">{kpi.uniqueProducts}</div>
           </div>
-          <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
-            <div className="text-[11px] text-[#64748b]">最早到期日（本頁）</div>
-            <div className="text-lg font-semibold text-[#0f172a] tabular-nums">{kpi.earliest}</div>
+          <div className="rounded-xl border border-brand-surface bg-table-head p-3">
+            <div className="text-[11px] text-muted">最早到期日（本頁）</div>
+            <div className="text-lg font-semibold text-content tabular-nums">{kpi.earliest}</div>
           </div>
         </div>
 
         {err && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            {err}
-          </div>
+          <div className="mt-4"><Alert variant="error">{err}</Alert></div>
         )}
 
-        <div className="mt-4 overflow-x-auto rounded-xl border border-[#e2e8f0]">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-brand-surface">
           <table className="w-full border-collapse text-sm">
-            <thead className="bg-[#f8fafc] text-xs text-[#475569]">
+            <thead className="bg-table-head text-xs text-muted">
               <tr>
                 <th className="px-3 py-2 text-left">效期日</th>
                 <th className="px-3 py-2 text-left">SKU</th>
@@ -223,24 +222,24 @@ export const AdminExpiringInventoryPage: React.FC = () => {
                 <th className="px-3 py-2 text-right">動作</th>
               </tr>
             </thead>
-            <tbody className="text-[#0f172a]">
+            <tbody className="text-content">
               {filteredItems.map((r) => (
                 <tr
                   key={`${r.productId}-${r.warehouseId}-${r.batchCode ?? 'none'}-${r.expiryDate}`}
-                  className="border-t border-[#e2e8f0]"
+                  className="border-t border-brand-surface"
                 >
                   <td className="px-3 py-2 text-xs tabular-nums">{yyyyMmDd(r.expiryDate)}</td>
                   <td className="px-3 py-2 font-mono text-xs">{r.sku ?? '—'}</td>
                   <td className="px-3 py-2">{r.productName ?? '—'}</td>
                   <td className="px-3 py-2 text-xs">{r.batchCode ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-[#475569]">
+                  <td className="px-3 py-2 text-xs text-muted">
                     {whNameById.get(r.warehouseId) ?? r.warehouseId}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">{r.onHandQty}</td>
                   <td className="px-3 py-2 text-right">
                     {r.sku ? (
                       <Link
-                        className="text-xs font-semibold text-[#0ea5e9] hover:underline"
+                        className="text-xs font-semibold text-brand-primary hover:underline"
                         to={`/admin/products?q=${encodeURIComponent(r.sku)}`}
                       >
                         看商品
