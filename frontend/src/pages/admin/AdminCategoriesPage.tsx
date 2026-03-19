@@ -585,11 +585,6 @@ export const AdminCategoriesPage: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-6xl" data-testid="e2e-admin-categories">
-      <div className="mb-4 text-xs text-[#64748b]">
-        寫入需 <code className="rounded bg-[#f1f5f9] px-1">X-Admin-Key</code>（
-        <code className="rounded bg-[#f1f5f9] px-1">VITE_ADMIN_API_KEY</code>）。標籤由 GET/POST/PATCH/DELETE /product-tags 管理。
-      </div>
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <MasterSection
           title="品項"
@@ -658,11 +653,6 @@ export const AdminCategoriesPage: React.FC = () => {
         <MasterSection
           title="標籤"
           testId="e2e-admin-categories-tags"
-          hint={
-            <p className="mb-2 text-xs text-[#64748b]">
-              與商品標籤共用；由 GET/POST/PATCH/DELETE /product-tags 管理。
-            </p>
-          }
           err={tagErr}
           create={{
             code: newTagCode,
@@ -674,7 +664,7 @@ export const AdminCategoriesPage: React.FC = () => {
             setName: setNewTagName,
             onCreate: () => void addTag(),
             namePlaceholder: '名稱',
-            codePlaceholder: '代碼（可選）',
+            codePlaceholder: '代碼',
           }}
           rows={tagMaster.map((t) => ({ id: t.id, code: t.code ?? t.name, name: t.name }))}
           editingId={tagEditId}
