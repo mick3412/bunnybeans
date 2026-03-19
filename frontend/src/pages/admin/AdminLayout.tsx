@@ -49,7 +49,7 @@ function headerTitle(
   if (pathname.startsWith('/admin/categories')) return '類別管理';
   if (pathname.startsWith('/admin/warehouses')) return '倉庫/門市';
   if (pathname.startsWith('/admin/reports') || pathname.startsWith('/admin/balances') || pathname.startsWith('/admin/finance/')) {
-    if (financeTab === 'balances') return '應收應付餘額';
+    if (financeTab === 'balances') return '應收應付';
     if (financeTab === 'periods') return '關帳區間';
     if (financeTab === 'audit') return '稽核紀錄';
     if (financeTab === 'snapshots') return '金流快照';
@@ -237,12 +237,17 @@ export const AdminLayout: React.FC = () => {
       <a href="#main-content" className="skip-link">跳至主內容</a>
       <div className="flex min-h-screen bg-forge-main">
         <aside className="sticky top-0 flex h-screen max-h-screen w-56 shrink-0 flex-col overflow-hidden border-r border-white/10 bg-forge-sidebar">
-          <div className="shrink-0 border-b border-white/10 px-4 py-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white">
-                P
-              </span>
-              <span className="text-sm font-semibold tracking-tight text-white">POS ERP</span>
+          <div className="shrink-0 border-b border-white/10 px-2 py-3">
+            <div className="flex rounded-lg bg-white/5 p-1">
+              <button
+                type="button"
+                className="flex flex-1 items-center justify-center rounded-md py-2 text-sm font-medium text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
+                onClick={() => navigate('/pos')}
+                title="POS"
+              >
+                POS
+              </button>
+              <span className="flex flex-1 items-center justify-center rounded-md bg-forge-sidebar-active py-2 text-sm font-medium text-white">後台</span>
             </div>
           </div>
           <nav className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 flex flex-col gap-0.5" aria-label="導覽">
@@ -289,7 +294,7 @@ export const AdminLayout: React.FC = () => {
               金流報表
             </NavLink>
             <NavLink to="/admin/balances" className={navClass}>
-              應收應付餘額
+              應收應付
             </NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />
@@ -307,15 +312,7 @@ export const AdminLayout: React.FC = () => {
               促銷規則
             </NavLink>
           </nav>
-          <div className="shrink-0 border-t border-white/10 px-2 py-4">
-            <button
-              type="button"
-              className="block w-full rounded-r-lg border-l-[3px] border-transparent py-2.5 pl-3 pr-3 text-left text-sm font-medium text-neutral-400 transition-colors hover:bg-white/[0.06] hover:text-white"
-              onClick={() => navigate('/pos')}
-            >
-              &lt; 收銀
-            </button>
-          </div>
+          <div className="shrink-0 border-t border-white/10 px-2 py-2" aria-hidden="true" />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col bg-forge-main">
           <header className="flex h-14 shrink-0 items-center border-b border-brand-surface bg-forge-card px-6 shadow-sm">

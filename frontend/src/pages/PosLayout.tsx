@@ -36,12 +36,18 @@ export const PosLayout: React.FC = () => {
     <div className="flex min-h-screen bg-forge-main">
       <a href="#main-content" className="skip-link">跳至主內容</a>
       <aside className="sticky top-0 flex h-screen max-h-screen w-56 shrink-0 flex-col overflow-hidden border-r border-white/10 bg-forge-sidebar">
-        <div className="shrink-0 border-b border-white/10 px-4 py-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white">
-              P
-            </span>
-            <span className="text-sm font-semibold tracking-tight text-white">POS</span>
+        <div className="shrink-0 border-b border-white/10 px-2 py-3">
+          <div className="flex rounded-lg bg-white/5 p-1">
+            <span className="flex flex-1 items-center justify-center rounded-md bg-forge-sidebar-active py-2 text-sm font-medium text-white">POS</span>
+            <button
+              type="button"
+              data-testid="e2e-nav-admin-inventory"
+              className="flex flex-1 items-center justify-center rounded-md py-2 text-sm font-medium text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
+              onClick={() => navigate('/admin')}
+              title="後台"
+            >
+              後台
+            </button>
           </div>
         </div>
         <nav className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 flex flex-col gap-0.5">
@@ -50,17 +56,7 @@ export const PosLayout: React.FC = () => {
           <NavLink to="/pos/promos" className={navClass} title="促銷">促銷</NavLink>
           <NavLink to="/pos/reports" className={navClass} title="報表">報表</NavLink>
         </nav>
-        <div className="shrink-0 border-t border-white/10 px-2 py-4">
-          <button
-            type="button"
-            data-testid="e2e-nav-admin-inventory"
-            className="block w-full rounded-r-lg border-l-[3px] border-transparent py-2.5 pl-3 pr-3 text-left text-sm font-medium text-neutral-400 transition-colors hover:bg-white/[0.06] hover:text-white"
-            onClick={() => navigate('/admin')}
-            title="後台"
-          >
-            &lt; 後台
-          </button>
-        </div>
+        <div className="shrink-0 border-t border-white/10 px-2 py-2" aria-hidden="true" />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col bg-forge-main">
         <header className="flex h-14 shrink-0 items-center border-b border-[#e2e8f0] bg-forge-card px-6 shadow-sm">
