@@ -83,3 +83,14 @@
 - [crm-member-roadmap.md](crm-member-roadmap.md) — 階段 A～G  
 - [api-design-loyalty.md](api-design-loyalty.md) — §6 客戶列表擴充  
 - [progress/integrated-last-cycle.md](progress/integrated-last-cycle.md) — 上一輪收斂與下一輪 §1 連結  
+
+---
+
+## 六、INSTRUCTIONS 021 補充（路由收斂提案摘要）
+
+- 本輪維持「**只寫提案、不改路由**」：`/admin/customers` 與 `/admin/loyalty/members` 並存。
+- 建議下一階段收斂為 **單一路由**：以 `/admin/customers` 為唯一會員管理入口，`/admin/loyalty/members` 改 redirect。
+- 收斂前置條件：
+  - `AdminCustomersPage` 補齊新增/編輯 Drawer（沿用 LoyaltyMembersPage 的 POST/PATCH 能力）。
+  - 保留點數存摺導流（`/admin/loyalty/point-ledger?customerId=...`）與互動紀錄。
+  - E2E 將直接斷言 `/admin/customers`，減少雙入口造成的維護分歧。
