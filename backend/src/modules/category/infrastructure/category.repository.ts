@@ -11,6 +11,10 @@ export class CategoryRepository {
     });
   }
 
+  findCodes(): Promise<string[]> {
+    return this.prisma.category.findMany({ select: { code: true } }).then((rows) => rows.map((r) => r.code));
+  }
+
   findById(id: string) {
     return this.prisma.category.findUnique({ where: { id } });
   }

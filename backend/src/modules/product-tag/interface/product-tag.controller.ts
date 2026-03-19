@@ -25,7 +25,7 @@ export class ProductTagController {
   @Post()
   @UseGuards(AdminApiKeyGuard)
   create(
-    @Body() body: { merchantId: string; name: string; code: string },
+    @Body() body: { merchantId: string; name: string; code?: string },
   ) {
     return this.service.create(body);
   }

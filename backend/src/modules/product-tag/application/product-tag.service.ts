@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { dedupeCode, isValidCode, resolveCode } from '../../../shared/utils/canonical-code';
 import { ProductTagRepository } from '../infrastructure/product-tag.repository';
 
 @Injectable()
@@ -22,10 +23,9 @@ export class ProductTagService {
     return this.repo.findMany(m);
   }
 
-  async create(input: { merchantId: string; name: string; code: string }) {
+  async create(input: { merchantId: string; name: string; code?: string }) {
     const merchantId = input.merchantId?.trim();
     const name = input.name?.trim();
-    const code = input.code?.trim();
     if (!merchantId) {
       throw new BadRequestException({
         message: 'merchantId is required',
@@ -38,11 +38,19 @@ export class ProductTagService {
         code: 'PRODUCT_TAG_NAME_REQUIRED',
       });
     }
-    if (!code) {
-      throw new BadRequestException({
-        message: 'code is required',
-        code: 'PRODUCT_TAG_CODE_REQUIRED',
-      });
+    let code: string;
+    try {
+      const existing = await this.repo.findCodes(merchantId);
+      const resolved = resolveCode(input.code, name, existing);
+      code = resolved.code;
+    } catch (e) {
+      if ((e as Error).message === 'CODE_INVALID') {
+        throw new BadRequestException({
+          message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
+          code: 'PRODUCT_TAG_CODE_INVALID',
+        });
+      }
+      throw e;
     }
     try {
       const tag = await this.repo.create({ merchantId, name, code });
@@ -85,14 +93,25 @@ export class ProductTagService {
       data.name = n;
     }
     if (input.code !== undefined) {
-      const c = input.code.trim();
-      if (!c) {
+      const raw = input.code.trim();
+      if (!raw) {
         throw new BadRequestException({
           message: 'code cannot be empty',
           code: 'PRODUCT_TAG_CODE_REQUIRED',
         });
       }
-      data.code = c;
+      const lower = raw.toLowerCase();
+      if (lower !== existing.code.toLowerCase()) {
+        if (!isValidCode(lower)) {
+          throw new BadRequestException({
+            message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
+            code: 'PRODUCT_TAG_CODE_INVALID',
+          });
+        }
+        const existingCodes = await this.repo.findCodes(existing.merchantId);
+        const others = existingCodes.filter((c) => c.toLowerCase() !== existing.code.toLowerCase());
+        data.code = dedupeCode(lower, others);
+      }
     }
     if (!Object.keys(data).length) {
       return {

@@ -23,7 +23,7 @@ export class BrandController {
 
   @Post()
   @UseGuards(AdminApiKeyGuard)
-  create(@Body() body: { code: string; name: string }) {
+  create(@Body() body: { code?: string; name: string }) {
     return this.service.createBrand(body);
   }
 

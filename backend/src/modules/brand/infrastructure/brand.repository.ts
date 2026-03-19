@@ -9,6 +9,10 @@ export class BrandRepository {
     return this.prisma.brand.findMany({ orderBy: { code: 'asc' } });
   }
 
+  findCodes(): Promise<string[]> {
+    return this.prisma.brand.findMany({ select: { code: true } }).then((rows) => rows.map((r) => r.code));
+  }
+
   findById(id: string) {
     return this.prisma.brand.findUnique({ where: { id } });
   }

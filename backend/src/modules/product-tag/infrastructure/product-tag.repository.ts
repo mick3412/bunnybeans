@@ -12,6 +12,12 @@ export class ProductTagRepository {
     });
   }
 
+  findCodes(merchantId: string): Promise<string[]> {
+    return this.prisma.productTag
+      .findMany({ where: { merchantId }, select: { code: true } })
+      .then((rows) => rows.map((r) => r.code));
+  }
+
   findById(id: string) {
     return this.prisma.productTag.findUnique({ where: { id } });
   }

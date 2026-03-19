@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { dedupeCode, isValidCode, resolveCode } from '../../../shared/utils/canonical-code';
 import { BrandRepository } from '../infrastructure/brand.repository';
 
 @Injectable()
@@ -15,20 +16,27 @@ export class BrandService {
     return this.repo.findAll();
   }
 
-  async createBrand(input: { code: string; name: string }) {
-    const code = input.code?.trim();
+  async createBrand(input: { code?: string; name: string }) {
     const name = input.name?.trim();
-    if (!code) {
-      throw new BadRequestException({
-        message: 'code is required',
-        code: 'BRAND_CODE_REQUIRED',
-      });
-    }
     if (!name) {
       throw new BadRequestException({
         message: 'name is required',
         code: 'BRAND_NAME_REQUIRED',
       });
+    }
+    let code: string;
+    try {
+      const existing = await this.repo.findCodes();
+      const resolved = resolveCode(input.code, name, existing);
+      code = resolved.code;
+    } catch (e) {
+      if ((e as Error).message === 'CODE_INVALID') {
+        throw new BadRequestException({
+          message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
+          code: 'BRAND_CODE_INVALID',
+        });
+      }
+      throw e;
     }
     try {
       return await this.repo.create({ code, name });
@@ -52,16 +60,6 @@ export class BrandService {
       });
     }
     const data: { code?: string; name?: string } = {};
-    if (input.code !== undefined) {
-      const c = input.code.trim();
-      if (!c) {
-        throw new BadRequestException({
-          message: 'code cannot be empty',
-          code: 'BRAND_CODE_REQUIRED',
-        });
-      }
-      data.code = c;
-    }
     if (input.name !== undefined) {
       const n = input.name.trim();
       if (!n) {
@@ -71,6 +69,27 @@ export class BrandService {
         });
       }
       data.name = n;
+    }
+    if (input.code !== undefined) {
+      const raw = input.code.trim();
+      if (!raw) {
+        throw new BadRequestException({
+          message: 'code cannot be empty',
+          code: 'BRAND_CODE_REQUIRED',
+        });
+      }
+      const lower = raw.toLowerCase();
+      if (lower !== existing.code.toLowerCase()) {
+        if (!isValidCode(lower)) {
+          throw new BadRequestException({
+            message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
+            code: 'BRAND_CODE_INVALID',
+          });
+        }
+        const existingCodes = await this.repo.findCodes();
+        const others = existingCodes.filter((c) => c.toLowerCase() !== existing.code.toLowerCase());
+        data.code = dedupeCode(lower, others);
+      }
     }
     if (!Object.keys(data).length) return existing;
     try {

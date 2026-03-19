@@ -29,7 +29,7 @@ describe('CategoryService (integration)', () => {
   it('createCategory + updateCategory', async () => {
     if (!process.env.DATABASE_URL) return;
 
-    const code = `CT-${Date.now()}`;
+    const code = `ct-${Date.now()}`;
     const created = await categoryService.createCategory({
       code,
       name: '測試分類',
@@ -58,11 +58,55 @@ describe('CategoryService (integration)', () => {
     expect(Array.isArray(row.tags)).toBe(true);
   }, 10000);
 
+  it('canonical code: Chinese name → derived code (x-*)', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const created = await categoryService.createCategory({ name: '飲料' });
+    expect(created.code).toMatch(/^x-[a-z0-9]+$/);
+    expect(created.name).toBe('飲料');
+    await prisma.category.delete({ where: { id: created.id } });
+  }, 10000);
+
+  it('canonical code: duplicate name or code → suffix -2, -3', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const c1 = await categoryService.createCategory({ name: '零食' });
+    const c2 = await categoryService.createCategory({ name: '零食' });
+    const c3 = await categoryService.createCategory({ code: c1.code, name: 'SameCode' });
+    expect(c1.code).toMatch(/^[a-z0-9-]+$/);
+    expect(c2.code).toBe(`${c1.code}-2`);
+    expect(c3.code).toBe(`${c1.code}-3`);
+    await prisma.category.deleteMany({ where: { id: { in: [c1.id, c2.id, c3.id] } } });
+  }, 10000);
+
+  it('canonical code: manual code accept valid, reject invalid', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const valid = await categoryService.createCategory({ code: 'valid-code-1', name: 'A' });
+    expect(valid.code).toBe('valid-code-1');
+    let errCode: string | undefined;
+    try {
+      await categoryService.createCategory({ code: 'Invalid Space!', name: 'B' });
+    } catch (e: unknown) {
+      errCode = (e as { response?: { code?: string } }).response?.code;
+    }
+    expect(errCode).toBe('CATEGORY_CODE_INVALID');
+    await prisma.category.delete({ where: { id: valid.id } });
+  }, 10000);
+
+  it('update: omit code retains existing; send code applies rule', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const created = await categoryService.createCategory({ code: 'orig-code', name: 'Orig' });
+    const updated = await categoryService.updateCategory(created.id, { name: 'Renamed' });
+    expect(updated.code).toBe('orig-code');
+    expect(updated.name).toBe('Renamed');
+    const updated2 = await categoryService.updateCategory(created.id, { code: 'new-code' });
+    expect(updated2.code).toBe('new-code');
+    await prisma.category.delete({ where: { id: created.id } });
+  }, 10000);
+
   it('deleteCategory removes empty category; CATEGORY_IN_USE when products reference', async () => {
     if (!process.env.DATABASE_URL) return;
 
     const cat = await categoryService.createCategory({
-      code: `CDEL-${Date.now()}`,
+      code: `cdel-${Date.now()}`,
       name: 'To delete',
     });
     await categoryService.deleteCategory(cat.id);
@@ -70,7 +114,7 @@ describe('CategoryService (integration)', () => {
     expect(gone).toBeNull();
 
     const cat2 = await categoryService.createCategory({
-      code: `CUSE-${Date.now()}`,
+      code: `cuse-${Date.now()}`,
       name: 'In use',
     });
     await prisma.product.create({
