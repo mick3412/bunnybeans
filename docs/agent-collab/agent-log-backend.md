@@ -22,7 +22,7 @@
   - **#3 營收趨勢 groupBy API**：擴充 `GET /pos/reports/daily` 支援 `groupBy=day|week|month`；getDaily 依 groupBy 分桶（week 週一起點、month 月單位）；integration-spec 補 groupBy=week 測試。
   - **#4 客單價分布 API**：新增 `GET /pos/reports/order-value-distribution`（query 同 summary）；回傳 buckets（0–200、200–500、500–1000、1000–2000、2000+）；integration-spec 補一則。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
-- commits：e7378c1 feat(pos-reports): memberContribution, daily groupBy, order-value-distribution；8354d040 docs(agent-log): add INSTRUCTIONS-024 backend entry
+- commits：e7378c1 feat(pos-reports): memberContribution, daily groupBy, order-value-distribution；8da05abc docs(agent-log): add INSTRUCTIONS-024 backend entry；0699922f docs(agent-log): fix commit sha
 
 ### INSTRUCTIONS-023（迴歸 + 已實作確認）
 - 做了：依 `BACKEND-INSTRUCTIONS 023.md` §1 完成 #1～#4。**#2～#4 已於前期實作**，本輪確認無需變更。
