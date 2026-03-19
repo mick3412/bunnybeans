@@ -11,6 +11,7 @@ import {
 import { listSuppliers } from '../../modules/admin/purchaseApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
 
 export const AdminReplenishmentPage: React.FC = () => {
   const navigate = useNavigate();
@@ -141,158 +142,152 @@ export const AdminReplenishmentPage: React.FC = () => {
   }, [selectedRows, supplierId, warehouseId, navigate]);
 
   return (
-    <div className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm" data-testid="e2e-admin-replenishment">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-semibold text-content">補貨建議</h1>
-          <p className="mt-1 text-sm text-[#64748b]">
-            依近 {result?.config.daysLookback ?? daysLookback} 天銷售與目前庫存計算建議補貨數量。
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[#64748b]">倉庫</label>
-            <select
-              className="min-w-[160px] rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              data-testid="e2e-admin-replenishment-warehouse-select"
-            >
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
+    <StandardListLayout
+      title="補貨建議"
+      description={`依近 ${result?.config.daysLookback ?? daysLookback} 天銷售與目前庫存計算建議補貨數量。`}
+      testId="e2e-admin-replenishment"
+      loading={loading}
+      error={error}
+      empty={false}
+      aboveContent={
+        createPoNotReady ? (
+          <div
+            className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+            data-testid="e2e-admin-replenishment-po-not-ready"
+          >
+            建立採購草稿 API 即將上線，請稍後再試。
           </div>
-          <div className="flex items-end gap-2 text-xs text-[#64748b]">
+        ) : undefined
+      }
+      filters={
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium">觀察天數</label>
-              <input
-                type="number"
-                className="w-20 rounded-lg border border-[#e2e8f0] px-2 py-1 text-right"
-                value={daysLookback}
-                onChange={(e) => setDaysLookback(Number(e.target.value) || 30)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium">預估天數</label>
-              <input
-                type="number"
-                className="w-20 rounded-lg border border-[#e2e8f0] px-2 py-1 text-right"
-                value={daysAhead}
-                onChange={(e) => setDaysAhead(Number(e.target.value) || 30)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium">安全天數</label>
-              <input
-                type="number"
-                className="w-20 rounded-lg border border-[#e2e8f0] px-2 py-1 text-right"
-                value={safetyDays}
-                onChange={(e) => setSafetyDays(Number(e.target.value) || 7)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium">最小建議量</label>
-              <input
-                type="number"
-                className="w-24 rounded-lg border border-[#e2e8f0] px-2 py-1 text-right"
-                value={minSuggestedQty}
-                onChange={(e) => setMinSuggestedQty(Number(e.target.value) || 0)}
-              />
-            </div>
-            <Button type="button" variant="secondary" onClick={load}>
-              重新計算
-            </Button>
-          </div>
-        </div>
-      </div>
-      {error && (
-        <div
-          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
-          data-testid="e2e-admin-replenishment-error"
-        >
-          {error}
-        </div>
-      )}
-      {createPoNotReady && (
-        <div
-          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
-          data-testid="e2e-admin-replenishment-po-not-ready"
-        >
-          建立採購草稿 API 即將上線，請稍後再試。
-        </div>
-      )}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs text-[#64748b]">
-            已選擇 <span className="font-semibold text-content">{selectedRows.length}</span> 筆建議
-          </span>
-          {selectedRows.length > 0 && (
-            <div>
-              <label className="mr-2 text-xs text-[#64748b]">供應商</label>
+              <label className="mb-1 block text-xs font-medium text-muted">倉庫</label>
               <select
-                className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-1.5 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
-                value={supplierId}
-                onChange={(e) => setSupplierId(e.target.value)}
-                data-testid="e2e-admin-replenishment-supplier-select"
+                className="min-w-[160px] rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                value={warehouseId}
+                onChange={(e) => setWarehouseId(e.target.value)}
+                data-testid="e2e-admin-replenishment-warehouse-select"
               >
-                <option value="">— 請選擇 —</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
+                {warehouses.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
                   </option>
                 ))}
               </select>
             </div>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={selectedRows.length === 0}
-            onClick={() => setShowPoDraft(true)}
-            data-testid="e2e-admin-replenishment-preview-draft-btn"
-          >
-            產生採購草稿（預覽）
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            disabled={selectedRows.length === 0 || !supplierId || createPoSubmitting}
-            onClick={() => void handleCreatePoDraft()}
-            data-testid="e2e-admin-replenishment-create-draft-btn"
-          >
-            {createPoSubmitting ? '建立中…' : '建立採購草稿'}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={rows.length === 0}
-            onClick={() => {
-              // 以目前列表為主體開啟列印；僅為樣板，不做任何後端呼叫
-              window.print();
-            }}
-          >
-            列印補貨清單
-          </Button>
-        </div>
-      </div>
-      <div className="overflow-hidden rounded-xl border border-[#e2e8f0]">
-        {loading ? (
-          <div className="flex min-h-[200px] items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#0ea5e9] border-t-transparent" />
+            <div className="flex items-end gap-2 text-xs text-muted">
+              <div>
+                <label className="mb-1 block text-xs font-medium">觀察天數</label>
+                <input
+                  type="number"
+                  className="w-20 rounded-lg border border-brand-surface px-2 py-1 text-right"
+                  value={daysLookback}
+                  onChange={(e) => setDaysLookback(Number(e.target.value) || 30)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium">預估天數</label>
+                <input
+                  type="number"
+                  className="w-20 rounded-lg border border-brand-surface px-2 py-1 text-right"
+                  value={daysAhead}
+                  onChange={(e) => setDaysAhead(Number(e.target.value) || 30)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium">安全天數</label>
+                <input
+                  type="number"
+                  className="w-20 rounded-lg border border-brand-surface px-2 py-1 text-right"
+                  value={safetyDays}
+                  onChange={(e) => setSafetyDays(Number(e.target.value) || 7)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium">最小建議量</label>
+                <input
+                  type="number"
+                  className="w-24 rounded-lg border border-brand-surface px-2 py-1 text-right"
+                  value={minSuggestedQty}
+                  onChange={(e) => setMinSuggestedQty(Number(e.target.value) || 0)}
+                />
+              </div>
+              <Button type="button" variant="secondary" size="sm" onClick={load}>
+                重新計算
+              </Button>
+            </div>
           </div>
-        ) : rows.length === 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs text-muted">
+                已選擇 <span className="font-semibold text-content">{selectedRows.length}</span> 筆建議
+              </span>
+              {selectedRows.length > 0 && (
+                <div>
+                  <label className="mr-2 text-xs text-muted">供應商</label>
+                  <select
+                    className="rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                    value={supplierId}
+                    onChange={(e) => setSupplierId(e.target.value)}
+                    data-testid="e2e-admin-replenishment-supplier-select"
+                  >
+                    <option value="">— 選擇 —</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={selectedRows.length === 0}
+                onClick={() => setShowPoDraft(true)}
+                data-testid="e2e-admin-replenishment-preview-draft-btn"
+              >
+                產生採購草稿（預覽）
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={selectedRows.length === 0 || !supplierId || createPoSubmitting}
+                onClick={() => void handleCreatePoDraft()}
+                data-testid="e2e-admin-replenishment-create-draft-btn"
+              >
+                {createPoSubmitting ? '建立中…' : '建立採購草稿'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={rows.length === 0}
+                onClick={() => window.print()}
+              >
+                列印補貨清單
+              </Button>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <>
+      {loading ? null : rows.length === 0 ? (
           <div
-            className="py-12 text-center text-sm text-[#64748b]"
+            className="py-12 text-center text-sm text-muted"
             data-testid="e2e-admin-replenishment-empty"
           >
             目前沒有需要補貨的商品。
           </div>
-        ) : (
+        ) : rows.length > 0 ? (
+          <div className="overflow-hidden rounded-xl border border-brand-surface">
           <div className="table-sticky-head overflow-x-auto bg-white">
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-xs font-semibold uppercase text-muted">
@@ -351,8 +346,8 @@ export const AdminReplenishmentPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+          </div>
+        ) : null}
       {showPoDraft && (
         <>
           <div
@@ -420,7 +415,8 @@ export const AdminReplenishmentPage: React.FC = () => {
           </aside>
         </>
       )}
-    </div>
+      </>
+    </StandardListLayout>
   );
 }
 
