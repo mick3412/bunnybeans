@@ -15,10 +15,17 @@
 
 ---
 
+### INSTRUCTIONS 023（會員路由收斂收尾、業績報表緊湊、營運總覽、餘額頁 StandardListLayout、按鈕主色）
+- 做了：① 會員路由：docs/crm-loyalty-ui-plan.md、erp-roadmap.md 更新為 /admin/customers 主入口（E2E 無 loyalty/members 引用）。② PosReportsPage：毛利／付款方式／分類銷售合併為三欄緊湊區塊；topItems/daily 載入失敗時顯示 merchantId、VITE_API_BASE_URL 除錯資訊與可操作提示。③ AdminDashboardPage：KPI 卡片縮小（text-xl、6 欄）、待辦中心移至頁面最下方且待辦項縮小。④ AdminFinanceBalancesPage 改用 StandardListLayout（title、description、filters、table 結構與 AdminReportsPage 一致）。⑤ 採購單／進貨驗收／供應商頁與 AdminSegmentExportPage 硬編碼 #0ea5e9 改為 brand-primary。⑥ 補貨閉環：驗證 AdminReplenishmentPage 已有勾選→建立採購草稿→navigate purchase-orders。⑦ 應收應付：022 已有 Party kind tabs；backend 無 platform kind，註記已就緒。⑧ dispatch-rules 已有 job 摘要、AdminSegmentExportPage 按鈕改 brand-primary。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 佔用可後補）。
+- commits：178ce69f docs 會員路由收斂；2243f96a PosReportsPage 緊湊+錯誤；4eff875a AdminDashboard 緊湊+待辦底部；97c5ea73 AdminFinanceBalancesPage StandardListLayout；3bc1f584 按鈕 brand-primary；1c1f9070 agent-log
+
+---
+
 ### INSTRUCTIONS 022（會員路由收斂、Party 視圖、常用區塊刪除）
 - 做了：① LoyaltyMembersPage 註記為 legacy（redirect 已存在，側欄/Hub 單一入口 `/admin/customers`）。② Party 視圖：`partyDisplay.ts` 共用 util，AdminFinanceBalancesPage／AdminReportsPage 優先 displayName、kind 標籤，相容 customer:/supplier: 小寫前綴；byParty drill-down 傳完整 partyId 至 balances。③ PosPage 常用區塊編輯模式下產品標籤顯示刪除符號（－），點擊可移除。④ admin-balances E2E 新增金流報表 drill-down 驗證。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 本機 port 衝突未跑（需手動執行 `e2e/admin-categories.spec.ts`、`e2e/admin-ops-report-clicks-full.spec.ts`、`e2e/admin-balances.spec.ts`）。
-- commits：ff85cdf8 chore LoyaltyMembersPage legacy；1e87bcb5 feat Party 視圖；bcba5abd feat POS 常用區塊刪除符號；8da69512 test e2e drill-down
+- commits：ff85cdf8 chore LoyaltyMembersPage legacy；1e87bcb5 feat Party 視圖；bcba5abd feat POS 常用區塊刪除符號；8da69512 test e2e drill-down；90476955 docs agent-log
 
 ---
 
