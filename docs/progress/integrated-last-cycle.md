@@ -1,25 +1,25 @@
 # 上一輪整合（規格 Agent 每輪覆寫）
 
-**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **014** · 前端 **014**  
+**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **015** · 前端 **015**  
 （路徑：[agent-collab/agent-log-backend.md](../agent-collab/agent-log-backend.md)、[agent-collab/agent-log-frontend.md](../agent-collab/agent-log-frontend.md)）
 
 ## 後端（收斂摘要）
 
-- **INSTRUCTIONS 014 已完成（referenceId UUID-like 修復 + 報表穿透穩定性）**：
-  - **E2E seed：UUID-like referenceId + deterministic occurredAt**：調整 POS order / receivingNote / exchange 對應 referenceId 為純 hex UUID-like，並補 deterministic occurredAt 以提升可重放性。
-  - **Fail-fast 驗證（seed）擴充**：驗證 UUID-like 格式符合，且存在至少 1 筆 finance/報表事件可解析為 `posOrder/receivingNote`，避免 full profile 在 `ReferenceIdLink` 長期不可點。
-  - **Ops reference resolve 邊界**：補 integration 以覆蓋 resolve 不落入 unknown 的邊界。
-  - **文件對齊**：更新 `docs/e2e-pos.md` referenceId 契約與 full profile 驗收要點。
-- **回歸**：`pnpm --filter pos-erp-backend test` 全綠（含 `e2e:seed` fail-fast）。
+- **INSTRUCTIONS 015 已完成（補貨建議 full gate：擴 suite、seed deterministic、補 contract）**：
+  - **CI：擴充 e2e-full 固定清單**：將 `admin-categories` / `admin-customers-import` / `admin-bulk` / `admin-replenishment` 納入 `.github/workflows/e2e-full.yml` 固定 suite。
+  - **E2E seed：補貨建議 deterministic**：在 `backend/scripts/e2e-seed.ts` 針對 replenishment-suggestions 需要的 inventory 低庫存基準與 `SALE_OUT` lookback 進行 deterministic 補齊，並 fail-fast 驗證 `suggestedQty > 0`，避免 full profile 長期空態。
+  - **Contract/錯誤碼一致性**：補 `AdminApiKeyGuard` 錯誤碼 schema 相關測試，確保前端/ E2E 能穩定預期 401。
+  - **文件對齊**：更新 `docs/e2e-pos.md` 對應 `e2e-full` 指令與新增 spec 驗收摘要。
+- **回歸**：`pnpm --filter pos-erp-backend test` 全綠。
 - **RBAC**：維持長期 skip（客戶不需要）。
 
 ## 前端（收斂摘要）
 
-- **INSTRUCTIONS 014 已完成（dispatch-rules run log + referenceId 穿透 full gate）**：
-  - **AdminDispatchRulesPage 驗收導向**：把「查看 run log」導向 `/admin/ops/jobs?kind=crm-run-scheduled`，並在 lastRun 區塊提供穩定 `data-testid`。
-  - **referenceId 穿透 full gate**：移除 full profile 對 referenceId==0 的跳過，並修正換貨導引遮罩下「回到來源」的互動順序，確保旅程回跳與導向可穩定驗證。
-  - **文件對齊**：更新 `docs/e2e-pos.md` full profile 驗收要點。
-- **回歸**：`pnpm --filter pos-erp-frontend build` ✅；full profile 下跑 `e2e/admin-dispatch-rules.spec.ts` 與 `e2e/admin-journey-exchange-loyalty.spec.ts` ✅。
+- **INSTRUCTIONS 015 已完成（admin import/export/replenishment 狀態一致性 + selector 穩定化）**：
+  - **Error schema 一致化**：customers/import preview、inventory export/import、replenishment 建立草稿等頁面，統一錯誤文案走既有 `getErrorMessage`，避免 shared error schema 不一致導致 UI/ E2E 預期漂移。
+  - **selector 穩定化**：replenishment 補上關鍵 UI `data-testid`，並同步更新對應 E2E selectors。
+  - **文件對齊**：更新 `docs/e2e-pos.md` 對應四個新增 spec 驗收摘要（customers-import / replenishment 加上定位說明）。
+- **回歸**：`pnpm --filter pos-erp-frontend build` ✅；full profile 下跑 `admin-categories/admin-customers-import/admin-bulk/admin-replenishment` 對應 E2E ✅。
 - **RBAC**：維持長期 skip（客戶不需要）。
 
 ## 前端：Admin 後台側欄 Hub 化與子頁面結構變更 Log
@@ -78,9 +78,8 @@
 
 | 來源 | 缺口 | 優先 |
 |------|------|------|
+| ops-roadmap / CI E2E coverage | **CI fail-fast 偵錯資訊仍需補齊（Expected fixture keys 不完整）**：目前 `.github/workflows/e2e-full.yml` 只列出 dispatch-rules 的 fixture keys，缺少 replenishment-suggestions / barcode / exchange / receiving note / expiring inventory 等 deterministic identifiers，導致 full gate 失敗時難以快速定位缺資料原因。 | 高 |
 | erp-roadmap / Phase 5 / admin-roles | **RBAC（長期 skip）**：客戶不需要角色/權限；維持現有 `AdminApiKeyGuard`（有/無管理金鑰）即可。本專案不落地 Role/Permission 資料模型與 permissions endpoint。 | 低 |
-| frontend-ui-principles / UI Review | **全站 UI/UX 再審視（按鈕/空態/錯誤態行動建議 + loading/disabled 一致性 + selector 穩定性）**：將 shared 元件與 Admin Hub 通用區塊的狀態呈現一致化，並補強 E2E 可定位 selector，避免 strict-mode 多筆匹配與 race condition。 | 高 |
-| ops-roadmap / CI E2E coverage | **E2E full gate 擴充：把更多 admin smoke spec 納入固定清單**：將 `admin-categories` / `admin-customers-import` / `admin-bulk` / `admin-replenishment` 納入 `.github/workflows/e2e-full.yml` 固定 suite，並補齊必要 seed/selector，降低 full profile 的 skip。 | 中 |
 
 ### 後續 Phase
 

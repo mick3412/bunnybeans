@@ -15,6 +15,11 @@
 
 ---
 
+### INSTRUCTIONS 017（admin-categories 標籤新增 testid + replenishment 空態 testid）
+- 做了：① `admin-categories` 的標籤新增 input/新增按鈕補上唯一 `data-testid`（`e2e-admin-categories-tags-create-name-input` / `e2e-admin-categories-tags-create-add-btn`），並更新對應 E2E locator；② `admin-replenishment` 空態改用 `e2e-admin-replenishment-empty` 斷言，避免文案漂移導致固定 full-profile suite 失敗；③ 更新 `docs/e2e-pos.md` 對應四個 spec 驗收摘要的定位欄位。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`export CI=0 E2E_PROFILE=full E2E_BASE_URL=http://localhost:5174 pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-customers-import.spec.ts e2e/admin-bulk.spec.ts e2e/admin-replenishment.spec.ts` ✅（4 skipped / 8 passed）。
+- commits：3e37ea72 frontend: stabilize E2E selectors/testids for categories + replenishment
+
 ### INSTRUCTIONS 015（admin import/export/replenishment 狀態一致性 + selector 穩定化）
 - 做了：① `customers/import preview`、`inventory export/import` 的 401 錯誤文案統一改用 `getErrorMessage`（不再硬編 `需 VITE_ADMIN_API_KEY`），避免 shared error schema 不一致；② `replenishment` 補上關鍵 UI 的 `data-testid`，並同步更新對應 E2E selectors；③ 更新 `docs/e2e-pos.md` 對應四個 spec 驗收摘要（customers-import / replenishment 加上 testid 定位說明）。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`export CI=0 E2E_PROFILE=full E2E_BASE_URL=http://localhost:5174 pnpm exec playwright test e2e/admin-categories.spec.ts e2e/admin-customers-import.spec.ts e2e/admin-bulk.spec.ts e2e/admin-replenishment.spec.ts` ✅（缺 Key 時對應用例 skip：4 skipped / 8 passed）。
