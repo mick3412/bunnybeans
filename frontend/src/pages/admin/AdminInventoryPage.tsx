@@ -161,7 +161,7 @@ export const AdminInventoryPage: React.FC = () => {
         return { productId: p.id, sku: p.sku, name: p.name, onHandQty: bySku?.onHandQty ?? null };
       }),
     );
-    showToast(`條碼命中 ${items.length} 筆商品，請先選擇`, 'err');
+    showToast(`條碼命中 ${items.length} 筆商品`, 'err');
     return null;
   };
 
@@ -316,32 +316,33 @@ export const AdminInventoryPage: React.FC = () => {
       )}
 
       <div
-        className="mb-6 flex flex-wrap items-center gap-3 sm:gap-4"
+        className="mb-6 flex flex-wrap items-center justify-between gap-3 sm:gap-4"
         data-testid="e2e-admin-inventory-header"
       >
-        <label className="shrink-0 text-sm font-medium text-muted">倉庫</label>
-        <select
-          className="h-9 min-w-[140px] shrink-0 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
-          value={warehouseId}
-          onChange={(e) => {
-            setWarehouseId(e.target.value);
-            setPage(1);
-          }}
-        >
-          {warehouses.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.code} — {w.name}
-            </option>
-          ))}
-        </select>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          disabled={!warehouseId || exporting}
-          data-testid="e2e-admin-inventory-export"
-          className="shrink-0"
-          onClick={async () => {
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="shrink-0 text-sm font-medium text-muted">倉庫</label>
+          <select
+            className="h-9 min-w-[140px] shrink-0 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20"
+            value={warehouseId}
+            onChange={(e) => {
+              setWarehouseId(e.target.value);
+              setPage(1);
+            }}
+          >
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.code} — {w.name}
+              </option>
+            ))}
+          </select>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={!warehouseId || exporting}
+            data-testid="e2e-admin-inventory-export"
+            className="shrink-0"
+            onClick={async () => {
             if (!warehouseId) return;
             setExporting(true);
             setErr(null);
@@ -357,9 +358,9 @@ export const AdminInventoryPage: React.FC = () => {
         >
           {exporting ? '匯出中…' : '匯出 CSV'}
         </Button>
-        <span className="hidden shrink-0 sm:inline text-[#cbd5e1]">|</span>
+        </div>
         <div
-          className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3"
+          className="flex shrink-0 flex-wrap items-center gap-2"
           data-testid="e2e-admin-inventory-import"
           title={`表頭：sku、warehouseCode、quantity；${adminKeyRequiredMsg}。一般同步、大檔非同步。`}
         >
@@ -634,11 +635,11 @@ export const AdminInventoryPage: React.FC = () => {
                   >
                     加入
                   </Button>
-                  <span className="text-xs text-muted">加入後可在列表中調整實際數量，再一鍵提交。</span>
+                  <span className="text-xs text-muted" aria-hidden="true" />
                 </div>
                 {scanChoices.length > 1 ? (
                   <div className="mt-2 rounded-xl border border-brand-surface bg-white p-2">
-                    <div className="mb-1 text-xs font-semibold text-muted">條碼命中多筆，請選擇</div>
+                    <div className="mb-1 text-xs font-semibold text-muted">條碼命中多筆</div>
                     <div className="flex flex-col gap-1">
                       {scanChoices.slice(0, 6).map((c) => (
                         <button
@@ -919,7 +920,7 @@ export const AdminInventoryPage: React.FC = () => {
                         .map((pid) => ({ productId: pid, actualQty: Number(actualQtyByProductId[pid]) }))
                         .filter((x) => Number.isFinite(x.actualQty));
                       if (!lines.length) {
-                        showToast('請先輸入實際數量', 'err');
+                        showToast('缺少實際數量', 'err');
                         return;
                       }
                       setStocktakeSubmitting(true);
@@ -929,7 +930,7 @@ export const AdminInventoryPage: React.FC = () => {
                         if (out.statusCode === 404 || out.statusCode === 501) {
                           showToast('批次盤點 API 即將上線', 'err');
                         } else if (out.statusCode === 401) {
-                          showToast('需設定 VITE_ADMIN_API_KEY', 'err');
+                          showToast('權限不足', 'err');
                         } else {
                           showToast(getErrorMessage(out), 'err');
                         }
