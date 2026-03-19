@@ -68,7 +68,7 @@ export const AdminCustomerImportPage: React.FC = () => {
   const runPreview = async () => {
     const f = fileRef.current;
     if (!f || !merchantId) {
-      showToast('請選商家與 CSV 檔', 'err');
+      showToast('缺少商家或 CSV 檔', 'err');
       return;
     }
     if (!hasAdminKey) {
@@ -135,7 +135,7 @@ export const AdminCustomerImportPage: React.FC = () => {
   const runApply = async () => {
     const f = fileRef.current;
     if (!f || !merchantId || !fileHash) {
-      showToast('請先預覽（同一檔）', 'err');
+      showToast('缺少預覽資料', 'err');
       return;
     }
     const list: CustomerImportApplyDecision[] = rows.map((r) => {
@@ -153,7 +153,7 @@ export const AdminCustomerImportPage: React.FC = () => {
     if ('statusCode' in out) {
       const msg =
         out.code === 'CUSTOMER_IMPORT_FILE_HASH_MISMATCH'
-          ? '檔案與預覽不一致，請勿換檔；可再預覽一次'
+          ? '檔案與預覽不一致'
           : out.statusCode === 401
             ? adminKeyRequiredMsg
             : getErrorMessage(out as ApiError);
@@ -173,9 +173,7 @@ export const AdminCustomerImportPage: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm" data-testid="e2e-admin-customers-import">
-      <p className="mb-2 text-sm text-[#64748b]">
-        步驟：<strong>1. 選擇 CSV 檔案</strong> → 2. 預覽（不寫入）→ 3. 確認決策後套用寫入。套用須與預覽同一檔。
-      </p>
+      <p className="mb-2 text-sm text-[#64748b]" aria-hidden="true" />
       {err && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {err}
@@ -198,55 +196,55 @@ export const AdminCustomerImportPage: React.FC = () => {
           }}
         />
         <div data-testid="e2e-admin-customers-import-preview" className="contents">
-        <Button
-          type="button"
-          size="sm"
-          variant="primary"
-          disabled={!hasAdminKey}
-          data-testid="e2e-admin-customers-import-preview-btn"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {fileName ? `已選：${fileName}` : '選擇 CSV 檔案'}
-        </Button>
-        {fileName && (
-          <>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={previewLoading || !merchantId || !hasAdminKey}
-              data-testid="e2e-admin-customers-import-run-preview-btn"
-              onClick={runPreview}
-            >
-              {previewLoading ? '預覽中…' : '預覽'}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                fileRef.current = null;
-                setFileName('');
-                inputKey.current += 1;
-                resetPreview();
-              }}
-            >
-              重選檔案
-            </Button>
-          </>
-        )}
-        {rows.length > 0 && (
           <Button
             type="button"
             size="sm"
             variant="primary"
-            disabled={applyLoading || !hasAdminKey}
-              data-testid="e2e-admin-customers-import-run-apply-btn"
-            onClick={runApply}
+            disabled={!hasAdminKey}
+            data-testid="e2e-admin-customers-import-preview-btn"
+            onClick={() => fileInputRef.current?.click()}
           >
-            {applyLoading ? '套用中…' : '套用寫入'}
+            {fileName ? `已選：${fileName}` : '選擇 CSV 檔案'}
           </Button>
-        )}
+          {fileName && (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={previewLoading || !merchantId || !hasAdminKey}
+                data-testid="e2e-admin-customers-import-run-preview-btn"
+                onClick={runPreview}
+              >
+                {previewLoading ? '預覽中…' : '預覽'}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  fileRef.current = null;
+                  setFileName('');
+                  inputKey.current += 1;
+                  resetPreview();
+                }}
+              >
+                重選檔案
+              </Button>
+            </>
+          )}
+          {rows.length > 0 && (
+            <Button
+              type="button"
+              size="sm"
+              variant="primary"
+              disabled={applyLoading || !hasAdminKey}
+              data-testid="e2e-admin-customers-import-run-apply-btn"
+              onClick={runApply}
+            >
+              {applyLoading ? '套用中…' : '套用寫入'}
+            </Button>
+          )}
         </div>
       </div>
 
