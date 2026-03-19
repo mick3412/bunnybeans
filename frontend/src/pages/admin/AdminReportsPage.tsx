@@ -8,6 +8,7 @@ import {
   type FinanceEventRow,
   type FinanceSummaryByType,
   type FinanceSummaryByPartyId,
+  type FinanceSummaryTrend,
 } from '../../modules/admin/adminApi';
 import { MiniLineChart } from '../../shared/components/MiniLineChart';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
@@ -67,6 +68,8 @@ export const AdminReportsPage: React.FC = () => {
   const [summaryByParty, setSummaryByParty] = useState<FinanceSummaryByPartyId | null>(null);
   const [dailyTrend, setDailyTrend] = useState<{ date: string; receivable: number; payment: number }[]>([]);
   const [prevDailyTrend, setPrevDailyTrend] = useState<{ date: string; receivable: number; payment: number }[]>([]);
+  const [financeTrend, setFinanceTrend] = useState<FinanceSummaryTrend | null>(null);
+  const [financeTrendGroupBy, setFinanceTrendGroupBy] = useState<'day' | 'week'>('day');
 
   const partyGroupPrefix = useMemo(() => {
     if (partyView === 'customer') return 'customer:';
@@ -228,6 +231,28 @@ export const AdminReportsPage: React.FC = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const fromParam = preset === 'custom' && from.trim() ? `${from.trim()}T00:00:00.000Z` : undefined;
+      const toParam = preset === 'custom' && to.trim() ? `${to.trim()}T23:59:59.999Z` : undefined;
+      const presetParam = preset === 'last30d' ? 'last30d' : preset === 'all' ? 'all' : undefined;
+      const sum = await getFinanceSummary({
+        preset: presetParam,
+        from: fromParam,
+        to: toParam,
+        groupBy: financeTrendGroupBy,
+      });
+      if (cancelled) return;
+      if (sum && typeof sum === 'object' && 'bucket' in sum && 'items' in sum) {
+        setFinanceTrend(sum as FinanceSummaryTrend);
+      } else {
+        setFinanceTrend(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [preset, from, to, financeTrendGroupBy]);
 
   useEffect(() => {
     // 只用 state 生成 scoped params，避免把 searchParams（依賴項）放進 effect 造成重入更新。
@@ -411,6 +436,58 @@ export const AdminReportsPage: React.FC = () => {
               }))}
             />
           </div>
+          {financeTrend?.items && financeTrend.items.length > 0 && (
+            <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-muted">金流趨勢</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={`rounded px-2 py-1 text-xs font-medium ${financeTrendGroupBy === 'day' ? 'bg-brand-primary text-white' : 'bg-[#f1f5f9] text-muted hover:bg-[#e2e8f0]'}`}
+                    onClick={() => setFinanceTrendGroupBy('day')}
+                  >
+                    依日
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded px-2 py-1 text-xs font-medium ${financeTrendGroupBy === 'week' ? 'bg-brand-primary text-white' : 'bg-[#f1f5f9] text-muted hover:bg-[#e2e8f0]'}`}
+                    onClick={() => setFinanceTrendGroupBy('week')}
+                  >
+                    依週
+                  </button>
+                </div>
+              </div>
+              <MiniLineChart
+                series={[
+                  {
+                    name: getFinanceEventTypeLabel('SALE_RECEIVABLE'),
+                    items: financeTrend.items.map((i) => ({
+                      label: i.periodStart,
+                      value: i.amountsByType?.SALE_RECEIVABLE ?? 0,
+                    })),
+                    stroke: '#0ea5e9',
+                  },
+                  {
+                    name: getFinanceEventTypeLabel('SALE_PAYMENT'),
+                    items: financeTrend.items.map((i) => ({
+                      label: i.periodStart,
+                      value: i.amountsByType?.SALE_PAYMENT ?? 0,
+                    })),
+                    stroke: '#16a34a',
+                  },
+                  {
+                    name: getFinanceEventTypeLabel('PURCHASE_PAYABLE'),
+                    items: financeTrend.items.map((i) => ({
+                      label: i.periodStart,
+                      value: i.amountsByType?.PURCHASE_PAYABLE ?? 0,
+                    })),
+                    stroke: '#f59e0b',
+                  },
+                ]}
+                formatValue={(n) => n.toLocaleString()}
+              />
+            </div>
+          )}
           {dailyTrend.length > 0 && (
             <div className="mb-4 rounded-xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
               <div className="mb-3 text-sm font-semibold text-muted">應收 vs 實收趨勢（近 30 日）</div>
