@@ -79,28 +79,7 @@ export const PosOrdersListPage: React.FC = () => {
     <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-pos-orders">
       <div className="border-b border-brand-surface pb-2">
         <h2 className="text-lg font-semibold text-content">訂單查詢</h2>
-        <p className="mt-1 text-sm text-muted">共 {total} 筆 · 可篩選門市、日期後匯出 CSV（需 VITE_ADMIN_API_KEY）</p>
-      </div>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          data-testid="e2e-nav-pos"
-          onClick={() => navigate('/pos')}
-        >
-          回到收銀
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          data-testid="e2e-nav-admin-inventory"
-          onClick={() => navigate('/admin/inventory')}
-          className="border-brand-surface bg-table-head text-brand-primary hover:bg-brand-primary/10"
-        >
-          庫存（後台）
-        </Button>
+        <p className="mt-1 text-sm text-muted">共 {total} 筆</p>
       </div>
       <div className="mt-4">
           <div className="mb-2 flex flex-wrap items-end gap-2 text-xs">
@@ -153,7 +132,7 @@ export const PosOrdersListPage: React.FC = () => {
                 variant="secondary"
                 data-testid="e2e-pos-orders-export"
                 disabled={exporting || !hasAdminKey}
-                title={!hasAdminKey ? '需設定 VITE_ADMIN_API_KEY' : '下載 CSV（與門市／日期篩選一致）'}
+                title={!hasAdminKey ? '權限不足' : '下載 CSV'}
                 onClick={async () => {
                   if (!hasAdminKey) return;
                   setExporting(true);
@@ -169,7 +148,7 @@ export const PosOrdersListPage: React.FC = () => {
                   );
                   setExporting(false);
                   if (out !== true) {
-                    setError(out.statusCode === 401 ? '匯出需 VITE_ADMIN_API_KEY' : out.message);
+                    setError(out.statusCode === 401 ? '權限不足' : out.message);
                   } else {
                     setError(null);
                   }
