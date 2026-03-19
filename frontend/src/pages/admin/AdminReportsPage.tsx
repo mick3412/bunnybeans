@@ -18,6 +18,7 @@ import { PartyViewSegmented } from '../../shared/components/PartyViewSegmented';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import { FINANCE_EVENT_TYPE_LABELS, getFinanceEventTypeLabel } from '../../shared/utils/financeEventTypeLabels';
+import { getPartyKindFromId } from '../../shared/utils/partyDisplay';
 
 function toYmd(d: Date): string {
   const y = d.getFullYear();
@@ -68,8 +69,8 @@ export const AdminReportsPage: React.FC = () => {
   const [prevDailyTrend, setPrevDailyTrend] = useState<{ date: string; receivable: number; payment: number }[]>([]);
 
   const partyGroupPrefix = useMemo(() => {
-    if (partyView === 'customer') return 'CUSTOMER:';
-    if (partyView === 'supplier') return 'SUPPLIER:';
+    if (partyView === 'customer') return 'customer:';
+    if (partyView === 'supplier') return 'supplier:';
     return null;
   }, [partyView]);
 
@@ -85,8 +86,8 @@ export const AdminReportsPage: React.FC = () => {
     const partyIdForApi = (() => {
       const pid = partyId.trim();
       if (!pid) return undefined;
-      if (partyView === 'customer' && !pid.includes(':')) return `CUSTOMER:${pid}`;
-      if (partyView === 'supplier' && !pid.includes(':')) return `SUPPLIER:${pid}`;
+      if (partyView === 'customer' && !pid.includes(':')) return `customer:${pid}`;
+      if (partyView === 'supplier' && !pid.includes(':')) return `supplier:${pid}`;
       return pid;
     })();
 
@@ -129,9 +130,10 @@ export const AdminReportsPage: React.FC = () => {
       const filtered = isGroupMode
         ? raw.filter((ev) => {
             const pid = (ev.partyId ?? '').trim();
-            if (partyView === 'customer') return pid.startsWith('CUSTOMER:');
-            if (partyView === 'supplier') return pid.startsWith('SUPPLIER:');
-            if (partyView === 'other') return !pid.startsWith('CUSTOMER:') && !pid.startsWith('SUPPLIER:');
+            const k = getPartyKindFromId(pid);
+            if (partyView === 'customer') return k === 'customer';
+            if (partyView === 'supplier') return k === 'supplier';
+            if (partyView === 'other') return k !== 'customer' && k !== 'supplier';
             return true;
           })
         : raw;
@@ -149,9 +151,10 @@ export const AdminReportsPage: React.FC = () => {
       if (isGroupMode) {
         const byParty = (raw.byParty ?? []).filter((p) => {
           const pid = (p.partyId ?? '').trim();
-          if (partyView === 'customer') return pid.startsWith('CUSTOMER:');
-          if (partyView === 'supplier') return pid.startsWith('SUPPLIER:');
-          if (partyView === 'other') return !pid.startsWith('CUSTOMER:') && !pid.startsWith('SUPPLIER:');
+          const k = getPartyKindFromId(pid);
+          if (partyView === 'customer') return k === 'customer';
+          if (partyView === 'supplier') return k === 'supplier';
+          if (partyView === 'other') return k !== 'customer' && k !== 'supplier';
           return true;
         });
         setSummaryByParty({ byParty });
@@ -480,17 +483,16 @@ export const AdminReportsPage: React.FC = () => {
               </div>
               <div className="mb-3 flex flex-wrap gap-2">
                 {summaryByParty.byParty.slice(0, 10).map((p) => {
-                  const [prefix, rawId] = p.partyId.includes(':') ? p.partyId.split(':', 2) : ['', p.partyId];
-                  const view =
-                    prefix === 'CUSTOMER' ? 'customer' : prefix === 'SUPPLIER' ? 'supplier' : 'other';
-                  const pid = rawId || p.partyId;
-                  const shortId = pid.length > 12 ? pid.slice(0, 8) + '…' : pid;
+                  const kind = getPartyKindFromId(p.partyId);
+                  const view = kind === 'customer' ? 'customer' : kind === 'supplier' ? 'supplier' : 'other';
+                  const shortId = p.partyId.length > 20 ? p.partyId.slice(0, 12) + '…' : p.partyId;
                   return (
                     <Link
                       key={p.partyId}
-                      to={`/admin/balances?view=${encodeURIComponent(view)}&partyId=${encodeURIComponent(pid)}`}
+                      to={`/admin/balances?view=${encodeURIComponent(view)}&partyId=${encodeURIComponent(p.partyId)}`}
                       className="rounded-full bg-[#f8fafc] px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-[#e2e8f0] hover:bg-white"
                       title={p.partyId}
+                      data-testid="e2e-reports-party-drilldown"
                     >
                       {shortId}
                     </Link>

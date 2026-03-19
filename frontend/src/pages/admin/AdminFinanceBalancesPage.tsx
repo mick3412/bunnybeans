@@ -4,6 +4,7 @@ import { getFinanceBalances, type ApiError, type FinanceBalanceItem } from '../.
 import { listLoyaltyCustomers } from '../../modules/admin/loyaltyApi';
 import { listSuppliers } from '../../modules/admin/purchaseApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
+import { formatPartyDisplay, getPartyKindFromId } from '../../shared/utils/partyDisplay';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { Button } from '../../shared/components/Button';
 import { PartyViewSegmented, type PartyView } from '../../shared/components/PartyViewSegmented';
@@ -35,6 +36,7 @@ export const AdminFinanceBalancesPage: React.FC = () => {
           const label = c.name ?? c.phone ?? c.id;
           names[c.id] = label;
           names[`CUSTOMER:${c.id}`] = label;
+          names[`customer:${c.id}`] = label;
         });
       }
       if (supRes?.data) {
@@ -42,6 +44,7 @@ export const AdminFinanceBalancesPage: React.FC = () => {
           const label = s.name ?? s.code ?? s.id;
           names[s.id] = label;
           names[`SUPPLIER:${s.id}`] = label;
+          names[`supplier:${s.id}`] = label;
         });
       }
       setPartyNames(names);
@@ -76,21 +79,13 @@ export const AdminFinanceBalancesPage: React.FC = () => {
     if (view === 'customer' || view === 'supplier') return items; // API 已依 kind 篩選
     return items.filter((row) => {
       const pid = row.partyId ?? '';
-      const k = row.kind ?? (pid.startsWith('CUSTOMER:') ? 'customer' : pid.startsWith('SUPPLIER:') ? 'supplier' : '');
+      const k = row.kind ?? getPartyKindFromId(pid);
       return k !== 'customer' && k !== 'supplier';
     });
   }, [items, view]);
 
   function getDisplayName(row: FinanceBalanceItem): string {
-    if (row.displayName?.trim()) return row.displayName.trim();
-    const partyId = row.partyId ?? '';
-    if (partyNames[partyId]) return partyNames[partyId];
-    const [kind, refId] = partyId.includes(':') ? partyId.split(':', 2) : ['', partyId];
-    if (!kind && partyNames[refId]) return partyNames[refId];
-    if (kind === 'CUSTOMER') return '會員 ' + (partyNames[refId] ?? refId);
-    if (kind === 'SUPPLIER') return '供應商 ' + (partyNames[refId] ?? refId);
-    if (!partyId) return '—';
-    return partyId;
+    return formatPartyDisplay(row.displayName, row.kind, row.partyId ?? '', partyNames);
   }
 
   useEffect(() => {
