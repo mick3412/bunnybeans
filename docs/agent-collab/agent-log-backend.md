@@ -15,6 +15,11 @@
 
 ---
 
+### INSTRUCTIONS-017（full gate fail-fast：expiring/receiving-note + CI triage log）
+- 做了：`.github/workflows/e2e-full.yml` 擴充 fail-fast 的 `Expected fixture keys`（包含 dispatch、barcode、exchange、referenceId、replenishment、expiring、receiving note、finance report refs，並補 disabled/future 負向 keys）；`backend/scripts/e2e-seed.ts` 在 `E2E_PROFILE=full` 增加 `E2E_SEED_SUMMARY` console log，並新增/強化 fail-fast 驗證：`E2E-EXP-BATCH-0001` expiring inventory（`PURCHASE_IN` + expiryDate 落在 `daysAhead=30` + SUM(quantity)>0）與 `E2E-RN-0001` receiving note return-to-supplier 最小可退量（`qualifiedQty` 可退且 returnable>=1，並確保關聯 PO/warehouse/product 存在）；同時補強錯誤訊息包含 fixture key 與實際 count/值。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
+- commits：3b316292 backend: extend e2e-full fail-fast fixture triage + seed summary；58701670 backend: refine e2e-seed errors + add CI seed summary；c58cee34 docs/e2e-pos: add CI triage fixture keys；4c213158 backend: fix TS types in e2e-seed fail-fast
+
 ### INSTRUCTIONS-015（補貨建議 full gate：擴 suite、seed deterministic、補 contract）
 - 做了：`.github/workflows/e2e-full.yml` 固定清單加入 `e2e/admin-categories.spec.ts`、`e2e/admin-customers-import.spec.ts`、`e2e/admin-bulk.spec.ts`、`e2e/admin-replenishment.spec.ts`；`backend/scripts/e2e-seed.ts` 在 `E2E_PROFILE=full` 補足補貨建議所需 deterministic inventory 資料（`inventoryBalance.onHandQty=0` + `SALE_OUT` fixture）並 fail-fast 驗證 `suggestedQty > 0`；新增 `AdminApiKeyGuard` 錯誤碼 schema 測試（`ADMIN_API_KEY_REQUIRED`）；更新 `docs/e2e-pos.md` 補 `e2e-full` 指令範例與四個 spec 的驗收摘要。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
