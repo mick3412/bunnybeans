@@ -15,9 +15,9 @@ import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams'
 const PAGE_SIZES = [20, 50, 100];
 const KIND_OPTIONS: Array<{ value: string; label: string }> = [
   { value: '', label: '全部' },
-  { value: 'posOrder', label: 'posOrder' },
-  { value: 'receivingNote', label: 'receivingNote' },
-  { value: 'unknown', label: 'unknown' },
+  { value: 'posOrder', label: 'POS 訂單' },
+  { value: 'receivingNote', label: '進貨驗收' },
+  { value: 'unknown', label: '未知' },
 ];
 
 export const AdminOpsReportClicksPage: React.FC = () => {
@@ -162,7 +162,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
           </div>
         </div>
         <div className="rounded-xl border border-brand-surface bg-white p-4">
-          <div className="text-xs font-semibold text-muted">解析 kind Top 5</div>
+          <div className="text-xs font-semibold text-muted">解析類型 前五</div>
           <div className="mt-2 space-y-1 text-xs">
             {topKinds.length ? (
               topKinds.map((r) => (
@@ -194,12 +194,13 @@ export const AdminOpsReportClicksPage: React.FC = () => {
     const okRate = total ? (summary.bySuccess.find((x) => x.success)?.count ?? 0) / total : 0;
 
     const status = (() => {
-      if (total === 0) return { label: 'OK', cls: 'bg-table-head text-muted ring-1 ring-brand-surface', note: '尚無資料' };
+      if (total === 0)
+        return { label: '良好', cls: 'bg-table-head text-muted ring-1 ring-brand-surface', note: '尚無資料' };
       if (notFoundRate >= 0.2 || multiMatchRate >= 0.08 || okRate < 0.8)
-        return { label: 'ALERT', cls: 'bg-brand-danger/10 text-brand-danger ring-1 ring-brand-danger/20', note: '需優先處理' };
+        return { label: '警示', cls: 'bg-brand-danger/10 text-brand-danger ring-1 ring-brand-danger/20', note: '需優先處理' };
       if (notFoundRate >= 0.08 || multiMatchRate >= 0.03 || okRate < 0.9)
-        return { label: 'WARN', cls: 'bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20', note: '建議排程修正' };
-      return { label: 'OK', cls: 'bg-brand-success/10 text-brand-success ring-1 ring-brand-success/20', note: '狀態良好' };
+        return { label: '警告', cls: 'bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20', note: '建議排程修正' };
+      return { label: '良好', cls: 'bg-brand-success/10 text-brand-success ring-1 ring-brand-success/20', note: '狀態良好' };
     })();
 
     const topSources = summary.topSources ?? [];
@@ -230,16 +231,16 @@ export const AdminOpsReportClicksPage: React.FC = () => {
               <span className="font-mono tabular-nums text-content">{Math.round(navigatedRate * 1000) / 10}%</span>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-muted">成功率（success）</span>
+              <span className="text-muted">成功率（成功）</span>
               <span className="font-mono tabular-nums text-content">{Math.round(okRate * 1000) / 10}%</span>
             </div>
-            {permission ? <div className="text-[11px] text-muted">PERMISSION：{permission} 次（可能缺 Admin key）</div> : null}
+            {permission ? <div className="text-[11px] text-muted">PERMISSION：{permission} 次（可能缺 Admin 金鑰）</div> : null}
           </div>
         </div>
 
         <div className="rounded-xl border border-brand-surface bg-white p-4">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-xs font-semibold text-muted">NOT_FOUND / MULTI_MATCH 排行（source）</div>
+            <div className="text-xs font-semibold text-muted">NOT_FOUND / MULTI_MATCH 排行（來源）</div>
             <div className="text-[11px] text-muted">依 summary.topSources</div>
           </div>
           {topSources.length ? (
@@ -260,7 +261,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
 
         <div className="rounded-xl border border-brand-surface bg-white p-4">
           <div className="flex items-center justify-between gap-2">
-            <div className="text-xs font-semibold text-muted">近期趨勢（failed/total）</div>
+            <div className="text-xs font-semibold text-muted">近期趨勢（失敗/總計）</div>
             <div className="flex items-center gap-1">
               {([7, 14, 30] as const).map((d) => (
                 <button
@@ -282,9 +283,9 @@ export const AdminOpsReportClicksPage: React.FC = () => {
               <table className="w-full min-w-[360px] text-left text-xs">
                 <thead className="border-b border-brand-surface bg-table-head text-[11px] font-semibold uppercase text-muted">
                   <tr>
-                    <th className="px-3 py-2">day</th>
-                    <th className="px-3 py-2 text-right">failed</th>
-                    <th className="px-3 py-2 text-right">total</th>
+                    <th className="px-3 py-2">天</th>
+                    <th className="px-3 py-2 text-right">失敗</th>
+                    <th className="px-3 py-2 text-right">總計</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -303,7 +304,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
           )}
           {topRefs.length ? (
             <div className="mt-3 text-[11px] text-muted">
-              常見失敗 referenceId：{topRefs.slice(0, 2).map((x) => `${x.referenceId.slice(0, 8)}…(${x.count})`).join('、')}
+              常見失敗 參考 ID：{topRefs.slice(0, 2).map((x) => `${x.referenceId.slice(0, 8)}…(${x.count})`).join('、')}
             </div>
           ) : null}
         </div>
@@ -317,13 +318,13 @@ export const AdminOpsReportClicksPage: React.FC = () => {
       description={
         <span>
           資料來源 <code className="rounded bg-table-head px-1">GET /ops/reports/click-audit</code> 與
-          <code className="rounded bg-table-head px-1">GET /ops/reports/click-audit/summary</code>（需 Admin key）。
+          <code className="rounded bg-table-head px-1">GET /ops/reports/click-audit/summary</code>（需 Admin 金鑰）。
         </span>
       }
       filters={
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-xs text-muted">來源 source</label>
+            <label className="mb-1 block text-xs text-muted">來源</label>
             <input
               value={source}
               onChange={(e) => {
@@ -359,7 +360,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted">解析 kind</label>
+            <label className="mb-1 block text-xs text-muted">解析類型</label>
             <select
               value={resolvedKind}
               onChange={(e) => {
@@ -391,7 +392,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted">結果 resultCode</label>
+            <label className="mb-1 block text-xs text-muted">結果代碼</label>
             <input
               value={resultCode}
               onChange={(e) => {
@@ -403,7 +404,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted">referenceId</label>
+            <label className="mb-1 block text-xs text-muted">參考 ID</label>
             <input
               value={referenceId}
               onChange={(e) => {
@@ -468,20 +469,22 @@ export const AdminOpsReportClicksPage: React.FC = () => {
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
               <tr>
-                <th className="px-3 py-2">時間</th>
-                <th className="px-3 py-2">source</th>
-                <th className="px-3 py-2">field</th>
-                <th className="px-3 py-2">referenceId</th>
-                <th className="px-3 py-2">resultCode</th>
-                <th className="px-3 py-2">resolvedKind</th>
-                <th className="px-3 py-2">success</th>
+                <th className="w-[220px] px-3 py-2 text-right">時間</th>
+                <th className="px-3 py-2">來源</th>
+                <th className="px-3 py-2">欄位</th>
+                <th className="px-3 py-2">參考 ID</th>
+                <th className="px-3 py-2" aria-label="resultCode">
+                  結果代碼
+                </th>
+                <th className="px-3 py-2">解析類型</th>
+                <th className="w-[120px] px-3 py-2 text-center">成功</th>
                 <th className="px-3 py-2">下一步</th>
               </tr>
             </thead>
             <tbody>
               {items.map((r) => (
                 <tr key={r.id} className="border-b border-brand-surface hover:bg-brand-canvas">
-                  <td className="px-3 py-2 tabular-nums text-muted">{new Date(r.createdAt).toLocaleString('zh-TW')}</td>
+                  <td className="px-3 py-2 tabular-nums text-right text-muted">{new Date(r.createdAt).toLocaleString('zh-TW')}</td>
                   <td className="max-w-[220px] truncate px-3 py-2 font-medium text-content" title={r.source}>
                     {r.source}
                   </td>
@@ -496,7 +499,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
                   </td>
                   <td className="px-3 py-2 font-mono text-xs text-muted">{(r.resultCode as string | null | undefined) ?? '—'}</td>
                   <td className="px-3 py-2 text-muted">{r.resolvedKind}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 text-center">
                     <span
                       className={[
                         'inline-flex rounded px-2 py-0.5 text-xs font-medium',
