@@ -118,23 +118,31 @@
 ### 6.0b `POST`／`PATCH`／`DELETE /categories`（stable）
 
 - **用途**：後台分類 CRUD；**GET /categories 仍公開**（POS 篩選）。**POST**／**PATCH**／**DELETE** 與 **`POST/PATCH/DELETE /products`** 相同：若設定 **`ADMIN_API_KEY`**，須 **`X-Admin-Key`**；未設定則不擋（CI 相容）。
-- **POST** `/categories` body：`{ "code": "CAT01", "name": "飲料" }`（`code` 全域唯一）
-- **PATCH** `/categories/:id` body：`{ "code?": "…", "name?": "…" }`
+- **POST** `/categories` body：`{ "code?": "…", "name": "飲料" }`（`code` 選填，未送時由 `name` 自動衍生；`code` 全域唯一）
+- **PATCH** `/categories/:id` body：`{ "code?": "…", "name?": "…" }`（未送 `code` 則保留現有）
 - **DELETE** `/categories/:id`：若仍有 **`Product.categoryId`** 指向該分類 → **409** **`CATEGORY_IN_USE`**；無引用則 **204** 無 body
-- **錯誤**：`400 CATEGORY_CODE_REQUIRED`／`CATEGORY_NAME_REQUIRED`；`409 CATEGORY_CODE_CONFLICT`；`404 CATEGORY_NOT_FOUND`；`409 CATEGORY_IN_USE`（DELETE）
+- **Code 規則（Category/Brand/ProductTag 共用）**：字元集 `a-z0-9-`（小寫、無前後綴 dash）；中文/特殊字元由 `name` 衍生時用 deterministic hash `x-${base36}`；重複時加 `-2`、`-3`…；手動 `code` 違規 → **400** **`*_CODE_INVALID`**
+- **錯誤**：`400 CATEGORY_CODE_INVALID`／`CATEGORY_NAME_REQUIRED`；`409 CATEGORY_CODE_CONFLICT`；`404 CATEGORY_NOT_FOUND`；`409 CATEGORY_IN_USE`（DELETE）
 
 ### 6.1 `GET /brands`（stable）
 
 - **Response**：`{ id, code, name, createdAt, updatedAt }[]`
 
+### 6.1b `POST`／`PATCH`／`DELETE /brands`（stable）
+
+- **POST** body：`{ "code?": "…", "name": "品牌名" }`（`code` 選填，未送時由 `name` 自動衍生）
+- **PATCH** body：`{ "code?": "…", "name?": "…" }`（未送 `code` 則保留現有）
+- **DELETE**：若品牌下仍有商品 → **409** **`BRAND_IN_USE`**
+- **錯誤**：`400 BRAND_CODE_INVALID`／`BRAND_NAME_REQUIRED`；`409 BRAND_CODE_CONFLICT`；`404 BRAND_NOT_FOUND`；`409 BRAND_IN_USE`（DELETE）
+
 ### 6.1a `GET/POST/PATCH/DELETE /product-tags`（stable）
 
 - **用途**：商品標籤 master CRUD；供類別管理頁與商品表單標籤 multi-select 使用。
 - **GET** `/product-tags` Query：**`merchantId`**（必填）。Response：`{ id, merchantId, name, code, createdAt, updatedAt }[]`
-- **POST** `/product-tags` Body：`{ "merchantId": "uuid", "name": "熱銷", "code": "HOT" }`；需 **X-Admin-Key**。
+- **POST** `/product-tags` Body：`{ "merchantId": "uuid", "name": "熱銷", "code?": "hot" }`（`code` 選填，未送時由 `name` 自動衍生）；需 **X-Admin-Key**。
 - **PATCH** `/product-tags/:id` Body：`{ "name?": "…", "code?": "…" }`；需 **X-Admin-Key**。
 - **DELETE** `/product-tags/:id`：204 無 body；需 **X-Admin-Key**。
-- **錯誤**：`400 PRODUCT_TAG_MERCHANT_REQUIRED`／`PRODUCT_TAG_NAME_REQUIRED`／`PRODUCT_TAG_CODE_REQUIRED`；`409 PRODUCT_TAG_CODE_CONFLICT`；`404 PRODUCT_TAG_NOT_FOUND`。
+- **錯誤**：`400 PRODUCT_TAG_MERCHANT_REQUIRED`／`PRODUCT_TAG_NAME_REQUIRED`／`PRODUCT_TAG_CODE_INVALID`；`409 PRODUCT_TAG_CODE_CONFLICT`；`404 PRODUCT_TAG_NOT_FOUND`。
 
 ### 6.2 `GET /products`（stable）
 

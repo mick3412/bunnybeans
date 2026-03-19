@@ -70,15 +70,24 @@
 | `FINANCE_PERIOD_OVERLAP` | 400 | 關帳區間與既有關帳重疊 | 請調整關帳區間 |
 | `FINANCE_PERIOD_ALREADY_CLOSED` | 400 | 該區間內已有日期被關帳 | 請選擇未關帳區間 |
 | `FINANCE_PERIOD_NOT_FOUND` | 404 | 解鎖時關帳紀錄不存在 | 找不到該關帳紀錄 |
-| `CATEGORY_CODE_REQUIRED` | 400 | 未提供分類代碼 | 請提供 code |
-| `CATEGORY_NAME_REQUIRED` | 400 | 未提供分類名稱 | 請提供 name |
+| `CATEGORY_NAME_REQUIRED` | 400 | 未提供分類名稱或不得為空 | 請提供 name |
+| `CATEGORY_CODE_REQUIRED` | 400 | PATCH 時若帶 code 則不可為空 | 請移除或填寫有效 code |
+| `CATEGORY_CODE_INVALID` | 400 | code 不符 a-z0-9- 規則（小寫、無前後綴 dash） | 請使用 a-z0-9- 格式 |
 | `CATEGORY_CODE_CONFLICT` | 409 | code 已存在 | 請使用其他代碼 |
 | `CATEGORY_NOT_FOUND` | 404 | 分類不存在 | id 無效 |
 | `CATEGORY_IN_USE` | 409 | 分類下仍有商品 | 先改商品分類或刪除商品後再刪 |
+| **Brand** | | | |
+| `BRAND_NAME_REQUIRED` | 400 | name 必填或不得為空 | 請提供 name |
+| `BRAND_CODE_REQUIRED` | 400 | PATCH 時若帶 code 則不可為空 | 請移除或填寫有效 code |
+| `BRAND_CODE_INVALID` | 400 | code 不符 a-z0-9- 規則 | 請使用 a-z0-9- 格式 |
+| `BRAND_CODE_CONFLICT` | 409 | code 已存在 | 請換品牌代碼 |
+| `BRAND_NOT_FOUND` | 404 | 品牌不存在 | 找不到該品牌 |
+| `BRAND_IN_USE` | 409 | 品牌下仍有商品 | 先改商品品牌後再刪 |
 | **ProductTag** | | | |
 | `PRODUCT_TAG_MERCHANT_REQUIRED` | 400 | GET /product-tags 或 POST body 未帶 merchantId | 請帶 merchantId |
 | `PRODUCT_TAG_NAME_REQUIRED` | 400 | name 必填或不得為空 | 請填寫名稱 |
-| `PRODUCT_TAG_CODE_REQUIRED` | 400 | code 必填或不得為空 | 請填寫代碼 |
+| `PRODUCT_TAG_CODE_REQUIRED` | 400 | PATCH 時若帶 code 則不可為空 | 請移除或填寫有效 code |
+| `PRODUCT_TAG_CODE_INVALID` | 400 | code 不符 a-z0-9- 規則 | 請使用 a-z0-9- 格式 |
 | `PRODUCT_TAG_CODE_CONFLICT` | 409 | 同商家 code 已存在 | 請換標籤代碼 |
 | `PRODUCT_TAG_NOT_FOUND` | 404 | 標籤不存在 | 找不到該標籤 |
 | **採購 Supplier** | | | |

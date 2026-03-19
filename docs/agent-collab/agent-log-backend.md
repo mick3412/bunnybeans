@@ -15,6 +15,23 @@
 
 ---
 
+### INSTRUCTIONS-019（主檔 canonical code + merchantId 單一商家友善 + agent-log 前端可開始）
+- 做了：依 `BACKEND-INSTRUCTIONS 019.md` §1 完成 #1～#7。
+  - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（135 passed）。
+  - **#2 主檔 code 規則**：Category/Brand/ProductTag 建立/更新套用 canonical code（`a-z0-9-`、slugify、dedupe suffix）；`code` 選填，未送時由 `name` 自動衍生；違規回傳 `*_CODE_INVALID`。
+  - **#3 API 契約**：更新 `docs/api-design.md`、`docs/backend-error-format.md`（含 `*_CODE_INVALID`、`*_CODE_REQUIRED`、Brand/ProductTag 條目）。
+  - **#4 integration-spec**：Category/ProductTag 補齊 (a) 中文名→x-* (b) 重複→suffix (c) 手動 code 接受/拒絕 (d) update 保留/重算。
+  - **#5 前端可開始條件**：見下方 curl 範例，可驗證規則。
+  - **#6 merchantId 單一商家友善**：`GET /finance/balances`、`GET /pos/reports/summary`、`top-items`、`daily` 未傳 merchantId 且 DB 僅一筆 Merchant 時自動使用；多商家時仍須傳 merchantId。
+  - **#7 POS 報表**：top-items/daily 已具 integration-spec；單一商家情境可透過 merchantId fallback 正常回傳。
+- **前端可開始條件**：API 已支援 `code` 選填與 canonical 規則；可用下列 curl 驗證：
+  - 中文名自動 code：`curl -X POST http://localhost:3003/categories -H "Content-Type: application/json" -d '{"name":"飲料"}'` → `code` 為 `x-{hash}` 格式
+  - 手動 code 接受：`curl -X POST http://localhost:3003/categories -H "Content-Type: application/json" -d '{"code":"drinks","name":"飲料"}'` → `code: "drinks"`
+  - 手動 code 拒絕：`curl -X POST http://localhost:3003/categories -H "Content-Type: application/json" -d '{"code":"Invalid!","name":"X"}'` → 400 `CATEGORY_CODE_INVALID`
+  - 單一商家 balances 免 merchantId：`curl http://localhost:3003/finance/balances`（DB 僅一筆 Merchant 時 200）
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
+- commits：待提交（本輪變更完成後 atomic commits）。
+
 ### INSTRUCTIONS-018（full seed 回歸 + 錯誤碼契約一致性確認）
 - 做了：完成本輪 §1 #1~#5 檢查與回歸；`E2E_PROFILE=full pnpm --filter pos-erp-backend e2e:seed` 通過，`E2E_SEED_SUMMARY` 與 fail-fast 正常；檢查前端 `getErrorMessage` 與後端常用錯誤碼（401/403、`ADMIN_API_KEY_REQUIRED`、POS/INVENTORY/FINANCE）映射一致，無需新增後端錯誤碼或調整；確認目前前端變更僅使用既有 `expiryDescription` 欄位（後端已支援），且未採 slugify code 規則，故本輪不需後端 schema/API/validation 變更。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`E2E_PROFILE=full pnpm --filter pos-erp-backend e2e:seed` 通過並輸出 `E2E_SEED_SUMMARY`。
