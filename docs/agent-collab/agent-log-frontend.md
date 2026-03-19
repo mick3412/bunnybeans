@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 024（金流趨勢、會員營收貢獻、營收趨勢週月、客單價分布、StandardListLayout）
+- 做了：① posOrdersApi：PosReportsSummaryDto 新增 memberContribution；getPosDaily 擴充 groupBy day|week|month、統一回傳 PosDailyChartItem[]；新增 getPosOrderValueDistribution。② adminApi：getFinanceSummary 擴充 groupBy day|week、新增 FinanceSummaryTrend。③ AdminReportsPage：新增「金流趨勢」區塊（依日/依週切換、MiniLineChart SALE_RECEIVABLE/SALE_PAYMENT/PURCHASE_PAYABLE）。④ PosReportsPage：新增「會員營收貢獻」區塊（memberContribution 長條圖）；營收趨勢新增依日/週/月下拉；新增「客單價分布」區塊（getPosOrderValueDistribution）。⑤ AdminReplenishmentPage 改用 StandardListLayout。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 許可時補跑 admin-categories、admin-ops-report-clicks-full、admin-balances）。
+- commits：0c93e74 feat(api) posOrdersApi+adminApi；7b0b098 AdminReportsPage 金流趨勢；254b59c PosReportsPage 四報表區塊；b810e29 AdminReplenishmentPage StandardListLayout；701b218 docs agent-log
+
+---
+
 ### INSTRUCTIONS 023（會員路由收斂收尾、業績報表緊湊、營運總覽、餘額頁 StandardListLayout、按鈕主色 + 進階項目 10-15）
 - 做了：① 會員路由：docs/crm-loyalty-ui-plan.md、erp-roadmap.md 更新為 /admin/customers 主入口（E2E 無 loyalty/members 引用）。② PosReportsPage：毛利／付款方式／分類銷售合併為三欄緊湊區塊；topItems/daily 載入失敗時顯示 merchantId、VITE_API_BASE_URL 除錯資訊與可操作提示。③ AdminDashboardPage：KPI 卡片縮小（text-xl、6 欄）、待辦中心移至頁面最下方且待辦項縮小。④ AdminFinanceBalancesPage 改用 StandardListLayout（title、description、filters、table 結構與 AdminReportsPage 一致）。⑤ 採購單／進貨驗收／供應商頁與 AdminSegmentExportPage 硬編碼 #0ea5e9 改為 brand-primary。⑥ 補貨閉環：驗證 AdminReplenishmentPage 已有勾選→建立採購草稿→navigate purchase-orders。⑦ 應收應付：022 已有 Party kind tabs；backend 無 platform kind，註記已就緒。⑧ dispatch-rules 已有 job 摘要、AdminSegmentExportPage 按鈕改 brand-primary。
 - **進階項目 10-15**：⑩ 金流報表與 POS 業績 cross-link（AdminReportsPage ↔ PosReportsPage）。⑪ dispatch-rules 最近 job 結果摘要已存在。⑫ 訂定 docs/frontend-layout-rules.md（列表 max-w-6xl）；QuickReceiving、WarehousesStores 收斂。⑬ AdminSegmentsPage 改用 StandardListLayout。⑭ 發券規則、即期庫存頁文字色與邊框統一（text-content/text-muted、border-brand-surface、Alert）。⑮ 空狀態／錯誤／載入：AdminSegmentsPage 用 EmptyState+Alert；發券規則、即期庫存用 Alert。
