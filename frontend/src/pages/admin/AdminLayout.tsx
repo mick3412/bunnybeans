@@ -251,9 +251,6 @@ export const AdminLayout: React.FC = () => {
             <NavLink to="/admin" className={navClass} end>
               總覽
             </NavLink>
-            <NavLink to="/admin/ops/jobs" className={navClass}>
-              Job 監控
-            </NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />
 
@@ -261,10 +258,10 @@ export const AdminLayout: React.FC = () => {
             <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">商品/庫存</div>
             {/* 第二層：主入口（可點） */}
             <NavLink to="/admin/products" className={navClass}>
-              商品主檔
+              商品總覽
             </NavLink>
             <NavLink to="/admin/inventory" className={navClass}>
-              庫存
+              庫存總覽
             </NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />
@@ -275,8 +272,8 @@ export const AdminLayout: React.FC = () => {
             <NavLink to="/admin/inventory/adjust" className={navClass}>
               入庫／盤點
             </NavLink>
-            <NavLink to="/admin/purchase-orders" className={navClass}>
-              採購單
+            <NavLink to="/admin/procurement" className={navClass}>
+              採購總覽
             </NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />
@@ -396,49 +393,53 @@ export const AdminLayout: React.FC = () => {
                       目前沒有待辦
                     </div>
                   ) : (
-                    <div className="max-h-[52vh] space-y-2 overflow-auto pr-1">
-                      {visibleTodos.map((it) => (
-                        <div key={it.key} className="rounded-lg border border-brand-surface bg-table-head px-3 py-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="truncate text-xs font-semibold text-content">{it.title}</div>
-                              <div className="mt-1 text-sm tabular-nums text-muted">{it.countText}</div>
-                              {it.metaText && <div className="mt-0.5 text-[11px] text-muted">{it.metaText}</div>}
-                            </div>
-                            <div className="flex shrink-0 flex-col items-end gap-1">
-                              <button
-                                type="button"
-                                className="rounded border border-brand-surface bg-white px-2 py-1 text-[11px] text-muted hover:border-brand-primary/30"
-                                onClick={() => dismiss(it.key)}
-                              >
-                                已處理
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded border border-brand-surface bg-white px-2 py-1 text-[11px] text-muted hover:border-brand-primary/30"
-                                onClick={() => snooze(it.key, 24 * 60 * 60 * 1000)}
-                              >
-                                稍後
-                              </button>
-                              <button
-                                type="button"
-                                className="rounded border border-brand-surface bg-white px-2 py-1 text-[11px] font-medium text-sky-700 hover:border-brand-primary/30"
-                                onClick={() => {
-                                  setBellOpen(false);
-                                  navigate(it.to);
-                                }}
-                                disabled={it.unavailable}
-                                title={it.unavailable ? '待後端提供資料' : '前往處理'}
-                              >
-                                前往
-                              </button>
+                    <>
+                      <div className="max-h-[52vh] space-y-2 overflow-auto pr-1">
+                        {visibleTodos.map((it) => (
+                          <div key={it.key} className="rounded-lg border border-brand-surface bg-table-head px-3 py-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="truncate text-xs font-semibold text-content">{it.title}</div>
+                                <div className="mt-1 text-sm tabular-nums text-muted">{it.countText}</div>
+                                {it.metaText && <div className="mt-0.5 text-[11px] text-muted">{it.metaText}</div>}
+                              </div>
+                              <div className="flex shrink-0 flex-col items-end gap-1">
+                                <button
+                                  type="button"
+                                  className="rounded border border-brand-surface bg-white px-2 py-1 text-[11px] text-muted hover:border-brand-primary/30"
+                                  onClick={() => dismiss(it.key)}
+                                >
+                                  已處理
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded border border-brand-surface bg-white px-2 py-1 text-[11px] text-muted hover:border-brand-primary/30"
+                                  onClick={() => snooze(it.key, 24 * 60 * 60 * 1000)}
+                                >
+                                  稍後
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded border border-brand-surface bg-white px-2 py-1 text-[11px] font-medium text-sky-700 hover:border-brand-primary/30"
+                                  onClick={() => {
+                                    setBellOpen(false);
+                                    navigate(it.to);
+                                  }}
+                                  disabled={it.unavailable}
+                                  title={it.unavailable ? '待後端提供資料' : '前往處理'}
+                                >
+                                  前往
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                      <div className="mt-2 text-[11px] text-muted">
+                        提示：通知/待辦目前為前端彙整，且已處理/稍後提醒只記錄在本機。
+                      </div>
+                    </>
                   )}
-                  <div className="mt-2 text-[11px] text-muted">提示：通知/待辦目前為前端彙整，且已處理/稍後提醒只記錄在本機。</div>
                 </div>
               )}
             </div>

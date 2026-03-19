@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../../shared/components/Button';
 import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
 import { AdminPromotionsPage } from '../AdminPromotionsPage';
@@ -16,24 +17,53 @@ const TAB_OPTIONS: Array<{ key: MarketingCenterHubTabKey; label: string }> = [
 function tabButtonClass(active: boolean) {
   return [
     'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-    active ? 'bg-[#1e293b] text-white shadow-sm' : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
+    active
+      ? '!bg-[#1e293b] !text-white shadow-sm ring-2 ring-brand-primary/40'
+      : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
   ].join(' ');
 }
 
 export function AdminMarketingCenterHubPage(props: { initialTab?: MarketingCenterHubTabKey }) {
   const { initialTab } = props;
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [hubParams, setHubParams] = useScopedSearchParams('marketing.hub');
   const tabFromUrl = (hubParams.get('tab') as MarketingCenterHubTabKey | null) ?? null;
-  const defaultTab: MarketingCenterHubTabKey = tabFromUrl ?? initialTab ?? 'promotions';
+  const tabFromPathname = useMemo<MarketingCenterHubTabKey | null>(() => {
+    const p = location.pathname;
+    if (p === '/admin/promotions') return 'promotions';
+    if (p.startsWith('/admin/promotions/')) return 'promotions';
+    if (p === '/admin/crm/jobs') return 'jobs';
+    if (p === '/admin/marketing/rules') return 'marketingRules';
+    return null;
+  }, [location.pathname]);
+
+  const defaultTab: MarketingCenterHubTabKey = tabFromPathname ?? tabFromUrl ?? initialTab ?? 'promotions';
 
   const [activeTab, setActiveTab] = useState<MarketingCenterHubTabKey>(defaultTab);
 
+  const toPath = useMemo<Record<MarketingCenterHubTabKey, string>>(
+    () => ({
+      promotions: '/admin/promotions',
+      jobs: '/admin/crm/jobs',
+      marketingRules: '/admin/marketing/rules',
+    }),
+    [],
+  );
+
   useEffect(() => {
-    if (!initialTab) return;
-    if (activeTab === initialTab) return;
-    setActiveTab(initialTab);
-  }, [initialTab, activeTab]);
+    // 從 URL 同步（避免用戶點擊後又被固定的 initialTab 覆蓋）
+    if (!tabFromUrl) return;
+    if (tabFromUrl === activeTab) return;
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl]);
+
+  useEffect(() => {
+    if (!tabFromPathname) return;
+    if (tabFromPathname === activeTab) return;
+    setActiveTab(tabFromPathname);
+  }, [tabFromPathname, activeTab]);
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -57,7 +87,7 @@ export function AdminMarketingCenterHubPage(props: { initialTab?: MarketingCente
             size="sm"
             variant="secondary"
             className={tabButtonClass(activeTab === t.key)}
-            onClick={() => setActiveTab(t.key)}
+            onClick={() => navigate(toPath[t.key])}
           >
             {t.label}
           </Button>

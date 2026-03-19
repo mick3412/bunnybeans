@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../../shared/components/Button';
 import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
 import { LoyaltyDashboardPage } from '../loyalty/LoyaltyDashboardPage';
@@ -37,24 +38,64 @@ const TAB_OPTIONS: Array<{ key: MemberCenterHubTabKey; label: string }> = [
 function tabButtonClass(active: boolean) {
   return [
     'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-    active ? 'bg-[#1e293b] text-white shadow-sm' : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
+    active
+      ? '!bg-[#1e293b] !text-white shadow-sm ring-2 ring-brand-primary/40'
+      : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
   ].join(' ');
 }
 
 export function AdminMemberCenterHubPage(props: { initialTab?: MemberCenterHubTabKey }) {
   const { initialTab } = props;
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [hubParams, setHubParams] = useScopedSearchParams('member.hub');
   const tabFromUrl = (hubParams.get('tab') as MemberCenterHubTabKey | null) ?? null;
-  const defaultTab: MemberCenterHubTabKey = tabFromUrl ?? initialTab ?? 'dashboard';
+  const tabFromPathname = useMemo<MemberCenterHubTabKey | null>(() => {
+    const p = location.pathname;
+    if (p === '/admin/loyalty') return 'dashboard';
+    if (p === '/admin/loyalty/point-ledger') return 'pointLedger';
+    if (p === '/admin/loyalty/coupons') return 'coupons';
+    if (p === '/admin/loyalty/reports') return 'reports';
+    if (p === '/admin/loyalty/settings') return 'settings';
+    if (p === '/admin/loyalty/tier-rules') return 'tierRules';
+    if (p === '/admin/customers') return 'members';
+    if (p === '/admin/segments') return 'segments';
+    if (p === '/admin/dispatch-rules') return 'dispatchRules';
+    return null;
+  }, [location.pathname]);
+
+  const defaultTab: MemberCenterHubTabKey = tabFromPathname ?? tabFromUrl ?? initialTab ?? 'dashboard';
 
   const [activeTab, setActiveTab] = useState<MemberCenterHubTabKey>(defaultTab);
 
+  const toPath = useMemo<Record<MemberCenterHubTabKey, string>>(
+    () => ({
+      dashboard: '/admin/loyalty',
+      members: '/admin/customers',
+      pointLedger: '/admin/loyalty/point-ledger',
+      coupons: '/admin/loyalty/coupons',
+      reports: '/admin/loyalty/reports',
+      settings: '/admin/loyalty/settings',
+      tierRules: '/admin/loyalty/tier-rules',
+      segments: '/admin/segments',
+      dispatchRules: '/admin/dispatch-rules',
+    }),
+    [],
+  );
+
   useEffect(() => {
-    if (!initialTab) return;
-    if (activeTab === initialTab) return;
-    setActiveTab(initialTab);
-  }, [initialTab, activeTab]);
+    // 從 URL 同步（避免用戶點擊後又被固定的 initialTab 覆蓋）
+    if (!tabFromUrl) return;
+    if (tabFromUrl === activeTab) return;
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl]);
+
+  useEffect(() => {
+    if (!tabFromPathname) return;
+    if (tabFromPathname === activeTab) return;
+    setActiveTab(tabFromPathname);
+  }, [tabFromPathname, activeTab]);
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -85,7 +126,7 @@ export function AdminMemberCenterHubPage(props: { initialTab?: MemberCenterHubTa
               size="sm"
               variant="secondary"
               className={tabButtonClass(activeTab === t.key)}
-              onClick={() => setActiveTab(t.key)}
+              onClick={() => navigate(toPath[t.key])}
             >
               {t.label}
             </Button>

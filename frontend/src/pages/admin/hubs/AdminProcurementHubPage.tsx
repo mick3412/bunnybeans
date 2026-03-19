@@ -2,14 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../../shared/components/Button';
 import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
-import { AdminProductsPage } from '../AdminProductsPage';
-import { AdminCategoriesPage } from '../AdminCategoriesPage';
+import { AdminPurchaseOrdersPage } from '../AdminPurchaseOrdersPage';
+import { AdminReceivingNotesPage } from '../AdminReceivingNotesPage';
+import { AdminReplenishmentPage } from '../AdminReplenishmentPage';
 
-export type ProductHubTabKey = 'products' | 'categories';
+export type ProcurementHubTabKey = 'purchaseOrders' | 'receivingNotes' | 'replenishment';
 
-const TAB_OPTIONS: Array<{ key: ProductHubTabKey; label: string }> = [
-  { key: 'products', label: '商品主檔' },
-  { key: 'categories', label: '類別管理' },
+const TAB_OPTIONS: Array<{ key: ProcurementHubTabKey; label: string }> = [
+  { key: 'purchaseOrders', label: '採購單' },
+  { key: 'receivingNotes', label: '進貨驗收／退供' },
+  { key: 'replenishment', label: '補貨建議' },
 ];
 
 function tabButtonClass(active: boolean) {
@@ -21,26 +23,30 @@ function tabButtonClass(active: boolean) {
   ].join(' ');
 }
 
-export function AdminProductHubPage(props: { initialTab?: ProductHubTabKey }) {
+export function AdminProcurementHubPage(props: { initialTab?: ProcurementHubTabKey }) {
   const { initialTab } = props;
   const location = useLocation();
   const navigate = useNavigate();
-  const [hubParams, setHubParams] = useScopedSearchParams('product.hub');
-  const tabFromUrl = (hubParams.get('tab') as ProductHubTabKey | null) ?? null;
-  const tabFromPathname = useMemo<ProductHubTabKey | null>(() => {
+  const [hubParams, setHubParams] = useScopedSearchParams('procurement.hub');
+
+  const tabFromUrl = (hubParams.get('tab') as ProcurementHubTabKey | null) ?? null;
+  const tabFromPathname = useMemo<ProcurementHubTabKey | null>(() => {
     const p = location.pathname;
-    if (p === '/admin/products') return 'products';
-    if (p === '/admin/categories') return 'categories';
+    if (p === '/admin/purchase-orders') return 'purchaseOrders';
+    if (p === '/admin/receiving-notes') return 'receivingNotes';
+    if (p === '/admin/replenishment') return 'replenishment';
+    if (p === '/admin/procurement') return null;
     return null;
   }, [location.pathname]);
 
-  const defaultTab: ProductHubTabKey = tabFromPathname ?? tabFromUrl ?? initialTab ?? 'products';
-  const [activeTab, setActiveTab] = useState<ProductHubTabKey>(defaultTab);
+  const defaultTab: ProcurementHubTabKey = tabFromPathname ?? tabFromUrl ?? initialTab ?? 'purchaseOrders';
+  const [activeTab, setActiveTab] = useState<ProcurementHubTabKey>(defaultTab);
 
-  const toPath = useMemo<Record<ProductHubTabKey, string>>(
+  const toPath = useMemo<Record<ProcurementHubTabKey, string>>(
     () => ({
-      products: '/admin/products',
-      categories: '/admin/categories',
+      purchaseOrders: '/admin/purchase-orders',
+      receivingNotes: '/admin/receiving-notes',
+      replenishment: '/admin/replenishment',
     }),
     [],
   );
@@ -64,8 +70,9 @@ export function AdminProductHubPage(props: { initialTab?: ProductHubTabKey }) {
   }, [activeTab, setHubParams]);
 
   const ActivePage = useMemo(() => {
-    if (activeTab === 'categories') return AdminCategoriesPage;
-    return AdminProductsPage;
+    if (activeTab === 'receivingNotes') return AdminReceivingNotesPage;
+    if (activeTab === 'replenishment') return AdminReplenishmentPage;
+    return AdminPurchaseOrdersPage;
   }, [activeTab]);
 
   return (

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from '../../../shared/components/Button';
 import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
 import { AdminInventoryPage } from '../AdminInventoryPage';
@@ -15,17 +16,26 @@ const TAB_OPTIONS: Array<{ key: InventoryQueryHubTabKey; label: string }> = [
 function tabButtonClass(active: boolean) {
   return [
     'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-    active ? 'bg-[#1e293b] text-white shadow-sm' : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
+    active
+      ? '!bg-[#1e293b] !text-white shadow-sm ring-2 ring-brand-primary/40'
+      : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
   ].join(' ');
 }
 
 export function AdminInventoryQueryHubPage(props: { initialTab?: InventoryQueryHubTabKey }) {
   const { initialTab } = props;
+  const location = useLocation();
   const [hubParams, setHubParams] = useScopedSearchParams('inventory.query.hub');
   const [invParams, setInvParams] = useScopedSearchParams('inventory.query');
 
   const tabFromUrl = (hubParams.get('tab') as InventoryQueryHubTabKey | null) ?? null;
-  const defaultTab: InventoryQueryHubTabKey = tabFromUrl ?? initialTab ?? 'balances';
+  const tabFromPathname = useMemo<InventoryQueryHubTabKey | null>(() => {
+    const p = location.pathname;
+    if (p === '/admin/inventory/expiring') return 'expiring';
+    return null;
+  }, [location.pathname]);
+
+  const defaultTab: InventoryQueryHubTabKey = tabFromPathname ?? tabFromUrl ?? initialTab ?? 'balances';
 
   const [activeTab, setActiveTab] = useState<InventoryQueryHubTabKey>(defaultTab);
 
@@ -33,7 +43,13 @@ export function AdminInventoryQueryHubPage(props: { initialTab?: InventoryQueryH
     if (!tabFromUrl) return;
     if (tabFromUrl === activeTab) return;
     setActiveTab(tabFromUrl);
-  }, [tabFromUrl, activeTab]);
+  }, [tabFromUrl]);
+
+  useEffect(() => {
+    if (!tabFromPathname) return;
+    if (tabFromPathname === activeTab) return;
+    setActiveTab(tabFromPathname);
+  }, [tabFromPathname, activeTab]);
 
   useEffect(() => {
     const nextHub = new URLSearchParams();

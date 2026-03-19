@@ -14,6 +14,7 @@ import { AdminWarehousesStoresPage } from './pages/admin/AdminWarehousesStoresPa
 import { AdminFinanceHubPage } from './pages/admin/hubs/AdminFinanceHubPage';
 import { AdminProductHubPage } from './pages/admin/hubs/AdminProductHubPage';
 import { AdminOpsMonitoringHubPage } from './pages/admin/hubs/AdminOpsMonitoringHubPage';
+import { AdminProcurementHubPage } from './pages/admin/hubs/AdminProcurementHubPage';
 import { AdminSegmentExportPage } from './pages/admin/AdminSegmentExportPage';
 import { AdminCustomerImportPage } from './pages/admin/AdminCustomerImportPage';
 import { AdminSuppliersPage } from './pages/admin/AdminSuppliersPage';
@@ -65,10 +66,11 @@ export const App: React.FC = () => {
         <Route path="marketing/rules/new" element={<AdminMarketingRuleEditPage />} />
         <Route path="marketing/rules/:id" element={<AdminMarketingRuleEditPage />} />
         <Route path="suppliers" element={<AdminSuppliersPage />} />
-        <Route path="purchase-orders" element={<AdminPurchaseOrdersPage />} />
+        <Route path="procurement" element={<AdminProcurementHubPage initialTab="purchaseOrders" />} />
+        <Route path="purchase-orders" element={<AdminProcurementHubPage initialTab="purchaseOrders" />} />
         <Route path="purchase-orders/quick-receiving" element={<AdminQuickReceivingPage />} />
-        <Route path="receiving-notes" element={<AdminReceivingNotesPage />} />
-        <Route path="replenishment" element={<AdminReplenishmentPage />} />
+        <Route path="receiving-notes" element={<AdminProcurementHubPage initialTab="receivingNotes" />} />
+        <Route path="replenishment" element={<AdminProcurementHubPage initialTab="replenishment" />} />
         <Route path="loyalty" element={<AdminMemberCenterHubPage initialTab="dashboard" />} />
         <Route path="loyalty/point-ledger" element={<AdminMemberCenterHubPage initialTab="pointLedger" />} />
         <Route path="loyalty/coupons" element={<AdminMemberCenterHubPage initialTab="coupons" />} />

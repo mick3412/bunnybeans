@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '../../../shared/components/Button';
 import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
 import { AdminDashboardPage } from '../AdminDashboardPage';
@@ -16,22 +17,49 @@ const TAB_OPTIONS: Array<{ key: OpsMonitoringHubTabKey; label: string }> = [
 function tabButtonClass(active: boolean) {
   return [
     'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-    active ? 'bg-[#1e293b] text-white shadow-sm' : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
+    active
+      ? '!bg-[#1e293b] !text-white shadow-sm ring-2 ring-brand-primary/40'
+      : 'bg-white text-[#64748b] ring-1 ring-[#e2e8f0] hover:bg-[#f8fafc]',
   ].join(' ');
 }
 
 export function AdminOpsMonitoringHubPage(props: { initialTab?: OpsMonitoringHubTabKey }) {
   const { initialTab } = props;
+  const location = useLocation();
+  const navigate = useNavigate();
   const [hubParams, setHubParams] = useScopedSearchParams('ops.monitoring.hub');
   const tabFromUrl = (hubParams.get('tab') as OpsMonitoringHubTabKey | null) ?? null;
-  const defaultTab: OpsMonitoringHubTabKey = tabFromUrl ?? initialTab ?? 'overview';
+  const tabFromPathname = useMemo<OpsMonitoringHubTabKey | null>(() => {
+    const p = location.pathname;
+    if (p === '/admin/ops/jobs') return 'jobs';
+    if (p === '/admin/ops/report-clicks') return 'clicks';
+    if (p === '/admin' || p === '/admin/') return 'overview';
+    return null;
+  }, [location.pathname]);
+
+  const defaultTab: OpsMonitoringHubTabKey = tabFromPathname ?? tabFromUrl ?? initialTab ?? 'overview';
   const [activeTab, setActiveTab] = useState<OpsMonitoringHubTabKey>(defaultTab);
+
+  const toPath = useMemo<Record<OpsMonitoringHubTabKey, string>>(
+    () => ({
+      overview: '/admin',
+      jobs: '/admin/ops/jobs',
+      clicks: '/admin/ops/report-clicks',
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (!tabFromUrl) return;
     if (tabFromUrl === activeTab) return;
     setActiveTab(tabFromUrl);
-  }, [tabFromUrl, activeTab]);
+  }, [tabFromUrl]);
+
+  useEffect(() => {
+    if (!tabFromPathname) return;
+    if (tabFromPathname === activeTab) return;
+    setActiveTab(tabFromPathname);
+  }, [tabFromPathname, activeTab]);
 
   useEffect(() => {
     const next = new URLSearchParams();
@@ -55,7 +83,7 @@ export function AdminOpsMonitoringHubPage(props: { initialTab?: OpsMonitoringHub
             size="sm"
             variant="secondary"
             className={tabButtonClass(activeTab === t.key)}
-            onClick={() => setActiveTab(t.key)}
+            onClick={() => navigate(toPath[t.key])}
           >
             {t.label}
           </Button>
