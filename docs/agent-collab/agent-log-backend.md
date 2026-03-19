@@ -21,7 +21,7 @@
   - **#2 finance-accounting-roadmap 對齊**：更新 `docs/finance-accounting-roadmap.md`：§6 應收應付彙總改為「已實作」；§6.2 GET /finance/balances 註明已實作、單一商家 merchantId fallback；§7 關帳與審計改為「已實作」；§9.1 應收應付餘額補充 displayName、kind、merchantId fallback；關帳／Audit 改為 **已實作**（periods、audit-log、snapshots 均已實作）。
   - **#3 E2E full profile 審查（選配）**：`admin-receiving-notes-smoke`、`admin-expiring-inventory-smoke` 已於 `.github/workflows/e2e-full.yml` fixed gate；e2e-seed full profile 具備對應 fixture（E2E-RN-0001、E2E-EXP-BATCH-0001）；`docs/e2e-pos.md` 已有驗收摘要；無需變更。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
-- commits：9ebda857 docs: INSTRUCTIONS-020 finance-accounting-roadmap alignment。
+- commits：9ebda857 docs: INSTRUCTIONS-020 finance-accounting-roadmap alignment；862905d5 docs(agent-log): fix INSTRUCTIONS-020 commit SHA。
 
 ### INSTRUCTIONS-019（主檔 canonical code + merchantId 單一商家友善 + agent-log 前端可開始）
 - 做了：依 `BACKEND-INSTRUCTIONS 019.md` §1 完成 #1～#7。
