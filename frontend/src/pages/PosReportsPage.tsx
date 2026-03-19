@@ -96,6 +96,8 @@ export const PosReportsPage: React.FC = () => {
     (async () => {
       setTopItemsLoading(true);
       setDailyLoading(true);
+      setTopItemsErr(null);
+      setDailyErr(null);
       const ordersRes = await listOrders({ from, to, page: 1, pageSize: 20 });
       if (cancelled) return;
       if ('statusCode' in ordersRes) {
@@ -105,26 +107,35 @@ export const PosReportsPage: React.FC = () => {
         setOrdersErr(null);
         setOrders(ordersRes);
       }
-      const top = await getPosTopItems({ from, to, limit: 10, sortBy: 'revenue', merchantId });
-      if (!cancelled) {
-        if (Array.isArray(top)) {
-          setTopItemsErr(null);
-          setTopItems(top);
-        } else {
-          setTopItemsErr(getErrorMessage(top as ApiError));
-          setTopItems([]);
+      if (!merchantId) {
+        setTopItemsErr('缺少商家，無法載入熱銷品項');
+        setDailyErr('缺少商家，無法載入區間趨勢');
+        setTopItems([]);
+        setDaily([]);
+      } else {
+        const [top, d] = await Promise.all([
+          getPosTopItems({ from, to, limit: 10, sortBy: 'revenue', merchantId }),
+          getPosDaily({ from, to, merchantId }),
+        ]);
+        if (!cancelled) {
+          if (Array.isArray(top)) {
+            setTopItemsErr(null);
+            setTopItems(top);
+          } else {
+            setTopItemsErr(getErrorMessage(top as ApiError));
+            setTopItems([]);
+          }
+          if (Array.isArray(d)) {
+            setDailyErr(null);
+            setDaily(d);
+          } else {
+            setDailyErr(getErrorMessage(d as ApiError));
+            setDaily([]);
+          }
         }
-        setTopItemsLoading(false);
       }
-      const d = await getPosDaily({ from, to, merchantId });
       if (!cancelled) {
-        if (Array.isArray(d)) {
-          setDailyErr(null);
-          setDaily(d);
-        } else {
-          setDailyErr(getErrorMessage(d as ApiError));
-          setDaily([]);
-        }
+        setTopItemsLoading(false);
         setDailyLoading(false);
       }
     })();
