@@ -663,7 +663,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
       const expirySamples = expEvents
         .filter((e) => e.expiryDate)
         .slice(0, 5)
-        .map((e) => e.expiryDate.toISOString());
+        .map((e) => e.expiryDate!.toISOString());
       throw new Error(
         `E2E fixture invalid: expiring inventory batch must fall within expiring window (batchCode=${E2E_EXPIRING_INVENTORY_BATCH} referenceId=${E2E_EXPIRING_INVENTORY_REF}) expected expiryDate in [${expiringFrom.toISOString()}, ${expiringTo.toISOString()}], inRangeCount=${inRangeCount} inRangeSumQty=${inRangeSumQty} expirySamples=${expirySamples.join(',')}`,
       );
@@ -717,7 +717,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     // Ensure related purchaseOrder/warehouse/product exist (avoid UI return flow failure).
     const pl = await client.purchaseOrderLine.findUnique({
       where: { id: eligibleLine.purchaseOrderLineId },
-      select: { productId: true, purchaseOrderId: true },
+      select: { productId: true, poId: true },
     });
     if (!pl) {
       throw new Error(
@@ -725,11 +725,11 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
       );
     }
     const po = await client.purchaseOrder.findUnique({
-      where: { id: pl.purchaseOrderId },
+      where: { id: pl.poId },
       select: { warehouseId: true },
     });
     if (!po) {
-      throw new Error(`E2E fixture invalid: purchaseOrder missing for purchaseOrderId=${pl.purchaseOrderId}`);
+      throw new Error(`E2E fixture invalid: purchaseOrder missing for purchaseOrderId=${pl.poId}`);
     }
     const productById = await client.product.findUnique({ where: { id: pl.productId }, select: { id: true } });
     const warehouseById = await client.warehouse.findUnique({ where: { id: po.warehouseId }, select: { id: true } });
