@@ -8,6 +8,8 @@ import { formatPartyDisplay, getPartyKindFromId } from '../../shared/utils/party
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { Button } from '../../shared/components/Button';
 import { PartyViewSegmented, type PartyView } from '../../shared/components/PartyViewSegmented';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
+import { Alert } from '../../shared/components/Alert';
 
 export const AdminFinanceBalancesPage: React.FC = () => {
   const merchantId = useDefaultMerchantId();
@@ -99,94 +101,52 @@ export const AdminFinanceBalancesPage: React.FC = () => {
     setSearchParams(params, { replace: true });
   }, [partyIdFilter, setSearchParams, view]);
 
+  const filters = (
+    <div className="flex flex-wrap items-end gap-3">
+      <PartyViewSegmented value={view} onChange={(v) => { setView(v); }} />
+      <div>
+        <label className="mb-1 block text-sm text-muted">對象 (partyId)</label>
+        <input
+          type="text"
+          className="w-48 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
+          placeholder="留空＝全部"
+          value={partyIdFilter}
+          onChange={(e) => setPartyIdFilter(e.target.value)}
+        />
+      </div>
+      <Button size="sm" variant="secondary" onClick={() => void load()}>
+        查詢
+      </Button>
+    </div>
+  );
+
   return (
-    <div
-      className="mx-auto max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm"
-      data-testid="e2e-admin-finance-balances"
+    <StandardListLayout
+      title="應收應付餘額"
+      description={
+        <>
+          資料來源 <code className="rounded bg-brand-surface px-1 text-content">GET /finance/balances</code>
+          ；依金流事件重算應收／應付餘額。
+        </>
+      }
+      filters={filters}
+      aboveContent={err ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Alert variant="error">{err}</Alert>
+          <Button size="sm" variant="secondary" onClick={() => void load()}>重試</Button>
+        </div>
+      ) : undefined}
+      loading={loading}
+      error={null}
+      empty={!loading && !err && filteredItems.length === 0}
+      emptyMessage="尚無應收應付餘額紀錄"
+      emptyDescription="可至金流報表確認是否有交易事件；有新交易後會依事件自動重算餘額"
+      testId="e2e-admin-finance-balances"
     >
-      <p className="mb-4 text-sm text-muted">
-        資料來源 <code className="rounded bg-[#f1f5f9] px-1 text-content">GET /finance/balances</code>
-        ；依金流事件重算應收／應付餘額。
-      </p>
-
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <PartyViewSegmented value={view} onChange={(v) => { setView(v); }} />
-      </div>
-
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div>
-          <label className="mb-1 block text-sm text-muted">對象 (partyId)</label>
-          <input
-            type="text"
-            className="w-48 rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm"
-            placeholder="留空＝全部"
-            value={partyIdFilter}
-            onChange={(e) => setPartyIdFilter(e.target.value)}
-          />
-        </div>
-        <button
-          type="button"
-          className="rounded-lg border border-[#e2e8f0] bg-white px-4 py-2 text-sm font-medium text-content shadow-sm hover:bg-[#f8fafc]"
-          onClick={() => void load()}
-        >
-          查詢
-        </button>
-      </div>
-
-      {err && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
-          <span className="text-sm text-red-800">{err}</span>
-          <Button type="button" size="sm" variant="secondary" onClick={() => void load()}>
-            重試
-          </Button>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+      {!loading && !err && filteredItems.length > 0 && (
+        <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
-              <tr>
-                <th className="px-4 py-2">對象</th>
-                <th className="px-4 py-2 font-mono text-xs">partyId</th>
-                <th className="px-4 py-2 text-right">應收</th>
-                <th className="px-4 py-2 text-right">應付</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <tr key={i} className="border-t border-[#e2e8f0]">
-                  <td className="px-4 py-3">
-                    <div className="h-4 w-24 rounded bg-[#e2e8f0] animate-pulse" />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="h-4 w-32 rounded bg-[#e2e8f0] animate-pulse" />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="ml-auto h-4 w-16 rounded bg-[#e2e8f0] animate-pulse" />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="ml-auto h-4 w-16 rounded bg-[#e2e8f0] animate-pulse" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : filteredItems.length === 0 && !err ? (
-        <div className="rounded-xl border border-dashed border-[#e2e8f0] bg-white px-4 py-12 text-center">
-          <p className="text-sm text-muted">目前尚無應收應付餘額紀錄</p>
-          <p className="mt-2 text-xs text-muted">
-            可至金流報表確認是否有交易事件；有新交易後會依事件自動重算餘額
-          </p>
-          <Button type="button" variant="secondary" className="mt-4" onClick={() => void load()}>
-            重新載入
-          </Button>
-        </div>
-      ) : (
-        <div className="table-sticky-head overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
+            <thead className="border-b border-brand-surface bg-table-head text-muted">
               <tr>
                 <th className="px-4 py-2">
                   {view === 'customer'
@@ -204,7 +164,7 @@ export const AdminFinanceBalancesPage: React.FC = () => {
             </thead>
             <tbody>
               {filteredItems.map((row) => (
-                <tr key={row.partyId} className="border-t border-slate-100">
+                <tr key={row.partyId} className="border-t border-brand-surface">
                   <td className="px-4 py-2 text-content" title={row.partyId}>
                     {getDisplayName(row)}
                   </td>
@@ -219,6 +179,6 @@ export const AdminFinanceBalancesPage: React.FC = () => {
           </table>
         </div>
       )}
-    </div>
+    </StandardListLayout>
   );
 };
