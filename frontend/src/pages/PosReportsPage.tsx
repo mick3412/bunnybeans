@@ -127,8 +127,8 @@ export const PosReportsPage: React.FC = () => {
         setOrders(ordersRes);
       }
       if (!merchantId) {
-        setTopItemsErr('缺少商家，無法載入熱銷品項');
-        setDailyErr('缺少商家，無法載入區間趨勢');
+        setTopItemsErr('無法載入：未選定商家（merchantId）。請確認後台已選商家。');
+        setDailyErr('無法載入：未選定商家（merchantId）。請確認後台已選商家。');
         setTopItems([]);
         setDaily([]);
       } else {
@@ -141,14 +141,26 @@ export const PosReportsPage: React.FC = () => {
             setTopItemsErr(null);
             setTopItems(top);
           } else {
-            setTopItemsErr(getErrorMessage(top as ApiError));
+            const e = top as ApiError;
+            const base = getErrorMessage(e);
+            const apiBase = import.meta.env.VITE_API_BASE_URL;
+            const extra = !apiBase || apiBase.trim() === ''
+              ? ' 請檢查 VITE_API_BASE_URL 是否已設定（dev 時預設 127.0.0.1:3003）。'
+              : '';
+            setTopItemsErr(`${base}${extra}`);
             setTopItems([]);
           }
           if (Array.isArray(d)) {
             setDailyErr(null);
             setDaily(d);
           } else {
-            setDailyErr(getErrorMessage(d as ApiError));
+            const e = d as ApiError;
+            const base = getErrorMessage(e);
+            const apiBase = import.meta.env.VITE_API_BASE_URL;
+            const extra = !apiBase || apiBase.trim() === ''
+              ? ' 請檢查 VITE_API_BASE_URL 是否已設定（dev 時預設 127.0.0.1:3003）。'
+              : '';
+            setDailyErr(`${base}${extra}`);
             setDaily([]);
           }
         }
@@ -241,30 +253,57 @@ export const PosReportsPage: React.FC = () => {
         ) : null}
       </div>
 
-      {data && (
-      <div className="mt-8 rounded-2xl border border-brand-surface bg-table-head p-4">
-        <h3 className="mb-3 text-sm font-semibold text-content">毛利分析</h3>
-        {data.grossMargin != null && data.grossMarginRate != null ? (
-          <div className="flex flex-wrap gap-6 text-sm">
-            {data.totalCost != null && (
-              <div>
-                <span className="text-muted">銷貨成本</span>
-                <span className="ml-2 font-medium tabular-nums text-content">{money(data.totalCost)}</span>
+      {data && (data.grossMargin != null || (data.byPaymentMethod && Object.keys(data.byPaymentMethod).length > 0) || (data.byCategory && data.byCategory.length > 0)) && (
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {/* 毛利分析 */}
+          <div className="rounded-xl border border-brand-surface bg-table-head p-3">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">毛利分析</h3>
+            {data.grossMargin != null && data.grossMarginRate != null ? (
+              <div className="space-y-1 text-xs">
+                {data.totalCost != null && (
+                  <div><span className="text-muted">成本 </span><span className="font-medium tabular-nums text-content">{money(data.totalCost)}</span></div>
+                )}
+                <div><span className="text-muted">毛利 </span><span className="font-semibold tabular-nums text-content">{money(data.grossMargin)} ({data.grossMarginRate}%)</span></div>
               </div>
+            ) : (
+              <p className="text-xs text-muted">需設定 costPrice</p>
             )}
-            <div>
-              <span className="text-muted">毛利</span>
-              <span className="ml-2 font-semibold tabular-nums text-content">{money(data.grossMargin)}</span>
-            </div>
-            <div>
-              <span className="text-muted">毛利率</span>
-              <span className="ml-2 font-semibold tabular-nums text-content">{data.grossMarginRate}%</span>
-            </div>
           </div>
-        ) : (
-          <p className="text-sm text-muted">毛利率需商品設定成本價（costPrice）後由後端彙總；若商品尚未設定成本，此區為空。</p>
-        )}
-      </div>
+          {/* 付款方式分布 */}
+          {data.byPaymentMethod && Object.keys(data.byPaymentMethod).length > 0 && (
+            <div className="rounded-xl border border-brand-surface bg-table-head p-3">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">付款方式</h3>
+              <div className="space-y-1 text-xs">
+                {Object.entries(data.byPaymentMethod).slice(0, 5).map(([method, amount]) => {
+                  const total = Object.values(data.byPaymentMethod ?? {}).reduce((s, v) => s + v, 0);
+                  const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
+                  return (
+                    <div key={method} className="flex justify-between gap-2">
+                      <span className="text-content">{getPaymentMethodLabel(method)}</span>
+                      <span className="tabular-nums text-muted">{money(String(amount))} ({pct}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {/* 分類銷售 */}
+          {data.byCategory && data.byCategory.length > 0 && (
+            <div className="rounded-xl border border-brand-surface bg-table-head p-3">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">分類銷售</h3>
+              <div className="max-h-24 space-y-1 overflow-y-auto text-xs">
+                {data.byCategory.slice(0, 6).map((row) => (
+                  <div key={row.categoryId ?? 'null'} className="flex justify-between gap-2">
+                    <span className="truncate text-content">
+                      {row.categoryId ? (categoryNames[row.categoryId] ?? categoryNames[row.categoryCode ?? ''] ?? row.categoryCode ?? row.categoryId) : '未分類'}
+                    </span>
+                    <span className="shrink-0 tabular-nums">{money(String(row.revenue))}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
       {data && data.ordersCount === 0 && !err && (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -272,41 +311,13 @@ export const PosReportsPage: React.FC = () => {
         </div>
       )}
 
-      {data?.byPaymentMethod && Object.keys(data.byPaymentMethod).length > 0 && (
-        <div className="mt-8 rounded-2xl border border-brand-surface bg-table-head p-4">
-          <h3 className="mb-3 text-sm font-semibold text-content">付款方式分布</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[320px] text-left text-sm">
-              <thead className="border-b border-brand-surface text-muted">
-                <tr>
-                  <th className="px-3 py-1.5">付款方式</th>
-                  <th className="px-3 py-1.5">金額</th>
-                  <th className="px-3 py-1.5">占比</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(data.byPaymentMethod).map(([method, amount]) => {
-                  const total = Object.values(data.byPaymentMethod ?? {}).reduce((s, v) => s + v, 0);
-                  const pct = total > 0 ? Math.round((amount / total) * 100) : 0;
-                  return (
-                    <tr key={method} className="border-t border-brand-surface">
-                      <td className="px-3 py-1.5 text-content">{getPaymentMethodLabel(method)}</td>
-                      <td className="px-3 py-1.5 tabular-nums">{money(String(amount))}</td>
-                      <td className="px-3 py-1.5 text-muted">{pct}%</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {(topItemsErr || dailyErr) && (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {topItemsErr && <div>熱銷品項：{topItemsErr}</div>}
           {dailyErr && <div className={topItemsErr ? 'mt-1' : ''}>區間趨勢：{dailyErr}</div>}
-          <div className="mt-1 text-xs opacity-90">請確認商家已選、後端服務正常，必要時檢查 VITE_API_BASE_URL。</div>
+          <div className="mt-1 text-xs opacity-90">
+            除錯：merchantId={merchantId ?? 'null'}；VITE_API_BASE_URL={import.meta.env.VITE_API_BASE_URL ? '已設定' : '未設定'}；API 連線請確認後端服務已啟動。
+          </div>
         </div>
       )}
       {topItemsLoading && !topItemsErr && (
@@ -361,34 +372,6 @@ export const PosReportsPage: React.FC = () => {
                       </Link>
                     </td>
                     <td className="px-3 py-1.5 tabular-nums">{row.quantity}</td>
-                    <td className="px-3 py-1.5 tabular-nums">{money(String(row.revenue))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {data?.byCategory && (
-        <div className="mt-8 rounded-2xl border border-brand-surface bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-content">分類銷售</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[360px] text-left text-sm">
-              <thead className="border-b border-brand-surface text-muted">
-                <tr>
-                  <th className="px-3 py-1.5">分類</th>
-                  <th className="px-3 py-1.5">營收</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.byCategory.map((row) => (
-                  <tr key={row.categoryId ?? 'null'} className="border-t border-brand-surface">
-                    <td className="px-3 py-1.5 text-content">
-                      {row.categoryId
-                        ? (categoryNames[row.categoryId] ?? categoryNames[row.categoryCode ?? ''] ?? row.categoryCode ?? row.categoryId)
-                        : '未分類'}
-                    </td>
                     <td className="px-3 py-1.5 tabular-nums">{money(String(row.revenue))}</td>
                   </tr>
                 ))}
