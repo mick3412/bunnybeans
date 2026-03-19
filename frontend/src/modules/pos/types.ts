@@ -10,6 +10,9 @@ export interface PosProductDisplay extends PosProduct {
   categoryId?: string;
   brandId?: string;
   tags?: string[];
+  specSize?: string | null;
+  specCapacity?: string | null;
+  specStyle?: string | null;
 }
 
 export interface CartItem {

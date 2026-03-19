@@ -82,18 +82,11 @@ export const PosPage: React.FC = () => {
   const [apiLoadError, setApiLoadError] = useState<string | null>(null);
   const [posCustomers, setPosCustomers] = useState<PosCustomerRow[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => loadFavorites());
+  const [favoriteEditMode, setFavoriteEditMode] = useState(false);
+  const [favoriteDraftIds, setFavoriteDraftIds] = useState<string[]>([]);
   const [barcodeHint, setBarcodeHint] = useState<string | null>(null);
   const [barcodeChoices, setBarcodeChoices] = useState<PosProduct[]>([]);
   const [barcodeLoading, setBarcodeLoading] = useState(false);
-
-  const toggleFavorite = (productId: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setFavoriteIds((prev) => {
-      const next = prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId];
-      saveFavorites(next);
-      return next;
-    });
-  };
 
   const handleBarcodeScan = async () => {
     const q = searchQuery.trim();
@@ -123,7 +116,7 @@ export const PosPage: React.FC = () => {
       setBarcodeHint('已加入購物車');
       return;
     }
-    setBarcodeHint(`此條碼命中 ${mapped.length} 筆商品，請選擇要加入的商品`);
+    setBarcodeHint(`此條碼命中 ${mapped.length} 筆商品`);
     setBarcodeChoices(mapped);
   };
 
@@ -139,6 +132,9 @@ export const PosPage: React.FC = () => {
           categoryId: p.categoryId,
           brandId: p.brandId,
           tags: p.tags ?? [],
+          specSize: p.specSize ?? null,
+          specCapacity: p.specCapacity ?? null,
+          specStyle: p.specStyle ?? null,
         })),
       );
       setApiLoadError(null);
@@ -196,6 +192,9 @@ export const PosPage: React.FC = () => {
             categoryId: p.categoryId,
             brandId: p.brandId,
             tags: p.tags ?? [],
+            specSize: p.specSize ?? null,
+            specCapacity: p.specCapacity ?? null,
+            specStyle: p.specStyle ?? null,
           })),
         );
       } else if (productsRes && !Array.isArray(productsRes)) {
@@ -291,6 +290,7 @@ export const PosPage: React.FC = () => {
       : gridCols === 4
         ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'
         : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
+  const activeFavoriteIds = favoriteEditMode ? favoriteDraftIds : favoriteIds;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -488,15 +488,33 @@ export const PosPage: React.FC = () => {
 
           {apiLoadError && (
             <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
-              {apiLoadError}，結帳將使用 mock 資料；若後端已啟動請重新整理。
+              {apiLoadError}，結帳將使用 mock 資料。
             </div>
           )}
-          {favoriteIds.length > 0 && (
+          {activeFavoriteIds.length > 0 && (
             <div className="mb-2 rounded-xl border border-brand-surface bg-white p-2">
-              <div className="mb-1.5 text-xs font-semibold text-muted">常用</div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <div className="text-xs font-semibold text-muted">常用</div>
+                <button
+                  type="button"
+                  className="rounded px-2 py-0.5 text-xs font-medium text-brand-primary hover:bg-sky-50"
+                  onClick={() => {
+                    if (favoriteEditMode) {
+                      setFavoriteIds(favoriteDraftIds);
+                      saveFavorites(favoriteDraftIds);
+                      setFavoriteEditMode(false);
+                    } else {
+                      setFavoriteDraftIds(favoriteIds);
+                      setFavoriteEditMode(true);
+                    }
+                  }}
+                >
+                  {favoriteEditMode ? '完成' : '編輯'}
+                </button>
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {productsForGrid
-                  .filter((p) => favoriteIds.includes(p.id))
+                  .filter((p) => activeFavoriteIds.includes(p.id))
                   .map((p) => (
                     <button
                       key={p.id}
@@ -517,7 +535,7 @@ export const PosPage: React.FC = () => {
             className={`grid min-h-[min(50vh,380px)] flex-1 content-start gap-2 overflow-y-auto rounded-xl border border-dashed border-brand-surface bg-table-head p-2 auto-rows-auto ${gridClass}`}
           >
             {filteredProducts.map((product) => {
-              const isFav = favoriteIds.includes(product.id);
+              const isFav = activeFavoriteIds.includes(product.id);
               return (
                 <div
                   key={product.id}
@@ -531,21 +549,43 @@ export const PosPage: React.FC = () => {
                     className="absolute inset-0 z-0 rounded-lg text-left"
                   />
                   <div className="relative z-10 flex flex-row items-start justify-between gap-1">
-                    {product.sku && <span className="shrink-0 text-xs text-muted">{product.sku}</span>}
-                    <button
-                      type="button"
-                      onClick={(e) => toggleFavorite(product.id, e)}
-                      className="shrink-0 rounded px-1 py-0.5 text-xs text-muted hover:bg-amber-100 hover:text-amber-700"
-                      title={isFav ? '取消常用' : '設為常用'}
-                      aria-label={isFav ? '取消常用' : '設為常用'}
-                    >
-                      {isFav ? '常用' : '設常用'}
-                    </button>
+                    {product.sku && (
+                      <span className="pointer-events-none shrink-0 text-xs text-muted">{product.sku}</span>
+                    )}
+                    {favoriteEditMode ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFavoriteDraftIds((prev) =>
+                            prev.includes(product.id) ? prev.filter((id) => id !== product.id) : [...prev, product.id],
+                          );
+                        }}
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold ${
+                          isFav ? 'text-red-600 hover:bg-red-50' : 'text-emerald-700 hover:bg-emerald-50'
+                        }`}
+                        title={isFav ? '移除常用' : '加入常用'}
+                        aria-label={isFav ? '移除常用' : '加入常用'}
+                      >
+                        {isFav ? '－' : '＋'}
+                      </button>
+                    ) : null}
                   </div>
-                  <span className="relative z-10 line-clamp-2 min-h-0 flex-1 font-medium leading-snug text-content">
-                    {product.name}
-                  </span>
-                  <span className="relative z-10 shrink-0 text-sky-700">${product.price}</span>
+                  <div className="pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center text-center">
+                    <span className="line-clamp-2 font-medium leading-snug text-content">{product.name}</span>
+                    {(() => {
+                      const specs = [product.specStyle, product.specSize, product.specCapacity]
+                        .map((x) => (x ?? '').trim())
+                        .filter(Boolean)
+                        .join(' / ');
+                      return specs ? (
+                        <span className="mt-0.5 line-clamp-1 w-full truncate text-[11px] text-muted" title={specs}>
+                          {specs}
+                        </span>
+                      ) : null;
+                    })()}
+                  </div>
+                  <span className="pointer-events-none relative z-10 ml-auto shrink-0 text-right text-sky-700">${product.price}</span>
                 </div>
               );
             })}
@@ -597,7 +637,7 @@ export const PosPage: React.FC = () => {
           </div>
           <div className="mt-2 border-t border-slate-100 pt-2">
             <label className="mb-1 block text-xs font-medium text-muted">
-              促銷試算用會員（可選；下拉帶 memberLevel，與 seed 一致）
+              促銷試算用會員（可選）
             </label>
             {posCustomers.length > 0 && (
               <select
@@ -607,7 +647,7 @@ export const PosPage: React.FC = () => {
                 }
                 onChange={(e) => setPreviewMemberRaw(e.target.value)}
               >
-                <option value="">不指定（或下方手填 UUID）</option>
+                <option value="">不指定</option>
                 {posCustomers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} · {c.memberLevel ?? '—'} · {c.code ?? c.phone ?? c.id.slice(0, 8)}
@@ -617,7 +657,7 @@ export const PosPage: React.FC = () => {
             )}
             <input
               type="text"
-              placeholder="會員 UUID（與結帳一致）"
+              placeholder="會員 UUID"
               data-testid="e2e-pos-preview-customer"
               value={previewMemberRaw}
               onChange={(e) => setPreviewMemberRaw(e.target.value)}
