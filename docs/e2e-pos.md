@@ -118,7 +118,7 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 | `e2e/pos-refund.spec.ts` | 全額結帳 → 訂單明細 → 小額退款 → 金額欄清空（API 成功） |
 | `e2e/pos-return-stock.spec.ts` | 全額結帳 → 明細 → 退貨入庫 1 件 → 成功提示 |
 | `e2e/admin-smoke.spec.ts` | 庫存頁載入 + **金流報表** `/admin/reports` |
-| `e2e/admin-categories.spec.ts` | 登入 → **分類維護**頁可見、標籤區可見；**標籤新增**（需 **VITE_ADMIN_API_KEY**，無 Key 時 skip；以 `e2e-admin-categories-tags-create-name-input` / `e2e-admin-categories-tags-create-add-btn` 定位） |
+| `e2e/admin-categories.spec.ts` | 登入 → **分類維護**頁可見、標籤區可見；**標籤新增**（需 **VITE_ADMIN_API_KEY**，無 Key 時 skip；以 `e2e-admin-categories-tags-create-name-input` / `e2e-admin-categories-tags-create-add-btn` 定位）；**類別新增後列表顯示**（跨層 code 驗證；後端 INSTRUCTIONS 019 完成後必跑） |
 | `e2e/admin-bulk.spec.ts` | **批量 smoke**：商品匯入區塊、庫存匯出餘額（需 **VITE_ADMIN_API_KEY** 且回 200）、盤點上傳區塊、POS 訂單列表「匯出」按鈕 |
 | `e2e/admin-customers-import.spec.ts` | 登入 → **`/admin/customers/import`** 可進入；**預覽** POST `/customers/import/preview`（需 **VITE_ADMIN_API_KEY**，無 Key 時該則 **test.skip**；使用 `e2e-admin-customers-import-file` / `e2e-admin-customers-import-run-preview-btn` / `e2e-admin-customers-import-filehash-preview` / `e2e-admin-customers-import-run-apply-btn` 定位） |
 | `e2e/admin-loyalty-smoke.spec.ts` | 登入 → **`/admin/loyalty`** 側欄可見 **`e2e-admin-loyalty`**；**`/admin/loyalty/settings`** 設定頁區塊可見（需 **VITE_ADMIN_API_KEY**，無 Key 時 skip） |
@@ -127,6 +127,7 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 | `e2e/admin-receiving-notes-smoke.spec.ts` | 登入 → `/admin/receiving-notes`；打開 `E2E-RN-0001`；填退貨數量/原因→ 送出退回供應商；驗證 toast 與 `InventoryEvent RETURN_TO_SUPPLIER` note |
 | `e2e/admin-expiring-inventory-smoke.spec.ts` | 登入 → `/admin/inventory/expiring`；篩選 `E2E-EXP-BATCH-0001`；驗證 KPI 區塊與列表/空態渲染（full profile 時期望非空） |
 | `e2e/admin-dispatch-rules.spec.ts` | 登入 → **`/admin/dispatch-rules`** 發券規則頁載入、列表或空態 |
+| `e2e/admin-ops-report-clicks-full.spec.ts` | 登入 → **`/admin/ops/report-clicks`**；驗證 `e2e-admin-ops-report-clicks` 載入、resultCode 欄位（`aria-label="resultCode"`）、中文 resultCode/解析類型顯示、placeholder `例：NOT_FOUND`；full profile 時不允許載入失敗 |
 | `e2e/admin-pos-reports.spec.ts` | 登入 → `/pos/reports`；驗證 summary KPI、時間區段 preset 切換（含 URL `preset` query）、熱銷品項／區間趨勢區塊或其空態文案，以及 top-items → `/admin/products?q=…` 與銷售明細單號 → `/pos/orders/:id` 的跳轉 |
 
 掛帳用客戶 UUID 固定為 **`e2e00001-0000-4000-8000-00000000c001`**（`code: E2E` 客戶）。請先執行 **`pnpm db:seed`**，再執行 **`pnpm e2e:seed`** 建立此客戶，然後跑掛帳 E2E。

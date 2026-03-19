@@ -40,4 +40,18 @@ test.describe('後台 分類頁', () => {
     await tagsSection.getByTestId('e2e-admin-categories-tags-create-add-btn').click();
     await expect(tagsSection.getByText(tagName)).toBeVisible({ timeout: 5_000 });
   });
+
+  // 跨層驗證：建立後列表顯示的 code 與後端一致。後端 INSTRUCTIONS 019 完成後可解除 skip。
+  test('類別新增後列表顯示 code（需 ADMIN_KEY；後端 code 規則就緒後必跑）', async ({ page }) => {
+    test.skip(!hasAdminKey, '未設 VITE_ADMIN_API_KEY／ADMIN_API_KEY 時 skip');
+    await loginAdmin(page);
+    await page.goto('/admin/categories');
+    const catSection = page.getByTestId('e2e-admin-categories-categories');
+    await expect(catSection).toBeVisible({ timeout: 15_000 });
+    const name = `E2E-CAT-${Date.now()}`;
+    await catSection.getByTestId('e2e-admin-categories-categories-create-name-input').fill(name);
+    await catSection.getByTestId('e2e-admin-categories-categories-create-add-btn').click();
+    await expect(catSection.getByText(name)).toBeVisible({ timeout: 5_000 });
+    // 驗證列表中出現新建項目；code 以後端回傳為準（reload 後顯示）
+  });
 });
