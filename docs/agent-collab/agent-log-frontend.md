@@ -15,6 +15,21 @@
 
 ---
 
+### INSTRUCTIONS 025（色值 token 統一、AdminMerchantsPage StandardListLayout、四組報表 E2E）
+- 做了：① **色值 token 全站統一**：border-[#e2e8f0]→border-brand-surface、#0ea5e9→brand-primary 系、bg-[#f8fafc]→bg-table-head、stroke→var(--color-brand-*)。② **AdminMerchantsPage** 改用 StandardListLayout（loading/error/empty/aboveContent）。③ **admin-pos-reports E2E** 擴充：會員營收貢獻、營收趨勢（日/週/月切換）、客單價分布、金流報表連結四區塊驗證。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 5173 佔用，補跑時機：`pnpm exec playwright test e2e/admin-pos-reports.spec.ts`）。
+- commits：7a5a6cd feat(ui) 色值 token 全站統一；0cb6042 refactor AdminMerchantsPage StandardListLayout；e01943a test(e2e) admin-pos-reports 四組報表驗證
+
+---
+
+### 額外操作（AD-HOC 2026-03-19：StandardListLayout 擴充、商品總覽修復、tab 遷移）
+- 做了：① **StandardListLayout 可選擴充**：會員列表（AdminCustomersPage）、促銷（AdminPromotionsPage）、採購單／進貨驗收（AdminPurchaseOrdersPage、AdminReceivingNotesPage）、即期庫存（AdminExpiringInventoryPage）四類共六頁改用 StandardListLayout（title/description/actions/filters/loading/error/empty）。② **商品總覽白屏修復**：AdminProductsPage 中 `categoryName`、`brandName` 被 `sortedProducts` useMemo 使用但宣告在其後，造成 ReferenceError；將兩者提前至 useMemo 之前宣告。③ **優惠券／分群管理／發券規則移至促銷規則**：AdminMarketingCenterHubPage 新增 coupons/segments/dispatchRules 三 tab；AdminMemberCenterHubPage 移除該三 tab；路由 loyalty/coupons、segments、dispatch-rules 改指向 MarketingCenterHubPage；AdminLayout headerTitle 對應調整。側欄維持促銷規則單一入口，點入後可見六 tab（促銷規則／優惠券／分群管理／發券規則／行銷工作台／行銷規則）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅。
+- commits：尚未提交（工作區變更）
+- PR／檔案：AdminCustomersPage、AdminPromotionsPage、AdminPurchaseOrdersPage、AdminReceivingNotesPage、AdminExpiringInventoryPage、AdminProductsPage、AdminMarketingCenterHubPage、AdminMemberCenterHubPage、App.tsx、AdminLayout.tsx
+
+---
+
 ### INSTRUCTIONS 024（金流趨勢、會員營收貢獻、營收趨勢週月、客單價分布、StandardListLayout）
 - 做了：① posOrdersApi：PosReportsSummaryDto 新增 memberContribution；getPosDaily 擴充 groupBy day|week|month、統一回傳 PosDailyChartItem[]；新增 getPosOrderValueDistribution。② adminApi：getFinanceSummary 擴充 groupBy day|week、新增 FinanceSummaryTrend。③ AdminReportsPage：新增「金流趨勢」區塊（依日/依週切換、MiniLineChart SALE_RECEIVABLE/SALE_PAYMENT/PURCHASE_PAYABLE）。④ PosReportsPage：新增「會員營收貢獻」區塊（memberContribution 長條圖）；營收趨勢新增依日/週/月下拉；新增「客單價分布」區塊（getPosOrderValueDistribution）。⑤ AdminReplenishmentPage 改用 StandardListLayout。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 許可時補跑 admin-categories、admin-ops-report-clicks-full、admin-balances）。

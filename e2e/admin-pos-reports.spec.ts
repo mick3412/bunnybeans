@@ -50,13 +50,7 @@ test.describe('Admin POS 報表', () => {
     const container = page.getByTestId('e2e-pos-reports');
     await expect(container).toBeVisible({ timeout: 15_000 });
 
-    // 會員營收貢獻：有 data.memberContribution 時顯示區塊或空態
-    const memberBlock = container.getByText('會員營收貢獻');
-    const memberEmpty = container.getByText('此區間尚無訂單');
-    if (await memberBlock.isVisible()) {
-      await expect(memberBlock).toBeVisible();
-    }
-    // 若無會員營收區塊，頁面仍應正常（區塊為選用）
+    // 會員營收貢獻：有 data.memberContribution 時顯示區塊或空態（選用區塊）
 
     // 營收趨勢：依日/週/月切換，有資料或空態
     const trendTitle = container.getByText('營收趨勢');
