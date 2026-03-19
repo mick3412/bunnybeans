@@ -55,8 +55,14 @@ jobs:
           echo "E2E full profile gate: this job must FAIL if fixtures/env are not ready."
           echo "Required: DATABASE_URL, VITE_ADMIN_API_KEY(secret), migrated DB, db:seed, e2e:seed(full)"
           echo "Expected fixture keys:"
-          echo "- Dispatch rules: E2E-SEGMENT-NORMAL-0001 / E2E-COUPON-0001 / E2E-RULE-ENABLED-0001"
-          echo "- Dispatch rules negative: E2E-RULE-DISABLED-0001 / E2E-RULE-FUTURE-0001"
+          echo "- Barcode: E2E-BC-0001 (single) + E2E-BC-0002 (multi>=2)"
+          echo "- Dispatch rules: segment=E2E-SEGMENT-NORMAL-0001 coupon=E2E-COUPON-0001 enabled=E2E-RULE-ENABLED-0001"
+          echo "- Dispatch rules negative: disabled=E2E-RULE-DISABLED-0001 future=E2E-RULE-FUTURE-0001"
+          echo "- ReferenceIdLink click-through: posOrder=e2e00002-0000-4000-8000-00000000a001 receivingNote=e2e00003-0000-4000-8000-00000000b001 exchangeSource=e2e00005-0000-4000-8000-00000000d001 exchangeDerived=e2e00006-0000-4000-8000-00000000e002"
+          echo "- Replenishment suggestions: replenishmentSaleRef=E2E-REPL-SALE-001 (inventoryBalance.onHandQty=0 + suggestedQty>0)"
+          echo "- Expiring inventory: expiringBatchCode=E2E-EXP-BATCH-0001 (PURCHASE_IN + expiryDate within daysAhead=30)"
+          echo "- Receiving note return-to-supplier: receiptNumber=E2E-RN-0001 (qualifiedQty>=1 => RETURN_TO_SUPPLIER can return qty=1)"
+          echo "- Finance report refs: sale=E2E-REPORT-SALE-001 purchase=E2E-REPORT-PUR-001"
           pnpm --filter pos-erp-backend db:seed
           pnpm --filter pos-erp-backend e2e:seed
 

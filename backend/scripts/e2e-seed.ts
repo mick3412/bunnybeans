@@ -38,6 +38,12 @@ const E2E_DISPATCH_RULE_FUTURE_NAME = 'E2E-RULE-FUTURE-0001';
 const E2E_EXPIRING_INVENTORY_REF = 'E2E-EXPIRING-INVENTORY-FIXTURE';
 const E2E_EXPIRING_INVENTORY_BATCH = 'E2E-EXP-BATCH-0001';
 
+// ---- Other fixed E2E identifiers (used by full profile + CI triage logs) ----
+const E2E_REPLENISH_SALE_REF = 'E2E-REPL-SALE-001';
+const E2E_RN_RECEIPT_NUMBER = 'E2E-RN-0001';
+const E2E_REPORT_SALE_REF = 'E2E-REPORT-SALE-001';
+const E2E_REPORT_PUR_REF = 'E2E-REPORT-PUR-001';
+
 export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClient }) {
   const client = opts?.client ?? prisma;
   const merchant = await client.merchant.findFirst({
@@ -221,7 +227,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
   // old runs might have left rows with the same `receiptNumber` but different `id`.
   {
     const existingRnIds = await client.receivingNote.findMany({
-      where: { receiptNumber: 'E2E-RN-0001' },
+      where: { receiptNumber: E2E_RN_RECEIPT_NUMBER },
       select: { id: true },
     });
     const rnIdsToDelete = Array.from(new Set([...existingRnIds.map((r) => r.id), E2E_RN_ID]));
@@ -250,7 +256,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     data: {
       id: E2E_RN_ID,
       merchantId: merchant.id,
-      receiptNumber: 'E2E-RN-0001',
+      receiptNumber: E2E_RN_RECEIPT_NUMBER,
       purchaseOrderId: po.id,
       status: 'COMPLETED',
       lines: {
@@ -383,7 +389,6 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     // - inventoryBalance.onHandQty (current stock)
     // - inventoryEvent of type SALE_OUT within daysLookback (default 30)
     // to compute suggestedQty > 0.
-    const E2E_REPLENISH_SALE_REF = 'E2E-REPL-SALE-001';
     const e2eNow = new Date();
     const occurredAt = new Date(e2eNow.getTime() - 10 * 24 * 3600 * 1000); // within default lookback=30
     const soldQty = 50;
@@ -511,7 +516,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
           currency: 'TWD',
           amount: 300,
           taxAmount: 0,
-          referenceId: 'E2E-REPORT-SALE-001',
+          referenceId: E2E_REPORT_SALE_REF,
           note: 'E2E report sale receivable',
         },
         {
@@ -521,7 +526,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
           currency: 'TWD',
           amount: 300,
           taxAmount: 0,
-          referenceId: 'E2E-REPORT-SALE-001',
+          referenceId: E2E_REPORT_SALE_REF,
           note: 'E2E report sale payment',
         },
       ],
@@ -538,7 +543,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
           currency: 'TWD',
           amount: 120,
           taxAmount: 0,
-          referenceId: 'E2E-REPORT-PUR-001',
+          referenceId: E2E_REPORT_PUR_REF,
           note: 'E2E report purchase payable',
         },
         {
@@ -548,7 +553,7 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
           currency: 'TWD',
           amount: 20,
           taxAmount: 0,
-          referenceId: 'E2E-REPORT-PUR-001',
+          referenceId: E2E_REPORT_PUR_REF,
           note: 'E2E report purchase rebate',
         },
       ],
@@ -577,26 +582,40 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
       select: { onHandQty: true },
     });
     if (!balance) {
-      throw new Error('E2E fixture invalid: inventoryBalance missing for replenishment suggestions fixture');
+      throw new Error(
+        `E2E fixture invalid: inventoryBalance missing for replenishment fixture referenceId=${E2E_REPLENISH_SALE_REF} productId=${product.id} warehouseId=${warehouse.id}`,
+      );
     }
     // UI defaults expect onHand low enough so suggestedQty > 0.
     if (balance.onHandQty > 0) {
-      throw new Error(`E2E fixture invalid: replenishment fixture onHandQty must be 0, got ${balance.onHandQty}`);
+      throw new Error(
+        `E2E fixture invalid: replenishment fixture expects inventoryBalance.onHandQty=0 (referenceId=${E2E_REPLENISH_SALE_REF}), got=${balance.onHandQty}`,
+      );
     }
     const replSales = await client.inventoryEvent.findMany({
       where: { referenceId: E2E_REPLENISH_SALE_REF, type: 'SALE_OUT' },
       select: { quantity: true, occurredAt: true },
     });
     if (replSales.length < 1) {
-      throw new Error('E2E fixture invalid: replenishment suggestions SALE_OUT fixture missing');
+      throw new Error(
+        `E2E fixture invalid: replenishment suggestions missing inventoryEvent type=SALE_OUT referenceId=${E2E_REPLENISH_SALE_REF} count=${replSales.length}`,
+      );
     }
     const totalSold = replSales.reduce((s, r) => s + Math.abs(r.quantity), 0);
     if (totalSold <= 0) {
-      throw new Error('E2E fixture invalid: replenishment suggestions fixture totalSold must be > 0');
+      throw new Error(
+        `E2E fixture invalid: replenishment suggestions totalSold must be > 0 (referenceId=${E2E_REPLENISH_SALE_REF}), totalSold=${totalSold} samples=${replSales.length}`,
+      );
     }
     const minOccuredAt = new Date(Date.now() - lookbackDays * 24 * 3600 * 1000);
-    if (replSales.some((r) => r.occurredAt < minOccuredAt)) {
-      throw new Error('E2E fixture invalid: replenishment suggestions fixture occurredAt out of lookback window');
+    const outOfLookback = replSales
+      .filter((r) => r.occurredAt < minOccuredAt)
+      .slice(0, 5)
+      .map((r) => r.occurredAt.toISOString());
+    if (outOfLookback.length) {
+      throw new Error(
+        `E2E fixture invalid: replenishment suggestions occurredAt out of lookback window (referenceId=${E2E_REPLENISH_SALE_REF}) expected>=${minOccuredAt.toISOString()} sample=${outOfLookback.join(',')}`,
+      );
     }
 
     const avgDailySales = totalSold / lookbackDays;
@@ -605,29 +624,149 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     const delta = targetStock - balance.onHandQty;
     const suggestedQty = Math.max(0, Math.ceil(delta));
     if (suggestedQty <= 0) {
-      throw new Error(`E2E fixture invalid: replenishment suggestions suggestedQty must be > 0, got ${suggestedQty}`);
+      throw new Error(
+        `E2E fixture invalid: replenishment suggestions suggestedQty must be > 0 (referenceId=${E2E_REPLENISH_SALE_REF}), suggestedQty=${suggestedQty} delta=${delta} onHandQty=${balance.onHandQty}`,
+      );
+    }
+
+    // ---- Expiring inventory: full gate expects the UI to find at least one batch ----
+    // Admin expiring inventory page default `daysAhead` is 30.
+    const expiringDaysAhead = 30;
+    const expiringFrom = new Date(new Date().toISOString().slice(0, 10)); // YYYY-MM-DD @ UTC midnight (align with service)
+    const expiringTo = new Date(expiringFrom);
+    expiringTo.setDate(expiringTo.getDate() + expiringDaysAhead);
+
+    const expEvents = await client.inventoryEvent.findMany({
+      where: {
+        referenceId: E2E_EXPIRING_INVENTORY_REF,
+        type: 'PURCHASE_IN',
+        batchCode: E2E_EXPIRING_INVENTORY_BATCH,
+      },
+      select: { quantity: true, expiryDate: true },
+    });
+
+    const expAllCount = expEvents.length;
+    const expAllSumQty = expEvents.reduce((s, r) => s + Math.abs(r.quantity), 0);
+
+    const inRange = expEvents.filter(
+      (e) => e.expiryDate && e.expiryDate >= expiringFrom && e.expiryDate <= expiringTo,
+    );
+    const inRangeCount = inRange.length;
+    const inRangeSumQty = inRange.reduce((s, r) => s + Math.abs(r.quantity), 0);
+
+    if (expAllCount < 1 || expAllSumQty <= 0) {
+      throw new Error(
+        `E2E fixture invalid: expiring inventory missing/empty (batchCode=${E2E_EXPIRING_INVENTORY_BATCH} referenceId=${E2E_EXPIRING_INVENTORY_REF}) allCount=${expAllCount} allSumQty=${expAllSumQty}`,
+      );
+    }
+    if (inRangeCount < 1 || inRangeSumQty <= 0) {
+      const expirySamples = expEvents
+        .filter((e) => e.expiryDate)
+        .slice(0, 5)
+        .map((e) => e.expiryDate.toISOString());
+      throw new Error(
+        `E2E fixture invalid: expiring inventory batch must fall within expiring window (batchCode=${E2E_EXPIRING_INVENTORY_BATCH} referenceId=${E2E_EXPIRING_INVENTORY_REF}) expected expiryDate in [${expiringFrom.toISOString()}, ${expiringTo.toISOString()}], inRangeCount=${inRangeCount} inRangeSumQty=${inRangeSumQty} expirySamples=${expirySamples.join(',')}`,
+      );
+    }
+
+    // ---- ReceivingNote return-to-supplier: must allow minimal RETURN_TO_SUPPLIER qty=1 ----
+    const rn = await client.receivingNote.findUnique({
+      where: { id: E2E_RN_ID },
+      select: { id: true, status: true },
+    });
+    if (!rn) {
+      throw new Error(`E2E fixture invalid: receivingNote missing for receiptNumber=${E2E_RN_RECEIPT_NUMBER} receivingNoteId=${E2E_RN_ID}`);
+    }
+    if (rn.status !== 'COMPLETED') {
+      throw new Error(
+        `E2E fixture invalid: receivingNote must be COMPLETED for return-to-supplier (receiptNumber=${E2E_RN_RECEIPT_NUMBER}) gotStatus=${rn.status}`,
+      );
+    }
+
+    const rnLines = await client.receivingNoteLine.findMany({
+      where: { receivingNoteId: E2E_RN_ID },
+      select: { id: true, qualifiedQty: true, purchaseOrderLineId: true },
+    });
+    if (rnLines.length < 1) {
+      throw new Error(
+        `E2E fixture invalid: receivingNoteLine missing for return-to-supplier (receiptNumber=${E2E_RN_RECEIPT_NUMBER}) linesCount=${rnLines.length}`,
+      );
+    }
+
+    const eligibleLine = rnLines.find((l) => (l.qualifiedQty ?? 0) >= 1);
+    if (!eligibleLine) {
+      throw new Error(
+        `E2E fixture invalid: receivingNoteLine qualifiedQty must allow return qty=1 (receiptNumber=${E2E_RN_RECEIPT_NUMBER}) qualifiedQtys=${rnLines
+          .map((l) => l.qualifiedQty)
+          .join(',')}`,
+      );
+    }
+
+    const alreadyReturnedEvents = await client.inventoryEvent.findMany({
+      where: { type: 'RETURN_TO_SUPPLIER', referenceId: eligibleLine.id },
+      select: { quantity: true },
+    });
+    const alreadyReturnedQty = alreadyReturnedEvents.reduce((s, r) => s + Math.abs(r.quantity), 0);
+    const remainingReturnableQty = eligibleLine.qualifiedQty - alreadyReturnedQty;
+    if (remainingReturnableQty < 1) {
+      throw new Error(
+        `E2E fixture invalid: receivingNote returnable qty must be >=1 (receiptNumber=${E2E_RN_RECEIPT_NUMBER}) receivingNoteLineId=${eligibleLine.id} qualifiedQty=${eligibleLine.qualifiedQty} alreadyReturned=${alreadyReturnedQty} remainingReturnable=${remainingReturnableQty}`,
+      );
+    }
+
+    // Ensure related purchaseOrder/warehouse/product exist (avoid UI return flow failure).
+    const pl = await client.purchaseOrderLine.findUnique({
+      where: { id: eligibleLine.purchaseOrderLineId },
+      select: { productId: true, purchaseOrderId: true },
+    });
+    if (!pl) {
+      throw new Error(
+        `E2E fixture invalid: purchaseOrderLine missing for receivingNoteLineId=${eligibleLine.id} purchaseOrderLineId=${eligibleLine.purchaseOrderLineId}`,
+      );
+    }
+    const po = await client.purchaseOrder.findUnique({
+      where: { id: pl.purchaseOrderId },
+      select: { warehouseId: true },
+    });
+    if (!po) {
+      throw new Error(`E2E fixture invalid: purchaseOrder missing for purchaseOrderId=${pl.purchaseOrderId}`);
+    }
+    const productById = await client.product.findUnique({ where: { id: pl.productId }, select: { id: true } });
+    const warehouseById = await client.warehouse.findUnique({ where: { id: po.warehouseId }, select: { id: true } });
+    if (!productById || !warehouseById) {
+      throw new Error(
+        `E2E fixture invalid: product/warehouse missing for receivingNote return-to-supplier (receiptNumber=${E2E_RN_RECEIPT_NUMBER}) productId=${pl.productId} warehouseId=${po.warehouseId}`,
+      );
     }
 
     const singleCount = await client.product.count({ where: { barcode: E2E_BARCODE_SINGLE } });
     if (singleCount !== 1) {
-      throw new Error(`E2E fixture invalid: barcode single count=${singleCount} (expected 1)`);
+      throw new Error(
+        `E2E fixture invalid: barcode single fixture key=${E2E_BARCODE_SINGLE} productCount=${singleCount} (expected 1)`,
+      );
     }
     const multiCount = await client.product.count({ where: { barcode: E2E_BARCODE_MULTI } });
     if (multiCount < 2) {
-      throw new Error(`E2E fixture invalid: barcode multi count=${multiCount} (expected >=2)`);
+      throw new Error(
+        `E2E fixture invalid: barcode multi fixture key=${E2E_BARCODE_MULTI} productCount=${multiCount} (expected >=2)`,
+      );
     }
     const [srcOrder, derivedOrder] = await Promise.all([
       client.posOrder.findUnique({ where: { id: E2E_EX_SOURCE_ORDER_ID }, select: { id: true } }),
       client.posOrder.findUnique({ where: { id: E2E_EX_DERIVED_ORDER_ID }, select: { id: true, exchangeFromOrderId: true } }),
     ]);
     if (!srcOrder || !derivedOrder || derivedOrder.exchangeFromOrderId !== E2E_EX_SOURCE_ORDER_ID) {
-      throw new Error('E2E fixture invalid: exchange orders missing or linkage broken');
+      throw new Error(
+        `E2E fixture invalid: exchange settlement linkage broken expected exchangeFromOrderId=${E2E_EX_SOURCE_ORDER_ID} derivedOrderId=${E2E_EX_DERIVED_ORDER_ID} derived.exchangeFromOrderId=${derivedOrder?.exchangeFromOrderId ?? 'null'}`,
+      );
     }
     const refundCount = await client.financeEvent.count({
       where: { referenceId: E2E_EX_SOURCE_ORDER_ID, type: 'SALE_REFUND' },
     });
     if (refundCount < 1) {
-      throw new Error('E2E fixture invalid: SALE_REFUND missing for exchange source order');
+      throw new Error(
+        `E2E fixture invalid: exchange source order missing financeEvent type=SALE_REFUND referenceId=${E2E_EX_SOURCE_ORDER_ID} count=${refundCount} (expected >=1)`,
+      );
     }
 
     // Ensure `/admin/reports` has at least 1 clickable `ReferenceIdLink` in full profile.
@@ -682,13 +821,13 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
       throw new Error('E2E fixture invalid: posOrder finance event must be newer than receivingNote');
     }
 
-    const reportEventCount = await client.financeEvent.count({ where: { referenceId: 'E2E-REPORT-SALE-001' } });
+    const reportEventCount = await client.financeEvent.count({ where: { referenceId: E2E_REPORT_SALE_REF } });
     if (reportEventCount < 2) {
-      throw new Error(`E2E fixture invalid: report finance events count=${reportEventCount} (expected >=2)`);
+      throw new Error(`E2E fixture invalid: finance report sale ref=${E2E_REPORT_SALE_REF} financeEvents count=${reportEventCount} (expected >=2)`);
     }
-    const reportPurCount = await client.financeEvent.count({ where: { referenceId: 'E2E-REPORT-PUR-001' } });
+    const reportPurCount = await client.financeEvent.count({ where: { referenceId: E2E_REPORT_PUR_REF } });
     if (reportPurCount < 2) {
-      throw new Error(`E2E fixture invalid: report purchase events count=${reportPurCount} (expected >=2)`);
+      throw new Error(`E2E fixture invalid: finance report purchase ref=${E2E_REPORT_PUR_REF} financeEvents count=${reportPurCount} (expected >=2)`);
     }
 
     // Dispatch-rules fixtures sanity checks (full profile)
