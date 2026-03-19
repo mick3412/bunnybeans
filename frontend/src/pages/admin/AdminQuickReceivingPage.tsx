@@ -78,23 +78,23 @@ export const AdminQuickReceivingPage: React.FC = () => {
       return;
     }
     if (!supplierId) {
-      showToast('請選供應商', 'err');
+      showToast('缺少供應商', 'err');
       return;
     }
     if (!warehouseId) {
-      showToast('請選倉庫/門市', 'err');
+      showToast('缺少倉庫/門市', 'err');
       return;
     }
     const validLines = lines
       .map((l) => ({ ...l, qty: Number(l.qty) || 0, unitCost: Number(l.unitCost) || 0 }))
       .filter((l) => l.productId && l.qty > 0);
     if (!validLines.length) {
-      showToast('請至少一列品項且數量 > 0', 'err');
+      showToast('至少需要一列品項且數量 > 0', 'err');
       return;
     }
 
     if (remark.trim()) {
-      showToast('備註尚未寫入採購單（待後端支援）', 'err');
+      showToast('備註未寫入採購單', 'err');
     }
 
     setSubmitting(true);
@@ -119,11 +119,11 @@ export const AdminQuickReceivingPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4" data-testid="e2e-admin-quick-receiving">
+    <div className="mx-auto max-w-6xl space-y-4" data-testid="e2e-admin-quick-receiving">
       <div className="rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm">
         <div className="mb-4 border-b border-[#e2e8f0] pb-2">
           <h2 className="text-lg font-semibold text-content">快速進貨</h2>
-          <p className="mt-1 text-sm text-muted">選供應商 → 選品項 → 輸入數量 → 一鍵建立採購單</p>
+          <p className="mt-1 text-sm text-muted" aria-hidden="true" />
         </div>
 
         {loading && (
@@ -164,7 +164,7 @@ export const AdminQuickReceivingPage: React.FC = () => {
         </div>
 
         <div className="mt-4">
-          <TextInput label="備註（選填）" value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="例如：快速補貨、急單" />
+          <TextInput label="備註（選填）" value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="" />
         </div>
 
         <div className="mt-4 overflow-hidden rounded-xl border border-[#e2e8f0]">

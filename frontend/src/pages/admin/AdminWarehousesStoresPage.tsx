@@ -7,7 +7,7 @@ const cardClass = 'min-w-0 flex-1 rounded-xl border border-[#e2e8f0] bg-white p-
 /** 門市 + 倉庫同一頁，雙列表佈局一致（先維護門市，再綁倉庫） */
 export const AdminWarehousesStoresPage: React.FC = () => {
   return (
-    <div className="max-w-7xl" data-testid="e2e-admin-warehouses-stores">
+    <div className="max-w-6xl" data-testid="e2e-admin-warehouses-stores">
       <p className="mb-6 text-sm text-muted">
         同頁維護門市與倉庫；新增倉庫時可選擇所屬門市（storeId）。寬螢幕左右並排，窄螢幕上下。
       </p>
