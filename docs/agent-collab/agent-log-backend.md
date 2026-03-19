@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS-025（迴歸 + Product schema 擴充確認）
+- 做了：依 `BACKEND-INSTRUCTIONS 025.md` §1 完成 #1～#2。
+  - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（138 passed）。
+  - **#2 Product schema 擴充**：**已於前期實作**。baseline migration 已含 `specCapacity`、`specStyle`、`specWeight`、`expiryDescription`；`specColor`、`weightGrams` 保留但棄用；product.service／repository／controller／CSV import 已支援；api-design.md 產品章節已載明。本輪更新 `GLOBAL-GAP-AND-UX-REVIEW.md` 將狀態改為「已實作」。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
+- commits：見下方（本輪僅 docs 變更）
+
 ### INSTRUCTIONS-024（四組報表後端：會員貢獻、營收趨勢 groupBy、客單價分布）
 - 做了：依 `BACKEND-INSTRUCTIONS 024.md` §1 完成 #1～#4。
   - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（138 passed）。
