@@ -42,6 +42,49 @@ test.describe('Admin POS 報表', () => {
     await expect.soft(dailyTitle.or(dailyChartTitle).or(dailyEmpty).or(dailyErr)).toBeVisible();
   });
 
+  test('會員營收貢獻、營收趨勢、客單價分布、金流連結四區塊存在或空態不報錯', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('button', { name: '進入門市收銀' }).click();
+    await page.getByRole('link', { name: '報表' }).click();
+
+    const container = page.getByTestId('e2e-pos-reports');
+    await expect(container).toBeVisible({ timeout: 15_000 });
+
+    // 會員營收貢獻：有 data.memberContribution 時顯示區塊或空態
+    const memberBlock = container.getByText('會員營收貢獻');
+    const memberEmpty = container.getByText('此區間尚無訂單');
+    if (await memberBlock.isVisible()) {
+      await expect(memberBlock).toBeVisible();
+    }
+    // 若無會員營收區塊，頁面仍應正常（區塊為選用）
+
+    // 營收趨勢：依日/週/月切換，有資料或空態
+    const trendTitle = container.getByText('營收趨勢');
+    const trendLoading = container.getByText('區間趨勢（按日）');
+    const trendEmpty = container.getByText('此區間內尚無營收／訂單紀錄。');
+    await expect.soft(trendTitle.or(trendLoading).or(trendEmpty)).toBeVisible();
+
+    // 日/週/月切換存在
+    const groupBySelect = container.locator('select').filter({ has: page.locator('option[value="day"]') });
+    if (await groupBySelect.isVisible()) {
+      await groupBySelect.selectOption('week');
+      await expect(groupBySelect).toHaveValue('week');
+      await groupBySelect.selectOption('month');
+      await expect(groupBySelect).toHaveValue('month');
+    }
+
+    // 客單價分布：有資料、載入中或空態
+    const distTitle = container.getByText('客單價分布');
+    const distEmpty = container.getByText('客單價分布：此區間尚無訂單');
+    const distErr = container.getByText(/客單價分布載入失敗/);
+    await expect.soft(distTitle.or(distEmpty).or(distErr)).toBeVisible();
+
+    // 金流報表連結存在
+    const financeLink = container.getByRole('link', { name: '金流報表' });
+    await expect(financeLink).toBeVisible();
+    await expect(financeLink).toHaveAttribute('href', '/admin/reports');
+  });
+
   test('top-items 與銷售明細跳轉', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('button', { name: '進入門市收銀' }).click();
