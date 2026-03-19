@@ -1,3 +1,8 @@
+/**
+ * @legacy 本頁已棄用。會員管理統一由 AdminCustomersPage（/admin/customers）提供，
+ * 路由 /admin/loyalty/members 已 redirect 至 /admin/customers。
+ * 保留本檔僅供參考，不再於路由中渲染。
+ */
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -126,7 +131,7 @@ export const LoyaltyMembersPage: React.FC = () => {
 
   const submitCreate = async () => {
     if (!merchantId || !form.name.trim()) {
-      showToast('請填寫姓名', 'err');
+      showToast('缺少姓名', 'err');
       return;
     }
     setSaving(true);
@@ -298,7 +303,7 @@ export const LoyaltyMembersPage: React.FC = () => {
                   <div className="rounded-lg border border-[#e2e8f0] bg-white p-3">
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold text-content">消費統計（預留）</div>
-                      <span className="text-[11px] text-muted">待後端擴充欄位</span>
+                      <span className="text-[11px] text-muted">預留</span>
                     </div>
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
                       <div className="rounded-md border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
@@ -322,9 +327,6 @@ export const LoyaltyMembersPage: React.FC = () => {
                         <div className="mt-0.5 text-[11px] text-muted">Top 3</div>
                       </div>
                     </div>
-                    <div className="mt-3 rounded-md border border-dashed border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-xs text-muted">
-                      之後會由後端提供：最近購買品項、品類占比、累計/區間統計。前端先保留版位與視覺化容器，避免假資料造成誤判。
-                    </div>
                   </div>
 
                   <div className="rounded-lg border border-[#e2e8f0] bg-white p-3">
@@ -340,7 +342,6 @@ export const LoyaltyMembersPage: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-2 text-[11px] text-muted">完成接欄位後會顯示 Top 品類與最近購買品項清單。</div>
                   </div>
 
                   <div className="rounded-lg border border-dashed border-[#cbd5f5] bg-[#eff6ff] p-3 text-xs">
@@ -350,30 +351,24 @@ export const LoyaltyMembersPage: React.FC = () => {
                         僅限有 Admin Key 者在後台修改
                       </span>
                     </div>
-                    <p className="mb-2 text-[11px] text-[#1e293b]">
-                      直接輸入新的 <span className="font-semibold">memberLevel</span>，例如
-                      <span className="font-mono"> GOLD</span>、<span className="font-mono"> VIP</span>；下次排程重算時仍會依 TierRule 規則覆蓋。
-                    </p>
+                    <p className="mb-2 text-[11px] text-[#1e293b]">輸入會員等級以更新畫面呈現。</p>
                     <div className="mb-2 rounded-md border border-dashed border-[#bfdbfe] bg-white/70 px-2 py-1.5">
                       <div className="text-[11px] font-medium text-[#1d4ed8]">
                         最近一次自動升降級（預留）
                       </div>
-                      <p className="mt-0.5 text-[11px] text-[#475569]">
-                        之後會由後端等級重算紀錄帶入「最後重算時間／原因」等資訊，目前僅作為版位預留，實際判斷仍以
-                        TierRule 定期重算為準。
-                      </p>
+                      <p className="mt-0.5 text-[11px] text-[#475569]">預留資訊區塊。</p>
                     </div>
                     <TextInput
                       label="手動指定等級（覆寫目前等級）"
                       value={form.memberLevel}
                       onChange={(e) => setForm((f) => ({ ...f, memberLevel: e.target.value }))}
-                      placeholder="例如：VIP / GOLD / NORMAL"
+                      placeholder=""
                     />
                     <TextInput
                       label="調整說明（僅備註用途，可填入原因與經辦人）"
                       value={manualLevelNote}
                       onChange={(e) => setManualLevelNote(e.target.value)}
-                      placeholder="例如：補發升等、客服處理投訴等"
+                      placeholder=""
                     />
                   </div>
                 </div>
