@@ -7,6 +7,7 @@ import { PosOrdersListPage } from './pages/PosOrdersListPage';
 import { PosOrderDetailPage } from './pages/PosOrderDetailPage';
 import { PosPromosPage } from './pages/PosPromosPage';
 import { PosReportsPage } from './pages/PosReportsPage';
+import { AdminPerformancePage } from './pages/admin/AdminPerformancePage';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminInventoryQueryHubPage } from './pages/admin/hubs/AdminInventoryQueryHubPage';
 import { AdminInventoryAdjustPage } from './pages/admin/AdminInventoryAdjustPage';
@@ -60,6 +61,7 @@ export const App: React.FC = () => {
         <Route path="finance/periods" element={<AdminFinanceHubPage initialTab="periods" />} />
         <Route path="finance/audit" element={<AdminFinanceHubPage initialTab="audit" />} />
         <Route path="finance/snapshots" element={<AdminFinanceHubPage initialTab="snapshots" />} />
+        <Route path="performance" element={<AdminPerformancePage />} />
         <Route path="ops/jobs" element={<AdminOpsMonitoringHubPage initialTab="jobs" />} />
         <Route path="ops/report-clicks" element={<AdminOpsMonitoringHubPage initialTab="clicks" />} />
         <Route path="marketing/rules" element={<AdminMarketingCenterHubPage initialTab="marketingRules" />} />

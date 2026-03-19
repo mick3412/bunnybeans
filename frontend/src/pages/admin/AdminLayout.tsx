@@ -32,8 +32,9 @@ function headerTitle(
   if (pathname === '/admin' || pathname === '/admin/') {
     if (opsTab === 'jobs') return 'Job 監控';
     if (opsTab === 'clicks') return '穿透點擊審計';
-    return '總覽';
+    return '營運';
   }
+  if (pathname.startsWith('/admin/performance')) return '業績';
   if (pathname.startsWith('/admin/inventory/adjust')) return '入庫／盤點';
   if (pathname.startsWith('/admin/inventory/expiring')) return '即期庫存';
   if (pathname.startsWith('/admin/inventory')) {
@@ -245,11 +246,14 @@ export const AdminLayout: React.FC = () => {
             </div>
           </div>
           <nav className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 flex flex-col gap-0.5" aria-label="導覽">
-            {/* 第一層：總覽 / 監控（不可點） */}
-            <div className="mb-1 mt-0.5 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">總覽 / 監控</div>
+            {/* 第一層：營運 / 監控（不可點） */}
+            <div className="mb-1 mt-0.5 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">營運 / 監控</div>
             {/* 第二層：主入口（可點） */}
             <NavLink to="/admin" className={navClass} end>
-              總覽
+              營運
+            </NavLink>
+            <NavLink to="/admin/performance" className={navClass}>
+              業績
             </NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />
@@ -426,7 +430,7 @@ export const AdminLayout: React.FC = () => {
                                     navigate(it.to);
                                   }}
                                   disabled={it.unavailable}
-                                  title={it.unavailable ? '待後端提供資料' : '前往處理'}
+                                  title={it.unavailable ? '暫不可用' : '前往處理'}
                                 >
                                   前往
                                 </button>
@@ -435,9 +439,7 @@ export const AdminLayout: React.FC = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="mt-2 text-[11px] text-muted">
-                        提示：通知/待辦目前為前端彙整，且已處理/稍後提醒只記錄在本機。
-                      </div>
+                      <div className="mt-2 text-[11px] text-muted" aria-hidden="true" />
                     </>
                   )}
                 </div>
