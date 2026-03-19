@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   getFinanceEvents,
@@ -78,6 +78,14 @@ export const AdminReportsPage: React.FC = () => {
   const [dailyTrend, setDailyTrend] = useState<{ date: string; receivable: number; payment: number }[]>([]);
   const [prevDailyTrend, setPrevDailyTrend] = useState<{ date: string; receivable: number; payment: number }[]>([]);
 
+  const partyGroupPrefix = useMemo(() => {
+    if (partyView === 'customer') return 'CUSTOMER:';
+    if (partyView === 'supplier') return 'SUPPLIER:';
+    return null;
+  }, [partyView]);
+
+  const isGroupMode = useMemo(() => partyView !== 'all' && !partyId.trim(), [partyId, partyView]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setErr(null);
@@ -93,13 +101,19 @@ export const AdminReportsPage: React.FC = () => {
       return pid;
     })();
 
+    // group 模式：不填 partyId 時，依視角預設分組（會員/供應商/其他）
+    // 後端目前沒有 kind=customer/supplier 的群組篩選，因此用前端過濾達到「預設 group」閱讀體驗。
+    // 注意：此模式下分頁 total 以「前端過濾後」為準，避免 UI 看起來卡住或頁數不合理。
+    const pageForApi = isGroupMode ? 1 : page;
+    const pageSizeForApi = isGroupMode ? 500 : pageSize;
+
     const [r, sumType, sumParty] = await Promise.all([
       getFinanceEvents({
         preset: presetParam,
         from: fromParam,
         to: toParam,
-        page,
-        pageSize,
+        page: pageForApi,
+        pageSize: pageSizeForApi,
         type: typeFilter || undefined,
         partyId: partyIdForApi,
       }),
@@ -122,8 +136,19 @@ export const AdminReportsPage: React.FC = () => {
       setRows([]);
       setTotal(0);
     } else {
-      setRows(r.items);
-      setTotal(r.total);
+      const raw = r.items ?? [];
+      const filtered = isGroupMode
+        ? raw.filter((ev) => {
+            const pid = (ev.partyId ?? '').trim();
+            if (partyView === 'customer') return pid.startsWith('CUSTOMER:');
+            if (partyView === 'supplier') return pid.startsWith('SUPPLIER:');
+            if (partyView === 'other') return !pid.startsWith('CUSTOMER:') && !pid.startsWith('SUPPLIER:');
+            return true;
+          })
+        : raw;
+      setRows(filtered);
+      setTotal(isGroupMode ? filtered.length : r.total);
+      if (isGroupMode && page !== 1) setPage(1);
     }
     if (sumType && typeof sumType === 'object' && 'byType' in sumType) {
       setSummary(sumType as FinanceSummaryByType);
@@ -131,12 +156,24 @@ export const AdminReportsPage: React.FC = () => {
       setSummary(null);
     }
     if (sumParty && typeof sumParty === 'object' && 'byParty' in sumParty) {
-      setSummaryByParty(sumParty as FinanceSummaryByPartyId);
+      const raw = sumParty as FinanceSummaryByPartyId;
+      if (isGroupMode) {
+        const byParty = (raw.byParty ?? []).filter((p) => {
+          const pid = (p.partyId ?? '').trim();
+          if (partyView === 'customer') return pid.startsWith('CUSTOMER:');
+          if (partyView === 'supplier') return pid.startsWith('SUPPLIER:');
+          if (partyView === 'other') return !pid.startsWith('CUSTOMER:') && !pid.startsWith('SUPPLIER:');
+          return true;
+        });
+        setSummaryByParty({ byParty });
+      } else {
+        setSummaryByParty(raw);
+      }
     } else {
       setSummaryByParty(null);
     }
     setLoading(false);
-  }, [page, pageSize, preset, from, to, typeFilter, partyId, partyView]);
+  }, [isGroupMode, page, pageSize, preset, from, to, typeFilter, partyId, partyView]);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,27 +238,24 @@ export const AdminReportsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    params.delete('preset');
-    params.delete('from');
-    params.delete('to');
+    // 只用 state 生成 scoped params，避免把 searchParams（依賴項）放進 effect 造成重入更新。
+    // setSearchParams 會先清掉 finance.reports.* scope 的 keys，再寫回本 effect 產生的內容。
+    const params = new URLSearchParams();
     if (preset === 'last30d') {
       params.set('preset', 'last30d');
     } else if (preset === 'custom') {
+      // custom 模式以 from/to 是否存在來定義，不一定需要顯式 preset=custom
       if (from.trim()) params.set('from', from.trim());
       if (to.trim()) params.set('to', to.trim());
     } else if (preset === 'all') {
       params.set('preset', 'all');
     }
     if (typeFilter) params.set('type', typeFilter);
-    else params.delete('type');
     if (partyId.trim()) params.set('partyId', partyId.trim());
-    else params.delete('partyId');
     if (partyView !== 'all') params.set('partyView', partyView);
-    else params.delete('partyView');
     // 保留 merchantId（由 AdminLayout 管理/寫入）
     setSearchParams(params, { replace: true });
-  }, [preset, from, to, typeFilter, partyId, partyView, searchParams, setSearchParams]);
+  }, [preset, from, to, typeFilter, partyId, partyView, setSearchParams]);
 
   useEffect(() => {
     void load();
@@ -235,7 +269,6 @@ export const AdminReportsPage: React.FC = () => {
       description={
         <>
           資料來源 <code className="rounded bg-brand-canvas px-1 text-content">GET /finance/events</code>
-          ；可近 30 日、全部或自訂起訖。可匯出 CSV（與下列區間一致，需 VITE_ADMIN_API_KEY）。訂單報表與日期篩選請至「POS → 訂單查詢」。
         </>
       }
       testId="e2e-admin-reports"
@@ -506,7 +539,7 @@ export const AdminReportsPage: React.FC = () => {
                   <th className="px-4 py-2">類型</th>
                   <th className="px-4 py-2 text-right">金額</th>
                   <th className="px-4 py-2">幣別</th>
-                  <th className="px-4 py-2 font-mono text-xs">referenceId</th>
+                  <th className="px-4 py-2 font-mono text-xs">參考單據</th>
                   <th className="px-4 py-2">備註</th>
                 </tr>
               </thead>
@@ -523,6 +556,7 @@ export const AdminReportsPage: React.FC = () => {
                       <ReferenceIdLink
                         referenceId={ev.referenceId ?? null}
                         fallback={ev.referenceId ?? '—'}
+                      label="訂單"
                         returnTo={`${location.pathname}${location.search}`}
                         auditSource="admin-reports"
                         auditField="referenceId"

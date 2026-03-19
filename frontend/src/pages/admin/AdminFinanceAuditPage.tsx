@@ -77,12 +77,12 @@ export const AdminFinanceAuditPage: React.FC = () => {
 
   return (
     <StandardListLayout
-      title="Finance Audit Log（稽核紀錄）"
+      title="稽核紀錄"
       description={description}
       filters={
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-xs text-muted">eventId</label>
+            <label className="mb-1 block text-xs text-muted">稽核事件 ID</label>
             <input
               type="text"
               className="w-56 rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm font-mono focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
@@ -119,7 +119,7 @@ export const AdminFinanceAuditPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted">actor</label>
+            <label className="mb-1 block text-xs text-muted">操作者</label>
             <input
               type="text"
               className="w-40 rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
@@ -180,23 +180,23 @@ export const AdminFinanceAuditPage: React.FC = () => {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
               <tr>
-                <th className="px-4 py-2">eventId</th>
+                <th className="px-4 py-2">稽核事件 ID</th>
                 <th className="px-4 py-2">類型</th>
                 <th className="px-4 py-2">來源</th>
                 <th className="px-4 py-2">摘要</th>
                 <th className="px-4 py-2">時間</th>
-                <th className="px-4 py-2">actor</th>
+                <th className="px-4 py-2">操作者</th>
               </tr>
             </thead>
             <tbody>
               {items.map((row) => (
                 <tr key={row.id} className="border-t border-brand-surface hover:bg-brand-canvas">
                   <td className="max-w-[180px] truncate px-4 py-2 font-mono text-xs text-content" title={row.eventId}>
-                    {row.eventId}
+                    {row.eventId.length > 10 ? `${row.eventId.slice(0, 8)}…` : row.eventId}
                   </td>
                   <td className="px-4 py-2 text-content">{row.eventType ?? '—'}</td>
                   <td className="px-4 py-2 text-muted">{row.source ?? '—'}</td>
-                  <td className="px-4 py-2 text-muted">{row.amount != null ? `amount=${row.amount}` : '—'}</td>
+                  <td className="px-4 py-2 text-muted">{row.amount != null ? `金額：${row.amount}` : '—'}</td>
                   <td className="px-4 py-2 tabular-nums text-muted">{row.createdAt ?? '—'}</td>
                   <td className="px-4 py-2 text-content">{row.actor ?? '—'}</td>
                 </tr>
