@@ -81,6 +81,20 @@ pnpm exec playwright test
 - `E2E_PROFILE=full` 驗收要點：`/admin/reports`（或 finance events 列表）必須至少有 1 筆可穿透 `referenceId`，且 E2E smoke 點擊第一個 `訂單` 按鈕必須導向 `/pos/orders/:id`（不可因按鈕數量為 0 而 skip）。
 - `E2E_PROFILE=full` 回程要點：從 `/pos/orders/:id` 點「回到來源」必須回到正確的來源頁（例如 `/admin/reports`），且回程後頁面區塊可見、後續旅程頁（例如 `/admin/loyalty/reports` 活動成效報表）可繼續到達。
 
+Expected fixture keys（CI triage checklist）：
+| Fixture key / value | 對應 seed fail-fast 檢查 / `E2E_SEED_SUMMARY` 欄位 | 應檢查的原因 |
+|---|---|---|
+| `E2E-REPL-SALE-001`（replenishmentSaleRef） | `E2E_SEED_SUMMARY.replenishmentSaleRef` + replenishment suggestions：`inventoryBalance.onHandQty=0`、`SALE_OUT` lookback 內存在、`suggestedQty>0` | full gate 的補貨建議不允許長期空清單 |
+| `E2E-EXP-BATCH-0001`（expiringInventoryBatchCode） | `E2E_SEED_SUMMARY.expiringInventoryBatchCode` + expiring：`PURCHASE_IN` 在預設 `daysAhead=30` 的 expiryDate 範圍內且 SUM(quantity)>0 | `admin/inventory/expiring` full profile 期望非空資料 |
+| `E2E-RN-0001`（receivingNoteReceiptNumber） | `E2E_SEED_SUMMARY.receivingNoteReceiptNumber` + receiving note return-to-supplier：`ReceivingNoteLine.qualifiedQty` 可退貨到至少 1、並確保關聯 PO/warehouse/product 存在 | `admin-receiving-notes-smoke` full gate return 流程至少能 return qty=1 |
+| `E2E-REPORT-SALE-001` / `E2E-REPORT-PUR-001`（financeReportRefs） | `E2E_SEED_SUMMARY.financeReportRefs` + finance events count（sale/purchase 各 ≥2） | 金流報表段落 fail-fast 不允許 skip |
+| `E2E-RULE-ENABLED-0001`（enabled） | `E2E_SEED_SUMMARY.dispatchRules.enabled.name` + enabled rule runnable 檢查 | dispatch-rules runner 更新 lastRun* 並應可觸發 |
+| `E2E-RULE-DISABLED-0001`（disabled） | `E2E_SEED_SUMMARY.dispatchRules.disabled.name` + disabled rule 必須存在 | disabled rule 不應觸發但資料仍需存在 |
+| `E2E-RULE-FUTURE-0001`（future） | `E2E_SEED_SUMMARY.dispatchRules.future.name` + future rule nextRunAt>now 檢查 | future rule 不應觸發 |
+| `E2E-BC-0001` / `E2E-BC-0002`（barcode） | `Barcode single fixture (q)` + `Barcode multi fixture (q)`（full 時）+ fail-fast barcode count（single=1、多筆≥2） | barcode multi-match/single-match smoke 需要穩定命中資料 |
+| `E2E_ORDER_ID=e2e00002-0000-4000-8000-00000000a001`、`E2E_RN_ID=e2e00003-0000-4000-8000-00000000b001`（referenceId clickable） | UUID-like 契約 + finance referenceId 可 resolve 為 `posOrder/receivingNote` | `/admin/reports` 的 `ReferenceIdLink` 需要可點穿透 |
+| `E2E_EX_SOURCE_ORDER_ID=e2e00005-0000-4000-8000-00000000d001`、`E2E_EX_DERIVED_ORDER_ID=e2e00006-0000-4000-8000-00000000e002`（exchange） | `Exchange source order id` / `Exchange derived order id`（seed log）+ fail-fast exchange linkage + `SALE_REFUND` count（source=≥1） | 換貨 settlement 的 referenceId 穿透與退款事件必須完整 |
+
 建議指令：
 
 ```bash
