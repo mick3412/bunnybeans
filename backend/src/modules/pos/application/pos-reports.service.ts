@@ -58,6 +58,13 @@ function parseFromToOrThrow(
   return { start, end };
 }
 
+export interface MemberContributionDto {
+  memberRevenue: number;
+  memberOrdersCount: number;
+  guestRevenue: number;
+  guestOrdersCount: number;
+}
+
 export interface PosReportsSummaryDto {
   totalRevenue: string;
   ordersCount: number;
@@ -70,6 +77,7 @@ export interface PosReportsSummaryDto {
   totalCost?: string;
   grossMargin?: string;
   grossMarginRate?: number | null;
+  memberContribution?: MemberContributionDto;
 }
 
 @Injectable()
@@ -132,7 +140,7 @@ export class PosReportsService {
       orderWhere.storeId = storeId;
     }
 
-    const [ordersCount, aggOrders, refundAgg, paymentRows, categoryRows] = await Promise.all([
+    const [ordersCount, aggOrders, refundAgg, memberAgg, guestAgg, paymentRows, categoryRows] = await Promise.all([
       this.prisma.posOrder.count({ where: orderWhere }),
       this.prisma.posOrder.aggregate({
         where: orderWhere,
@@ -145,6 +153,16 @@ export class PosReportsService {
           AND "occurredAt" >= ${start} AND "occurredAt" <= ${end}
           AND "partyId" IN (SELECT "partyId" FROM "Party" WHERE "merchantId" = ${merchantId})
       `,
+      this.prisma.posOrder.aggregate({
+        where: { ...orderWhere, customerId: { not: null } },
+        _sum: { totalAmount: true },
+        _count: true,
+      }),
+      this.prisma.posOrder.aggregate({
+        where: { ...orderWhere, customerId: null },
+        _sum: { totalAmount: true },
+        _count: true,
+      }),
       this.prisma.posOrderPayment.findMany({
         where: { order: orderWhere },
         select: { method: true, amount: true },
@@ -203,6 +221,16 @@ export class PosReportsService {
     const grossMargin = totalNum - totalCost;
     const grossMarginRate =
       totalNum > 0 ? Math.round((grossMargin / totalNum) * 10000) / 100 : null;
+
+    const memberRevenue = memberAgg._sum.totalAmount != null ? Number(memberAgg._sum.totalAmount) : 0;
+    const guestRevenue = guestAgg._sum.totalAmount != null ? Number(guestAgg._sum.totalAmount) : 0;
+    const memberContribution: MemberContributionDto = {
+      memberRevenue,
+      memberOrdersCount: memberAgg._count,
+      guestRevenue,
+      guestOrdersCount: guestAgg._count,
+    };
+
     return {
       totalRevenue: totalNum.toFixed(2),
       ordersCount,
@@ -215,6 +243,7 @@ export class PosReportsService {
       totalCost: totalCost.toFixed(2),
       grossMargin: grossMargin.toFixed(2),
       ...(grossMarginRate !== null && { grossMarginRate }),
+      memberContribution,
     };
   }
 
@@ -303,10 +332,30 @@ export class PosReportsService {
     return { items: list.slice(0, limit), from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
   }
 
+  /** 取得週一起始日（YYYY-MM-DD） */
+  private getWeekStart(d: Date): string {
+    const copy = new Date(d);
+    const day = copy.getDay();
+    const diff = (day + 6) % 7;
+    copy.setDate(copy.getDate() - diff);
+    return copy.toISOString().slice(0, 10);
+  }
+
+  /** 取得月起始日（YYYY-MM-01） */
+  private getMonthStart(d: Date): string {
+    return d.toISOString().slice(0, 7) + '-01';
+  }
+
   /**
-   * GET /pos/reports/daily — 區間內按日彙總
+   * GET /pos/reports/daily — 區間內按日／週／月彙總
    */
-  async getDaily(filter: { merchantId: string; from?: string; to?: string; storeId?: string }) {
+  async getDaily(filter: {
+    merchantId: string;
+    from?: string;
+    to?: string;
+    storeId?: string;
+    groupBy?: 'day' | 'week' | 'month';
+  }) {
     let start: Date;
     let end: Date;
     const fromTo = parseFromToOrThrow(filter.from, filter.to);
@@ -336,25 +385,120 @@ export class PosReportsService {
       orderWhere.storeId = storeId;
     }
 
+    const groupBy = ['day', 'week', 'month'].includes(filter.groupBy ?? '') ? filter.groupBy : 'day';
+
     const orders = await this.prisma.posOrder.findMany({
       where: orderWhere,
       select: { createdAt: true, totalAmount: true },
     });
 
-    const byDay = new Map<string, { revenue: number; ordersCount: number }>();
+    const bucketMap = new Map<string, { revenue: number; ordersCount: number }>();
     for (const o of orders) {
-      const day = o.createdAt.toISOString().slice(0, 10);
-      const cur = byDay.get(day);
+      const key =
+        groupBy === 'day'
+          ? o.createdAt.toISOString().slice(0, 10)
+          : groupBy === 'week'
+            ? this.getWeekStart(o.createdAt)
+            : this.getMonthStart(o.createdAt);
+      const cur = bucketMap.get(key);
       const amt = Number(o.totalAmount);
-      if (!cur) byDay.set(day, { revenue: amt, ordersCount: 1 });
+      if (!cur) bucketMap.set(key, { revenue: amt, ordersCount: 1 });
       else {
         cur.revenue += amt;
         cur.ordersCount += 1;
       }
     }
-    const list = Array.from(byDay.entries())
-      .map(([date, v]) => ({ date, revenue: v.revenue, ordersCount: v.ordersCount }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-    return { byDay: list, from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+
+    const list = Array.from(bucketMap.entries())
+      .map(([periodStart, v]) => ({ periodStart, revenue: v.revenue, ordersCount: v.ordersCount }))
+      .sort((a, b) => a.periodStart.localeCompare(b.periodStart));
+
+    const fromStr = start.toISOString().slice(0, 10);
+    const toStr = end.toISOString().slice(0, 10);
+
+    if (groupBy === 'day') {
+      return { byDay: list.map((x) => ({ date: x.periodStart, revenue: x.revenue, ordersCount: x.ordersCount })), from: fromStr, to: toStr };
+    }
+    return { items: list, from: fromStr, to: toStr, groupBy };
+  }
+
+  /**
+   * GET /pos/reports/order-value-distribution — 客單價分布
+   */
+  async getOrderValueDistribution(filter: {
+    merchantId: string;
+    preset?: string;
+    from?: string;
+    to?: string;
+    storeId?: string;
+  }) {
+    let start: Date;
+    let end: Date;
+    const fromTo = parseFromToOrThrow(filter.from, filter.to);
+    if (fromTo) {
+      start = fromTo.start;
+      end = fromTo.end;
+    } else {
+      const p: string = PRESETS.includes((filter.preset ?? '') as (typeof PRESETS)[0])
+        ? (filter.preset as string)
+        : 'today';
+      const range = parsePresetToRange(p);
+      start = range.start;
+      end = range.end;
+    }
+
+    const merchantId = filter.merchantId?.trim();
+    if (!merchantId) {
+      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId is required' });
+    }
+    const orderWhere: {
+      createdAt: { gte: Date; lte: Date };
+      storeId?: string;
+      store?: { merchantId: string };
+    } = {
+      createdAt: { gte: start, lte: end },
+      store: { merchantId },
+    };
+    if (filter.storeId?.trim()) {
+      const storeId = filter.storeId.trim();
+      await this.assertStoreBelongsToMerchant(storeId, merchantId);
+      orderWhere.storeId = storeId;
+    }
+
+    const orders = await this.prisma.posOrder.findMany({
+      where: orderWhere,
+      select: { totalAmount: true },
+    });
+
+    const BUCKETS = [
+      { label: '0–200', min: 0, max: 200 },
+      { label: '200–500', min: 200, max: 500 },
+      { label: '500–1000', min: 500, max: 1000 },
+      { label: '1000–2000', min: 1000, max: 2000 },
+      { label: '2000+', min: 2000, max: Infinity },
+    ];
+    const counts = BUCKETS.map(() => ({ count: 0, revenue: 0 }));
+
+    for (const o of orders) {
+      const amt = Number(o.totalAmount);
+      let idx = BUCKETS.findIndex((b) => amt >= b.min && amt < b.max);
+      if (idx < 0) idx = BUCKETS.length - 1;
+      counts[idx].count += 1;
+      counts[idx].revenue += amt;
+    }
+
+    const buckets = BUCKETS.map((b, i) => ({
+      label: b.label,
+      min: b.min,
+      max: b.max === Infinity ? null : b.max,
+      count: counts[i].count,
+      revenue: counts[i].revenue,
+    }));
+
+    return {
+      buckets,
+      from: start.toISOString().slice(0, 10),
+      to: end.toISOString().slice(0, 10),
+    };
   }
 }

@@ -409,7 +409,7 @@ interface PosOrderListResponse {
 **GET /pos/reports/summary**
 
 - **Query**（皆選填）：`preset`（today｜last7d｜last30d｜currentMonth｜last60d｜lastHalfYear，預設 today）、`from`、`to`（ISO 日期，與 preset 二擇一）、`storeId`。
-- **Response**：`period: { preset?, from, to }`、`totalRevenue`、`ordersCount`、`avgOrder`、`refundsCount`、`refundsTotal`、`byPaymentMethod?: Record<string, number>`、`byCategory?: { categoryId, categoryCode?, revenue }[]`、**`totalCost?`**（區間內銷貨成本：Σ quantity × Product.costPrice，costPrice 為 null 視為 0）、**`grossMargin?`**（totalRevenue − totalCost）、**`grossMarginRate?`**（毛利率 %，totalRevenue > 0 時 (grossMargin / totalRevenue) × 100）。
+- **Response**：`period: { preset?, from, to }`、`totalRevenue`、`ordersCount`、`avgOrder`、`refundsCount`、`refundsTotal`、`byPaymentMethod?: Record<string, number>`、`byCategory?: { categoryId, categoryCode?, revenue }[]`、**`totalCost?`**（區間內銷貨成本：Σ quantity × Product.costPrice，costPrice 為 null 視為 0）、**`grossMargin?`**（totalRevenue − totalCost）、**`grossMarginRate?`**（毛利率 %，totalRevenue > 0 時 (grossMargin / totalRevenue) × 100）、**`memberContribution?`**（會員 vs 匿名客：`{ memberRevenue, memberOrdersCount, guestRevenue, guestOrdersCount }`；依 PosOrder.customerId 有無分組彙總）。
 
 **GET /pos/reports/top-items**
 
@@ -418,8 +418,13 @@ interface PosOrderListResponse {
 
 **GET /pos/reports/daily**
 
-- **Query**：`from`、`to`（未帶則預設 last30d）、`storeId?`。
-- **Response**：`byDay: { date, revenue, ordersCount }[]`、`from`、`to`。
+- **Query**：`from`、`to`（未帶則預設 last30d）、`storeId?`、**`groupBy?`**（day｜week｜month，預設 day）。
+- **Response**：`groupBy=day` 時 `byDay: { date, revenue, ordersCount }[]`；`groupBy=week|month` 時 `items: { periodStart, revenue, ordersCount }[]`。`from`、`to`。week 以週一為起點；month 以月為單位。
+
+**GET /pos/reports/order-value-distribution**
+
+- **Query**（同 summary）：`preset`、`from`、`to`、`storeId`、`merchantId`。
+- **Response**：`buckets: { label, min, max, count, revenue }[]`。固定區間：0–200、200–500、500–1000、1000–2000、2000+（依 totalAmount 落入分桶）。
 
 **報表錯誤碼**（見 [backend-error-format.md](backend-error-format.md)）：當同時帶 `from`、`to` 時，若 `from`＞`to` 或無法解析為日期 → **400 `REPORT_INVALID_RANGE`**；若區間超過 366 天 → **400 `REPORT_RANGE_TOO_LARGE`**。
 

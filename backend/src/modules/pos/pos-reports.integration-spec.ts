@@ -99,6 +99,9 @@ describe('PosReportsService (integration)', () => {
     expect(Number(out.totalRevenue)).toBeGreaterThanOrEqual(100);
     expect(Number(out.avgOrder)).toBeGreaterThan(0);
     expect(out.byPaymentMethod?.CASH).toBeGreaterThanOrEqual(100);
+    expect(out.memberContribution).toBeDefined();
+    expect(out.memberContribution?.guestRevenue).toBeGreaterThanOrEqual(100);
+    expect(out.memberContribution?.guestOrdersCount).toBeGreaterThanOrEqual(1);
 
     await prisma.posOrderItem.deleteMany({ where: { orderId: order.id } });
     await prisma.posOrderPayment.deleteMany({ where: { orderId: order.id } });
@@ -322,13 +325,256 @@ describe('PosReportsService (integration)', () => {
 
     const out = await reports.getDaily({ merchantId: merchant.id, storeId: store.id });
 
-    expect(out.byDay.length).toBeGreaterThanOrEqual(1);
-    const totalRevenue = out.byDay.reduce((sum, d) => sum + d.revenue, 0);
-    const totalOrders = out.byDay.reduce((sum, d) => sum + d.ordersCount, 0);
+    expect(out.byDay).toBeDefined();
+    expect(out.byDay!.length).toBeGreaterThanOrEqual(1);
+    const totalRevenue = out.byDay!.reduce((sum, d) => sum + d.revenue, 0);
+    const totalOrders = out.byDay!.reduce((sum, d) => sum + d.ordersCount, 0);
     expect(totalRevenue).toBeGreaterThanOrEqual(100);
     expect(totalOrders).toBeGreaterThanOrEqual(2);
     expect(out.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(out.to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    await prisma.posOrderItem.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrderPayment.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrder.deleteMany({ where: { storeId: store.id } });
+    await prisma.financeEvent.deleteMany({ where: { partyId: merchant.id } });
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 25000);
+
+  it('summary returns memberContribution with member and guest breakdown', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `MR-MC-${Date.now()}`, name: 'Member Contrib Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SR-MC-${Date.now()}`, name: 'MC Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `WR-MC-${Date.now()}`,
+        name: 'MC WH',
+        merchantId: merchant.id,
+        storeId: store.id,
+      },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-MC-${Date.now()}`, name: 'MC Product' },
+    });
+    const customer = await prisma.customer.create({
+      data: {
+        merchantId: merchant.id,
+        name: 'Member Customer',
+        phone: `MC-${Date.now()}`,
+        memberCode: `M${Date.now()}`,
+      },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: {
+        productId_warehouseId: { productId: product.id, warehouseId: warehouse.id },
+      },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 20 },
+      update: { onHandQty: 20 },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 20,
+        occurredAt: new Date(),
+        note: 'mc seed',
+      },
+    });
+
+    const guestOrder = await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 100 }],
+      payments: [{ method: 'CASH', amount: 100 }],
+    });
+    const memberOrder = await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 2, unitPrice: 75 }],
+      payments: [{ method: 'CASH', amount: 150 }],
+      customerId: customer.id,
+    });
+
+    const out = await reports.summary({ merchantId: merchant.id, preset: 'today', storeId: store.id });
+
+    expect(out.memberContribution).toBeDefined();
+    expect(out.memberContribution?.memberRevenue).toBeGreaterThanOrEqual(150);
+    expect(out.memberContribution?.memberOrdersCount).toBeGreaterThanOrEqual(1);
+    expect(out.memberContribution?.guestRevenue).toBeGreaterThanOrEqual(100);
+    expect(out.memberContribution?.guestOrdersCount).toBeGreaterThanOrEqual(1);
+
+    await prisma.posOrderItem.deleteMany({ where: { orderId: { in: [guestOrder.id, memberOrder.id] } } });
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: { in: [guestOrder.id, memberOrder.id] } } });
+    await prisma.posOrder.deleteMany({ where: { id: { in: [guestOrder.id, memberOrder.id] } } });
+    await prisma.financeEvent.deleteMany({ where: { referenceId: { in: [guestOrder.id, memberOrder.id] } } });
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.customer.delete({ where: { id: customer.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 25000);
+
+  it('daily with groupBy=week returns items with periodStart', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `MR-GB-${Date.now()}`, name: 'GroupBy Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SR-GB-${Date.now()}`, name: 'GB Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `WR-GB-${Date.now()}`,
+        name: 'GB WH',
+        merchantId: merchant.id,
+        storeId: store.id,
+      },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-GB-${Date.now()}`, name: 'GB Product' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: {
+        productId_warehouseId: { productId: product.id, warehouseId: warehouse.id },
+      },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 20 },
+      update: { onHandQty: 20 },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 20,
+        occurredAt: new Date(),
+        note: 'gb seed',
+      },
+    });
+
+    await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 50 }],
+      payments: [{ method: 'CASH', amount: 50 }],
+    });
+
+    const out = await reports.getDaily({
+      merchantId: merchant.id,
+      storeId: store.id,
+      groupBy: 'week',
+    });
+
+    expect(out.items).toBeDefined();
+    expect(out.groupBy).toBe('week');
+    const items = out.items ?? [];
+    expect(Array.isArray(items)).toBe(true);
+    if (items.length > 0) {
+      expect(items[0]).toHaveProperty('periodStart');
+      expect(items[0]).toHaveProperty('revenue');
+      expect(items[0]).toHaveProperty('ordersCount');
+    }
+
+    await prisma.posOrderItem.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrderPayment.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrder.deleteMany({ where: { storeId: store.id } });
+    await prisma.financeEvent.deleteMany({ where: { partyId: merchant.id } });
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 25000);
+
+  it('order-value-distribution returns buckets for order amounts', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `MR-OVD-${Date.now()}`, name: 'OVD Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SR-OVD-${Date.now()}`, name: 'OVD Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `WR-OVD-${Date.now()}`,
+        name: 'OVD WH',
+        merchantId: merchant.id,
+        storeId: store.id,
+      },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-OVD-${Date.now()}`, name: 'OVD Product' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: {
+        productId_warehouseId: { productId: product.id, warehouseId: warehouse.id },
+      },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 100 },
+      update: { onHandQty: 100 },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 100,
+        occurredAt: new Date(),
+        note: 'ovd seed',
+      },
+    });
+
+    await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 150 }],
+      payments: [{ method: 'CASH', amount: 150 }],
+    });
+    await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 2500 }],
+      payments: [{ method: 'CASH', amount: 2500 }],
+    });
+
+    const out = await reports.getOrderValueDistribution({
+      merchantId: merchant.id,
+      preset: 'today',
+      storeId: store.id,
+    });
+
+    expect(out.buckets).toBeDefined();
+    expect(out.buckets.length).toBe(5);
+    const labels = out.buckets.map((b) => b.label);
+    expect(labels).toContain('0–200');
+    expect(labels).toContain('2000+');
+    const bucket150 = out.buckets.find((b) => b.label === '0–200');
+    const bucket2500 = out.buckets.find((b) => b.label === '2000+');
+    expect(bucket150?.count).toBeGreaterThanOrEqual(1);
+    expect(bucket150?.revenue).toBeGreaterThanOrEqual(150);
+    expect(bucket2500?.count).toBeGreaterThanOrEqual(1);
+    expect(bucket2500?.revenue).toBeGreaterThanOrEqual(2500);
 
     await prisma.posOrderItem.deleteMany({ where: { order: { storeId: store.id } } });
     await prisma.posOrderPayment.deleteMany({ where: { order: { storeId: store.id } } });
