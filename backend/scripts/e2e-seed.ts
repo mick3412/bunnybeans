@@ -782,7 +782,14 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     );
 
     if (distinctRefIds.length < 1) {
-      throw new Error('E2E fixture invalid: finance referenceId candidates missing');
+      throw new Error(
+        `E2E fixture invalid: finance referenceId candidates missing referenceIdsExpected=[${[
+          E2E_ORDER_ID,
+          E2E_RN_ID,
+          E2E_EX_SOURCE_ORDER_ID,
+          E2E_EX_DERIVED_ORDER_ID,
+        ].join(',')}] financeRefsCount=${financeRefs.length}`,
+      );
     }
 
     const [posOrders, receivingNotes] = await Promise.all([
@@ -799,7 +806,11 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
     const posSet = new Set(posOrders.map((o) => o.id));
     const rnSet = new Set(receivingNotes.map((n) => n.id));
     if (posSet.size < 1 && rnSet.size < 1) {
-      throw new Error('E2E fixture invalid: no finance referenceId resolvable to posOrder/receivingNote');
+      throw new Error(
+        `E2E fixture invalid: no finance referenceId resolvable to posOrder/receivingNote expectedDistinctRefs=[${distinctRefIds.join(
+          ',',
+        )}] posOrderCount=${posSet.size} receivingNoteCount=${rnSet.size}`,
+      );
     }
 
     // Make `posOrder` referenceId appear before `receivingNote` on `/admin/reports`,
@@ -815,10 +826,16 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
       select: { occurredAt: true },
     });
     if (!latestPos) {
-      throw new Error('E2E fixture invalid: missing latest posOrder finance event');
+      throw new Error(
+        `E2E fixture invalid: missing latest posOrder finance event expectedReferenceIdIn=[${[E2E_ORDER_ID, E2E_EX_SOURCE_ORDER_ID].join(
+          ',',
+        )}]`,
+      );
     }
     if (latestRn && latestPos.occurredAt <= latestRn.occurredAt) {
-      throw new Error('E2E fixture invalid: posOrder finance event must be newer than receivingNote');
+      throw new Error(
+        `E2E fixture invalid: posOrder finance event must be newer than receivingNote referenceId=${E2E_RN_ID} posOccurredAt=${latestPos.occurredAt.toISOString()} receivingNoteOccurredAt=${latestRn.occurredAt.toISOString()}`,
+      );
     }
 
     const reportEventCount = await client.financeEvent.count({ where: { referenceId: E2E_REPORT_SALE_REF } });
@@ -841,21 +858,27 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
       },
     });
     if (shouldRunCount < 1) {
-      throw new Error('E2E dispatch fixture invalid: enabled rule should be runnable');
+      throw new Error(
+        `E2E fixture invalid: dispatch enabled rule not runnable name=${E2E_DISPATCH_RULE_ENABLED_NAME} count=${shouldRunCount} (expected>=1)`,
+      );
     }
 
     const disabledCount = await client.crmCouponDispatchRule.count({
       where: { merchantId: merchant.id, name: E2E_DISPATCH_RULE_DISABLED_NAME, enabled: false },
     });
     if (disabledCount < 1) {
-      throw new Error('E2E dispatch fixture invalid: disabled rule missing');
+      throw new Error(
+        `E2E fixture invalid: dispatch disabled rule missing name=${E2E_DISPATCH_RULE_DISABLED_NAME} count=${disabledCount} (expected>=1)`,
+      );
     }
 
     const futureCount = await client.crmCouponDispatchRule.count({
       where: { merchantId: merchant.id, name: E2E_DISPATCH_RULE_FUTURE_NAME, enabled: true, nextRunAt: { gt: new Date() } },
     });
     if (futureCount < 1) {
-      throw new Error('E2E dispatch fixture invalid: future rule should not be runnable');
+      throw new Error(
+        `E2E fixture invalid: dispatch future rule runnable but should not name=${E2E_DISPATCH_RULE_FUTURE_NAME} count=${futureCount} (expected>=1 but nextRunAt>now)`,
+      );
     }
   }
 
@@ -866,6 +889,26 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
   console.log('Barcode single fixture (q):', E2E_BARCODE_SINGLE);
   if (isFull) {
     console.log('Barcode multi fixture (q):', E2E_BARCODE_MULTI);
+
+    // CI triage: one place to see what deterministic identifiers are expected.
+    console.log(
+      'E2E_SEED_SUMMARY',
+      JSON.stringify({
+        E2E_PROFILE: 'full',
+        replenishmentSaleRef: E2E_REPLENISH_SALE_REF,
+        expiringInventoryBatchCode: E2E_EXPIRING_INVENTORY_BATCH,
+        receivingNoteReceiptNumber: E2E_RN_RECEIPT_NUMBER,
+        financeReportRefs: { sale: E2E_REPORT_SALE_REF, purchase: E2E_REPORT_PUR_REF },
+        dispatchRules: {
+          segment: { id: E2E_DISPATCH_SEGMENT_ID, name: E2E_DISPATCH_SEGMENT_NAME },
+          coupon: { id: E2E_DISPATCH_COUPON_ID, code: E2E_DISPATCH_COUPON_CODE },
+          enabled: { id: E2E_DISPATCH_RULE_ENABLED_ID, name: E2E_DISPATCH_RULE_ENABLED_NAME },
+          disabled: { id: E2E_DISPATCH_RULE_DISABLED_ID, name: E2E_DISPATCH_RULE_DISABLED_NAME },
+          future: { id: E2E_DISPATCH_RULE_FUTURE_ID, name: E2E_DISPATCH_RULE_FUTURE_NAME },
+        },
+      }),
+    );
+
     console.log('Exchange source order id:', E2E_EX_SOURCE_ORDER_ID);
     console.log('Exchange derived order id:', E2E_EX_DERIVED_ORDER_ID);
     console.log('E2E_PROFILE:', 'full');
