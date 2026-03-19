@@ -114,6 +114,10 @@ export const AdminProductsPage: React.FC = () => {
     tags: [] as string[],
   });
   const [searchQ, setSearchQ] = useState('');
+  const [sortBy, setSortBy] = useState<
+    'sku' | 'name' | 'category' | 'brand' | 'listPrice' | 'salePrice' | 'costPrice' | 'stock' | 'expiry'
+  >('sku');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const load = async () => {
     setErr(null);
@@ -212,6 +216,54 @@ export const AdminProductsPage: React.FC = () => {
       return sku.includes(q) || name.includes(q);
     });
   }, [products, searchQ]);
+  const sortedProducts = useMemo(() => {
+    const rows = [...filteredProducts];
+    const num = (v: unknown) => (typeof v === 'number' ? v : Number(v ?? 0));
+    rows.sort((a, b) => {
+      const av =
+        sortBy === 'sku'
+          ? a.sku
+          : sortBy === 'name'
+            ? a.name
+            : sortBy === 'category'
+              ? categoryName(a.categoryId)
+              : sortBy === 'brand'
+                ? brandName(a.brandId)
+                : sortBy === 'listPrice'
+                  ? num(a.listPrice)
+                  : sortBy === 'salePrice'
+                    ? num(a.salePrice)
+                    : sortBy === 'costPrice'
+                      ? num(a.costPrice)
+                      : sortBy === 'stock'
+                        ? stockByProduct[a.id] ?? 0
+                        : a.expiryDescription ?? '';
+      const bv =
+        sortBy === 'sku'
+          ? b.sku
+          : sortBy === 'name'
+            ? b.name
+            : sortBy === 'category'
+              ? categoryName(b.categoryId)
+              : sortBy === 'brand'
+                ? brandName(b.brandId)
+                : sortBy === 'listPrice'
+                  ? num(b.listPrice)
+                  : sortBy === 'salePrice'
+                    ? num(b.salePrice)
+                    : sortBy === 'costPrice'
+                      ? num(b.costPrice)
+                      : sortBy === 'stock'
+                        ? stockByProduct[b.id] ?? 0
+                        : b.expiryDescription ?? '';
+      const delta =
+        typeof av === 'number' && typeof bv === 'number'
+          ? av - bv
+          : String(av ?? '').localeCompare(String(bv ?? ''), 'zh-Hant');
+      return sortDir === 'asc' ? delta : -delta;
+    });
+    return rows;
+  }, [brandName, categoryName, filteredProducts, sortBy, sortDir, stockByProduct]);
 
   const allFilteredIds = useMemo(() => filteredProducts.map((p) => p.id), [filteredProducts]);
   const selectedCount = selectedIds.size;
@@ -578,11 +630,39 @@ export const AdminProductsPage: React.FC = () => {
                       key={key}
                       className={[
                         'relative px-3 py-2 select-none',
+                        key === 'sku' ? 'sticky z-[1] bg-[#f8fafc]' : '',
+                        key === 'name' ? 'sticky z-[1] bg-[#f8fafc]' : '',
                         key === 'listPrice' || key === 'salePrice' || key === 'costPrice' ? 'text-right' : '',
                       ].join(' ')}
-                      style={{ width: colW[key] }}
+                      style={{
+                        width: colW[key],
+                        left: key === 'sku' ? 44 : key === 'name' ? 44 + colW.sku : undefined,
+                      }}
                     >
-                      <span className="block truncate pr-2">{label}</span>
+                      <button
+                        type="button"
+                        className="flex max-w-full items-center gap-1 truncate pr-2 text-left"
+                        onClick={() => {
+                          const next = key as
+                            | 'sku'
+                            | 'name'
+                            | 'category'
+                            | 'brand'
+                            | 'listPrice'
+                            | 'salePrice'
+                            | 'costPrice';
+                          if (sortBy === next) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                          else {
+                            setSortBy(next);
+                            setSortDir('asc');
+                          }
+                        }}
+                      >
+                        <span className="truncate">{label}</span>
+                        <span className="text-[10px] text-muted">
+                          {sortBy === key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+                        </span>
+                      </button>
                       <button
                         type="button"
                         tabIndex={-1}
@@ -597,7 +677,22 @@ export const AdminProductsPage: React.FC = () => {
                     style={{ width: colW.stock }}
                   >
                     <div className="flex flex-col items-end gap-1 pr-2">
-                      <span>總庫存</span>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1"
+                        onClick={() => {
+                          if (sortBy === 'stock') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                          else {
+                            setSortBy('stock');
+                            setSortDir('asc');
+                          }
+                        }}
+                      >
+                        <span>總庫存</span>
+                        <span className="text-[10px] text-muted">
+                          {sortBy === 'stock' ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+                        </span>
+                      </button>
                       <button
                         type="button"
                         className="text-[10px] font-normal text-[#0ea5e9] hover:underline"
@@ -628,7 +723,22 @@ export const AdminProductsPage: React.FC = () => {
                       </th>
                     ))}
                   <th className="relative px-3 py-2 select-none" style={{ width: colW.expiry }}>
-                    <span className="block truncate pr-2">效期</span>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 pr-2"
+                      onClick={() => {
+                        if (sortBy === 'expiry') setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                        else {
+                          setSortBy('expiry');
+                          setSortDir('asc');
+                        }
+                      }}
+                    >
+                      <span className="truncate">效期</span>
+                      <span className="text-[10px] text-muted">
+                        {sortBy === 'expiry' ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+                      </span>
+                    </button>
                     <button
                       type="button"
                       tabIndex={-1}
@@ -677,7 +787,7 @@ export const AdminProductsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((p) => (
+                {sortedProducts.map((p) => (
                   <tr key={p.id} className="group border-t border-slate-100 hover:bg-[#f8fafc]">
                     <td className="sticky left-0 z-[1] bg-white px-3 py-2 group-hover:bg-[#f8fafc]">
                       <input
@@ -695,11 +805,16 @@ export const AdminProductsPage: React.FC = () => {
                         }}
                       />
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs truncate" title={p.sku}>
+                    <td
+                      className="sticky z-[1] bg-white px-3 py-2 font-mono text-xs truncate group-hover:bg-[#f8fafc]"
+                      style={{ left: 44 }}
+                      title={p.sku}
+                    >
                       {p.sku}
                     </td>
                     <td
-                      className="px-3 py-2 truncate"
+                      className="sticky z-[1] bg-white px-3 py-2 truncate group-hover:bg-[#f8fafc]"
+                      style={{ left: 44 + colW.sku }}
                       title={p.name + (p.description ? ` — ${p.description}` : '')}
                     >
                       {p.name}
