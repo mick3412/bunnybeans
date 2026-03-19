@@ -367,15 +367,9 @@ export const AdminProductsPage: React.FC = () => {
         <p className="max-w-xl text-sm text-[#64748b]">
           與 POS 共用主檔 API；庫存唯讀。
         </p>
-        <div
-          className="rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 shadow-sm"
-          data-testid="e2e-admin-products-import"
-        >
-          <div className="text-xs font-semibold text-muted">商品 CSV 匯入</div>
-          <p className="mt-0.5 text-[11px] text-[#64748b]">
-            表頭須含 <code className="rounded bg-[#f1f5f9] px-0.5">sku</code>。
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-4">
+        <details className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-1.5" data-testid="e2e-admin-products-import">
+          <summary className="cursor-pointer text-xs font-medium text-muted hover:text-content">CSV 匯入</summary>
+          <div className="mt-2 flex flex-wrap items-center gap-3 pb-1">
             <span className="flex items-center gap-2">
               <span className="text-[11px] text-[#64748b]">一般</span>
               <input
@@ -457,27 +451,27 @@ export const AdminProductsPage: React.FC = () => {
               {jobSubmitting && <span className="text-[11px] text-[#64748b]">建立 job…</span>}
             </span>
           </div>
-          {importResult && (
-            <div className="mt-1.5 border-t border-slate-100 pt-1.5 text-[11px]">
-              <span className="font-medium text-emerald-700">成功 {importResult.ok} 筆</span>
-              {importResult.failed.length > 0 && (
+          {(importResult || jobId) && (
+            <div className="mt-1.5 border-t border-slate-200 pt-1.5 text-[11px]">
+              {importResult && (
+                <span className="font-medium text-emerald-700">成功 {importResult.ok} 筆</span>
+              )}
+              {importResult?.failed && importResult.failed.length > 0 && (
                 <details className="mt-1">
                   <summary className="cursor-pointer text-red-700">失敗 {importResult.failed.length} 列</summary>
-                  <ul className="mt-1 max-h-24 list-inside list-disc overflow-y-auto rounded border border-red-100 bg-red-50/80 p-1.5 text-red-900">
-                    {importResult.failed.slice(0, 50).map((x) => (
+                  <ul className="mt-1 max-h-20 list-inside list-disc overflow-y-auto rounded border border-red-100 bg-red-50/80 p-1.5 text-red-900">
+                    {importResult.failed.slice(0, 20).map((x) => (
                       <li key={`${x.row}-${x.reason}`}>第 {x.row} 列：{x.reason}</li>
                     ))}
-                    {importResult.failed.length > 50 && <li>…其餘 {importResult.failed.length - 50} 列</li>}
+                    {importResult.failed.length > 20 && <li>…其餘 {importResult.failed.length - 20} 列</li>}
                   </ul>
                 </details>
               )}
-            </div>
-          )}
-          {jobId && (
-            <div className="mt-1.5 border-t border-slate-100 pt-1.5 text-[11px] text-[#64748b]">
-              大檔 job: <code className="rounded bg-[#f1f5f9] px-0.5">{jobId.slice(0, 8)}…</code> {jobStatus}
-              {jobResult && (
-                <span className="ml-1.5">ok {jobResult.ok ?? 0} failed {jobResult.failed?.length ?? 0}</span>
+              {jobId && (
+                <span className="ml-2 text-[#64748b]">
+                  大檔 job: <code className="rounded bg-white px-0.5">{jobId.slice(0, 8)}…</code> {jobStatus}
+                  {jobResult && <span className="ml-1">ok {jobResult.ok ?? 0} failed {jobResult.failed?.length ?? 0}</span>}
+                </span>
               )}
             </div>
           )}
@@ -486,7 +480,7 @@ export const AdminProductsPage: React.FC = () => {
               非同步失敗：{jobError}
             </div>
           )}
-        </div>
+        </details>
       </div>
       {err && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -555,7 +549,7 @@ export const AdminProductsPage: React.FC = () => {
               </colgroup>
               <thead className="border-b border-[#e2e8f0] bg-[#f8fafc] text-muted">
                 <tr>
-                  <th className="px-3 py-2">
+                  <th className="sticky left-0 z-[1] bg-[#f8fafc] px-3 py-2">
                     <input
                       type="checkbox"
                       checked={allSelected}
@@ -653,7 +647,7 @@ export const AdminProductsPage: React.FC = () => {
                       key={key}
                       className={[
                         'relative px-3 py-2 select-none',
-                        key === 'actions' ? 'text-right' : '',
+                        key === 'actions' ? 'sticky right-0 z-[1] bg-[#f8fafc] text-right' : '',
                       ].join(' ')}
                       style={{ width: colW[key] }}
                     >
@@ -684,8 +678,8 @@ export const AdminProductsPage: React.FC = () => {
               </thead>
               <tbody>
                 {filteredProducts.map((p) => (
-                  <tr key={p.id} className="border-t border-slate-100">
-                    <td className="px-3 py-2">
+                  <tr key={p.id} className="group border-t border-slate-100 hover:bg-[#f8fafc]">
+                    <td className="sticky left-0 z-[1] bg-white px-3 py-2 group-hover:bg-[#f8fafc]">
                       <input
                         type="checkbox"
                         checked={selectedIds.has(p.id)}
@@ -763,7 +757,7 @@ export const AdminProductsPage: React.FC = () => {
                         <span className="text-muted">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-right">
+                    <td className="sticky right-0 z-[1] bg-white px-3 py-2 whitespace-nowrap text-right group-hover:bg-[#f8fafc]">
                       <button
                         type="button"
                         className="mr-2 text-[#0ea5e9] text-xs font-medium hover:underline"
