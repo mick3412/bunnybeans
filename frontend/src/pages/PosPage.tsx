@@ -516,16 +516,34 @@ export const PosPage: React.FC = () => {
                 {productsForGrid
                   .filter((p) => activeFavoriteIds.includes(p.id))
                   .map((p) => (
-                    <button
+                    <div
                       key={p.id}
-                      type="button"
-                      data-testid={`pos-favorite-${p.id}`}
-                      onClick={() => addProduct(p as PosProduct)}
-                      className="rounded-lg border border-brand-surface bg-table-head px-2 py-1.5 text-left text-xs hover:border-brand-primary/50 hover:bg-sky-50"
+                      className="relative inline-flex items-center gap-1 rounded-lg border border-brand-surface bg-table-head px-2 py-1.5 text-left text-xs hover:border-brand-primary/50 hover:bg-sky-50"
                     >
-                      <span className="font-medium text-content">{p.name}</span>
-                      <span className="ml-1 text-sky-700">${p.price}</span>
-                    </button>
+                      <button
+                        type="button"
+                        data-testid={`pos-favorite-${p.id}`}
+                        onClick={() => addProduct(p as PosProduct)}
+                        className="flex-1 text-left"
+                      >
+                        <span className="font-medium text-content">{p.name}</span>
+                        <span className="ml-1 text-sky-700">${p.price}</span>
+                      </button>
+                      {favoriteEditMode && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFavoriteDraftIds((prev) => prev.filter((id) => id !== p.id));
+                          }}
+                          className="shrink-0 rounded px-1 py-0.5 text-red-600 hover:bg-red-50"
+                          title="移除常用"
+                          aria-label="移除常用"
+                        >
+                          －
+                        </button>
+                      )}
+                    </div>
                   ))}
               </div>
             </div>
