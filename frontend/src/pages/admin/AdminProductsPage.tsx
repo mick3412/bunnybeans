@@ -30,14 +30,17 @@ import { useAdminToast } from './AdminToastContext';
 import { pollImportJob } from '../../shared/utils/pollImportJob';
 import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/adminKey';
 
-const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v2';
+const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v3';
 const PRODUCTS_TABLE_COL_DEFAULTS = {
   sku: 120,
   name: 180,
   category: 100,
   brand: 100,
+  listPrice: 80,
   salePrice: 80,
+  costPrice: 80,
   stock: 104,
+  expiry: 120,
   spec: 120,
   actions: 120,
 } as const;
@@ -63,6 +66,8 @@ export const AdminProductsPage: React.FC = () => {
   const [warehousesOrdered, setWarehousesOrdered] = useState<{ id: string; name: string }[]>([]);
   /** false = 僅總庫存；true = 總庫存 + 各倉欄 */
   const [showWhDetail, setShowWhDetail] = useState(false);
+  /** false = 收合；true = 展開顯示尺寸/容量/重量/款式 */
+  const [showSpecDetail, setShowSpecDetail] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [brands, setBrands] = useState<{ id: string; name: string }[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -328,9 +333,12 @@ export const AdminProductsPage: React.FC = () => {
     colW.name +
     colW.category +
     colW.brand +
+    colW.listPrice +
     colW.salePrice +
+    colW.costPrice +
     colW.stock +
     whColsSum +
+    colW.expiry +
     colW.spec +
     colW.actions;
 
@@ -340,7 +348,7 @@ export const AdminProductsPage: React.FC = () => {
     id ? brands.find((b) => b.id === id)?.name ?? '—' : '—';
 
   const onDelete = async (id: string) => {
-    if (!confirm('確定刪除此商品？（若有庫存事件請先確認）')) return;
+    if (!confirm('確定刪除此商品？（若有庫存事件請確認）')) return;
     const out = await deleteProduct(id);
     if ('statusCode' in out) {
       const msg = getErrorMessage(out as ApiError);
@@ -357,7 +365,7 @@ export const AdminProductsPage: React.FC = () => {
     <div className="mx-auto min-w-0 max-w-6xl rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <p className="max-w-xl text-sm text-[#64748b]">
-          與 POS 共用主檔 API；庫存唯讀。預設僅總庫存；可展開各倉現量。新增請用右側表單「改為新增」或清空表單。
+          與 POS 共用主檔 API；庫存唯讀。
         </p>
         <div
           className="rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 shadow-sm"
@@ -365,8 +373,7 @@ export const AdminProductsPage: React.FC = () => {
         >
           <div className="text-xs font-semibold text-muted">商品 CSV 匯入</div>
           <p className="mt-0.5 text-[11px] text-[#64748b]">
-            表頭須含 <code className="rounded bg-[#f1f5f9] px-0.5">sku</code>；需{' '}
-            <code className="rounded bg-[#f1f5f9] px-0.5">VITE_ADMIN_API_KEY</code>。一般用同步、大檔用非同步。
+            表頭須含 <code className="rounded bg-[#f1f5f9] px-0.5">sku</code>。
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-4">
             <span className="flex items-center gap-2">
@@ -385,10 +392,7 @@ export const AdminProductsPage: React.FC = () => {
                   const out = await importProductsCsv(f);
                   setImportSubmitting(false);
                   if ('statusCode' in out) {
-                    const msg =
-                      out.statusCode === 401
-                        ? '需設定 VITE_ADMIN_API_KEY（與後端 ADMIN_API_KEY 相同）'
-                        : getErrorMessage(out);
+                    const msg = getErrorMessage(out);
                     setErr(msg);
                     showToast(msg, 'err');
                     return;
@@ -537,12 +541,15 @@ export const AdminProductsPage: React.FC = () => {
                 <col style={{ width: colW.name }} />
                 <col style={{ width: colW.category }} />
                 <col style={{ width: colW.brand }} />
+                <col style={{ width: colW.listPrice }} />
                 <col style={{ width: colW.salePrice }} />
+                <col style={{ width: colW.costPrice }} />
                 <col style={{ width: colW.stock }} />
                 {showWhDetail &&
                   warehousesOrdered.map((w, i) => (
                     <col key={w.id} style={{ width: whColWidths[i] }} />
                   ))}
+                <col style={{ width: colW.expiry }} />
                 <col style={{ width: colW.spec }} />
                 <col style={{ width: colW.actions }} />
               </colgroup>
@@ -568,12 +575,17 @@ export const AdminProductsPage: React.FC = () => {
                       ['name', '名稱'],
                       ['category', '類別'],
                       ['brand', '品牌'],
+                      ['listPrice', '定價'],
                       ['salePrice', '售價'],
+                      ['costPrice', '成本'],
                     ] as const
                   ).map(([key, label]) => (
                     <th
                       key={key}
-                      className="relative px-3 py-2 select-none"
+                      className={[
+                        'relative px-3 py-2 select-none',
+                        key === 'listPrice' || key === 'salePrice' || key === 'costPrice' ? 'text-right' : '',
+                      ].join(' ')}
                       style={{ width: colW[key] }}
                     >
                       <span className="block truncate pr-2">{label}</span>
@@ -621,6 +633,16 @@ export const AdminProductsPage: React.FC = () => {
                         </span>
                       </th>
                     ))}
+                  <th className="relative px-3 py-2 select-none" style={{ width: colW.expiry }}>
+                    <span className="block truncate pr-2">效期</span>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      aria-label="調整「效期」欄寬（拖曳後會記住）"
+                      className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-[#0ea5e9]/15 active:bg-[#0ea5e9]/25"
+                      onMouseDown={(e) => onResizeStart('expiry', e)}
+                    />
+                  </th>
                   {(
                     [
                       ['spec', '規格'],
@@ -629,10 +651,26 @@ export const AdminProductsPage: React.FC = () => {
                   ).map(([key, label]) => (
                     <th
                       key={key}
-                      className="relative px-3 py-2 select-none"
+                      className={[
+                        'relative px-3 py-2 select-none',
+                        key === 'actions' ? 'text-right' : '',
+                      ].join(' ')}
                       style={{ width: colW[key] }}
                     >
-                      <span className="block truncate pr-2">{label}</span>
+                      {key === 'spec' ? (
+                        <div className="flex flex-col items-start gap-1 pr-2">
+                          <span>規格</span>
+                          <button
+                            type="button"
+                            className="text-[10px] font-normal text-[#0ea5e9] hover:underline"
+                            onClick={() => setShowSpecDetail((v) => !v)}
+                          >
+                            {showSpecDetail ? '收合規格' : '展開規格'}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="block truncate pr-2">{label}</span>
+                      )}
                       <button
                         type="button"
                         tabIndex={-1}
@@ -678,7 +716,9 @@ export const AdminProductsPage: React.FC = () => {
                     <td className="px-3 py-2 truncate text-xs text-muted" title={brandName(p.brandId)}>
                       {brandName(p.brandId)}
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs">{p.salePrice ?? '0'}</td>
+                    <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">{p.listPrice ?? '0'}</td>
+                    <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">{p.salePrice ?? '0'}</td>
+                    <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">{p.costPrice ?? '—'}</td>
                     <td
                       className="px-3 py-2 text-right font-mono text-xs"
                       title="全倉加總"
@@ -696,12 +736,34 @@ export const AdminProductsPage: React.FC = () => {
                           {stockByProductWarehouse[p.id]?.[w.id] ?? 0}
                         </td>
                       ))}
-                    <td className="px-3 py-2 text-xs text-[#64748b] truncate">
-                      {[p.specSize, p.specCapacity, p.specWeight, p.specStyle, p.expiryDescription]
-                        .filter(Boolean)
-                        .join(' / ') || '—'}
+                    <td className="px-3 py-2 text-xs text-muted truncate" title={p.expiryDescription ?? undefined}>
+                      {p.expiryDescription?.trim() || '—'}
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-3 py-2 text-xs text-muted">
+                      {showSpecDetail ? (
+                        <div className="space-y-0.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] text-muted">尺寸</span>
+                            <span className="font-mono text-xs text-content">{p.specSize?.trim() || '—'}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] text-muted">容量</span>
+                            <span className="font-mono text-xs text-content">{p.specCapacity?.trim() || '—'}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] text-muted">重量</span>
+                            <span className="font-mono text-xs text-content">{p.specWeight?.trim() || '—'}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] text-muted">款式</span>
+                            <span className="font-mono text-xs text-content">{p.specStyle?.trim() || '—'}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap text-right">
                       <button
                         type="button"
                         className="mr-2 text-[#0ea5e9] text-xs font-medium hover:underline"
@@ -912,31 +974,31 @@ export const AdminProductsPage: React.FC = () => {
                       label="尺寸 (specSize)"
                       value={form.specSize}
                       onChange={(e) => setForm((f) => ({ ...f, specSize: e.target.value }))}
-                      placeholder="例如：S / M / L 或 30x40cm"
+                      placeholder=""
                     />
                     <TextInput
                       label="容量 (specCapacity)"
                       value={form.specCapacity}
                       onChange={(e) => setForm((f) => ({ ...f, specCapacity: e.target.value }))}
-                      placeholder="例如：500ml / 10kg"
+                      placeholder=""
                     />
                     <TextInput
                       label="重量 (specWeight)"
                       value={form.specWeight}
                       onChange={(e) => setForm((f) => ({ ...f, specWeight: e.target.value }))}
-                      placeholder="含單位自填，例如：500g 或 0.5kg"
+                      placeholder=""
                     />
                     <TextInput
                       label="款式 (specStyle)"
                       value={form.specStyle}
                       onChange={(e) => setForm((f) => ({ ...f, specStyle: e.target.value }))}
-                      placeholder="例如：紅色／無香味"
+                      placeholder=""
                     />
                     <TextInput
                       label="保存說明（非效期日）(expiryDescription)"
                       value={form.expiryDescription}
                       onChange={(e) => setForm((f) => ({ ...f, expiryDescription: e.target.value }))}
-                      placeholder="例如：常溫 12 個月；實際效期日請在入庫批次填日期"
+                      placeholder=""
                     />
                   </div>
                     {editing && (

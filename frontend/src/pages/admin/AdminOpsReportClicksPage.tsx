@@ -20,6 +20,25 @@ const KIND_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'unknown', label: '未知' },
 ];
 
+function resolvedKindLabel(k: string | null | undefined): string {
+  const v = (k ?? '').trim();
+  if (!v) return '—';
+  if (v === 'posOrder') return 'POS 訂單';
+  if (v === 'receivingNote') return '進貨驗收';
+  if (v === 'unknown') return '未知';
+  return v;
+}
+
+function resultCodeLabel(code: string | null | undefined): string {
+  const c = String(code ?? '').trim().toUpperCase();
+  if (!c) return '—';
+  if (c === 'NAVIGATED') return '已導向';
+  if (c === 'NOT_FOUND') return '查無資料';
+  if (c === 'MULTI_MATCH') return '多筆符合';
+  if (c === 'PERMISSION') return '權限不足';
+  return c;
+}
+
 export const AdminOpsReportClicksPage: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useScopedSearchParams('ops.reportClicks');
@@ -332,7 +351,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
                 setPage(1);
               }}
               className="w-48 rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-              placeholder="例如：admin.reports"
+              placeholder=""
             />
           </div>
           <div>
@@ -400,7 +419,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
                 setPage(1);
               }}
               className="w-44 rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm font-mono focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-              placeholder="例：NOT_FOUND"
+              placeholder="例如：NOT_FOUND"
             />
           </div>
           <div>
@@ -458,7 +477,7 @@ export const AdminOpsReportClicksPage: React.FC = () => {
       error={err}
       empty={!loading && !err && items.length === 0}
       emptyMessage="沒有點擊審計紀錄"
-      emptyDescription="請先設定篩選條件，或確認後端已寫入 click-audit。"
+      emptyDescription=""
       testId="e2e-admin-ops-report-clicks"
     >
       {summaryCards ? <div className="mb-4">{summaryCards}</div> : null}
@@ -497,8 +516,16 @@ export const AdminOpsReportClicksPage: React.FC = () => {
                       returnTo={returnTo}
                     />
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs text-muted">{(r.resultCode as string | null | undefined) ?? '—'}</td>
-                  <td className="px-3 py-2 text-muted">{r.resolvedKind}</td>
+                  <td className="px-3 py-2 text-xs text-content" title={(r.resultCode as string | null | undefined) ?? undefined}>
+                    <div className="font-semibold">{resultCodeLabel(r.resultCode as string | null | undefined)}</div>
+                    {(r.resultCode as string | null | undefined) ? (
+                      <div className="font-mono text-[11px] text-muted">{String(r.resultCode)}</div>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2 text-content" title={r.resolvedKind}>
+                    <div className="font-semibold">{resolvedKindLabel(r.resolvedKind)}</div>
+                    {r.resolvedKind ? <div className="font-mono text-[11px] text-muted">{r.resolvedKind}</div> : null}
+                  </td>
                   <td className="px-3 py-2 text-center">
                     <span
                       className={[
@@ -515,16 +542,22 @@ export const AdminOpsReportClicksPage: React.FC = () => {
                       if (code === 'MULTI_MATCH') {
                         return (
                           <span>
-                            建議：確認條碼資料是否不唯一；POS/庫存掃碼會要求選擇（可用 `E2E-BC-MULTI` 驗證）。
+                            條碼資料不唯一（多筆符合）。
                           </span>
                         );
                       }
                       if (code === 'NOT_FOUND') {
                         return (
                           <span>
-                            建議：補齊 fixture 或確認輸入值；可先跑 `pnpm db:seed` → `pnpm --filter pos-erp-backend e2e:seed`。
+                            查無對應資料。
                           </span>
                         );
+                      }
+                      if (code === 'PERMISSION') {
+                        return <span>權限不足（可能缺 Admin 金鑰）。</span>;
+                      }
+                      if (code === 'NAVIGATED') {
+                        return <span>已導向。</span>;
                       }
                       return <span>—</span>;
                     })()}
