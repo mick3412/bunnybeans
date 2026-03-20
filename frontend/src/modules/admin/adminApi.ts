@@ -1679,7 +1679,7 @@ export async function getFinanceEvents(params?: {
 /** GET /finance/summary — 依 type、partyId、day、week 彙總區間內金額 */
 export type FinanceSummaryByType = { byType: Record<string, number> };
 export type FinanceSummaryByPartyId = {
-  byParty: Array<{ partyId: string; amountsByType: Record<string, number> }>;
+  byParty: Array<{ partyId: string; amountsByType: Record<string, number>; displayName?: string }>;
 };
 /** groupBy=day|week 時後端回傳 */
 export type FinanceSummaryTrend = {

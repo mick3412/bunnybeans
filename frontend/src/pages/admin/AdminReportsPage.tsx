@@ -19,7 +19,10 @@ import { PartyViewSegmented } from '../../shared/components/PartyViewSegmented';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import { FINANCE_EVENT_TYPE_LABELS, getFinanceEventTypeLabel } from '../../shared/utils/financeEventTypeLabels';
-import { getPartyKindFromId } from '../../shared/utils/partyDisplay';
+import { formatPartyDisplay, getPartyKindFromId } from '../../shared/utils/partyDisplay';
+import { listLoyaltyCustomers } from '../../modules/admin/loyaltyApi';
+import { listSuppliers } from '../../modules/admin/purchaseApi';
+import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 
 function toYmd(d: Date): string {
   const y = d.getFullYear();
@@ -35,7 +38,9 @@ const FINANCE_TYPE_OPTIONS: { value: string; label: string }[] = [
 
 export const AdminReportsPage: React.FC = () => {
   const location = useLocation();
+  const merchantId = useDefaultMerchantId();
   const [searchParams, setSearchParams] = useScopedSearchParams('finance.reports');
+  const [partyNames, setPartyNames] = useState<Record<string, string>>({});
   const presetFromUrl = (searchParams.get('preset') as 'last30d' | 'all' | 'custom' | null) ?? 'last30d';
   const fromFromUrl = searchParams.get('from') ?? '';
   const toFromUrl = searchParams.get('to') ?? '';
@@ -70,6 +75,37 @@ export const AdminReportsPage: React.FC = () => {
   const [prevDailyTrend, setPrevDailyTrend] = useState<{ date: string; receivable: number; payment: number }[]>([]);
   const [financeTrend, setFinanceTrend] = useState<FinanceSummaryTrend | null>(null);
   const [financeTrendGroupBy, setFinanceTrendGroupBy] = useState<'day' | 'week'>('day');
+
+  useEffect(() => {
+    if (!merchantId) return;
+    let cancelled = false;
+    (async () => {
+      const names: Record<string, string> = {};
+      const [custRes, supRes] = await Promise.all([
+        listLoyaltyCustomers(merchantId),
+        listSuppliers(merchantId),
+      ]);
+      if (cancelled) return;
+      if (Array.isArray(custRes)) {
+        custRes.forEach((c) => {
+          const label = c.name ?? c.phone ?? c.id;
+          names[c.id] = label;
+          names[`CUSTOMER:${c.id}`] = label;
+          names[`customer:${c.id}`] = label;
+        });
+      }
+      if (supRes?.data) {
+        supRes.data.forEach((s) => {
+          const label = s.name ?? s.code ?? s.id;
+          names[s.id] = label;
+          names[`SUPPLIER:${s.id}`] = label;
+          names[`supplier:${s.id}`] = label;
+        });
+      }
+      setPartyNames(names);
+    })();
+    return () => { cancelled = true; };
+  }, [merchantId]);
 
   const partyGroupPrefix = useMemo(() => {
     if (partyView === 'customer') return 'customer:';
@@ -564,7 +600,7 @@ export const AdminReportsPage: React.FC = () => {
                 {summaryByParty.byParty.slice(0, 10).map((p) => {
                   const kind = getPartyKindFromId(p.partyId);
                   const view = kind === 'customer' ? 'customer' : kind === 'supplier' ? 'supplier' : 'other';
-                  const shortId = p.partyId.length > 20 ? p.partyId.slice(0, 12) + '…' : p.partyId;
+                  const display = formatPartyDisplay(p.displayName, kind || undefined, p.partyId, partyNames);
                   return (
                     <Link
                       key={p.partyId}
@@ -573,7 +609,7 @@ export const AdminReportsPage: React.FC = () => {
                       title={p.partyId}
                       data-testid="e2e-reports-party-drilldown"
                     >
-                      {shortId}
+                      {display}
                     </Link>
                   );
                 })}
@@ -581,8 +617,9 @@ export const AdminReportsPage: React.FC = () => {
               <MiniBarChart
                 items={summaryByParty.byParty.map((p) => {
                   const total = Object.values(p.amountsByType ?? {}).reduce((s, v) => s + v, 0);
-                  const shortId = p.partyId.length > 12 ? p.partyId.slice(0, 8) + '…' : p.partyId;
-                  return { label: shortId, value: total };
+                  const kind = getPartyKindFromId(p.partyId);
+                  const label = formatPartyDisplay(p.displayName, kind || undefined, p.partyId, partyNames);
+                  return { label, value: total };
                 })}
                 formatValue={(n) => n.toLocaleString()}
               />
