@@ -274,7 +274,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
               className={`rounded-xl border px-3 py-1.5 text-sm font-medium ${
                 enabledFilter === f.key
                   ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
-                  : 'border-brand-surface bg-white text-[#64748b] hover:border-[#cbd5e1]'
+                  : 'border-brand-surface bg-white text-muted hover:border-brand-surface'
               }`}
               onClick={() => setEnabledFilter(f.key)}
             >
@@ -296,7 +296,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
       <div className="overflow-hidden rounded-xl border border-brand-surface">
         <div className="table-sticky-head overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-brand-surface bg-table-head text-[#64748b]">
+            <thead className="border-b border-brand-surface bg-table-head text-muted">
               <tr>
                 <th className="px-4 py-2 font-semibold">名稱</th>
                 <th className="px-4 py-2 font-semibold">分群</th>
@@ -311,14 +311,14 @@ export const AdminDispatchRulesPage: React.FC = () => {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-[#64748b]">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
                     載入中…
                   </td>
                 </tr>
               )}
               {!loading && rules.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-[#64748b]">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted">
                     尚無發券規則，請新增
                   </td>
                 </tr>
@@ -337,16 +337,16 @@ export const AdminDispatchRulesPage: React.FC = () => {
                     <td className="px-4 py-2">
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          row.enabled ? 'bg-brand-success/12 text-brand-success ring-1 ring-brand-success/20' : 'bg-brand-canvas text-[#64748b] ring-1 ring-brand-surface'
+                          row.enabled ? 'bg-brand-success/12 text-brand-success ring-1 ring-brand-success/20' : 'bg-brand-canvas text-muted ring-1 ring-brand-surface'
                         }`}
                       >
                         {row.enabled ? '啟用' : '停用'}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-[#64748b]">
+                    <td className="px-4 py-2 text-muted">
                       {row.nextRunAt ? new Date(row.nextRunAt).toLocaleString('zh-TW') : '—'}
                     </td>
-                    <td className="px-4 py-2 text-[#64748b]">
+                    <td className="px-4 py-2 text-muted">
                       <div className="flex min-w-[240px] flex-col gap-0.5">
                         <span className="tabular-nums" data-testid="e2e-dispatch-rules-lastRunAt">
                           {row.lastRunAt ? new Date(row.lastRunAt).toLocaleString('zh-TW') : '—'}
@@ -423,7 +423,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#64748b]">名稱 *</label>
+                <label className="mb-1 block text-xs font-medium text-muted">名稱 *</label>
                 <input
                   type="text"
                   className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"
@@ -433,7 +433,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#64748b]">分群 *</label>
+                <label className="mb-1 block text-xs font-medium text-muted">分群 *</label>
                 <select
                   className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"
                   value={formSegmentId}
@@ -447,7 +447,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#64748b]">優惠券 *</label>
+                <label className="mb-1 block text-xs font-medium text-muted">優惠券 *</label>
                 <select
                   className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"
                   value={formCouponId}
@@ -473,7 +473,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 </label>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#64748b]">排程類型 *</label>
+                <label className="mb-1 block text-xs font-medium text-muted">排程類型 *</label>
                 <select
                   className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"
                   value={formScheduleType}
@@ -487,7 +487,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#64748b]">Cron 表達式（選填）</label>
+                <label className="mb-1 block text-xs font-medium text-muted">Cron 表達式（選填）</label>
                 <input
                   type="text"
                   className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm font-mono"
@@ -497,7 +497,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-[#64748b]">下次執行時間（選填）</label>
+                <label className="mb-1 block text-xs font-medium text-muted">下次執行時間（選填）</label>
                 <input
                   type="datetime-local"
                   className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm"

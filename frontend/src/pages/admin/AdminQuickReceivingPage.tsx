@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { TextInput } from '../../shared/components/TextInput';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { useAdminToast } from './AdminToastContext';
 import { getProducts, getWarehouses, type ProductFullDto, type WarehouseDto } from '../../modules/admin/adminApi';
 import { createPurchaseOrder, listSuppliers, type ApiError as PurchaseApiError } from '../../modules/admin/purchaseApi';
+import type { ApiError } from '../../modules/admin/adminApi';
+import { getErrorMessage } from '../../shared/errors/errorMessages';
 
 type LineDraft = { productId: string; qty: number; unitCost: number };
 
@@ -18,6 +22,7 @@ export const AdminQuickReceivingPage: React.FC = () => {
   const [warehouses, setWarehouses] = useState<WarehouseDto[]>([]);
   const [products, setProducts] = useState<ProductFullDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
 
   const [supplierId, setSupplierId] = useState('');
   const [warehouseId, setWarehouseId] = useState('');
@@ -29,12 +34,18 @@ export const AdminQuickReceivingPage: React.FC = () => {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      setLoadErr(null);
       const [wh, pr] = await Promise.all([getWarehouses(), getProducts()]);
       if (cancelled) return;
       setLoading(false);
-      setWarehouses(Array.isArray(wh) ? wh : []);
-      if (Array.isArray(wh) && wh[0] && !warehouseId) setWarehouseId(wh[0].id);
-      setProducts(Array.isArray(pr) ? pr : []);
+      const whArr = Array.isArray(wh) ? wh : [];
+      const prArr = Array.isArray(pr) ? pr : [];
+      if (!Array.isArray(wh)) setLoadErr(getErrorMessage(wh as ApiError) || '載入倉庫失敗');
+      else if (!Array.isArray(pr)) setLoadErr(getErrorMessage(pr as ApiError) || '載入商品失敗');
+      else setLoadErr(null);
+      setWarehouses(whArr);
+      if (whArr[0] && !warehouseId) setWarehouseId(whArr[0].id);
+      setProducts(prArr);
     })();
     return () => {
       cancelled = true;
@@ -126,8 +137,21 @@ export const AdminQuickReceivingPage: React.FC = () => {
           <p className="mt-1 text-sm text-muted" aria-hidden="true" />
         </div>
 
+        {loadErr && (
+          <Alert variant="error" className="mb-4">
+            {loadErr}
+          </Alert>
+        )}
         {loading && (
-          <div className="rounded-lg border border-brand-surface bg-table-head px-3 py-3 text-sm text-muted">載入資料中…</div>
+          <div className="mb-4 rounded-lg border border-brand-surface bg-table-head px-3 py-3 text-sm text-muted">載入資料中…</div>
+        )}
+        {!loading && !loadErr && (products.length === 0 || warehouses.length === 0) && (
+          <div className="mb-4">
+            <EmptyState
+              message={products.length === 0 && warehouses.length === 0 ? '尚無倉庫或商品' : products.length === 0 ? '尚無商品' : '尚無倉庫'}
+              description="請先建立商品主檔與倉庫"
+            />
+          </div>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">

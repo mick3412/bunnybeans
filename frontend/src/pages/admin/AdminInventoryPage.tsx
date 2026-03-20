@@ -321,7 +321,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
 
   return (
     <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-admin-inventory">
-      <p className="mb-4 text-sm text-[#64748b]">
+      <p className="mb-4 text-sm text-muted">
         選擇倉庫後檢視即時庫存與事件歷史（append-only）。
       </p>
 
@@ -382,7 +382,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
         >
           <span className="text-[11px] font-medium text-muted">匯入</span>
           <span className="flex items-center gap-2">
-              <span className="text-[11px] text-[#64748b]">一般</span>
+              <span className="text-[11px] text-muted">一般</span>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -427,10 +427,10 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
                   }
                 }}
               />
-              {importSubmitting && <span className="text-[11px] text-[#64748b]">上傳中…</span>}
+              {importSubmitting && <span className="text-[11px] text-muted">上傳中…</span>}
             </span>
             <span className="flex items-center gap-2">
-              <span className="text-[11px] text-[#64748b]">大檔</span>
+              <span className="text-[11px] text-muted">大檔</span>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -492,7 +492,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
                   });
                 }}
               />
-              {jobSubmitting && <span className="text-[11px] text-[#64748b]">建立 job…</span>}
+              {jobSubmitting && <span className="text-[11px] text-muted">建立 job…</span>}
             </span>
         </div>
       </div>
@@ -514,7 +514,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
             </span>
           )}
           {jobId && (
-            <span className="text-[11px] text-[#64748b]">
+            <span className="text-[11px] text-muted">
               大檔 job: <code className="rounded bg-white px-0.5">{jobId.slice(0, 8)}…</code> {jobStatus}
               {jobResult && (
                 <span className="ml-1.5">ok {jobResult.ok ?? 0} failed {jobResult.failed?.length ?? 0}</span>
@@ -536,7 +536,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               view === 'balances'
                 ? 'bg-[#1e293b] text-white shadow-sm'
-                : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
+                : 'bg-white text-muted shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
             }`}
             onClick={() => setView('balances')}
           >
@@ -547,7 +547,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               view === 'slowMoving'
                 ? 'bg-[#1e293b] text-white shadow-sm'
-                : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
+                : 'bg-white text-muted shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
             }`}
             onClick={() => setView('slowMoving')}
           >
@@ -585,7 +585,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
                       'rounded-full px-3 py-1.5 text-xs font-semibold transition',
                       stocktakeMode === 'list'
                         ? 'bg-[#1e293b] text-white shadow-sm'
-                        : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head',
+                        : 'bg-white text-muted shadow-sm ring-1 ring-brand-surface hover:bg-table-head',
                     ].join(' ')}
                     onClick={() => setStocktakeMode('list')}
                   >
@@ -797,7 +797,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
                             }}
                           />
                         </td>
-                        <td className="px-4 py-2 text-xs text-[#64748b]">
+                        <td className="px-4 py-2 text-xs text-muted">
                           {new Date(row.updatedAt).toLocaleString()}
                         </td>
                       </tr>
@@ -1015,7 +1015,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-brand-surface bg-table-head text-[#64748b]">
+                <thead className="border-b border-brand-surface bg-table-head text-muted">
                   <tr>
                     <th className="px-4 py-2">時間</th>
                     <th className="px-4 py-2">類型</th>
@@ -1038,7 +1038,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
                         </td>
                         <td className="px-4 py-2 font-mono text-xs">{ev.type}</td>
                         <td className="px-4 py-2 text-right tabular-nums">{ev.quantity}</td>
-                        <td className="max-w-xs truncate px-4 py-2 text-xs text-[#64748b]">
+                        <td className="max-w-xs truncate px-4 py-2 text-xs text-muted">
                           {ev.note ?? '—'}
                         </td>
                       </tr>
@@ -1049,7 +1049,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
             </div>
             {events && events.total > pageSize && (
               <div className="flex items-center justify-between border-t border-brand-surface px-4 py-3 text-sm">
-                <span className="text-[#64748b]">
+                <span className="text-muted">
                   共 {events.total} 筆 · 第 {page} / {totalPages} 頁
                 </span>
                 <div className="flex gap-2">
@@ -1173,7 +1173,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-brand-surface bg-table-head text-[#64748b]">
+              <thead className="border-b border-brand-surface bg-table-head text-muted">
                 <tr>
                   <th className="px-4 py-2">SKU</th>
                   <th className="px-4 py-2">品名</th>

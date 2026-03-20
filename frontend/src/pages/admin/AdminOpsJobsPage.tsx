@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import { listOpsJobs, runOpsJob, type ApiError } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { useAdminToast } from './AdminToastContext';
 import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/adminKey';
 
@@ -100,21 +102,21 @@ export const AdminOpsJobsPage: React.FC = () => {
       className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm"
       data-testid="e2e-admin-ops-jobs"
     >
-      <p className="mb-4 text-sm text-[#64748b]">
+      <p className="mb-4 text-sm text-muted">
         營運工作執行紀錄（OpsJobRunLog）：資料來源 <code className="rounded bg-brand-canvas px-1">GET /ops/jobs</code>。
       </p>
       {err && (
-        <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <Alert variant="error" className="mb-4 flex items-center justify-between gap-3">
           <span>{err}</span>
           <Button type="button" variant="secondary" size="sm" onClick={() => void load()}>
             重試
           </Button>
-        </div>
+        </Alert>
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div>
-          <label className="mr-2 text-xs text-[#64748b]">類型</label>
+          <label className="mr-2 text-xs text-muted">類型</label>
           <select
             className="rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             value={kind}
@@ -131,7 +133,7 @@ export const AdminOpsJobsPage: React.FC = () => {
           </select>
         </div>
         <div>
-          <label className="mr-2 text-xs text-[#64748b]">起始日期</label>
+          <label className="mr-2 text-xs text-muted">起始日期</label>
           <input
             type="date"
             className="rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
@@ -143,7 +145,7 @@ export const AdminOpsJobsPage: React.FC = () => {
           />
         </div>
         <div>
-          <label className="mr-2 text-xs text-[#64748b]">截止日期</label>
+          <label className="mr-2 text-xs text-muted">截止日期</label>
           <input
             type="date"
             className="rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
@@ -177,7 +179,7 @@ export const AdminOpsJobsPage: React.FC = () => {
         </Button>
         {!canWrite ? <span className="text-xs text-muted">{ADMIN_KEY_REQUIRED_HINT}</span> : null}
         <div>
-          <label className="mr-2 text-xs text-[#64748b]">每頁</label>
+          <label className="mr-2 text-xs text-muted">每頁</label>
           <select
             className="rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm"
             value={pageSize}
@@ -227,23 +229,20 @@ export const AdminOpsJobsPage: React.FC = () => {
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
           </div>
         ) : items.length === 0 ? (
-          <div className="py-12 text-center text-sm text-[#64748b]">
-            <div className="font-medium text-content">沒有紀錄</div>
-            <div className="mt-1 text-xs text-muted">
-              {from.trim() || to.trim()
-                ? `目前條件：${kindLabel}${from.trim() || to.trim() ? ` · ${from.trim() || '—'} ～ ${to.trim() || '—'}` : ''}`
-                : `目前條件：${kindLabel}`}
-            </div>
-            <div className="mt-3">
-              <Button type="button" variant="secondary" size="sm" onClick={() => void load()}>
-                重試
-              </Button>
-            </div>
+          <div className="py-12">
+            <EmptyState
+              message="沒有紀錄"
+              description={
+                from.trim() || to.trim()
+                  ? `目前條件：${kindLabel}${from.trim() || to.trim() ? ` · ${from.trim() || '—'} ～ ${to.trim() || '—'}` : ''}`
+                  : `目前條件：${kindLabel}`
+              }
+            />
           </div>
         ) : (
           <div className="table-sticky-head overflow-x-auto bg-white">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-[#64748b]">
+              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
                 <tr>
                   <th className="w-[220px] px-3 py-2 text-left">作業類型</th>
                   <th className="w-[220px] px-3 py-2 text-right">最近一次執行</th>
@@ -262,9 +261,9 @@ export const AdminOpsJobsPage: React.FC = () => {
                       lastTriggeredRunLogId === r.id ? 'bg-brand-primary/5' : '',
                     ].join(' ')}
                   >
-                    <td className="px-3 py-2 font-medium text-[#1e293b]">{formatJobTypeLabel(r.jobType)}</td>
+                    <td className="px-3 py-2 font-medium text-content">{formatJobTypeLabel(r.jobType)}</td>
                     <td
-                      className="px-3 py-2 tabular-nums text-right text-[#64748b]"
+                      className="px-3 py-2 tabular-nums text-right text-muted"
                       data-testid="e2e-admin-ops-jobs-lastRunAt"
                     >
                       {r.lastRunAt ? new Date(r.lastRunAt).toLocaleString('zh-TW') : '—'}
@@ -279,13 +278,13 @@ export const AdminOpsJobsPage: React.FC = () => {
                       </span>
                     </td>
                     <td
-                      className="max-w-[360px] truncate px-3 py-2 text-left text-[#64748b]"
+                      className="max-w-[360px] truncate px-3 py-2 text-left text-muted"
                       title={r.message ?? undefined}
                       data-testid="e2e-admin-ops-jobs-message"
                     >
                       {r.message || '—'}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-right text-[#64748b]">
+                    <td className="px-3 py-2 tabular-nums text-right text-muted">
                       {new Date(r.createdAt).toLocaleString('zh-TW')}
                     </td>
                   </tr>
@@ -296,7 +295,7 @@ export const AdminOpsJobsPage: React.FC = () => {
         )}
 
         {total > 0 && (
-          <div className="flex items-center justify-between border-t border-brand-surface bg-table-head px-3 py-2 text-sm text-[#64748b]">
+          <div className="flex items-center justify-between border-t border-brand-surface bg-table-head px-3 py-2 text-sm text-muted">
             <span>
               共 {total} 筆 · 第 {page} / {totalPages} 頁
             </span>

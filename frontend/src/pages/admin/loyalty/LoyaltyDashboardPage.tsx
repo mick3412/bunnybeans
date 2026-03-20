@@ -28,7 +28,7 @@ function Card({
   return (
     <div className={`rounded-xl border border-brand-surface bg-white p-4 shadow-sm ${accentClass}`}>
       <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{title}</div>
-      <div className="mt-2 text-2xl font-semibold tabular-nums text-[#1e293b]">{value}</div>
+      <div className="mt-2 text-2xl font-semibold tabular-nums text-content">{value}</div>
       {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
     </div>
   );
@@ -63,7 +63,7 @@ export const LoyaltyDashboardPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="border-b border-brand-surface pb-2">
-        <h2 className="text-lg font-semibold text-[#1e293b]">會員集點與促銷總覽</h2>
+        <h2 className="text-lg font-semibold text-content">會員集點與促銷總覽</h2>
         <p className="mt-1 text-sm text-muted">
           四張 KPI 與 GET /loyalty/dashboard 擴充欄位一致；近 30 日發放／兌回仍保留於後台統計
         </p>
@@ -90,7 +90,7 @@ export const LoyaltyDashboardPage: React.FC = () => {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#1e293b]">最近點數異動</span>
+            <span className="text-sm font-semibold text-content">最近點數異動</span>
             <Link
               to="/admin/loyalty/point-ledger"
               className="text-xs font-medium text-brand-primary hover:underline"
@@ -135,7 +135,7 @@ export const LoyaltyDashboardPage: React.FC = () => {
           </div>
         </div>
         <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-semibold text-[#1e293b]">進行中活動</div>
+          <div className="mb-3 text-sm font-semibold text-content">進行中活動</div>
           <ul className="space-y-2 text-sm">
             {promos.length === 0 && <li className="text-muted">尚無進行中促銷（或皆為草稿）</li>}
             {promos.map((p) => (

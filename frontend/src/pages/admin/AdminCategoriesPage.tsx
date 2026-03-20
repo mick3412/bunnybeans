@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
+import { EmptyState } from '../../shared/components/EmptyState';
 import {
   getCategories,
   createCategory,
@@ -103,12 +105,12 @@ function MasterSection(props: {
 
   return (
     <div className={cardClass} data-testid={testId}>
-      <h3 className="mb-3 text-sm font-semibold text-[#1e293b]">{title}</h3>
+      <h3 className="mb-3 text-sm font-semibold text-content">{title}</h3>
       {hint}
       {err && (
-        <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <Alert variant="error" className="mb-3">
           {err}
-        </div>
+        </Alert>
       )}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
@@ -183,7 +185,7 @@ function MasterSection(props: {
               ) : (
                 <>
                   <span className="truncate font-medium">{r.code}</span>
-                  <span className="truncate text-[#64748b]">{r.name}</span>
+                  <span className="truncate text-muted">{r.name}</span>
                   <div className="flex shrink-0 gap-1">
                     <Button
                       type="button"
@@ -210,7 +212,9 @@ function MasterSection(props: {
           ))}
         </ul>
         {rows.length === 0 && !err && (
-          <div className="px-4 py-6 text-center text-sm text-[#64748b]">{emptyText}</div>
+          <div className="px-4 py-6">
+            <EmptyState message={emptyText} />
+          </div>
         )}
       </div>
     </div>

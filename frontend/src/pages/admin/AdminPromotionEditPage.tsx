@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
 import {
   getPromotionRule,
@@ -25,7 +26,7 @@ const input =
   'mt-1.5 w-full rounded-xl border border-brand-surface bg-white px-3 py-2.5 text-sm text-content shadow-sm placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
 const select =
   'mt-1.5 w-full rounded-xl border border-brand-surface bg-white px-3 py-2.5 text-sm shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
-const card = 'rounded-2xl border border-neutral-100 bg-white p-5 shadow-sm';
+const card = 'rounded-2xl border border-brand-surface bg-white p-5 shadow-sm';
 const label = 'text-xs font-semibold uppercase tracking-wide text-muted';
 const sectionTitle = 'text-sm font-semibold text-content';
 
@@ -41,7 +42,7 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-xl bg-neutral-50/80 px-4 py-3">
+    <div className="flex items-center justify-between gap-4 rounded-xl bg-table-head px-4 py-3">
       <div>
         <div className="text-sm font-medium text-content">{title}</div>
         <div className="mt-0.5 text-xs text-muted">{hint}</div>
@@ -52,7 +53,7 @@ function ToggleRow({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
-          checked ? 'bg-brand-primary' : 'bg-neutral-300'
+          checked ? 'bg-brand-primary' : 'bg-brand-surface'
         }`}
       >
         <span
@@ -313,9 +314,9 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
   const content = (
     <div className={`flex min-h-0 flex-1 flex-col ${embed ? 'px-3 py-4' : 'mx-auto max-w-6xl px-4 py-6 sm:px-6'}`}>
         {err && (
-          <div className="mb-4 shrink-0 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-sm">
+          <Alert variant="error" className="mb-4 shrink-0">
             {err}
-          </div>
+          </Alert>
         )}
 
         {/* 左右兩欄：左＝規則預覽＋優先級＋基本資訊；右＝條件 IF＋行動 THEN */}
@@ -445,9 +446,9 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
                 {conditions.map((c, i) => (
                   <div
                     key={i}
-                    className="rounded-xl border border-neutral-100 bg-[#FAFBFC] p-4"
+                    className="rounded-xl border border-brand-surface bg-table-head p-4"
                   >
-                    <div className="mb-3 flex justify-end border-b border-neutral-100 pb-2">
+                    <div className="mb-3 flex justify-end border-b border-brand-surface pb-2">
                       <button
                         type="button"
                         className="text-sm font-medium text-red-800 hover:underline"
@@ -572,9 +573,9 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
                 {actions.map((a, i) => (
                   <div
                     key={i}
-                    className="rounded-xl border border-neutral-100 bg-[#FAFBFC] p-4"
+                    className="rounded-xl border border-brand-surface bg-table-head p-4"
                   >
-                    <div className="mb-3 flex justify-end border-b border-neutral-100 pb-2">
+                    <div className="mb-3 flex justify-end border-b border-brand-surface pb-2">
                       <button
                         type="button"
                         className="text-sm font-medium text-red-800 hover:underline"
@@ -643,7 +644,7 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
                             </div>
                           </div>
                         )}
-                        <div className="rounded-xl border border-neutral-100 bg-white/80 p-3">
+                        <div className="rounded-xl border border-brand-surface bg-white/80 p-3">
                           <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                             <div>
                               <span className="text-xs font-semibold text-muted">
@@ -681,7 +682,7 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
                           {(a.tiers ?? []).map((t, ti) => (
                             <div
                               key={ti}
-                              className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-neutral-100 bg-[#FAFBFC] px-3 py-2"
+                              className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-brand-surface bg-table-head px-3 py-2"
                             >
                               <span className="w-8 text-xs font-medium text-muted">
                                 #{ti + 1}

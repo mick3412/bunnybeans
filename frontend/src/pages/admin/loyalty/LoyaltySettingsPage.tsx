@@ -11,7 +11,7 @@ import { TextInput } from '../../../shared/components/TextInput';
 import { useAdminToast } from '../AdminToastContext';
 import { StandardListLayout } from '../../../shared/components/StandardListLayout';
 
-const cardClass = 'rounded-xl border border-brand-surface bg-white p-4 shadow-sm';
+const cardClass = 'rounded-2xl border border-brand-surface bg-white p-5 shadow-sm';
 
 export const LoyaltySettingsPage: React.FC = () => {
   const merchantId = useDefaultMerchantId();

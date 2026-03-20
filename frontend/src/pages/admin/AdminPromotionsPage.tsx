@@ -29,8 +29,8 @@ function statusBadge(status: string) {
   const map: Record<string, string> = {
     active: 'bg-brand-success/12 text-brand-success ring-1 ring-brand-success/20',
     scheduled: 'bg-brand-primary/10 text-brand-primary ring-1 ring-brand-primary/20',
-    draft: 'bg-table-head text-[#64748b] ring-1 ring-brand-surface',
-    ended: 'bg-table-head text-[#64748b] ring-1 ring-brand-surface',
+    draft: 'bg-table-head text-muted ring-1 ring-brand-surface',
+    ended: 'bg-table-head text-muted ring-1 ring-brand-surface',
   };
   const label: Record<string, string> = {
     active: '進行中',
@@ -173,7 +173,7 @@ export const AdminPromotionsPage: React.FC = () => {
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                   status === t.key
                     ? 'bg-[#1e293b] text-white shadow-sm'
-                    : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
+                    : 'bg-white text-muted shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
                 }`}
               >
                 {t.label}
@@ -280,23 +280,23 @@ export const AdminPromotionsPage: React.FC = () => {
                       </svg>
                     </button>
                     {/* 只保留拖曳調整排序；不再提供上移/下移按鈕 */}
-                    <span className="text-base font-semibold text-[#1e293b] group-hover:text-brand-primary">
+                    <span className="text-base font-semibold text-content group-hover:text-brand-primary">
                       {r.name}
                     </span>
                     {statusBadge(r.status)}
                     {r.exclusive && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-table-head px-2 py-0.5 text-xs font-medium text-[#64748b] ring-1 ring-brand-surface">
-                        <span className="h-1.5 w-1.5 rounded-full border-2 border-[#64748b]" />
+                      <span className="inline-flex items-center gap-1 rounded-full bg-table-head px-2 py-0.5 text-xs font-medium text-muted ring-1 ring-brand-surface">
+                        <span className="h-1.5 w-1.5 rounded-full border-2 border-muted" />
                         排他
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-sm leading-relaxed text-[#64748b]">{r.summary}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">{r.summary}</p>
                   {(() => {
                     const eff = effectiveness[r.id];
                     if (!eff) return null;
                     return (
-                      <div className="mt-3 flex flex-wrap gap-4 text-xs text-[#64748b]">
+                      <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted">
                         <span>觸發 {eff.triggerCount} 次</span>
                         <span>折讓 {eff.discountTotal.toLocaleString()}</span>
                         <span>帶動 {eff.drivenRevenue.toLocaleString()}</span>
@@ -305,8 +305,8 @@ export const AdminPromotionsPage: React.FC = () => {
                   })()}
                 </div>
                 <div className="flex shrink-0 flex-col items-center justify-center rounded-xl bg-table-head px-5 py-3 text-center ring-1 ring-brand-surface">
-                  <span className="text-xs font-medium text-[#64748b]">優先級</span>
-                  <span className="text-2xl font-bold tabular-nums text-[#1e293b]">
+                  <span className="text-xs font-medium text-muted">優先級</span>
+                  <span className="text-2xl font-bold tabular-nums text-content">
                     {r.priority}
                   </span>
                   {sorting && (

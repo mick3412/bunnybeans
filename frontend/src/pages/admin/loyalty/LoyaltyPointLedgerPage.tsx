@@ -84,7 +84,7 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
   return (
     <div className="space-y-4">
       <div className="border-b border-brand-surface pb-2">
-        <p className="text-sm text-[#64748b]">
+        <p className="text-sm text-muted">
           Append-only 流水；預設<strong>全店最近筆數</strong>，可改選單一會員
         </p>
       </div>
@@ -92,7 +92,7 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
         <div className="min-w-[220px]">
           <label className="mb-1 block text-xs font-medium text-muted">會員（選「全店」看最近流水）</label>
           <select
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-brand-surface px-3 py-2 text-sm"
             value={customerId}
             onChange={(e) => setCustomerId(e.target.value)}
           >

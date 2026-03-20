@@ -136,7 +136,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="border-b border-brand-surface pb-2">
-        <h2 className="text-lg font-semibold text-[#1e293b]">會員等級規則</h2>
+        <h2 className="text-lg font-semibold text-content">會員等級規則</h2>
         <p className="mt-1 text-sm text-muted">
           依「區間消費金額」自動升級會員等級；目前僅支援 SPEND_SUM 規則，依門檻由高到低套用。
         </p>
@@ -149,7 +149,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
       <div className="grid gap-4 lg:grid-cols-[3fr,2fr]">
         <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#1e293b]">規則列表</span>
+            <span className="text-sm font-semibold text-content">規則列表</span>
             <Button type="button" variant="secondary" onClick={runRecalc} disabled={saving}>
               依規則重新計算會員等級
             </Button>
@@ -211,7 +211,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
         </div>
         <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#1e293b]">
+            <span className="text-sm font-semibold text-content">
               {editing ? '編輯等級規則' : '新增等級規則'}
             </span>
             {editing && (

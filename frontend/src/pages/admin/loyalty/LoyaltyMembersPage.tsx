@@ -185,7 +185,7 @@ export const LoyaltyMembersPage: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="border-b border-brand-surface pb-2">
-          <p className="text-sm text-[#64748b]">含點數餘額／即將到期；新增與編輯需後端 §7</p>
+          <p className="text-sm text-muted">含點數餘額／即將到期；新增與編輯需後端 §7</p>
         </div>
         <div className="flex items-center gap-2">
           <TextInput
@@ -347,7 +347,7 @@ export const LoyaltyMembersPage: React.FC = () => {
                   <div className="rounded-lg border border-dashed border-[#cbd5f5] bg-[#eff6ff] p-3 text-xs">
                     <div className="mb-1 flex items-center justify-between">
                       <div className="font-medium text-[#1d4ed8]">手動調整會員等級</div>
-                      <span className="text-[11px] text-[#64748b]">
+                      <span className="text-[11px] text-muted">
                         僅限有 Admin Key 者在後台修改
                       </span>
                     </div>

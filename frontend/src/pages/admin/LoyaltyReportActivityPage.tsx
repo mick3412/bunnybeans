@@ -200,7 +200,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
               <div className="mb-3 text-sm font-semibold text-[#1e293b]">依發券規則</div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-brand-surface text-[#64748b]">
+                  <thead className="border-b border-brand-surface text-muted">
                     <tr>
                       <th className="px-3 py-2">規則名稱</th>
                       <th className="px-3 py-2 text-right">job 執行次數</th>
@@ -225,7 +225,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
               <div className="mb-3 text-sm font-semibold text-[#1e293b]">依券成效（發送數／使用數）</div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
-                  <thead className="border-b border-brand-surface text-[#64748b]">
+                  <thead className="border-b border-brand-surface text-muted">
                     <tr>
                       <th className="px-3 py-2">券號／名稱</th>
                       <th className="px-3 py-2 text-right">發送數</th>

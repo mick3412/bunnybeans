@@ -536,14 +536,14 @@ export const AdminProductsPage: React.FC = () => {
   return (
     <div className="mx-auto min-w-0 max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-        <p className="max-w-xl text-sm text-[#64748b]">
+        <p className="max-w-xl text-sm text-muted">
           與 POS 共用主檔 API；庫存唯讀。
         </p>
         <details className="rounded-lg border border-brand-surface bg-table-head px-3 py-1.5" data-testid="e2e-admin-products-import">
           <summary className="cursor-pointer text-xs font-medium text-muted hover:text-content">CSV 匯入</summary>
           <div className="mt-2 flex flex-wrap items-center gap-3 pb-1">
             <span className="flex items-center gap-2">
-              <span className="text-[11px] text-[#64748b]">一般</span>
+              <span className="text-[11px] text-muted">一般</span>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -569,10 +569,10 @@ export const AdminProductsPage: React.FC = () => {
                   await load();
                 }}
               />
-              {importSubmitting && <span className="text-[11px] text-[#64748b]">上傳中…</span>}
+              {importSubmitting && <span className="text-[11px] text-muted">上傳中…</span>}
             </span>
             <span className="flex items-center gap-2">
-              <span className="text-[11px] text-[#64748b]">大檔</span>
+              <span className="text-[11px] text-muted">大檔</span>
               <input
                 type="file"
                 accept=".csv,text/csv"
@@ -620,11 +620,11 @@ export const AdminProductsPage: React.FC = () => {
                   });
                 }}
               />
-              {jobSubmitting && <span className="text-[11px] text-[#64748b]">建立 job…</span>}
+              {jobSubmitting && <span className="text-[11px] text-muted">建立 job…</span>}
             </span>
           </div>
           {(importResult || jobId) && (
-            <div className="mt-1.5 border-t border-slate-200 pt-1.5 text-[11px]">
+            <div className="mt-1.5 border-t border-brand-surface pt-1.5 text-[11px]">
               {importResult && (
                 <span className="font-medium text-emerald-700">成功 {importResult.ok} 筆</span>
               )}
@@ -640,7 +640,7 @@ export const AdminProductsPage: React.FC = () => {
                 </details>
               )}
               {jobId && (
-                <span className="ml-2 text-[#64748b]">
+                <span className="ml-2 text-muted">
                   大檔 job: <code className="rounded bg-white px-0.5">{jobId.slice(0, 8)}…</code> {jobStatus}
                   {jobResult && <span className="ml-1">ok {jobResult.ok ?? 0} failed {jobResult.failed?.length ?? 0}</span>}
                 </span>
@@ -1196,7 +1196,7 @@ export const AdminProductsPage: React.FC = () => {
                 )}
                 <button
                   type="button"
-                  className="rounded-lg border border-brand-surface px-2 py-1 text-xs font-medium text-[#64748b] hover:bg-table-head"
+                  className="rounded-lg border border-brand-surface px-2 py-1 text-xs font-medium text-muted hover:bg-table-head"
                   onClick={() => setPanelOpen(false)}
                   aria-label="收起表單"
                 >
@@ -1206,7 +1206,7 @@ export const AdminProductsPage: React.FC = () => {
             </div>
               <div className="space-y-4">
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
                     基本
                   </p>
                   <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
@@ -1231,12 +1231,12 @@ export const AdminProductsPage: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
                     歸屬
                   </p>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-[#64748b]">類別</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">類別</label>
                       <select
                         className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                         value={form.categoryId}
@@ -1251,7 +1251,7 @@ export const AdminProductsPage: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-[#64748b]">品牌</label>
+                      <label className="mb-1 block text-xs font-medium text-muted">品牌</label>
                       <select
                         className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                         value={form.brandId}
@@ -1268,7 +1268,7 @@ export const AdminProductsPage: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
                     規格與效期
                   </p>
                   {editing && (
@@ -1407,7 +1407,7 @@ export const AdminProductsPage: React.FC = () => {
                             近 30 天即將到期批次
                           </span>
                           {expiringLoading && (
-                            <span className="text-[11px] text-[#94a3b8]">載入中…</span>
+                            <span className="text-[11px] text-muted">載入中…</span>
                           )}
                         </div>
                         {expiringError && (
@@ -1418,7 +1418,7 @@ export const AdminProductsPage: React.FC = () => {
                         {!expiringError &&
                           !expiringLoading &&
                           (!expiringBatches || expiringBatches.length === 0) && (
-                            <p className="text-[11px] text-[#94a3b8]">
+                            <p className="text-[11px] text-muted">
                               目前沒有設定效期的庫存批次。
                             </p>
                           )}
@@ -1448,7 +1448,7 @@ export const AdminProductsPage: React.FC = () => {
                                     <td className="px-2 py-1 text-right font-mono">
                                       {b.onHandQty}
                                     </td>
-                                    <td className="px-2 py-1 text-xs text-[#64748b]">
+                                    <td className="px-2 py-1 text-xs text-muted">
                                       {b.warehouseId}
                                     </td>
                                   </tr>
@@ -1461,7 +1461,7 @@ export const AdminProductsPage: React.FC = () => {
                     )}
                 </div>
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
                     價格
                   </p>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1486,7 +1486,7 @@ export const AdminProductsPage: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
                     描述
                   </p>
                   <TextInput
@@ -1497,10 +1497,10 @@ export const AdminProductsPage: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="block text-[11px] font-semibold uppercase tracking-wide text-[#64748b]">
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-muted">
                   標籤（可多選）
                 </label>
-                <p className="text-[11px] text-[#94a3b8]">
+                <p className="text-[11px] text-muted">
                   用來在報表與列表中快速篩選；選項來自 GET /product-tags。
                 </p>
                 <select
@@ -1519,7 +1519,7 @@ export const AdminProductsPage: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                <p className="text-[11px] text-[#94a3b8]">
+                <p className="text-[11px] text-muted">
                   按住 Ctrl（Windows）或 Cmd（Mac）可多選
                 </p>
               </div>
