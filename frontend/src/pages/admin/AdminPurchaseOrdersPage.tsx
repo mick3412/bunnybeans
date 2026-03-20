@@ -78,6 +78,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
   });
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
+  const [createPoSubmitting, setCreatePoSubmitting] = useState(false);
 
   const detailProgress = useMemo(() => {
     if (!detail) return { ordered: 0, received: 0, pct: 0 };
@@ -197,6 +198,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
       showToast('至少需要一列訂購品項', 'err');
       return;
     }
+    setCreatePoSubmitting(true);
     const orderNumber = `PO-${Date.now().toString().slice(-8)}`;
     const out = await createPurchaseOrder({
       merchantId,
@@ -206,6 +208,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
       expectedDate: newPo.expectedDate || undefined,
       lines: validLines.map((l) => ({ productId: l.productId, qtyOrdered: l.qty, unitCost: l.unitCost })),
     });
+    setCreatePoSubmitting(false);
     if ('statusCode' in out) {
       showToast((out as ApiError).message, 'err');
       return;
@@ -245,12 +248,17 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
       filters={
         <div className="flex flex-col gap-4">
           <div className="relative min-w-[240px] flex-1 max-w-md">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+            <label htmlFor="admin-po-search" className="sr-only">
+              搜尋單號或供應商
+            </label>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden>
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </span>
             <input
+              id="admin-po-search"
+              aria-label="搜尋單號或供應商"
               className="w-full rounded-lg border border-brand-surface bg-table-head py-2.5 pl-10 pr-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               placeholder="搜尋單號 / 供應商..."
               value={q}
@@ -653,8 +661,8 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 <Button variant="secondary" onClick={() => setCreateOpen(false)}>
                   取消
                 </Button>
-                <Button variant="primary" onClick={createPo}>
-                  建立採購單
+                <Button variant="primary" disabled={createPoSubmitting} onClick={() => void createPo()}>
+                  {createPoSubmitting ? '建立中…' : '建立採購單'}
                 </Button>
               </div>
             </div>

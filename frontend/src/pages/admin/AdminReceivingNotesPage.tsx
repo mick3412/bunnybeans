@@ -68,6 +68,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
   const [returnQty, setReturnQty] = useState<Record<string, number>>({});
   const [returnReason, setReturnReason] = useState<Record<string, string>>({});
   const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [createRnSubmitting, setCreateRnSubmitting] = useState(false);
   const [returnLastSubmitted, setReturnLastSubmitted] = useState<
     Array<{ lineId: string; qty: number; reason: string }> | null
   >(null);
@@ -262,6 +263,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
       showToast('缺少採購單', 'err');
       return;
     }
+    setCreateRnSubmitting(true);
     const lineInputs = (selectedPo.lines ?? []).map((l) => ({
       poLineId: l.id,
       receivedQty: lineDrafts[l.id]?.receivedQty ?? 0,
@@ -274,6 +276,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
       remark: newRn.remark || undefined,
       lineInputs,
     });
+    setCreateRnSubmitting(false);
     if ('statusCode' in out) {
       showToast(out.message, 'err');
       return;
@@ -324,12 +327,17 @@ export const AdminReceivingNotesPage: React.FC = () => {
       filters={
         <div className="flex flex-col gap-4">
           <div className="relative min-w-[240px] max-w-md flex-1">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+            <label htmlFor="admin-rn-search" className="sr-only">
+              搜尋驗收單號、採購單號或供應商
+            </label>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden>
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </span>
             <input
+              id="admin-rn-search"
+              aria-label="搜尋驗收單號、採購單號或供應商"
               className="w-full rounded-lg border border-brand-surface bg-table-head py-2.5 pl-10 pr-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               placeholder="搜尋驗收單號 / 採購單號 / 供應商..."
               value={q}
@@ -540,11 +548,11 @@ export const AdminReceivingNotesPage: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={createRn}
-                disabled={!selectedPo}
+                onClick={() => void createRn()}
+                disabled={!selectedPo || createRnSubmitting}
                 className="rounded-lg bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-primary-hover disabled:opacity-50"
               >
-                建立驗收單
+                {createRnSubmitting ? '建立中…' : '建立驗收單'}
               </button>
             </div>
             </div>
