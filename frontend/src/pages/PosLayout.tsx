@@ -7,7 +7,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
     'block rounded-r-lg border-l-[3px] py-2.5 pl-3 pr-3 text-sm font-medium leading-snug transition-colors',
     isActive
       ? 'border-brand-primary bg-forge-sidebar-active text-white'
-      : 'border-transparent text-neutral-400 hover:bg-white/[0.06] hover:text-neutral-200',
+      : 'border-transparent text-muted hover:bg-white/[0.06] hover:text-content/90',
   ].join(' ');
 
 function posHeaderTitle(pathname: string): string {
@@ -42,7 +42,7 @@ export const PosLayout: React.FC = () => {
             <button
               type="button"
               data-testid="e2e-nav-admin-inventory"
-              className="flex flex-1 items-center justify-center rounded-md py-2 text-sm font-medium text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
+              className="flex flex-1 items-center justify-center rounded-md py-2 text-sm font-medium text-muted transition-colors hover:bg-white/10 hover:text-white"
               onClick={() => navigate('/admin')}
               title="後台"
             >

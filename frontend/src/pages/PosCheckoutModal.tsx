@@ -300,7 +300,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
               )}
             </div>
             {kindLabel && (
-              <p className="mt-1 text-[10px] text-sky-700">
+              <p className="mt-1 text-[10px] text-brand-primary">
                 辨識為：<span className="font-medium">{kindLabel}</span>
               </p>
             )}

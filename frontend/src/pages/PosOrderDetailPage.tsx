@@ -516,7 +516,7 @@ export const PosOrderDetailPage: React.FC = () => {
               {(typeof order.subtotalAmount === 'number' ||
                 typeof order.discountAmount === 'number' ||
                 order.promotionApplied != null) && (
-                <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-2">
+                <div className="rounded-lg border border-brand-success/25 bg-brand-success/5 px-3 py-2">
                   <div className="text-[10px] font-semibold uppercase text-brand-success">金額明細（促銷）</div>
                   {typeof order.subtotalAmount === 'number' && (
                     <div className="mt-1 flex justify-between text-muted">
@@ -544,8 +544,8 @@ export const PosOrderDetailPage: React.FC = () => {
               )}
 
               {remainingAmount > 0 && (
-                <div id="append-payment" className="rounded-lg border border-sky-200 bg-sky-50/80 px-3 py-2">
-                  <div className="mb-2 text-[11px] font-semibold text-sky-900">補款</div>
+                <div id="append-payment" className="rounded-lg border border-brand-primary/25 bg-brand-primary/5 px-3 py-2">
+                  <div className="mb-2 text-[11px] font-semibold text-content">補款</div>
                   <div className="flex flex-wrap items-end gap-2">
                     <div className="flex gap-1">
                       {(['CASH', 'CARD', 'TRANSFER'] as const).map((m) => (
@@ -554,7 +554,7 @@ export const PosOrderDetailPage: React.FC = () => {
                           type="button"
                           onClick={() => setPayMethod(m)}
                           className={`rounded px-2 py-1 text-[10px] font-medium ${
-                            payMethod === m ? 'bg-sky-600 text-white' : 'bg-white text-muted ring-1 ring-brand-surface'
+                            payMethod === m ? 'bg-brand-primary text-white' : 'bg-white text-muted ring-1 ring-brand-surface'
                           }`}
                         >
                           {paymentMethodLabel(m)}
@@ -619,11 +619,11 @@ export const PosOrderDetailPage: React.FC = () => {
                       {refundSubmitting ? '送出…' : '確認退款'}
                     </Button>
                   </div>
-                  {refundError && <p className="mt-1 text-[11px] text-red-600">{refundError}</p>}
+                  {refundError && <p className="mt-1 text-[11px] text-brand-danger">{refundError}</p>}
                 </div>
               )}
 
-              <div id="return-to-stock" className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2">
+              <div id="return-to-stock" className="rounded-lg border border-brand-success/30 bg-brand-success/5 px-3 py-2">
                 <div className="mb-1 text-[11px] font-semibold text-brand-success">退貨入庫（實體回倉）</div>
                 <p className="mb-2 text-[10px] text-brand-success">
                   依本單明細加回庫存（RETURN_FROM_CUSTOMER）；與退款分開；單筆不得超過該列銷量。
@@ -641,7 +641,7 @@ export const PosOrderDetailPage: React.FC = () => {
                           inputMode="numeric"
                           placeholder="入庫數"
                           data-testid={idx === 0 ? 'e2e-detail-return-qty' : undefined}
-                          className="h-7 w-14 rounded border border-emerald-200 bg-white px-1 text-right tabular-nums"
+                          className="h-7 w-14 rounded border border-brand-surface bg-white px-1 text-right tabular-nums"
                           value={returnQtyByLine[line.id] ?? ''}
                           onChange={(e) =>
                             setReturnQtyByLine((prev) => ({ ...prev, [line.id]: e.target.value }))
@@ -672,7 +672,7 @@ export const PosOrderDetailPage: React.FC = () => {
                   </p>
                 )}
                 {returnStockError && (
-                  <p className="mt-1 text-[11px] text-red-600">{returnStockError}</p>
+                  <p className="mt-1 text-[11px] text-brand-danger">{returnStockError}</p>
                 )}
               </div>
 

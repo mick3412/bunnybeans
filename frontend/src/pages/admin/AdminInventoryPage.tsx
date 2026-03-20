@@ -523,7 +523,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
       aboveContent={(importResult || jobId || jobError) ? (
         <div className="mb-6 flex flex-wrap items-start gap-3 rounded-lg border border-brand-surface bg-table-head px-3 py-2">
           {importResult && (
-            <span className="text-[11px] font-medium text-emerald-700">
+            <span className="text-[11px] font-medium text-brand-success">
               成功 {importResult.ok} 列
               {importResult.failed.length > 0 && (
                 <details className="ml-1 inline">

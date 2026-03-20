@@ -13,7 +13,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
     'block rounded-r-lg border-l-[3px] py-2.5 pl-3 pr-3 text-sm font-medium leading-snug transition-colors',
     isActive
       ? 'border-brand-primary bg-forge-sidebar-active text-white'
-      : 'border-transparent text-neutral-400 hover:bg-white/[0.06] hover:text-neutral-200',
+      : 'border-transparent text-muted hover:bg-white/[0.06] hover:text-content/90',
   ].join(' ');
 
 function headerTitle(
@@ -233,7 +233,7 @@ export const AdminLayout: React.FC = () => {
             <div className="flex rounded-lg bg-white/5 p-1">
               <button
                 type="button"
-                className="flex flex-1 items-center justify-center rounded-md py-2 text-sm font-medium text-neutral-400 transition-colors hover:bg-white/10 hover:text-white"
+                className="flex flex-1 items-center justify-center rounded-md py-2 text-sm font-medium text-muted transition-colors hover:bg-white/10 hover:text-white"
                 onClick={() => navigate('/pos')}
                 title="POS"
               >
@@ -244,7 +244,7 @@ export const AdminLayout: React.FC = () => {
           </div>
           <nav className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 flex flex-col gap-0.5" aria-label="導覽">
             {/* 第一層：營運 / 監控（不可點） */}
-            <div className="mb-1 mt-0.5 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">營運 / 監控</div>
+            <div className="mb-1 mt-0.5 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">營運 / 監控</div>
             {/* 第二層：主入口（可點） */}
             <NavLink to="/admin" className={navClass} end>
               營運
@@ -256,7 +256,7 @@ export const AdminLayout: React.FC = () => {
             <div className="my-2 border-t border-white/25" aria-hidden />
 
             {/* 第一層：商品/庫存（不可點） */}
-            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">商品/庫存</div>
+            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">商品/庫存</div>
             {/* 第二層：主入口（可點） */}
             <NavLink to="/admin/products" className={navClass}>
               商品總覽
@@ -268,7 +268,7 @@ export const AdminLayout: React.FC = () => {
             <div className="my-2 border-t border-white/25" aria-hidden />
 
             {/* 第一層：採購管理（不可點） */}
-            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">採購管理</div>
+            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">採購管理</div>
             {/* 第二層：主入口（可點） */}
             <NavLink to="/admin/inventory/adjust" className={navClass}>
               入庫／盤點
@@ -280,7 +280,7 @@ export const AdminLayout: React.FC = () => {
             <div className="my-2 border-t border-white/25" aria-hidden />
 
             {/* 第一層：財務（不可點） */}
-            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">財務</div>
+            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">財務</div>
             {/* 第二層：主入口（可點） */}
             <NavLink to="/admin/reports" className={navClass}>
               金流報表
@@ -292,7 +292,7 @@ export const AdminLayout: React.FC = () => {
             <div className="my-2 border-t border-white/25" aria-hidden />
 
             {/* 第一層：會員/行銷（不可點） */}
-            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">會員/行銷</div>
+            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">會員/行銷</div>
             {/* 第二層：主入口（可點） */}
             <NavLink to="/admin/loyalty" className={navClass} end>
               儀表板

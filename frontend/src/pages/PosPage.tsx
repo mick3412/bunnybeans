@@ -554,7 +554,7 @@ export const PosPage: React.FC = () => {
                         className="flex-1 text-left"
                       >
                         <span className="font-medium text-content">{p.name}</span>
-                        <span className="ml-1 text-sky-700">${p.price}</span>
+                        <span className="ml-1 text-brand-primary">${p.price}</span>
                       </button>
                       {favoriteEditMode && (
                         <button
@@ -630,7 +630,7 @@ export const PosPage: React.FC = () => {
                       ) : null;
                     })()}
                   </div>
-                  <span className="pointer-events-none relative z-10 ml-auto shrink-0 text-right text-sky-700">${product.price}</span>
+                  <span className="pointer-events-none relative z-10 ml-auto shrink-0 text-right text-brand-primary">${product.price}</span>
                 </div>
               );
             })}

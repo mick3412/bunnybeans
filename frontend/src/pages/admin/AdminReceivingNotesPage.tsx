@@ -27,6 +27,7 @@ import {
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { Alert } from '../../shared/components/Alert';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
+import { Modal } from '../../shared/components/Modal';
 import { useAdminToast } from './AdminToastContext';
 
 const RN_STATUS: { key: string; label: string }[] = [
@@ -405,13 +406,17 @@ export const AdminReceivingNotesPage: React.FC = () => {
       )}
     </StandardListLayout>
 
-      {createOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl">
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        labelledBy="admin-rn-create-title"
+        className="z-50"
+        panelClassName="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-xl"
+      >
             <div className="max-h-[92vh] overflow-y-auto p-6">
             <div className="flex justify-between">
               <div>
-                <h2 className="text-xl font-bold text-content">新增驗收單</h2>
+                <h2 id="admin-rn-create-title" className="text-xl font-bold text-content">新增驗收單</h2>
                 <p className="mt-1 text-sm text-muted">從採購單建立驗收紀錄</p>
               </div>
               <button type="button" className="text-muted hover:text-muted" onClick={() => setCreateOpen(false)}>
@@ -421,7 +426,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium text-muted">
-                  採購單 <span className="text-red-500">*</span>
+                  採購單 <span className="text-brand-danger">*</span>
                 </label>
                 <select
                   className="w-full rounded-lg border border-brand-surface px-3 py-2.5 text-sm"
@@ -507,7 +512,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                               }
                             />
                           </td>
-                          <td className="py-3 text-right text-sm font-semibold tabular-nums text-emerald-600">{qualified}</td>
+                          <td className="py-3 text-right text-sm font-semibold tabular-nums text-brand-success">{qualified}</td>
                         </tr>
                       );
                     })}
@@ -543,16 +548,19 @@ export const AdminReceivingNotesPage: React.FC = () => {
               </button>
             </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDetail(null)}>
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <Modal
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        labelledBy="admin-rn-detail-title"
+        className="z-50"
+        panelClassName="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl"
+      >
+        {detail ? (
           <div className="max-h-[90vh] overflow-y-auto p-6">
             <div className="flex justify-between">
-              <h2 className="text-lg font-semibold">{detail.number}</h2>
+              <h2 id="admin-rn-detail-title" className="text-lg font-semibold">{detail.number}</h2>
               <button type="button" onClick={() => setDetail(null)} className="text-muted hover:text-muted">
                 ✕
               </button>
@@ -630,20 +638,16 @@ export const AdminReceivingNotesPage: React.FC = () => {
               </div>
             )}
 
-            {expiringPanelOpen && detail.warehouseId && (
-              <div
-                className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-                role="dialog"
-                aria-modal="true"
-                onClick={() => setExpiringPanelOpen(false)}
-              >
-                <div
-                  className="w-full max-w-4xl rounded-2xl border border-brand-surface bg-white p-4 shadow-xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
+            <Modal
+              open={expiringPanelOpen && !!detail.warehouseId}
+              onClose={() => setExpiringPanelOpen(false)}
+              labelledBy="admin-rn-expiring-panel-title"
+              className="z-[60]"
+              panelClassName="w-full max-w-4xl rounded-2xl border border-brand-surface bg-white p-4 shadow-xl"
+            >
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-content">即期庫存監控</div>
+                      <h2 id="admin-rn-expiring-panel-title" className="text-sm font-semibold text-content">即期庫存監控</h2>
                       <div className="mt-0.5 text-xs text-muted">
                         warehouseId：<span className="font-mono">{detail.warehouseId}</span>
                       </div>
@@ -770,9 +774,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
-            )}
+            </Modal>
             <table className="mt-4 w-full text-sm">
               <thead className="border-b border-brand-surface bg-table-head">
                 <tr>
@@ -1080,7 +1082,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="text-red-600"
+                  className="text-brand-danger"
                   onClick={async () => {
                     const out = await rejectReceivingNote(detail.id);
                     if ('statusCode' in out) {
@@ -1097,9 +1099,8 @@ export const AdminReceivingNotesPage: React.FC = () => {
               </div>
             )}
             </div>
-          </div>
-        </div>
-      )}
+        ) : null}
+      </Modal>
     </>
   );
 };

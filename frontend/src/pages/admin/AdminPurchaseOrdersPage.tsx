@@ -44,11 +44,11 @@ function statusLabel(s: PoStatus | string) {
 
 function statusPill(s: PoStatus | string) {
   const styles: Record<string, string> = {
-    RECEIVED: 'bg-emerald-100 text-emerald-800',
-    ORDERED: 'bg-orange-100 text-orange-800',
+    RECEIVED: 'bg-brand-success/15 text-brand-success',
+    ORDERED: 'bg-amber-100 text-amber-900',
     PARTIALLY_RECEIVED: 'bg-brand-primary/10 text-brand-primary',
     DRAFT: 'bg-brand-surface text-muted',
-    CANCELLED: 'bg-red-100 text-red-800',
+    CANCELLED: 'bg-brand-danger/10 text-brand-danger',
   };
   return styles[s] ?? 'bg-brand-canvas text-muted';
 }
@@ -399,19 +399,19 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                           }}
                           title="前往驗收詳情"
                         >
-                          <td className="px-2 py-2 font-mono text-xs text-sky-700 hover:underline">{rn.number}</td>
+                          <td className="px-2 py-2 font-mono text-xs text-brand-primary hover:underline">{rn.number}</td>
                           <td className="px-2 py-2 text-xs">
                             <span
                               className={[
                                 'inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold',
                                 rn.status === 'COMPLETED'
-                                  ? 'bg-emerald-100 text-emerald-800'
+                                  ? 'bg-brand-success/15 text-brand-success'
                                   : rn.status === 'IN_PROGRESS'
                                     ? 'bg-brand-primary/10 text-brand-primary'
                                     : rn.status === 'PENDING'
-                                      ? 'bg-orange-100 text-orange-800'
+                                      ? 'bg-amber-100 text-amber-900'
                                       : rn.status === 'RETURNED'
-                                        ? 'bg-red-100 text-red-800'
+                                        ? 'bg-brand-danger/10 text-brand-danger'
                                         : 'bg-brand-surface text-muted',
                               ].join(' ')}
                             >
@@ -610,7 +610,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                 {newPo.lines.length > 1 && (
                                   <button
                                     type="button"
-                                    className="rounded-lg p-1.5 text-muted hover:bg-red-50 hover:text-red-600 transition-colors"
+                                    className="rounded-lg p-1.5 text-muted hover:bg-brand-danger/10 hover:text-brand-danger transition-colors"
                                     onClick={() => setNewPo({ ...newPo, lines: newPo.lines.filter((_, i) => i !== idx) })}
                                     aria-label="刪除此列"
                                   >

@@ -573,7 +573,7 @@ export const AdminCustomersPage: React.FC = () => {
                 <div className="mt-2">
                   <label className="mb-1 block text-xs text-muted">備註</label>
                   <textarea
-                    className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
+                    className="w-full rounded-lg border border-brand-surface px-2 py-1.5 text-sm"
                     rows={2}
                     value={newContactNote}
                     onChange={(e) => setNewContactNote(e.target.value)}

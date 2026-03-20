@@ -389,7 +389,7 @@ export const AdminReplenishmentPage: React.FC = () => {
                       </thead>
                       <tbody>
                         {selectedRows.map((r) => (
-                          <tr key={`${r.productId}-${r.warehouseId}`} className="border-t border-slate-100">
+                          <tr key={`${r.productId}-${r.warehouseId}`} className="border-t border-brand-surface">
                             <td className="px-3 py-1.5 text-content">
                               {r.productName ?? '—'}
                             </td>
