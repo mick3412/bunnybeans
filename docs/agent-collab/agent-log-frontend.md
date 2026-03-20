@@ -15,6 +15,20 @@
 
 ---
 
+### INSTRUCTIONS 027（026 待補提交、色值 token、空態、促銷、集點、Loyalty）
+- 做了：① **026 待補 atomic commits**：ead875bd fix(inventory) 空態/錯誤/載入；7f3b36b9 feat(products) 有效期限+條碼+空態。② **迴歸**：build ✅；E2E port 5173 佔用 skip。③ **有效期限對齊**：商品表單/總覽/即期庫存與後端 API 對齊。④ **色值 token**：AdminInventoryPage、AdminProductsPage、AdminCategoriesPage、AdminPromotionEditPage、AdminPromotionsPage、AdminOpsJobsPage、AdminDispatchRulesPage、Loyalty 系列：text-[#64748b]→text-muted、border-slate-200→border-brand-surface。⑤ **空態/錯誤/載入**：AdminCategoriesPage、AdminQuickReceivingPage、AdminOpsJobsPage 補齊 EmptyState、Alert、載入中。⑥ **促銷規則**：AdminPromotionEditPage Alert、bg-table-head；左右兩欄與預設 1 條件+1 行動已存在。⑦ **集點設定**：LoyaltySettingsPage 大卡 rounded-2xl p-5。⑧ **表格可讀性**：全站已有 tabular-nums、table-sticky-head。⑨ **Loyalty token**：LoyaltyPointLedgerPage、LoyaltyReportActivityPage、LoyaltyMembersPage、LoyaltyTierRulesPage、LoyaltyDashboardPage。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 5173 佔用）。
+- commits：ead875bd fix(inventory)；7f3b36b9 feat(products)；8bea0dcf feat(admin) INSTRUCTIONS 027
+
+---
+
+### INSTRUCTIONS 026 待補完成（空態/錯誤/載入、有效期限模組、條碼、效期 N年N月、剩餘天數）
+- 做了：① **空態/錯誤/載入**：AdminInventoryPage、AdminProductsPage 補齊 EmptyState、Alert、載入中 skeleton。② **有效期限模組**：Product schema 新增 productionDate/shelfLifeMonths/expiryDate；表單支援 (a) 生產日期+效期（N年N月）或 (b) 到期日期；商品總覽到期日欄位顯示具體日期。③ **產品條碼**：ProductFullDto、create/update 支援 barcode；商品總覽/表單新增條碼欄；條碼可搜尋、排序。④ **效期輸入**：效期月數改為支援 N年N月 格式（如 1年6月、18月）。⑤ **剩餘天數**：商品總覽新增「剩餘天數」欄（到期日−當天；已過期顯示紅字）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 許可時補跑）。
+- commits：ead875bd fix(inventory)；7f3b36b9 feat(products)
+
+---
+
 ### INSTRUCTIONS 026（getPosTopItems、Vite proxy、客單價分布、庫存 tab、盤點 filter、商品 Filter）
 - 做了：① **getPosTopItems** 修復：後端回傳 `{ items }` 時正確取出，productName→name。② **Vite proxy** `/pos` 涵蓋 `/pos/reports/*`。③ **PosReportsPage** 客單價分布 response 解析加強。④ **庫存 tab 重複**：AdminInventoryPage embeddedInHub 時隱藏庫存餘額/滯銷品 tab。⑤ **盤點列表**：新增 SKU/品名篩選、表格 max-h 60vh 可滾動。⑥ **AdminProductsPage** 分類/品牌 Filter。⑦ **POS 會員**（AD-HOC）：購物車 searchCustomers typeahead、結帳點數餘額顯示。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 許可時補跑 admin-categories、admin-ops-report-clicks-full、admin-balances、admin-pos-reports）。
