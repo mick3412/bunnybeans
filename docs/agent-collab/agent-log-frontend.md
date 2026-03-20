@@ -15,6 +15,20 @@
 
 ---
 
+### INSTRUCTIONS 028（AD-HOC 提交、收銀白屏、進階圖表、會員管理 UX）
+- 做了：① **AD-HOC atomic commits**：收銀端白屏修復（ErrorBoundary + ProductDto spec）；促銷面板加寬 480→760px；預設 1 條件 1 行動；色值 token text-muted 全站。② **迴歸**：build ✅；E2E skip（Playwright chromium 未安裝於沙箱）。③ **收銀端白屏修復**：新增 ErrorBoundary 包覆 PosLayout；ProductDto 擴充 specSize/specCapacity/specStyle。④ **進階圖表方案 A**：AdminReportsPage byParty chips 與 MiniBarChart 使用 formatPartyDisplay、預取 listLoyaltyCustomers + listSuppliers 建立 partyNames。⑤ **會員管理 UX**：匯入／匯出移搜尋列右側置右；移除說明文字；操作欄「會員管理」→「會員編輯」；新增會員右側懸浮按鈕 + Drawer。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用 / Playwright chromium 沙箱缺檔）。
+- commits：87766a18 fix(pos) ErrorBoundary；e490b0c8 feat(promotions) 促銷面板加寬；37ad1bd4 feat(promotions) 預設 1 條件 1 行動；63a8b6b7 style(ui) 色值 token；9d6fb952 feat(reports) 進階圖表 byParty 可讀名稱；13843eb8 feat(customers) 會員管理 UX
+
+---
+
+### AD-HOC（2026-03-19：色值 token 補齊、促銷面板加寬、預設 1 條件 1 行動）
+- 做了：① **色值 token 補齊**：AdminCustomerImportPage、AdminInventoryAdjustPage、AdminCustomersPage、AdminReplenishmentPage、AdminExpiringInventoryPage、AdminProductsPage、AdminDispatchRulesPage、LoyaltyMembersPage、PosOrderDetailPage 等 `text-[#64748b]`/`#475569`/`#94a3b8`→`text-muted`。② **促銷規則面板**：`PANEL_WIDTH_EXPANDED` 480→760px，維持左右雙欄 layout。③ **預設 1 條件 1 行動**：載入既有規則時若 conditions/actions 為空，自動填入預設（滿額≥$0、全單 10% 折）。
+- 測試/驗收：build ✅
+- commits：尚未提交（工作區變更）
+
+---
+
 ### INSTRUCTIONS 027（026 待補提交、色值 token、空態、促銷、集點、Loyalty）
 - 做了：① **026 待補 atomic commits**：ead875bd fix(inventory) 空態/錯誤/載入；7f3b36b9 feat(products) 有效期限+條碼+空態。② **迴歸**：build ✅；E2E port 5173 佔用 skip。③ **有效期限對齊**：商品表單/總覽/即期庫存與後端 API 對齊。④ **色值 token**：AdminInventoryPage、AdminProductsPage、AdminCategoriesPage、AdminPromotionEditPage、AdminPromotionsPage、AdminOpsJobsPage、AdminDispatchRulesPage、Loyalty 系列：text-[#64748b]→text-muted、border-slate-200→border-brand-surface。⑤ **空態/錯誤/載入**：AdminCategoriesPage、AdminQuickReceivingPage、AdminOpsJobsPage 補齊 EmptyState、Alert、載入中。⑥ **促銷規則**：AdminPromotionEditPage Alert、bg-table-head；左右兩欄與預設 1 條件+1 行動已存在。⑦ **集點設定**：LoyaltySettingsPage 大卡 rounded-2xl p-5。⑧ **表格可讀性**：全站已有 tabular-nums、table-sticky-head。⑨ **Loyalty token**：LoyaltyPointLedgerPage、LoyaltyReportActivityPage、LoyaltyMembersPage、LoyaltyTierRulesPage、LoyaltyDashboardPage。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 5173 佔用）。
