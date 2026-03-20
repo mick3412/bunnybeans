@@ -15,6 +15,18 @@
 
 ---
 
+### INSTRUCTIONS-037（Promotion DTO、throw 工廠、pos.service 型別）
+- 做了：依 `BACKEND-INSTRUCTIONS 037.md` §1 完成本輪任務。
+  - **#1 迴歸確認**：036 變更無遺漏、測試全綠。
+  - **#2 BACKEND-OPTIMIZATION-REVIEW.md**：標註 033/034 完成、列出剩餘缺口。
+  - **#3 Promotion conditions/actions DTO**：新增 `promotion-condition-action.dto.ts`（PromotionConditionDto、PromotionActionTierDto、PromotionActionDto）；`create-promotion-rule.dto.ts` 使用 `@ValidateNested` + `@Type`；`promotion.controller` 移除 `as any`。
+  - **#4 throw 工廠殘留**：finance.controller L71、customer.controller L178 改為 `throwBadRequest`。
+  - **#5 pos.service L520**：新增 `toNum` helper，`sourceTotal` 改為 `source ? toNum(source.totalAmount) : 0`，移除 `as any`。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 152 passed；`pnpm ci:backend-with-db` 通過。
+- commits：`a9f7fed8` feat(promotion): DTO for conditions/actions with @ValidateNested；`9890ff3d` refactor(backend): throwBadRequest in finance/customer controller；`9d9fcdb4` refactor(pos): toNum helper for sourceTotal
+
+---
+
 ### INSTRUCTIONS-036（迴歸確認）
 - 做了：依 `BACKEND-INSTRUCTIONS 036.md` §1 完成本輪任務。
   - **迴歸維護**：`pnpm --filter pos-erp-backend test` 152 passed；`pnpm ci:backend-with-db` 通過。
