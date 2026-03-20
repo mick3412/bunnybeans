@@ -15,6 +15,16 @@
 
 ---
 
+### INSTRUCTIONS-035（迴歸確認、E2E 環境支援）
+- 做了：依 `BACKEND-INSTRUCTIONS 035.md` §1 完成本輪任務。
+  - **迴歸維護**：`pnpm --filter pos-erp-backend test` 152 passed；`pnpm ci:backend-with-db` 通過。
+  - **#1 迴歸確認**：確認 034 變更無遺漏、測試全綠；後端無待提交變更。
+  - **#2 E2E 環境支援**：確認 `db:seed` 含「食盆 小」（DEMO-BOWL-S）；`e2e:seed` 含 E2E-RN-0001（receiptNumber）、E2E-BC-0001（barcode single fixture）；供前端 E2E spec 使用。無需改 Guard 或 Key。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
+- commits：`c33caa97` docs(agent-log): INSTRUCTIONS 035
+
+---
+
 ### INSTRUCTIONS-033（Guard 一致性、throw 工廠遷移、DTO 擴展、POS Transaction、N+1/並行優化、分頁上限、as any 清理、catch 修正、Logger、測試覆蓋）
 - 做了：依 `BACKEND-INSTRUCTIONS 033.md` §1 完成 #1～#12，並補齊第二輪項目。
   - **#1 AdminApiKeyGuard**：為 MerchantController（寫入端點）、PurchaseOrderController、ReceivingNoteController、SupplierController、PurchaseReportsController、DashboardController（class-level）、PosController（POST 端點）加上 AdminApiKeyGuard。
