@@ -1218,8 +1218,10 @@ describe('PosService (integration)', () => {
       expect(code.response?.code).toBe('INVENTORY_INSUFFICIENT');
     }
 
-    const createdIds = fulfilled.map((f) => (f as PromiseFulfilledResult<{ id: string }>).value.id);
-    const orders = await prisma.posOrder.findMany({ where: { id: { in: createdIds } } });
+    const orders = await prisma.posOrder.findMany({
+      where: { storeId: store.id },
+      select: { id: true },
+    });
     for (const o of orders) {
       await prisma.inventoryEvent.deleteMany({ where: { referenceId: o.id } });
       await prisma.posOrderItem.deleteMany({ where: { orderId: o.id } });
