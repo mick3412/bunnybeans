@@ -15,6 +15,29 @@
 
 ---
 
+### INSTRUCTIONS-032（Inventory 參數化、PosOrder 索引、Supplier CTE、createMasterWithCode、throw-exceptions、PosService 並行、Reorder SQL、Finance SQL 分頁、ValidationPipe、分頁 cap、Multi-tenant 稽核）
+- 做了：依 `BACKEND-INSTRUCTIONS 032.md` §1 完成 #1～#16（略 #17 快取）。
+  - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠。
+  - **#2 ci:backend-with-db**：migrate deploy → db:seed → test 全綠。
+  - **#3** Inventory `findExpiringBatches`、`findExpiringProductSummary`：`$queryRawUnsafe` → `Prisma.sql` 參數化。
+  - **#4** PosOrder 新增 `@@index([storeId, createdAt])`；migration `20260320123220`。
+  - **#5** SupplierService.getById：lead/qualified/returned 三 raw query 合併為單一 CTE SQL。
+  - **#6** `createMasterWithCode` 共用函數；category/brand/product-tag service create 改呼叫之。
+  - **#7** `shared/utils/throw-exceptions.ts`（throwBadRequest, throwNotFound, throwConflict）；promotion、pos-reports controller 試用。
+  - **#8** PosService.getOrderById：derived、source、refundAgg、refundEvents 改 `Promise.all` 並行。
+  - **#9** category/brand/product-tag repository reorder：單一 raw SQL `UPDATE ... SET sortOrder = CASE id WHEN ... END`。
+  - **#10** findExpiringBatches rows+total 合併為單一查詢（COUNT(*) OVER()）。
+  - **#11** main.ts requestLogger 改 NestJS Logger；bootstrap 改用 Logger。
+  - **#12** finance.repository balancesByPartyId：SQL 層分頁與排序；Party 子查詢取代 IN 清單。
+  - **#13** class-validator、class-transformer、@nestjs/mapped-types；main.ts ValidationPipe；CreatePromotionRuleDto、UpdatePromotionRuleDto、PosReportsQueryDto。
+  - **#14** FinanceEvent `@@index([partyId, type])`；migration `20260320124252`。ReceivingNote/PurchaseOrder 既有索引評估後未新增。
+  - **#15** pageSize 上限統一為 100（finance、inventory、ops）。
+  - **#16** Multi-tenant 稽核：`docs/agent-collab/MULTI-TENANT-AUDIT-INSTRUCTIONS-032.md`。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（145 passed）；`pnpm ci:backend-with-db` 全綠。
+- commits：77a3c680 feat(backend): INSTRUCTIONS 032 — security, perf, refactor (#3–#16)
+
+---
+
 ### INSTRUCTIONS-031（迴歸 + ci:backend-with-db 驗證）
 - 做了：依 `BACKEND-INSTRUCTIONS 031.md` §1 完成 #1～#2。
   - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（145 passed）。
