@@ -4,6 +4,7 @@ import { listOpsJobs, runOpsJob, type ApiError } from '../../modules/admin/admin
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
+import { Modal } from '../../shared/components/Modal';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useAdminToast } from './AdminToastContext';
 import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/adminKey';
@@ -315,11 +316,16 @@ export const AdminOpsJobsPage: React.FC = () => {
       </div>
       )}
 
-      {runOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-md rounded-2xl border border-brand-surface bg-white p-4 shadow-xl">
+      <Modal
+        open={runOpen}
+        onClose={() => setRunOpen(false)}
+        labelledBy="admin-ops-jobs-run-modal-title"
+        panelClassName="w-full max-w-md rounded-2xl border border-brand-surface bg-white p-4 shadow-xl"
+      >
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-semibold text-content">手動補跑</div>
+              <h2 id="admin-ops-jobs-run-modal-title" className="text-sm font-semibold text-content">
+                手動補跑
+              </h2>
               <button
                 type="button"
                 className="rounded px-2 py-1 text-xs text-muted hover:bg-brand-canvas"
@@ -413,9 +419,7 @@ export const AdminOpsJobsPage: React.FC = () => {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </StandardListLayout>
   );
 };

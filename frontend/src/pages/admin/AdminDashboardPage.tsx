@@ -18,20 +18,7 @@ import { Alert } from '../../shared/components/Alert';
 import { MiniLineChart } from '../../shared/components/MiniLineChart';
 import { useAdminTodoItems } from '../../shared/hooks/useAdminTodoItems';
 import { useTodoDismiss } from '../../shared/hooks/useTodoDismiss';
-
-function formatInt(n: number): string {
-  return new Intl.NumberFormat('zh-TW').format(n);
-}
-
-function formatMoney(s: string | number): string {
-  const n = typeof s === 'string' ? Number(s) : s;
-  if (Number.isNaN(n)) return String(s);
-  return new Intl.NumberFormat('zh-TW', {
-    style: 'currency',
-    currency: 'TWD',
-    maximumFractionDigits: 0,
-  }).format(n);
-}
+import { formatInt, formatMoney } from '../../shared/utils/formatMoney';
 
 const cardLinkClass =
   'block rounded-lg border border-brand-surface bg-forge-card p-3 shadow-sm transition-colors hover:border-brand-primary/50 hover:shadow-md cursor-pointer';
@@ -51,11 +38,17 @@ export const AdminDashboardPage: React.FC = () => {
   const [newMembersCount, setNewMembersCount] = useState<number | null>(null);
   const [dailyRevenue, setDailyRevenue] = useState<{ date: string; revenue: number }[]>([]);
 
+  /** 合併首屏非 merchantId 依賴請求，減少 waterfall */
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const res = await getDashboardSummary();
+      const [res, catRes, todayRes, expRes] = await Promise.all([
+        getDashboardSummary(),
+        getCategoriesEnriched(),
+        getPosReportsSummary({ preset: 'today' }),
+        getExpiringInventory({ daysAhead: 30, pageSize: 1 }),
+      ]);
       if (cancelled) return;
       setLoading(false);
       if ('statusCode' in res) {
@@ -63,92 +56,23 @@ export const AdminDashboardPage: React.FC = () => {
         setErr(msg);
         showAdminApiErrorToast(showToast, res as ApiError);
         setData(null);
-        return;
+      } else {
+        setErr(null);
+        setData(res);
       }
-      setErr(null);
-      setData(res);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [showToast]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const res = await getCategoriesEnriched();
-      if (cancelled) return;
-      if (Array.isArray(res) && res.length) {
-        const withCount = res.filter((c) => typeof c.productCount === 'number');
+      if (Array.isArray(catRes) && catRes.length) {
+        const withCount = catRes.filter((c) => typeof c.productCount === 'number');
         if (withCount.length) {
-          setEnrichedHint(`分類 ${res.length} 筆（${withCount.length} 筆含商品數）`);
+          setEnrichedHint(`分類 ${catRes.length} 筆（${withCount.length} 筆含商品數）`);
         } else {
-          setEnrichedHint(`分類 ${res.length} 筆`);
+          setEnrichedHint(`分類 ${catRes.length} 筆`);
         }
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const r = await getPosReportsSummary({ preset: 'today' });
-      if (cancelled) return;
-      if (r && typeof r === 'object' && 'totalRevenue' in r) {
-        setTodayRevenue(r.totalRevenue as string);
+      if (todayRes && typeof todayRes === 'object' && 'totalRevenue' in todayRes) {
+        setTodayRevenue(todayRes.totalRevenue as string);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      if (expRes && typeof expRes === 'object' && 'total' in expRes) setExpiringCount(expRes.total);
 
-  useEffect(() => {
-    if (!merchantId) return;
-    let cancelled = false;
-    (async () => {
-      const r = await listPurchaseOrdersReceivable(merchantId);
-      if (cancelled) return;
-      setPendingPOCount(r?.data?.length ?? 0);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [merchantId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const r = await getExpiringInventory({ daysAhead: 30, pageSize: 1 });
-      if (cancelled) return;
-      if (r && typeof r === 'object' && 'total' in r) setExpiringCount(r.total);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!merchantId) return;
-    let cancelled = false;
-    (async () => {
-      const r = await getLoyaltyReportMembers(merchantId, { preset: 'last30d' });
-      if (cancelled) return;
-      if (r && typeof r === 'object' && 'newMembersCount' in r) {
-        setNewMembersCount(r.newMembersCount);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [merchantId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
       const summary = await getPosReportsSummary({ preset: 'last7d' });
       if (cancelled) return;
       if (!summary || 'statusCode' in summary || !summary.period) {
@@ -163,8 +87,29 @@ export const AdminDashboardPage: React.FC = () => {
         setDailyRevenue([]);
       }
     })();
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (!merchantId) return;
+    let cancelled = false;
+    (async () => {
+      const [po, mem] = await Promise.all([
+        listPurchaseOrdersReceivable(merchantId),
+        getLoyaltyReportMembers(merchantId, { preset: 'last30d' }),
+      ]);
+      if (cancelled) return;
+      setPendingPOCount(po?.data?.length ?? 0);
+      if (mem && typeof mem === 'object' && 'newMembersCount' in mem) {
+        setNewMembersCount(mem.newMembersCount);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [merchantId]);
 
   // 待辦中心與頂欄鈴鐺共用 useAdminTodoItems + localStorage 行為（已處理 / 稍後提醒）
 

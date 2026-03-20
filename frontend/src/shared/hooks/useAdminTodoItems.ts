@@ -7,6 +7,7 @@ import {
   listOpsJobs,
 } from '../../modules/admin/adminApi';
 import { listPurchaseOrdersReceivable } from '../../modules/admin/purchaseApi';
+import { formatInt } from '../utils/formatMoney';
 
 export type AdminTodoTone = 'info' | 'warn' | 'danger' | 'neutral';
 
@@ -19,10 +20,6 @@ export type AdminTodoItem = {
   metaText?: string;
   unavailable?: boolean;
 };
-
-function formatInt(n: number): string {
-  return new Intl.NumberFormat('zh-TW').format(n);
-}
 
 function asCountText(n: number | null, unit: string) {
   if (n == null) return '—';

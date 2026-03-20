@@ -21,12 +21,7 @@ import { getPaymentMethodLabel } from '../shared/utils/paymentMethodLabels';
 import { MiniBarChart } from '../shared/components/MiniBarChart';
 import { MiniLineChart } from '../shared/components/MiniLineChart';
 import { useDefaultMerchantId } from '../shared/hooks/useDefaultMerchantId';
-
-function money(s: string) {
-  const n = Number(s);
-  if (Number.isNaN(n)) return s;
-  return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(n);
-}
+import { formatMoneyFromString as money } from '../shared/utils/formatMoney';
 
 const cardBase = 'rounded-xl border border-brand-surface bg-white p-4 shadow-sm';
 

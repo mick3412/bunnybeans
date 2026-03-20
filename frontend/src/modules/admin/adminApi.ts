@@ -7,72 +7,37 @@ const BASE_URL =
   (import.meta.env.DEV ? 'http://127.0.0.1:3003' : '');
 const ADMIN_API_KEY = (import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim() ?? '';
 
-/** 與後端 AdminApiKeyGuard 一致：僅受保護的寫入需帶 X-Admin-Key */
+/**
+ * 與後端 AdminApiKeyGuard 一致：統一規則
+ * - 非 GET（POST/PATCH/PUT/DELETE 等）一律帶 X-Admin-Key（若已設定環境變數）
+ * - GET 僅下列路徑需帶 Key（匯出、部分後台唯讀）
+ */
 function needsAdminKey(path: string, method: string): boolean {
   const m = (method || 'GET').toUpperCase();
   const p = path.replace(/^\//, '');
-  if (p === 'inventory/events' && m === 'POST') return true;
-  if (p === 'inventory/transfer' && m === 'POST') return true;
-  if (p === 'inventory/events/batch-stocktake' && m === 'POST') return true;
-  if (p === 'products' && m === 'POST') return true;
-  if (p === 'products/import' && m === 'POST') return true;
-  if (p === 'products/batch-price' && m === 'PATCH') return true;
-  if (p.startsWith('products/') && (m === 'PATCH' || m === 'DELETE')) return true;
-  if (p === 'categories' && m === 'POST') return true;
-  if (p === 'categories/reorder' && m === 'PATCH') return true;
-  if (/^categories\/.+/.test(p) && m === 'PATCH') return true;
-  if (/^categories\/.+/.test(p) && m === 'DELETE') return true;
-  if (p === 'brands' && m === 'POST') return true;
-  if (p === 'brands/reorder' && m === 'PATCH') return true;
-  if (/^brands\/.+/.test(p) && m === 'PATCH') return true;
-  if (/^brands\/.+/.test(p) && m === 'DELETE') return true;
-  if (p === 'promotion-rules' && m === 'POST') return true;
-  if (p === 'promotion-rules/reorder/bulk' && m === 'PATCH') return true;
-  if (/^promotion-rules\/.+/.test(p) && m === 'PATCH') return true;
-  if (/^promotion-rules\/.+/.test(p) && m === 'DELETE') return true;
-  if (p === 'inventory/balances/export' && m === 'GET') return true;
-  if (p === 'finance/events/export' && m === 'GET') return true;
-  if (p === 'inventory/events/export' && m === 'GET') return true;
   const pathOnly = p.split('?')[0];
-  if (pathOnly === 'pos/orders/export' && m === 'GET') return true;
-  if (pathOnly === 'inventory/events/import' && m === 'POST') return true;
-  if (pathOnly === 'customers/import/preview' && m === 'POST') return true;
-  if (pathOnly === 'customers/import/apply' && m === 'POST') return true;
-  if (m === 'POST' && /^imports\/jobs\/(products_csv|inventory_csv)$/.test(pathOnly)) return true;
-  if (m === 'GET' && /^imports\/jobs\/.+/.test(pathOnly)) return true;
-  if (pathOnly === 'loyalty/settings' && m === 'PATCH') return true;
-  if (pathOnly === 'loyalty/coupons' && m === 'POST') return true;
-  if (m === 'PATCH' && /^loyalty\/coupons\/.+/.test(pathOnly)) return true;
-  if (pathOnly === 'customers' && m === 'POST') return true;
-  if (m === 'GET' && /^customers\/[^/]+$/.test(pathOnly)) return true;
-  if (m === 'PATCH' && /^customers\/[^/]+$/.test(pathOnly)) return true;
-  if (pathOnly === 'customers/merge' && m === 'POST') return true;
-  if (m === 'POST' && /^customers\/[^/]+\/contacts$/.test(pathOnly)) return true;
-  if (pathOnly === 'merchant/current' && m === 'GET') return true;
-  if (pathOnly === 'crm/segments' && m === 'GET') return true;
-  if (m === 'GET' && /^crm\/segments\/[^/]+\/export$/.test(pathOnly)) return true;
-  if (m === 'POST' && /^crm\/jobs\/[^/]+$/.test(pathOnly)) return true;
-  if (m === 'GET' && /^crm\/jobs\/[^/]+$/.test(pathOnly)) return true;
-  if (pathOnly === 'loyalty/reports/activity' && m === 'GET') return true;
-  if (pathOnly === 'loyalty/reports/members' && m === 'GET') return true;
-  if (pathOnly === 'finance/periods' && m === 'GET') return true;
-  if (pathOnly === 'finance/periods/close' && m === 'POST') return true;
-  if (m === 'POST' && /^finance\/periods\/[^/]+\/unlock$/.test(pathOnly)) return true;
-  if (pathOnly === 'finance/audit-log' && m === 'GET') return true;
-  if (pathOnly === 'finance/snapshots' && m === 'GET') return true;
-  if (m === 'GET' && /^finance\/snapshots\/[^/]+$/.test(pathOnly)) return true;
-  if (m === 'GET' && /^finance\/snapshots\/[^/]+\/download$/.test(pathOnly)) return true;
-  if (pathOnly === 'crm/dispatch-rules' && (m === 'GET' || m === 'POST')) return true;
-  if ((m === 'PATCH' || m === 'DELETE') && /^crm\/dispatch-rules\/[^/]+$/.test(pathOnly)) return true;
-  if (pathOnly === 'product-tags' && m === 'POST') return true;
-  if (pathOnly === 'product-tags/reorder' && m === 'PATCH') return true;
-  if (m === 'PATCH' && /^product-tags\/[^/]+$/.test(pathOnly)) return true;
-  if (m === 'DELETE' && /^product-tags\/[^/]+$/.test(pathOnly)) return true;
-  if (pathOnly === 'purchase-orders/from-replenishment' && m === 'POST') return true;
-  if (pathOnly === 'ops/jobs/run' && m === 'POST') return true;
-  if (pathOnly === 'ops/reports/click-audit' && m === 'POST') return true;
-  if (pathOnly === 'ops/reports/click-audit' && m === 'GET') return true;
-  if (pathOnly === 'ops/reports/click-audit/summary' && m === 'GET') return true;
+  if (m !== 'GET') {
+    return true;
+  }
+  if (pathOnly === 'inventory/balances/export') return true;
+  if (pathOnly === 'finance/events/export') return true;
+  if (pathOnly === 'inventory/events/export') return true;
+  if (pathOnly === 'pos/orders/export') return true;
+  if (/^imports\/jobs\/.+/.test(pathOnly)) return true;
+  if (pathOnly === 'merchant/current') return true;
+  if (pathOnly === 'crm/segments') return true;
+  if (/^crm\/segments\/[^/]+\/export$/.test(pathOnly)) return true;
+  if (/^crm\/jobs\/[^/]+$/.test(pathOnly)) return true;
+  if (pathOnly === 'loyalty/reports/activity') return true;
+  if (pathOnly === 'loyalty/reports/members') return true;
+  if (pathOnly === 'finance/periods') return true;
+  if (pathOnly === 'finance/audit-log') return true;
+  if (pathOnly === 'finance/snapshots') return true;
+  if (/^finance\/snapshots\/[^/]+$/.test(pathOnly)) return true;
+  if (/^finance\/snapshots\/[^/]+\/download$/.test(pathOnly)) return true;
+  if (pathOnly === 'crm/dispatch-rules') return true;
+  if (pathOnly === 'ops/reports/click-audit') return true;
+  if (pathOnly === 'ops/reports/click-audit/summary') return true;
   return false;
 }
 

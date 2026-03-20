@@ -19,6 +19,8 @@ type Act = {
   targetTags?: string;
   productName?: string;
   upsellAmount?: number;
+  /** POINTS_MULTIPLIER 行動：後端 schema 允許 */
+  multiplier?: number;
   tiers?: { threshold: number; discountPercent: number }[];
 };
 
@@ -202,9 +204,8 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
       const base = actions.filter((a) => a.type !== 'POINTS_MULTIPLIER');
       const parsed = Number(pointsMultiplier);
       if (!Number.isFinite(parsed) || parsed <= 0 || parsed === 1) return base;
-      const multiAct: Act & { multiplier: number } = {
+      const multiAct: Act = {
         type: 'POINTS_MULTIPLIER',
-        // @ts-expect-error: multiplier 不在共用 Act union 內，但後端 schema 允許
         multiplier: parsed,
       };
       return [...base, multiAct];
