@@ -47,7 +47,7 @@ function statusBadge(status: string) {
   );
 }
 
-const PANEL_WIDTH_EXPANDED = 480;
+const PANEL_WIDTH_EXPANDED = 760;
 const PANEL_WIDTH_COLLAPSED = 48;
 
 export const AdminPromotionsPage: React.FC = () => {
