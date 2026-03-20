@@ -265,32 +265,21 @@ export const AdminDispatchRulesPage: React.FC = () => {
       {err && (
         <div className="mb-4"><Alert variant="error">{err}</Alert></div>
       )}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap gap-2">
-          {ENABLED_FILTER.map((f) => (
-            <button
-              key={String(f.key)}
-              type="button"
-              className={`rounded-xl border px-3 py-1.5 text-sm font-medium ${
-                enabledFilter === f.key
-                  ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
-                  : 'border-brand-surface bg-white text-muted hover:border-brand-surface'
-              }`}
-              onClick={() => setEnabledFilter(f.key)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <Button
-          type="button"
-          variant="primary"
-          className="rounded-xl px-4 shadow-md shadow-brand-primary/20"
-          onClick={openNew}
-          disabled={!merchantId}
-        >
-          + 新增發券規則
-        </Button>
+      <div className="mb-4 flex flex-wrap gap-2">
+        {ENABLED_FILTER.map((f) => (
+          <button
+            key={String(f.key)}
+            type="button"
+            className={`rounded-xl border px-3 py-1.5 text-sm font-medium ${
+              enabledFilter === f.key
+                ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                : 'border-brand-surface bg-white text-muted hover:border-brand-surface'
+            }`}
+            onClick={() => setEnabledFilter(f.key)}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       <div className="overflow-hidden rounded-xl border border-brand-surface">
@@ -415,12 +404,32 @@ export const AdminDispatchRulesPage: React.FC = () => {
         </div>
       </div>
 
+      {!formOpen && (
+        <button
+          type="button"
+          className="fixed right-0 top-1/2 z-[95] flex -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-brand-primary bg-brand-primary px-2.5 py-6 text-xs font-semibold text-white shadow-lg transition hover:bg-brand-primary-hover disabled:opacity-50"
+          onClick={openNew}
+          disabled={!merchantId}
+          title="新增發券規則"
+          aria-label="新增發券規則"
+        >
+          <span className="[writing-mode:vertical-rl] tracking-widest">新增規則</span>
+        </button>
+      )}
+
       {formOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" aria-modal="true">
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-brand-surface bg-white p-6 shadow-xl">
-            <h3 className="mb-4 text-lg font-semibold text-[#1e293b]">
-              {editingId ? '編輯發券規則' : '新增發券規則'}
-            </h3>
+        <>
+          <div className="fixed inset-0 z-40 bg-black/25" aria-hidden onClick={closeForm} />
+          <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[440px] flex-col border-l border-brand-surface bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h3 className="font-semibold text-content">
+                {editingId ? '編輯發券規則' : '新增發券規則'}
+              </h3>
+              <button type="button" className="rounded px-2 py-1 text-muted hover:bg-table-head" onClick={closeForm}>
+                關閉
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted">名稱 *</label>
@@ -506,22 +515,20 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button type="button" variant="secondary" className="rounded-xl" onClick={closeForm}>
-                取消
-              </Button>
+            <div className="mt-6">
               <Button
                 type="button"
                 variant="primary"
-                className="rounded-xl"
+                fullWidth
                 onClick={() => void handleSubmit()}
                 disabled={saving}
               >
                 {saving ? '儲存中…' : editingId ? '儲存' : '新增'}
               </Button>
             </div>
-          </div>
-        </div>
+            </div>
+          </aside>
+        </>
       )}
     </div>
   );
