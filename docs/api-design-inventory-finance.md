@@ -295,7 +295,10 @@ interface PagedResult<T> {
 
 - `batchCode`：批次代碼；若來源無提供則為 `null`。
 - `expiryDate`：效期日；以 ISO 字串回傳。
+- `daysUntilExpiry`：即將到期天數 = `expiryDate` 當天 − 查詢當天（整天數；正數為未來、0 為當天、負數為已過期）。
 - `onHandQty`：該批次目前庫存量（與 `InventoryBalance` 對齊）。
+
+**groupBy=product 時**：每筆含 `earliestExpiryDate`、`earliestDaysUntilExpiry`、`expiringQty`、`batches[]`；各 batch 物件亦含 `daysUntilExpiry`。
 
 **錯誤情境（草案）**
 
@@ -497,19 +500,29 @@ interface PagedResult<T> {
 - **PartyKind**（建議）：`CUSTOMER`｜`SUPPLIER`｜`PLATFORM`｜`VENDOR`｜`STORE`｜`MERCHANT`｜`OTHER`
 - **PartyRef（建議格式）**：`{ kind, refId, displayName? }`
 
-**落地方式（兩種方案，先採用 A；B 為後續演進）**
+**落地方式（決策：以 `Party` 為 canonical；同時維持 prefixed `partyId` 對外契約）**
 
-- **A（先採用，無需新增表）**：`partyId` 使用字串前綴形成穩定 key  
-  - 格式：`${kind}:${refId}`  
-  - 例：`CUSTOMER:uuid`、`SUPPLIER:uuid`、`PLATFORM:shopee`、`VENDOR:print-001`
-  - 優點：不需 schema 變更即可表達多方；缺點：顯示名稱需另外對照或由 `note` 帶入。
-- **B（後續）**：新增 `Party` 表（或 `FinanceParty`）  
-  - 欄位：`id`、`merchantId`、`kind`、`refId?`、`name`、`metaJson?`  
-  - `FinanceEvent.partyId` 改為 FK（或新增 `partyRefId`），並提供後台對照與查詢。
+- **Canonical（已採用）**：以資料表 `Party` 作為「對象視圖」單一真實來源  
+  - **隔離**：以 `Party.merchantId` 做多商家資料隔離（同一 `partyId` 在不同 merchant 下視為不同 party）。
+  - **顯示**：以 `Party.kind`、`Party.displayName` 作為 API `kind`／`displayName` 的來源（前端不再自行用字串推導顯示名稱）。
+- **對外識別（穩定 key）**：`FinanceEvent.partyId` 對外一律使用 **小寫前綴**  
+  - 格式：`${prefix}:${refId}`
+  - 目前前綴集合：`customer`、`supplier`
+  - 例：`customer:{customerId}`、`supplier:{supplierId}`
+  - （未來擴充：`platform:{code}`、`vendor:{code}`… 需同步擴充 `Party.kind` 與文件）
 
-> **統一規則（Phase 2，stable）**：
-> - `FinanceEvent.partyId` 以 **小寫前綴**作為穩定 key：`customer:{customerId}`、`supplier:{supplierId}`（其他 kind 後續擴充）
-> - 舊資料若仍為純 UUID（無前綴）仍允許查詢，但新寫入請一律使用前綴格式，以避免不同 kind 撞值與讓前端可穩定顯示 kind。
+> **相容性註記（legacy）**：歷史資料若仍存在無前綴值，後端可能仍可查詢/回傳；但文件層契約以「一律前綴」為準，新寫入不得再產生無前綴 `partyId`。
+
+**文件層驗收條款（Party，多方視圖）**
+
+- **partyId 格式**：所有對外 API（query/body/response）中的 `partyId`，若非空值，必須符合 `customer:{uuid}` 或 `supplier:{uuid}`（小寫前綴 + `:` + UUID）。
+- **kind / displayName 語意**：
+  - `kind`（若回傳）僅能為 `customer` 或 `supplier`（與前綴一致）。
+  - `displayName`（若回傳）為可顯示的人類名稱；來源以 `Party` 為準（而非前端自行拼字串）。
+- **多商家隔離**：以 `Party.merchantId` 作為隔離邊界；同一 `partyId` 在不同 merchant 下不得互相可見（包含 balances / summary / reports）。
+- **篩選一致性**：
+  - `GET /finance/balances?partyId=...` 為精確比對（不做模糊查）。
+  - `GET /finance/balances?kind=customer|supplier` 的判定與 `partyId` 前綴/Party.kind 一致。
 
 #### 5.0b 金流事件 CSV 匯出 `GET /finance/events/export`（stable）
 

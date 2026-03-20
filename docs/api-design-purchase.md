@@ -82,9 +82,10 @@
     - `warehouseId`（必填）
     - `orderNumber`（必填；同商家唯一）
     - `inspectorName?`、`remark?`
-    - `lines`（必填，至少 1 筆）：`[{ productId, qty, unitCost?, batchCode?, expiryDate?, weightUnit? }]`
+    - `lines`（必填，至少 1 筆）：`[{ productId, qty, unitCost?, batchCode?, expiryDate?, productionDate?, shelfLifeMonths?, weightUnit? }]`
       - `qty` 必須為 **正整數**
       - `unitCost` 未提供時，後端以 Product `costPrice`（無則 0）帶入
+      - **效期輸入**（二擇一）：(a) `expiryDate` 直接填到期日；或 (b) `productionDate` + `shelfLifeMonths` 由後端計算 `expiryDate = productionDate + shelfLifeMonths` 月
   - **行為**：
     - 建立 **PO（DRAFT）** → submit 成 **ORDERED**
     - 建立 **RN** → 寫入每列 `receivedQty=qty`、`qualifiedQty=qty` → **complete**
@@ -105,12 +106,12 @@
 | GET | `/receiving-notes?merchantId=&status=&q=` | 列表 + 搜尋 |
 | GET | `/receiving-notes/:id` | 詳情 + lines |
 | POST | `/receiving-notes` | purchaseOrderId, inspectorName?, remark?；PO 須 **ORDERED** 或 **PARTIALLY_RECEIVED**；展開明細 |
-| PATCH | `/receiving-notes/:id/lines` | 實收／合格／退回／原因；可選填 **batchCode**（批號）、**expiryDate**（效期）、重量單位等欄位 |
+| PATCH | `/receiving-notes/:id/lines` | 實收／合格／退回／原因；可選填 **batchCode**、**expiryDate** 或 **productionDate**+**shelfLifeMonths**（效期二擇一）、**weightUnit** |
 | POST | `/receiving-notes/:id/complete` | **僅對本單每列增量合格數**（或本單填寫之 qualifiedQty 與上次 complete 差額—實作擇一，建議：每張 RN 只 complete 一次，qualifiedQty 即本次入庫量）呼叫 **PURCHASE_IN**；**退回不進庫**；回寫 PO Line **qtyReceived**、PO 狀態；若該列有填寫 **batchCode／expiryDate** 則一併寫入對應的 `InventoryEvent` 以供效期查詢（`GET /inventory/expiring`） |
 | POST | `/receiving-notes/:id/reject` | **RETURNED** |
 
 **complete 建議語意（與 UI 一致）**：該張驗收單每列 **qualifiedQty** = 本次驗收認可入庫量 → 對該數量 **PURCHASE_IN**；**returnedQty** 僅紀錄與顯示，不產生入庫事件。  
-飼料／生鮮等需控管效期之商品，可在 RN line 填寫 **batchCode** 與 **expiryDate**，complete 時計入 `InventoryEvent` 上對應欄位，後續由 `/inventory/expiring` 聚合成「即將到期批次」清單。
+飼料／生鮮等需控管效期之商品，可在 RN line 填寫 **batchCode** 與 **expiryDate**（或 **productionDate** + **shelfLifeMonths** 由後端計算到期日），complete 時計入 `InventoryEvent` 上對應欄位，後續由 `/inventory/expiring` 聚合成「即將到期批次」清單；即期天數以「到期日期 − 當天」計算。
 
 **可驗收採購單**：`GET /purchase-orders?merchantId=&status=ORDERED` 與 `PARTIALLY_RECEIVED`（前端下拉合併請求或後端單一 query）。
 
