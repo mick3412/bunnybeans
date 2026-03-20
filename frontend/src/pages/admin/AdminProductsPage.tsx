@@ -114,6 +114,8 @@ export const AdminProductsPage: React.FC = () => {
     tags: [] as string[],
   });
   const [searchQ, setSearchQ] = useState('');
+  const [filterCategoryId, setFilterCategoryId] = useState('');
+  const [filterBrandId, setFilterBrandId] = useState('');
   const [sortBy, setSortBy] = useState<
     'sku' | 'name' | 'category' | 'brand' | 'listPrice' | 'salePrice' | 'costPrice' | 'stock' | 'expiry'
   >('sku');
@@ -208,14 +210,23 @@ export const AdminProductsPage: React.FC = () => {
   }, [editing?.id]);
 
   const filteredProducts = useMemo(() => {
-    if (!searchQ.trim()) return products;
-    const q = searchQ.trim().toLowerCase();
-    return products.filter((p) => {
-      const sku = p.sku?.toLowerCase() ?? '';
-      const name = p.name?.toLowerCase() ?? '';
-      return sku.includes(q) || name.includes(q);
-    });
-  }, [products, searchQ]);
+    let list = products;
+    if (searchQ.trim()) {
+      const q = searchQ.trim().toLowerCase();
+      list = list.filter((p) => {
+        const sku = p.sku?.toLowerCase() ?? '';
+        const name = p.name?.toLowerCase() ?? '';
+        return sku.includes(q) || name.includes(q);
+      });
+    }
+    if (filterCategoryId) {
+      list = list.filter((p) => p.categoryId === filterCategoryId);
+    }
+    if (filterBrandId) {
+      list = list.filter((p) => p.brandId === filterBrandId);
+    }
+    return list;
+  }, [products, searchQ, filterCategoryId, filterBrandId]);
 
   const categoryName = (id: string | null | undefined) =>
     id ? categories.find((c) => c.id === id)?.name ?? '—' : '—';
@@ -568,7 +579,33 @@ export const AdminProductsPage: React.FC = () => {
       <div className="min-w-0 w-full">
         {/* 表格全寬 */}
         <div className="min-w-0 overflow-hidden">
-          <div className="mb-3 flex justify-end">
+          <div className="mb-3 flex flex-wrap items-end justify-end gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">分類</label>
+              <select
+                className="h-9 min-w-[120px] rounded-lg border border-brand-surface bg-white px-2 text-sm"
+                value={filterCategoryId}
+                onChange={(e) => setFilterCategoryId(e.target.value)}
+              >
+                <option value="">全部</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">品牌</label>
+              <select
+                className="h-9 min-w-[100px] rounded-lg border border-brand-surface bg-white px-2 text-sm"
+                value={filterBrandId}
+                onChange={(e) => setFilterBrandId(e.target.value)}
+              >
+                <option value="">全部</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
             <TextInput
               label="搜尋"
               placeholder="SKU 或名稱"
