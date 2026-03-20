@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 035
+- 做了：① **前置**：無 034 待提交。② **E2E barcode**：admin-barcode-min、admin-barcode-multi-match 補 `waitForURL(/\/pos$/)` 與 `toBeVisible({ timeout: 15_000 })`。③ **E2E receiving-notes**：無 Admin Key 時 `test.skip`；斷言改為「本次送出明細」與「E2E test」（toast 3.2s 後消失）。④ **E2E pos 商品**：pos-checkout、pos-credit、pos-refund、pos-return-stock 改用 `[data-testid^="pos-product-"]` 第一個商品。⑤ **Admin Key 隱藏**：AdminOpsJobsPage、AdminProductsPage、AdminMarketingRuleEditPage、AdminFinancePeriodsPage 移除「需管理金鑰」等權限提示，改由 .env `VITE_ADMIN_API_KEY` 配置。⑥ **選配 Drawer**：未做。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 3003/5173 未啟動 → **skip**（待伺服器起後重跑驗證）
+- commits：`2e0b57a6`（E2E fix）、`fab09ab8`（Admin Key hide）；本條 docs 見 `git log -2 --oneline`
+- PR／檔案：`e2e/admin-barcode-*.spec.ts`、`e2e/admin-receiving-notes-smoke.spec.ts`、`e2e/pos-*.spec.ts`、`Admin*Page.tsx` 四頁
+
+---
+
 ### E2E 補跑（034 後續）
 - 做了：伺服器重啟後，補跑剩餘 16 支 spec（先前已跑 admin-categories、admin-ops-report-clicks-full、admin-balances、admin-pos-reports）。使用 `reuseExistingServer`（5173 已有 Vite）、後端 3003 + e2e:seed。
 - 測試/驗收：**11 passed**、**7 skipped**（需 VITE_ADMIN_API_KEY 等）、**7 failed**。pass：admin-bulk、admin-customers-import、admin-dispatch-rules、admin-expiring-inventory-smoke、admin-loyalty-smoke、admin-replenishment、admin-smoke、pos-exchange-settlement-journey。skip：admin-bulk 庫存匯出、admin-customers-import 預覽、admin-dispatch-rules full、admin-journey-exchange-loyalty、admin-loyalty-smoke 設定、admin-replenishment 採購草稿、admin-smoke 金流報表。**fail**：① admin-barcode-min / admin-barcode-multi-match：`e2e-pos-barcode-input` 未找到；② admin-receiving-notes-smoke：未出現「已送出退回供應商」；③ pos-checkout / pos-credit / pos-refund / pos-return-stock：`[data-product-name="食盆 小"]` 未找到（可能 seed 或前端結構變更）。
