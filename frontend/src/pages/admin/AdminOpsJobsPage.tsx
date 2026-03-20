@@ -7,7 +7,7 @@ import { Button } from '../../shared/components/Button';
 import { Modal } from '../../shared/components/Modal';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useAdminToast } from './AdminToastContext';
-import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/adminKey';
+import { hasAdminApiKey } from '../../shared/rbac/adminKey';
 
 const KIND_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: '全部' },
@@ -179,7 +179,7 @@ export const AdminOpsJobsPage: React.FC = () => {
         >
           補跑
         </Button>
-        {!canWrite ? <span className="text-xs text-muted">{ADMIN_KEY_REQUIRED_HINT}</span> : null}
+        {/* 權限提示已隱藏，改由 .env VITE_ADMIN_API_KEY 配置 */}
         <div>
           <label className="mr-2 text-xs text-muted">每頁</label>
           <select

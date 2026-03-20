@@ -11,7 +11,7 @@ import { useAdminToast } from './AdminToastContext';
 import { Button } from '../../shared/components/Button';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
-import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/adminKey';
+import { hasAdminApiKey } from '../../shared/rbac/adminKey';
 
 export const AdminFinancePeriodsPage: React.FC = () => {
   const { showToast } = useAdminToast();
@@ -132,7 +132,7 @@ export const AdminFinancePeriodsPage: React.FC = () => {
             {closing ? '關帳中…' : '關帳'}
           </Button>
           {!merchantId ? <div className="text-xs text-muted">載入商家中…</div> : null}
-          {!canWrite ? <div className="text-xs text-muted">{ADMIN_KEY_REQUIRED_HINT}</div> : null}
+          {/* 權限提示已隱藏，改由 .env VITE_ADMIN_API_KEY 配置 */}
         </div>
       </div>
 

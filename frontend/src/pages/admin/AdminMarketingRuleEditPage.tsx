@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { Button } from '../../shared/components/Button';
 import { TextInput } from '../../shared/components/TextInput';
-import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/adminKey';
+import { hasAdminApiKey } from '../../shared/rbac/adminKey';
 
 export const AdminMarketingRuleEditPage: React.FC = () => {
   const navigate = useNavigate();
@@ -89,7 +89,7 @@ export const AdminMarketingRuleEditPage: React.FC = () => {
         <Button type="button" variant="secondary" onClick={() => navigate('/admin/ops/jobs?kind=crm-run-scheduled')}>
           查看最近一次執行（Job 監控）
         </Button>
-        {!canWrite ? <div className="text-xs text-muted">{ADMIN_KEY_REQUIRED_HINT}</div> : null}
+        {/* 權限提示已隱藏，改由 .env VITE_ADMIN_API_KEY 配置 */}
       </div>
     </StandardListLayout>
   );

@@ -31,7 +31,7 @@ import { StandardFloatBar } from '../../shared/components/StandardFloatBar';
 import { TextInput } from '../../shared/components/TextInput';
 import { useAdminToast } from './AdminToastContext';
 import { pollImportJob } from '../../shared/utils/pollImportJob';
-import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/adminKey';
+import { hasAdminApiKey } from '../../shared/rbac/adminKey';
 
 const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v3';
 const PRODUCTS_TABLE_COL_DEFAULTS = {
@@ -1210,7 +1210,7 @@ export const AdminProductsPage: React.FC = () => {
               >
                 {bulkSubmitting ? '送出中…' : '批次改價'}
               </Button>
-              {!canWrite ? <div className="text-xs text-muted">{ADMIN_KEY_REQUIRED_HINT}</div> : null}
+              {/* 權限提示已隱藏，改由 .env VITE_ADMIN_API_KEY 配置 */}
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Button
