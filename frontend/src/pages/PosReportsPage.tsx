@@ -37,7 +37,7 @@ export const PosReportsPage: React.FC = () => {
   const [data, setData] = useState<PosReportsSummaryDto | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState<boolean>(false);
-  const [preset, setPreset] = useState<PosReportsPreset>(presetFromQuery ?? 'today');
+  const [preset, setPreset] = useState<PosReportsPreset>(presetFromQuery ?? 'last30d');
   const [orders, setOrders] = useState<PosOrderListResponse | null>(null);
   const [ordersErr, setOrdersErr] = useState<string | null>(null);
   const [topItems, setTopItems] = useState<PosTopItemRow[]>([]);
@@ -86,7 +86,7 @@ export const PosReportsPage: React.FC = () => {
   }, [data]);
 
   useEffect(() => {
-    const p = presetFromQuery ?? 'today';
+    const p = presetFromQuery ?? 'last30d';
     if (p !== preset) {
       setPreset(p);
     }
@@ -195,10 +195,11 @@ export const PosReportsPage: React.FC = () => {
         merchantId,
       });
       if (cancelled) return;
-      if ('buckets' in out && Array.isArray(out.buckets)) {
-        setOrderValueDist(out.buckets);
+      if (out && typeof out === 'object' && 'buckets' in out && Array.isArray((out as { buckets?: unknown }).buckets)) {
+        setOrderValueDist((out as { buckets: OrderValueDistributionBucket[] }).buckets);
       } else {
-        setOrderValueDistErr(getErrorMessage(out as ApiError));
+        const errMsg = getErrorMessage((out ?? { statusCode: 500, message: '未知錯誤' }) as ApiError);
+        setOrderValueDistErr(errMsg);
         setOrderValueDist([]);
       }
       setOrderValueDistLoading(false);
