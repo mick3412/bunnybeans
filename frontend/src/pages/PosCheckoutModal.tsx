@@ -92,6 +92,8 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
     }
   }, [open, totalAmount, initialMemberInput]);
 
+  const parsed = useMemo(() => parseMemberLookup(memberInput), [memberInput]);
+
   useEffect(() => {
     if (!parsed.customerId) {
       setPointBalance(null);
@@ -136,8 +138,6 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
     }, 280);
     return () => clearTimeout(t);
   }, [merchantId, memberInput, searchMembers]);
-
-  const parsed = useMemo(() => parseMemberLookup(memberInput), [memberInput]);
   const kindLabel =
     parsed.kind === 'empty'
       ? null
