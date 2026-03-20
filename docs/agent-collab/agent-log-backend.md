@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS-031（迴歸 + ci:backend-with-db 驗證）
+- 做了：依 `BACKEND-INSTRUCTIONS 031.md` §1 完成 #1～#2。
+  - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（145 passed）。
+  - **#2 ci:backend-with-db**：`migrate deploy` → `db:seed` → test 全綠。
+- 測試/驗收：`pnpm ci:backend-with-db` 全綠。
+- commits：無（本輪無後端變更）
+
 ### INSTRUCTIONS-030（迴歸 + ci:backend-with-db 驗證 + 類別／品牌／標籤排序）
 - 做了：依 `BACKEND-INSTRUCTIONS 030.md` §1 完成 #1～#3。
   - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（145 passed）。
