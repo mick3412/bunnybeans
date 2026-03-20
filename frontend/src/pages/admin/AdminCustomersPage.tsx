@@ -4,6 +4,7 @@ import { listLoyaltyCustomers, type LoyaltyCustomerRow } from '../../modules/adm
 import {
   mergeCustomers,
   createCustomer,
+  patchCustomer,
   getCustomerContacts,
   addCustomerContact,
   exportSegmentCsv,
@@ -41,7 +42,9 @@ export const AdminCustomersPage: React.FC = () => {
   const [segmentExportId, setSegmentExportId] = useState('');
   const [segmentExporting, setSegmentExporting] = useState(false);
   const [segmentExportErr, setSegmentExportErr] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelMode, setPanelMode] = useState<'create' | 'edit'>('create');
+  const [editCustomer, setEditCustomer] = useState<LoyaltyCustomerRow | null>(null);
   const [createForm, setCreateForm] = useState({ name: '', phone: '', email: '', memberLevel: '', memberCode: '' });
   const [createSaving, setCreateSaving] = useState(false);
 
@@ -191,7 +194,17 @@ export const AdminCustomersPage: React.FC = () => {
                   合併會員
                 </Button>
               )}
-              <Button type="button" size="sm" variant="primary" onClick={() => setCreateOpen(true)}>
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  setEditCustomer(null);
+                  setCreateForm({ name: '', phone: '', email: '', memberLevel: '', memberCode: '' });
+                  setPanelMode('create');
+                  setPanelOpen(true);
+                }}
+              >
                 新增會員
               </Button>
             </div>
@@ -340,12 +353,24 @@ export const AdminCustomersPage: React.FC = () => {
                         >
                           互動紀錄
                         </button>
-                        <Link
-                          to="/admin/customers"
+                        <button
+                          type="button"
                           className="text-xs font-medium text-sky-700 hover:underline"
+                          onClick={() => {
+                            setEditCustomer(r);
+                            setCreateForm({
+                              name: r.name ?? '',
+                              phone: r.phone ?? '',
+                              email: r.email ?? '',
+                              memberLevel: r.memberLevel ?? '',
+                              memberCode: r.memberCode ?? r.code ?? '',
+                            });
+                            setPanelMode('edit');
+                            setPanelOpen(true);
+                          }}
                         >
-                          會員編輯
-                        </Link>
+                          編輯
+                        </button>
                         <Link
                           to={`/admin/loyalty/point-ledger?customerId=${encodeURIComponent(r.id)}`}
                           className="text-xs font-medium text-sky-700 hover:underline"
@@ -362,25 +387,42 @@ export const AdminCustomersPage: React.FC = () => {
       )}
     </StandardListLayout>
 
-      {/* 新增會員 右側懸浮按鈕 */}
-      <button
-        type="button"
-        onClick={() => setCreateOpen(true)}
-        className="fixed bottom-8 right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-lg hover:bg-brand-primary-hover"
-        title="新增會員"
-        aria-label="新增會員"
-      >
-        <span className="text-2xl leading-none">+</span>
-      </button>
+      {/* 右緣懸浮：收起時可點開（向左展開表單） */}
+      {!panelOpen && (
+        <button
+          type="button"
+          className="fixed right-0 top-1/2 z-[95] flex -translate-y-1/2 flex-col items-center gap-1 rounded-l-xl border border-r-0 border-brand-primary bg-brand-primary px-2.5 py-6 text-xs font-semibold text-white shadow-lg transition hover:bg-brand-primary-hover"
+          onClick={() => {
+            setEditCustomer(null);
+            setCreateForm({ name: '', phone: '', email: '', memberLevel: '', memberCode: '' });
+            setPanelMode('create');
+            setPanelOpen(true);
+          }}
+          title="新增會員"
+          aria-label="新增會員"
+        >
+          <span className="[writing-mode:vertical-rl] tracking-widest">新增會員</span>
+        </button>
+      )}
 
-      {/* 新增會員 Drawer */}
-      {createOpen && (
+      {/* 新增/編輯會員 Drawer */}
+      {panelOpen && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/25" aria-hidden onClick={() => setCreateOpen(false)} />
-          <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-brand-surface bg-white shadow-xl">
+          <div
+            className="fixed inset-0 z-40 bg-black/25"
+            aria-hidden
+            onClick={() => setPanelOpen(false)}
+          />
+          <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-[440px] flex-col border-l border-brand-surface bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="font-semibold text-content">新增會員</h3>
-              <button type="button" className="rounded px-2 py-1 text-muted hover:bg-table-head" onClick={() => setCreateOpen(false)}>關閉</button>
+              <h3 className="font-semibold text-content">{panelMode === 'edit' ? '編輯會員' : '新增會員'}</h3>
+              <button
+                type="button"
+                className="rounded px-2 py-1 text-muted hover:bg-table-head"
+                onClick={() => setPanelOpen(false)}
+              >
+                關閉
+              </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
               <TextInput label="姓名 *" value={createForm.name} onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))} placeholder="" />
@@ -396,8 +438,27 @@ export const AdminCustomersPage: React.FC = () => {
                 fullWidth
                 disabled={createSaving || !createForm.name.trim()}
                 onClick={async () => {
-                  if (!merchantId || !createForm.name.trim()) return;
+                  if (!createForm.name.trim()) return;
                   setCreateSaving(true);
+                  if (panelMode === 'edit' && editCustomer) {
+                    const out = await patchCustomer(editCustomer.id, {
+                      name: createForm.name.trim(),
+                      phone: createForm.phone.trim() || undefined,
+                      email: createForm.email.trim() || undefined,
+                      memberLevel: createForm.memberLevel.trim() || undefined,
+                      memberCode: createForm.memberCode.trim() || undefined,
+                    });
+                    setCreateSaving(false);
+                    if ('statusCode' in out) {
+                      showAdminApiErrorToast(showToast, out as ApiError);
+                      return;
+                    }
+                    showToast('已更新會員', 'ok');
+                    setPanelOpen(false);
+                    void load();
+                    return;
+                  }
+                  if (!merchantId) return;
                   const out = await createCustomer({
                     merchantId,
                     name: createForm.name.trim(),
@@ -412,12 +473,12 @@ export const AdminCustomersPage: React.FC = () => {
                     return;
                   }
                   showToast('已新增會員', 'ok');
-                  setCreateOpen(false);
+                  setPanelOpen(false);
                   setCreateForm({ name: '', phone: '', email: '', memberLevel: '', memberCode: '' });
                   void load();
                 }}
               >
-                {createSaving ? '建立中…' : '建立會員'}
+                {createSaving ? (panelMode === 'edit' ? '儲存中…' : '建立中…') : panelMode === 'edit' ? '儲存' : '建立會員'}
               </Button>
             </div>
           </aside>
