@@ -28,7 +28,7 @@ import { useAdminToast } from './AdminToastContext';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { pollImportJob } from '../../shared/utils/pollImportJob';
 
-export const AdminInventoryPage: React.FC = () => {
+export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embeddedInHub = false }) => {
   const { showToast } = useAdminToast();
   const [searchParams] = useSearchParams();
   const merchantIdDefault = useDefaultMerchantId();
@@ -81,6 +81,7 @@ export const AdminInventoryPage: React.FC = () => {
   const [actualQtyByProductId, setActualQtyByProductId] = useState<Record<string, number>>({});
   const [stocktakeSubmitting, setStocktakeSubmitting] = useState(false);
   const [stocktakeMode, setStocktakeMode] = useState<'list' | 'scan'>('list');
+  const [stocktakeListFilter, setStocktakeListFilter] = useState('');
   const [scanSku, setScanSku] = useState('');
   const [scanQty, setScanQty] = useState('');
   const [scanChoices, setScanChoices] = useState<Array<{ productId: string; sku: string; name: string; onHandQty?: number | null }>>([]);
@@ -112,6 +113,16 @@ export const AdminInventoryPage: React.FC = () => {
     hubNext.set('tab', desired);
     setInvHubTabParams(hubNext, { replace: true });
   }, [view, setInvParams, setInvHubTabParams]);
+
+  const filteredBalancesForStocktake = useMemo(() => {
+    const q = stocktakeListFilter.trim().toLowerCase();
+    if (!q) return balances;
+    return balances.filter((b) => {
+      const sku = (b.sku ?? '').toLowerCase();
+      const name = (b.name ?? '').toLowerCase();
+      return sku.includes(q) || name.includes(q);
+    });
+  }, [balances, stocktakeListFilter]);
 
   const skuToBalanceRow = useMemo(() => {
     const m = new Map<string, BalanceEnrichedRow>();
@@ -513,33 +524,35 @@ export const AdminInventoryPage: React.FC = () => {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-            view === 'balances'
-              ? 'bg-[#1e293b] text-white shadow-sm'
-              : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
-          }`}
-          onClick={() => setView('balances')}
-        >
-          庫存餘額
-        </button>
-        <button
-          type="button"
-          className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-            view === 'slowMoving'
-              ? 'bg-[#1e293b] text-white shadow-sm'
-              : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
-          }`}
-          onClick={() => setView('slowMoving')}
-        >
-          滯銷品
-        </button>
-        <span className="ml-auto text-xs text-muted">
-          {view === 'slowMoving' && slowRange ? `區間：${slowRange.from}～${slowRange.to}` : null}
-        </span>
-      </div>
+      {!embeddedInHub && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              view === 'balances'
+                ? 'bg-[#1e293b] text-white shadow-sm'
+                : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
+            }`}
+            onClick={() => setView('balances')}
+          >
+            庫存餘額
+          </button>
+          <button
+            type="button"
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              view === 'slowMoving'
+                ? 'bg-[#1e293b] text-white shadow-sm'
+                : 'bg-white text-[#64748b] shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
+            }`}
+            onClick={() => setView('slowMoving')}
+          >
+            滯銷品
+          </button>
+          <span className="ml-auto text-xs text-muted">
+            {view === 'slowMoving' && slowRange ? `區間：${slowRange.from}～${slowRange.to}` : null}
+          </span>
+        </div>
+      )}
 
       {view === 'balances' ? (
         <>
@@ -588,6 +601,19 @@ export const AdminInventoryPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            {stocktakeMode === 'list' && (
+              <div className="border-b border-brand-surface bg-table-head px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="篩選 SKU 或品名…"
+                    className="h-9 max-w-[200px] rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                    value={stocktakeListFilter}
+                    onChange={(e) => setStocktakeListFilter(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
             {stocktakeMode === 'scan' && (
               <div className="border-b border-brand-surface bg-table-head px-4 py-3">
                 <div className="flex flex-wrap items-end gap-2">
@@ -675,20 +701,20 @@ export const AdminInventoryPage: React.FC = () => {
                 ) : null}
               </div>
             )}
-            <div className="overflow-x-auto">
+            <div className="max-h-[60vh] overflow-auto">
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-brand-surface bg-table-head text-[#64748b]">
+                <thead className="sticky top-0 z-10 border-b border-brand-surface bg-table-head text-muted">
                   <tr>
-                    <th className="px-4 py-2 w-10">
+                    <th className="bg-table-head px-4 py-2 w-10">
                       <input
                         type="checkbox"
                         aria-label="全選"
-                        checked={balances.length > 0 && balances.every((b) => selectedProductIds.has(b.productId))}
+                        checked={filteredBalancesForStocktake.length > 0 && filteredBalancesForStocktake.every((b) => selectedProductIds.has(b.productId))}
                         onChange={(e) => {
                           const checked = e.target.checked;
                           setSelectedProductIds(() => {
                             if (!checked) return new Set();
-                            return new Set(balances.map((b) => b.productId));
+                            return new Set(filteredBalancesForStocktake.map((b) => b.productId));
                           });
                         }}
                       />
@@ -701,14 +727,16 @@ export const AdminInventoryPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {balances.length === 0 ? (
+                  {filteredBalancesForStocktake.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-muted">
-                        此倉尚無庫存匯總（可自「入庫／盤點」或 POS 銷售後產生）
+                        {balances.length === 0
+                          ? '此倉尚無庫存匯總（可自「入庫／盤點」或 POS 銷售後產生）'
+                          : '無符合篩選的品項'}
                       </td>
                     </tr>
                   ) : (
-                    balances.map((row) => (
+                    filteredBalancesForStocktake.map((row) => (
                       <tr key={`${row.productId}-${row.warehouseId}`} className="border-t border-brand-surface">
                         <td className="px-4 py-2">
                           <input

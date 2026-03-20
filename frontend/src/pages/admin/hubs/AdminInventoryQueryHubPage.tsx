@@ -66,11 +66,6 @@ export function AdminInventoryQueryHubPage(props: { initialTab?: InventoryQueryH
     }
   }, [activeTab, setInvParams]);
 
-  const ActivePage = useMemo(() => {
-    if (activeTab === 'expiring') return AdminExpiringInventoryPage;
-    return AdminInventoryPage;
-  }, [activeTab]);
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 border-b border-brand-surface pb-3">
@@ -87,7 +82,11 @@ export function AdminInventoryQueryHubPage(props: { initialTab?: InventoryQueryH
           </Button>
         ))}
       </div>
-      <ActivePage />
+      {activeTab === 'expiring' ? (
+        <AdminExpiringInventoryPage />
+      ) : (
+        <AdminInventoryPage embeddedInHub />
+      )}
     </div>
   );
 }
