@@ -60,6 +60,26 @@ export class ProductRepository {
       where: Object.keys(where).length ? where : undefined,
       orderBy: { sku: 'asc' },
       take: 5000,
+      select: {
+        id: true,
+        sku: true,
+        barcode: true,
+        name: true,
+        description: true,
+        specSize: true,
+        specCapacity: true,
+        specStyle: true,
+        specWeight: true,
+        expiryDescription: true,
+        listPrice: true,
+        salePrice: true,
+        costPrice: true,
+        categoryId: true,
+        brandId: true,
+        tags: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 

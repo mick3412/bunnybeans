@@ -140,12 +140,23 @@ export class PosRepository {
       where,
       orderBy: { createdAt: 'desc' },
       take: 10_000,
-      include: { customer: true },
+      select: {
+        id: true,
+        orderNumber: true,
+        storeId: true,
+        customerId: true,
+        subtotalAmount: true,
+        discountAmount: true,
+        totalAmount: true,
+        createdAt: true,
+        customer: { select: { name: true } },
+      },
     });
   }
 
   /**
    * 匯出含明細：每元素 = 一筆訂單列 + 一筆明細；最多 maxLines 筆明細列（訂單無明細則仍一列 order、item 空）
+   * 使用 cursor-based pagination 避免 skip 隨頁數增大而變慢
    */
   async findLineRowsForExport(
     filter: { storeId?: string; from?: Date; to?: Date },
@@ -167,30 +178,41 @@ export class PosRepository {
       };
       item: { id: string; productId: string; quantity: number; unitPrice: Decimal } | null;
     }> = [];
-    let skip = 0;
     const batch = 60;
+    let cursor: string | undefined;
     while (out.length < maxLines) {
       const orders = await this.prisma.posOrder.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
-        skip,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: batch,
-        include: { customer: true, items: true },
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        select: {
+          id: true,
+          orderNumber: true,
+          storeId: true,
+          customerId: true,
+          subtotalAmount: true,
+          discountAmount: true,
+          totalAmount: true,
+          createdAt: true,
+          customer: { select: { name: true } },
+          items: { select: { id: true, productId: true, quantity: true, unitPrice: true } },
+        },
       });
       if (orders.length === 0) break;
+      cursor = orders[orders.length - 1]?.id;
       for (const o of orders) {
         const items = o.items;
         if (items.length === 0) {
           if (out.length >= maxLines) return out;
-          out.push({ order: o, item: null });
+          out.push({ order: o as (typeof out)[0]['order'], item: null });
           continue;
         }
         for (const item of items) {
           if (out.length >= maxLines) return out;
-          out.push({ order: o, item });
+          out.push({ order: o as (typeof out)[0]['order'], item });
         }
       }
-      skip += batch;
     }
     return out;
   }
