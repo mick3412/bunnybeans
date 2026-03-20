@@ -15,7 +15,10 @@ import { FinanceEventType } from '@prisma/client';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { MerchantService } from '../../merchant/application/merchant.service';
 import { OpsService } from '../../ops/application/ops.service';
-import { FinanceService, RecordFinanceEventInput } from '../application/finance.service';
+import { FinanceService } from '../application/finance.service';
+import { RecordFinanceEventDto } from '../dto/record-finance-event.dto';
+import { ClosePeriodDto } from '../dto/close-period.dto';
+import { CreateSnapshotDto } from '../dto/create-snapshot.dto';
 
 @Controller('finance')
 export class FinanceController {
@@ -131,30 +134,11 @@ export class FinanceController {
   }
 
   @Post('events')
-  recordEvent(
-    @Body()
-    body: {
-      type: FinanceEventType;
-      partyId?: string | null;
-      currency: string;
-      amount: number;
-      taxAmount?: number;
-      occurredAt?: string;
-      referenceId?: string;
-      note?: string;
-    },
-  ) {
-    const input: RecordFinanceEventInput = {
-      type: body.type,
-      partyId: body.partyId,
-      currency: body.currency,
-      amount: body.amount,
-      taxAmount: body.taxAmount,
-      occurredAt: body.occurredAt,
-      referenceId: body.referenceId,
-      note: body.note,
-    };
-    return this.service.recordFinanceEvent(input);
+  recordEvent(@Body() body: RecordFinanceEventDto) {
+    return this.service.recordFinanceEvent({
+      ...body,
+      type: body.type as FinanceEventType,
+    });
   }
 
   @Get('periods')
@@ -165,11 +149,9 @@ export class FinanceController {
 
   @Post('periods/close')
   @UseGuards(AdminApiKeyGuard)
-  async closePeriod(
-    @Body() body: { startDate: string; endDate: string; merchantId?: string; closedBy?: string },
-  ) {
+  async closePeriod(@Body() body: ClosePeriodDto) {
     try {
-      const result = await this.service.closePeriod(body ?? { startDate: '', endDate: '' });
+      const result = await this.service.closePeriod(body);
       await this.opsService.recordRun('finance-period-close', true);
       return result;
     } catch (e) {
@@ -206,9 +188,9 @@ export class FinanceController {
 
   @Post('snapshots')
   @UseGuards(AdminApiKeyGuard)
-  async createSnapshot(@Body() body: { asOfDate: string; type: 'daily' | 'monthly' }) {
+  async createSnapshot(@Body() body: CreateSnapshotDto) {
     try {
-      const result = await this.service.createSnapshot(body ?? { asOfDate: new Date().toISOString().slice(0, 10), type: 'daily' });
+      const result = await this.service.createSnapshot(body);
       await this.opsService.recordRun('finance-snapshot', true);
       return result;
     } catch (e) {

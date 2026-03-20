@@ -46,15 +46,7 @@ export class CustomerController {
   /** POST 合併會員（Admin）；body { primaryId, mergeIds } */
   @Post('merge')
   @UseGuards(AdminApiKeyGuard)
-  merge(
-    @Body() body: { primaryId: string; mergeIds: string[] },
-  ) {
-    if (!body?.primaryId || !Array.isArray(body.mergeIds)) {
-      throw new BadRequestException({
-        message: 'primaryId and mergeIds (array) required',
-        code: 'CUSTOMER_MERGE_INVALID',
-      });
-    }
+  merge(@Body() body: MergeCustomersDto) {
     return this.service.merge(body.primaryId.trim(), body.mergeIds);
   }
 

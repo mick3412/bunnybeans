@@ -1,6 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { ReceivingNoteService } from '../application/receiving-note.service';
+import { CreateReceivingNoteDto } from '../dto/create-receiving-note.dto';
+import { PatchReceivingNoteLinesDto } from '../dto/patch-receiving-note-lines.dto';
+import { ReturnToSupplierDto } from '../dto/return-to-supplier.dto';
 
 @Controller('receiving-notes')
 @UseGuards(AdminApiKeyGuard)
@@ -22,37 +25,12 @@ export class ReceivingNoteController {
   }
 
   @Post()
-  create(
-    @Body()
-    body: {
-      merchantId: string;
-      purchaseOrderId: string;
-      inspectorName?: string;
-      remark?: string;
-    },
-  ) {
+  create(@Body() body: CreateReceivingNoteDto) {
     return this.svc.create(body);
   }
 
   @Patch(':id/lines')
-  patchLines(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      lines: {
-        lineId: string;
-        receivedQty?: number;
-        qualifiedQty?: number;
-        returnedQty?: number;
-        returnReason?: string;
-        batchCode?: string | null;
-        expiryDate?: string | null;
-        productionDate?: string | null;
-        shelfLifeMonths?: number | null;
-        weightUnit?: string | null;
-      }[];
-    },
-  ) {
+  patchLines(@Param('id') id: string, @Body() body: PatchReceivingNoteLinesDto) {
     return this.svc.patchLines(id, body.lines ?? []);
   }
 
@@ -67,13 +45,7 @@ export class ReceivingNoteController {
   }
 
   @Post(':id/return-to-supplier')
-  returnToSupplier(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      lines: { receivingNoteLineId: string; quantity: number }[];
-    },
-  ) {
+  returnToSupplier(@Param('id') id: string, @Body() body: ReturnToSupplierDto) {
     return this.svc.returnToSupplier(id, body);
   }
 }

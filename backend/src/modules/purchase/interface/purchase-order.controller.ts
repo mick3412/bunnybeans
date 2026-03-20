@@ -1,6 +1,10 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { PurchaseOrderService } from '../application/purchase-order.service';
+import { CreatePurchaseOrderDto } from '../dto/create-purchase-order.dto';
+import { CreateFromReplenishmentDto } from '../dto/create-from-replenishment.dto';
+import { QuickReceiveDto } from '../dto/quick-receive.dto';
+import { PatchPurchaseOrderDto } from '../dto/patch-purchase-order.dto';
 
 @Controller('purchase-orders')
 @UseGuards(AdminApiKeyGuard)
@@ -22,14 +26,7 @@ export class PurchaseOrderController {
   }
 
   @Post('from-replenishment')
-  createFromReplenishment(
-    @Body()
-    body: {
-      supplierId: string;
-      warehouseId: string;
-      suggestions: { productId: string; suggestedQty: number }[];
-    },
-  ) {
+  createFromReplenishment(@Body() body: CreateFromReplenishmentDto) {
     return this.svc.createFromReplenishment(body);
   }
 
@@ -38,54 +35,17 @@ export class PurchaseOrderController {
    * UI flow: 選供應商 → 選品項 → 輸入數量 → 完成。
    */
   @Post('quick-receive')
-  quickReceive(
-    @Body()
-    body: {
-      merchantId: string;
-      supplierId: string;
-      warehouseId: string;
-      orderNumber: string;
-      inspectorName?: string;
-      remark?: string;
-      lines: {
-        productId: string;
-        qty: number;
-        unitCost?: number;
-        batchCode?: string | null;
-        expiryDate?: string | null;
-        productionDate?: string | null;
-        shelfLifeMonths?: number | null;
-        weightUnit?: string | null;
-      }[];
-    },
-  ) {
+  quickReceive(@Body() body: QuickReceiveDto) {
     return this.svc.quickReceive(body);
   }
 
   @Post()
-  create(
-    @Body()
-    body: {
-      merchantId: string;
-      supplierId: string;
-      warehouseId: string;
-      orderNumber: string;
-      expectedDate?: string;
-      lines: { productId: string; qtyOrdered: number; unitCost: number }[];
-    },
-  ) {
+  create(@Body() body: CreatePurchaseOrderDto) {
     return this.svc.create(body);
   }
 
   @Patch(':id')
-  patch(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      expectedDate?: string | null;
-      lines?: { productId: string; qtyOrdered: number; unitCost: number }[];
-    },
-  ) {
+  patch(@Param('id') id: string, @Body() body: PatchPurchaseOrderDto) {
     return this.svc.patchDraft(id, body);
   }
 
