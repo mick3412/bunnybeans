@@ -56,6 +56,11 @@ export interface ProductDto {
   specStyle?: string | null;
 }
 
+/** GET /pos/products 回傳：產品基本欄位 + 門市倉庫彙總 onHandQty */
+export interface PosProductWithStockDto extends ProductDto {
+  onHandQty: number;
+}
+
 export function productDtoSalePriceNumber(p: ProductDto): number {
   const n = Number(p.salePrice);
   return Number.isFinite(n) && n >= 0 ? n : 0;
@@ -185,6 +190,20 @@ export async function getProducts(
   if (params?.sku?.trim()) q.set('sku', params.sku.trim());
   const path = `products${q.toString() ? `?${q.toString()}` : ''}`;
   const out = await request<ProductDto[]>(path, { traceId: traceId ?? genTraceId() });
+  if (!out.ok) return out.error;
+  return Array.isArray(out.data) ? out.data : [];
+}
+
+/** GET /pos/products?storeId= — 產品列表含門市倉庫庫存（onHandQty） */
+export async function getPosProducts(
+  storeId: string,
+  traceId?: string,
+): Promise<PosProductWithStockDto[] | ApiError> {
+  const id = storeId?.trim();
+  if (!id) return { statusCode: 400, message: 'storeId required', code: 'POS_PRODUCTS_STORE_REQUIRED' };
+  const out = await request<PosProductWithStockDto[]>(`pos/products?storeId=${encodeURIComponent(id)}`, {
+    traceId: traceId ?? genTraceId(),
+  });
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
 }
