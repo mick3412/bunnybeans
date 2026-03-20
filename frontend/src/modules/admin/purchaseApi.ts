@@ -386,6 +386,39 @@ function normalizeRnDetailFromApi(raw: Record<string, unknown>): ReceivingNoteDt
   };
 }
 
+export interface SupplierRankingItem {
+  supplierId: string;
+  supplierCode: string;
+  supplierName: string;
+  receivingNotesCount: number;
+  totalAmount: number;
+}
+
+export async function getSupplierRankings(params: {
+  merchantId: string;
+  from?: string;
+  to?: string;
+}): Promise<
+  | { items: SupplierRankingItem[]; from?: string; to?: string }
+  | ApiError
+> {
+  if (!BASE) {
+    return { items: [] };
+  }
+  const q = new URLSearchParams({ merchantId: params.merchantId });
+  if (params.from) q.set('from', params.from);
+  if (params.to) q.set('to', params.to);
+  const out = await req<{ items: SupplierRankingItem[]; from?: string; to?: string }>(
+    `purchase/reports/supplier-rankings?${q}`,
+  );
+  if (!out.ok) return out.error;
+  return {
+    items: Array.isArray(out.data.items) ? out.data.items : [],
+    from: out.data.from,
+    to: out.data.to,
+  };
+}
+
 export async function listSuppliers(merchantId: string, q?: string): Promise<PurchaseListResult<SupplierDto>> {
   if (!BASE) {
     let rows = mockSuppliers.map((s) => ({ ...s, merchantId }));
