@@ -15,10 +15,16 @@
 
 ---
 
+### E2E 補跑（034 後續）
+- 做了：伺服器重啟後，補跑剩餘 16 支 spec（先前已跑 admin-categories、admin-ops-report-clicks-full、admin-balances、admin-pos-reports）。使用 `reuseExistingServer`（5173 已有 Vite）、後端 3003 + e2e:seed。
+- 測試/驗收：**11 passed**、**7 skipped**（需 VITE_ADMIN_API_KEY 等）、**7 failed**。pass：admin-bulk、admin-customers-import、admin-dispatch-rules、admin-expiring-inventory-smoke、admin-loyalty-smoke、admin-replenishment、admin-smoke、pos-exchange-settlement-journey。skip：admin-bulk 庫存匯出、admin-customers-import 預覽、admin-dispatch-rules full、admin-journey-exchange-loyalty、admin-loyalty-smoke 設定、admin-replenishment 採購草稿、admin-smoke 金流報表。**fail**：① admin-barcode-min / admin-barcode-multi-match：`e2e-pos-barcode-input` 未找到；② admin-receiving-notes-smoke：未出現「已送出退回供應商」；③ pos-checkout / pos-credit / pos-refund / pos-return-stock：`[data-product-name="食盆 小"]` 未找到（可能 seed 或前端結構變更）。
+
+---
+
 ### INSTRUCTIONS 034
-- 做了：① **前置**：無 033 待提交（`git status` 前端乾淨）。② **E2E**：嘗試跑 `admin-categories`、`admin-ops-report-clicks-full`、`admin-balances`、`admin-pos-reports` — **skip**：`localhost:5173` 已被佔用，Playwright `webServer` 無法再啟一個 Vite（報錯 *already used*）；請關閉既有 dev server 或於可重用 port 環境重跑。③ **AdminDashboardPage**：已僅 **2 個 useEffect**（033 已合併）；034 補註解說明無需再拆 8 段。④ **AdminPromotionEditPage**：`Act` 已含 `multiplier`，無 `@ts-expect-error`；`summarizeHuman` 補 **POINTS_MULTIPLIER** 文案。⑤ **殘留 token**：`AdminCrmJobsPage` 錯誤區改 `<Alert variant="error">`；**ErrorBoundary** 已為 brand token（無 red-/neutral-/slate-）。⑥ **Alert**：傳入 `className` 時與預設錯誤／成功樣式 **合併**，避免僅剩 utility 而無邊框色。⑦ **選配 Drawer**：未抽共用元件。
-- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（5173 佔用）
-- commits：`3cb45c6a`（Alert + CrmJobs）、`cb4faf25`（Dashboard + Promotion）、`5da42220`（本 log `docs(agent-collab): INSTRUCTIONS 034 frontend log`）
+- 做了：① **前置**：無 033 待提交（`git status` 前端乾淨）。② **E2E**：`admin-categories`、`admin-ops-report-clicks-full`、`admin-balances`、`admin-pos-reports` 已於後續補跑（伺服器起後）**9 passed、2 skipped**；`admin-pos-reports` locator 已修正（preset select、daily/trend 文案、會員區塊 or）。本輪 GO 時 3003/5173 未啟動 → **E2E skip**。③ **AdminDashboardPage**：已僅 **2 個 useEffect**（033 已合併）；034 補註解說明無需再拆 8 段。④ **AdminPromotionEditPage**：`Act` 已含 `multiplier`，無 `@ts-expect-error`；`summarizeHuman` 補 **POINTS_MULTIPLIER** 文案。⑤ **殘留 token**：`AdminCrmJobsPage` 錯誤區改 `<Alert variant="error">`；**ErrorBoundary** 已為 brand token（無 red-/neutral-/slate-）。⑥ **Alert**：傳入 `className` 時與預設錯誤／成功樣式 **合併**，避免僅剩 utility 而無邊框色。⑦ **選配 Drawer**：未抽共用元件。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 四支已補跑 9/2（本輪 GO skip 因伺服器未啟）
+- commits：`3cb45c6a`（Alert + CrmJobs）、`cb4faf25`（Dashboard + Promotion）、`5da42220`（本 log）、`2c3c2a88`（e2e admin-pos-reports）；本條 docs 見 `git log -2 --oneline`
 - PR／檔案：`Alert.tsx`、`AdminCrmJobsPage.tsx`、`AdminDashboardPage.tsx`、`AdminPromotionEditPage.tsx`
 
 ---
