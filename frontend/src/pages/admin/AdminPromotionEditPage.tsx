@@ -106,6 +106,8 @@ function summarizeHuman(conditions: Cond[], actions: Act[]): string {
           ? `贈送「${x.productName || '禮品'}」`
           : `加價購「${x.productName}」$${x.upsellAmount}`,
       );
+    else if (x.type === 'POINTS_MULTIPLIER')
+      parts.push(`點數倍率 ×${x.multiplier ?? 1}`);
   }
   const when = c.filter(Boolean).join('，') || '無門檻';
   const then = parts.join('；') || '（尚未設定行動）';

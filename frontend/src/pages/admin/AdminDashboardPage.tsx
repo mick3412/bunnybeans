@@ -38,7 +38,10 @@ export const AdminDashboardPage: React.FC = () => {
   const [newMembersCount, setNewMembersCount] = useState<number | null>(null);
   const [dailyRevenue, setDailyRevenue] = useState<{ date: string; revenue: number }[]>([]);
 
-  /** 合併首屏非 merchantId 依賴請求，減少 waterfall */
+  /**
+   * 首屏資料：已合併為 2 個 effect（本頁無 8 段 useEffect；034 僅評估確認）。
+   * - 此 effect：不依 merchantId 的摘要／分類／今日營收／即期筆數 + 近 7 日營收曲線
+   */
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -111,7 +114,7 @@ export const AdminDashboardPage: React.FC = () => {
     };
   }, [merchantId]);
 
-  // 待辦中心與頂欄鈴鐺共用 useAdminTodoItems + localStorage 行為（已處理 / 稍後提醒）
+  /** 待辦中心與頂欄鈴鐺共用 useAdminTodoItems + localStorage（非此頁 useEffect） */
 
   return (
     <div className="mx-auto max-w-7xl">
