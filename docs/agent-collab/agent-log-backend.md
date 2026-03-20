@@ -23,7 +23,7 @@
   - **#4 即將到期天數**：`GET /inventory/expiring` 批次回傳新增 `daysUntilExpiry`（到期日期 − 當天）；`groupBy=product` 新增 `earliestDaysUntilExpiry` 與每 batch 之 `daysUntilExpiry`。
   - **#5 產品條碼確認**：Product schema 已有 `barcode`；`GET /products/search-barcode?q=`、scan-stocktake 已使用；api-design.md 已載明。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
-- commits：d73b624b feat(purchase,inventory): expiry - productionDate+shelfLifeMonths, daysUntilExpiry；368edbed docs: api-design expiry；bf15a079 docs(agent-log): INSTRUCTIONS-026
+- commits：d73b624b feat(purchase,inventory): expiry - productionDate+shelfLifeMonths, daysUntilExpiry；368edbed docs: api-design expiry；4cc5b8a9 docs(agent-log): INSTRUCTIONS-026
 
 ### INSTRUCTIONS-025（迴歸 + Product schema 擴充確認）
 - 做了：依 `BACKEND-INSTRUCTIONS 025.md` §1 完成 #1～#2。
