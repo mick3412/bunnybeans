@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { listLoyaltyCustomers, type LoyaltyCustomerRow } from '../../modules/admin/loyaltyApi';
 import {
   mergeCustomers,
+  createCustomer,
   getCustomerContacts,
   addCustomerContact,
   exportSegmentCsv,
@@ -40,6 +41,9 @@ export const AdminCustomersPage: React.FC = () => {
   const [segmentExportId, setSegmentExportId] = useState('');
   const [segmentExporting, setSegmentExporting] = useState(false);
   const [segmentExportErr, setSegmentExportErr] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', phone: '', email: '', memberLevel: '', memberCode: '' });
+  const [createSaving, setCreateSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!merchantId) {
@@ -105,46 +109,10 @@ export const AdminCustomersPage: React.FC = () => {
     <>
     <StandardListLayout
       title="會員管理"
-      description={
-        <>
-          資料來源 <code className="rounded bg-brand-canvas px-1 text-[#1e293b]">GET /customers?merchantId=</code>
-          ；可篩選等級、搜尋姓名／電話／會員碼。使用 <strong>匯入</strong> 前往客戶 CSV 匯入、<strong>匯出</strong> 可下載分群名單 CSV。點擊「會員管理」進入 Loyalty 會員管理、「點數存摺」進入存摺。
-        </>
-      }
-      actions={
-        <>
-          <Link to="/admin/customers/import">
-            <Button type="button" size="sm" variant="primary" className="shadow-sm">
-              匯入
-            </Button>
-          </Link>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() => setExportPanelOpen((o) => !o)}
-            aria-expanded={exportPanelOpen}
-          >
-            匯出
-          </Button>
-          {selectedIds.size >= 2 && (
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setMergeOpen(true);
-                setMergePrimaryId(Array.from(selectedIds)[0] ?? '');
-              }}
-            >
-              合併會員
-            </Button>
-          )}
-        </>
-      }
       filters={
         <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="flex flex-wrap items-end gap-3">
             <TextInput
               label="搜尋"
               value={searchQ}
@@ -193,6 +161,39 @@ export const AdminCustomersPage: React.FC = () => {
                   </option>
                 ))}
               </select>
+            </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Link to="/admin/customers/import">
+                <Button type="button" size="sm" variant="primary" className="shadow-sm">
+                  匯入
+                </Button>
+              </Link>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setExportPanelOpen((o) => !o)}
+                aria-expanded={exportPanelOpen}
+              >
+                匯出
+              </Button>
+              {selectedIds.size >= 2 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setMergeOpen(true);
+                    setMergePrimaryId(Array.from(selectedIds)[0] ?? '');
+                  }}
+                >
+                  合併會員
+                </Button>
+              )}
+              <Button type="button" size="sm" variant="primary" onClick={() => setCreateOpen(true)}>
+                新增會員
+              </Button>
             </div>
           </div>
           {exportPanelOpen && (
@@ -343,7 +344,7 @@ export const AdminCustomersPage: React.FC = () => {
                           to="/admin/customers"
                           className="text-xs font-medium text-sky-700 hover:underline"
                         >
-                          會員管理
+                          會員編輯
                         </Link>
                         <Link
                           to={`/admin/loyalty/point-ledger?customerId=${encodeURIComponent(r.id)}`}
@@ -360,6 +361,68 @@ export const AdminCustomersPage: React.FC = () => {
       </div>
       )}
     </StandardListLayout>
+
+      {/* 新增會員 右側懸浮按鈕 */}
+      <button
+        type="button"
+        onClick={() => setCreateOpen(true)}
+        className="fixed bottom-8 right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-lg hover:bg-brand-primary-hover"
+        title="新增會員"
+        aria-label="新增會員"
+      >
+        <span className="text-2xl leading-none">+</span>
+      </button>
+
+      {/* 新增會員 Drawer */}
+      {createOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/25" aria-hidden onClick={() => setCreateOpen(false)} />
+          <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-brand-surface bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h3 className="font-semibold text-content">新增會員</h3>
+              <button type="button" className="rounded px-2 py-1 text-muted hover:bg-table-head" onClick={() => setCreateOpen(false)}>關閉</button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
+              <TextInput label="姓名 *" value={createForm.name} onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))} placeholder="" />
+              <TextInput label="電話" value={createForm.phone} onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))} placeholder="" />
+              <TextInput label="Email" value={createForm.email} onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))} placeholder="" />
+              <TextInput label="會員等級" value={createForm.memberLevel} onChange={(e) => setCreateForm((f) => ({ ...f, memberLevel: e.target.value }))} placeholder="" />
+              <TextInput label="會員碼" value={createForm.memberCode} onChange={(e) => setCreateForm((f) => ({ ...f, memberCode: e.target.value }))} placeholder="" />
+            </div>
+            <div className="border-t border-brand-surface p-4">
+              <Button
+                type="button"
+                variant="primary"
+                fullWidth
+                disabled={createSaving || !createForm.name.trim()}
+                onClick={async () => {
+                  if (!merchantId || !createForm.name.trim()) return;
+                  setCreateSaving(true);
+                  const out = await createCustomer({
+                    merchantId,
+                    name: createForm.name.trim(),
+                    phone: createForm.phone.trim() || undefined,
+                    email: createForm.email.trim() || undefined,
+                    memberLevel: createForm.memberLevel.trim() || undefined,
+                    memberCode: createForm.memberCode.trim() || undefined,
+                  });
+                  setCreateSaving(false);
+                  if ('statusCode' in out) {
+                    showAdminApiErrorToast(showToast, out as ApiError);
+                    return;
+                  }
+                  showToast('已新增會員', 'ok');
+                  setCreateOpen(false);
+                  setCreateForm({ name: '', phone: '', email: '', memberLevel: '', memberCode: '' });
+                  void load();
+                }}
+              >
+                {createSaving ? '建立中…' : '建立會員'}
+              </Button>
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* 合併會員 Modal */}
       {mergeOpen && selectedIds.size >= 2 && (
