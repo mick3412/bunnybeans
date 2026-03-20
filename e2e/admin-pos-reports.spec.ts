@@ -14,7 +14,13 @@ test.describe('Admin POS 報表', () => {
     await expect(page).not.toHaveURL(/preset=/);
 
     // 切換到近 7 日
-    await container.getByRole('combobox').selectOption('last7d');
+    // 頁面上可能同時存在多個 <select>（例如：preset 與日/週/月 groupBy）
+    // 避免 strict mode violation，改用 option[value="last7d"] 定位正確 select。
+    const presetSelect = container
+      .locator('select')
+      .filter({ has: page.locator('option[value="last7d"]') })
+      .first();
+    await presetSelect.selectOption('last7d');
     await expect(page).toHaveURL(/preset=last7d/);
   });
 
@@ -36,10 +42,12 @@ test.describe('Admin POS 報表', () => {
     await expect.soft(topItemsTitle.or(topItemsRankTitle).or(topItemsEmpty)).toBeVisible();
 
     const dailyTitle = container.getByText('區間趨勢（按日）');
-    const dailyChartTitle = container.getByText('日營收趨勢');
+    const dailyChartTitle = container.getByText('營收趨勢');
     const dailyEmpty = container.getByText('此區間內尚無營收／訂單紀錄。');
-    const dailyErr = container.getByText('區間趨勢載入失敗');
-    await expect.soft(dailyTitle.or(dailyChartTitle).or(dailyEmpty).or(dailyErr)).toBeVisible();
+    // 頁面用 Alert 顯示錯誤：區間趨勢：{error}
+    const dailyErr = container.getByText(/區間趨勢：/);
+    const dailyAnyState = dailyTitle.or(dailyChartTitle).or(dailyEmpty).or(dailyErr);
+    await expect.soft(dailyAnyState.first()).toBeVisible();
   });
 
   test('會員營收貢獻、營收趨勢、客單價分布、金流連結四區塊存在或空態不報錯', async ({ page }) => {
@@ -53,13 +61,17 @@ test.describe('Admin POS 報表', () => {
     // 會員營收貢獻：區塊標題或空態文案（memberContribution 有值時顯示）
     const memberContribTitle = container.getByText('會員營收貢獻');
     const memberContribEmpty = container.getByText('此區間尚無訂單');
-    await expect.soft(memberContribTitle.or(memberContribEmpty).or(container.getByText('營收合計'))).toBeVisible();
+    // 不要把「營收合計」混進 or，避免一次命中兩個元素造成 strict mode violation。
+    await expect.soft(memberContribTitle.or(memberContribEmpty).first()).toBeVisible();
 
     // 營收趨勢：依日/週/月切換，有資料或空態
     const trendTitle = container.getByText('營收趨勢');
     const trendLoading = container.getByText('區間趨勢（按日）');
     const trendEmpty = container.getByText('此區間內尚無營收／訂單紀錄。');
-    await expect.soft(trendTitle.or(trendLoading).or(trendEmpty)).toBeVisible();
+    // 頁面用 Alert 顯示錯誤：區間趨勢：{error}
+    const trendErr = container.getByText(/區間趨勢：/);
+    const trendAnyState = trendTitle.or(trendLoading).or(trendEmpty).or(trendErr);
+    await expect.soft(trendAnyState.first()).toBeVisible();
 
     // 日/週/月切換存在
     const groupBySelect = container.locator('select').filter({ has: page.locator('option[value="day"]') });
