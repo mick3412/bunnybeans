@@ -63,8 +63,8 @@ export class PromotionController {
       exclusive: body.exclusive,
       firstPurchaseOnly: body.firstPurchaseOnly,
       memberLevels: body.memberLevels,
-      conditions: body.conditions as any,
-      actions: body.actions as any,
+      conditions: body.conditions ?? [],
+      actions: body.actions ?? [],
     });
   }
 
@@ -80,8 +80,8 @@ export class PromotionController {
       exclusive: body.exclusive,
       firstPurchaseOnly: body.firstPurchaseOnly,
       memberLevels: body.memberLevels,
-      conditions: body.conditions as any,
-      actions: body.actions as any,
+      conditions: body.conditions ?? [],
+      actions: body.actions ?? [],
     });
   }
 

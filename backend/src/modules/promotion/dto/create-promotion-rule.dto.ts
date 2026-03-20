@@ -1,4 +1,16 @@
-import { IsBoolean, IsOptional, IsString, IsArray, IsNumber, Min, Max, IsNotEmpty } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsArray,
+  IsNumber,
+  Min,
+  Max,
+  IsNotEmpty,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { PromotionConditionDto, PromotionActionDto } from './promotion-condition-action.dto';
 
 export class CreatePromotionRuleDto {
   @IsNotEmpty({ message: 'merchantId is required' })
@@ -41,9 +53,13 @@ export class CreatePromotionRuleDto {
 
   @IsOptional()
   @IsArray()
-  conditions?: unknown[];
+  @ValidateNested({ each: true })
+  @Type(() => PromotionConditionDto)
+  conditions?: PromotionConditionDto[];
 
   @IsOptional()
   @IsArray()
-  actions?: unknown[];
+  @ValidateNested({ each: true })
+  @Type(() => PromotionActionDto)
+  actions?: PromotionActionDto[];
 }
