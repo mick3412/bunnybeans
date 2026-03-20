@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePersistentTableColumnWidths } from '../../shared/hooks/usePersistentTableColumnWidths';
 import {
@@ -184,16 +184,31 @@ export const AdminProductsPage: React.FC = () => {
   const [searchQ, setSearchQ] = useState('');
   const [filterCategoryId, setFilterCategoryId] = useState('');
   const [filterBrandId, setFilterBrandId] = useState('');
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [filterMinDaysLeft, setFilterMinDaysLeft] = useState<string>('');
   const [sortBy, setSortBy] = useState<
     'sku' | 'barcode' | 'name' | 'category' | 'brand' | 'listPrice' | 'salePrice' | 'costPrice' | 'stock' | 'expiry'
   >('sku');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setErr(null);
     setListLoading(true);
+    const minDays =
+      filterMinDaysLeft.trim() === ''
+        ? undefined
+        : (() => {
+            const n = parseInt(filterMinDaysLeft, 10);
+            return Number.isNaN(n) || n < 0 ? undefined : n;
+          })();
     const [p, c, b, bal, wh] = await Promise.all([
-      getProducts(),
+      getProducts({
+        search: searchQ.trim() || undefined,
+        categoryId: filterCategoryId || undefined,
+        brandId: filterBrandId || undefined,
+        tag: filterTags.length === 1 ? filterTags[0] : undefined,
+        minDaysUntilExpiry: minDays,
+      }),
       getCategories(),
       getBrands(),
       getInventoryBalances(),
@@ -230,11 +245,17 @@ export const AdminProductsPage: React.FC = () => {
       setStockByProduct({});
       setStockByProductWarehouse({});
     }
-  };
+  }, [
+    searchQ,
+    filterCategoryId,
+    filterBrandId,
+    filterTags,
+    filterMinDaysLeft,
+  ]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     if (!merchantId) return;
@@ -281,23 +302,14 @@ export const AdminProductsPage: React.FC = () => {
 
   const filteredProducts = useMemo(() => {
     let list = products;
-    if (searchQ.trim()) {
-      const q = searchQ.trim().toLowerCase();
+    if (filterTags.length > 1) {
       list = list.filter((p) => {
-        const sku = p.sku?.toLowerCase() ?? '';
-        const barcode = p.barcode?.toLowerCase() ?? '';
-        const name = p.name?.toLowerCase() ?? '';
-        return sku.includes(q) || barcode.includes(q) || name.includes(q);
+        const tags = p.tags ?? [];
+        return filterTags.some((t) => tags.includes(t));
       });
     }
-    if (filterCategoryId) {
-      list = list.filter((p) => p.categoryId === filterCategoryId);
-    }
-    if (filterBrandId) {
-      list = list.filter((p) => p.brandId === filterBrandId);
-    }
     return list;
-  }, [products, searchQ, filterCategoryId, filterBrandId]);
+  }, [products, searchQ, filterCategoryId, filterBrandId, filterTags, filterMinDaysLeft]);
 
   const categoryName = (id: string | null | undefined) =>
     id ? categories.find((c) => c.id === id)?.name ?? '—' : '—';
@@ -533,13 +545,91 @@ export const AdminProductsPage: React.FC = () => {
     await load();
   };
 
+  const toggleFilterTag = (tag: string) => {
+    setFilterTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
+
   return (
     <div className="mx-auto min-w-0 max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm">
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-        <p className="max-w-xl text-sm text-muted">
-          與 POS 共用主檔 API；庫存唯讀。
-        </p>
-        <details className="rounded-lg border border-brand-surface bg-table-head px-3 py-1.5" data-testid="e2e-admin-products-import">
+      <p className="mb-4 max-w-xl text-sm text-muted">
+        與 POS 共用主檔 API；庫存唯讀。
+      </p>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">剩餘天數 &gt;</label>
+            <input
+              type="number"
+              min={0}
+              placeholder="留空"
+              value={filterMinDaysLeft}
+              onChange={(e) => setFilterMinDaysLeft(e.target.value)}
+              className="h-9 w-20 rounded-lg border border-brand-surface bg-white px-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">分類</label>
+            <select
+              className="h-9 min-w-[120px] rounded-lg border border-brand-surface bg-white px-2 text-sm"
+              value={filterCategoryId}
+              onChange={(e) => setFilterCategoryId(e.target.value)}
+            >
+              <option value="">全部</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">品牌</label>
+            <select
+              className="h-9 min-w-[100px] rounded-lg border border-brand-surface bg-white px-2 text-sm"
+              value={filterBrandId}
+              onChange={(e) => setFilterBrandId(e.target.value)}
+            >
+              <option value="">全部</option>
+              {brands.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+          {tagOptions.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted">標籤</label>
+              <div className="flex flex-wrap gap-1">
+                {tagOptions.map((tag) => {
+                  const selected = filterTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleFilterTag(tag)}
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        selected
+                          ? 'bg-brand-primary text-white'
+                          : 'bg-table-head text-muted hover:bg-brand-surface'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="ml-auto">
+            <TextInput
+              label="搜尋"
+              placeholder="SKU、條碼或名稱"
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              className="w-56 !py-1.5"
+            />
+          </div>
+        </div>
+        <details className="rounded-lg border border-brand-surface bg-table-head px-3 py-1.5 shrink-0" data-testid="e2e-admin-products-import">
           <summary className="cursor-pointer text-xs font-medium text-muted hover:text-content">CSV 匯入</summary>
           <div className="mt-2 flex flex-wrap items-center gap-3 pb-1">
             <span className="flex items-center gap-2">
@@ -687,41 +777,6 @@ export const AdminProductsPage: React.FC = () => {
       <div className="min-w-0 w-full">
         {/* 表格全寬 */}
         <div className="min-w-0 overflow-hidden">
-          <div className="mb-3 flex flex-wrap items-end justify-end gap-3">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">分類</label>
-              <select
-                className="h-9 min-w-[120px] rounded-lg border border-brand-surface bg-white px-2 text-sm"
-                value={filterCategoryId}
-                onChange={(e) => setFilterCategoryId(e.target.value)}
-              >
-                <option value="">全部</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">品牌</label>
-              <select
-                className="h-9 min-w-[100px] rounded-lg border border-brand-surface bg-white px-2 text-sm"
-                value={filterBrandId}
-                onChange={(e) => setFilterBrandId(e.target.value)}
-              >
-                <option value="">全部</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-            <TextInput
-              label="搜尋"
-              placeholder="SKU、條碼或名稱"
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              className="w-56 !py-1.5"
-            />
-          </div>
           <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
             <table
               className="table-fixed text-left text-sm"
@@ -1401,7 +1456,7 @@ export const AdminProductsPage: React.FC = () => {
                     />
                   </div>
                     {editing && (
-                      <div className="mt-3 rounded-lg border border-dashed border-[#cbd5f5] bg-white/70 p-2">
+                      <div className="mt-3 rounded-lg border border-dashed border-brand-surface bg-white/70 p-2">
                         <div className="mb-1 flex items-center justify-between gap-2">
                           <span className="text-[11px] font-semibold text-muted">
                             近 30 天即將到期批次
