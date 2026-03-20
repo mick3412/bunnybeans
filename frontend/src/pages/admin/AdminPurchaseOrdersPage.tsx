@@ -528,7 +528,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-content">
-                      供應商 <span className="text-red-500">*</span>
+                      供應商 <span className="text-brand-danger">*</span>
                     </label>
                     <select
                       className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2.5 text-sm text-content shadow-sm transition-colors placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"

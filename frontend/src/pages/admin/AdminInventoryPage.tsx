@@ -527,8 +527,8 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
               成功 {importResult.ok} 列
               {importResult.failed.length > 0 && (
                 <details className="ml-1 inline">
-                  <summary className="cursor-pointer text-red-700">失敗 {importResult.failed.length} 列</summary>
-                  <ul className="mt-1 max-h-20 list-inside list-disc overflow-y-auto rounded border border-red-100 bg-red-50/80 p-1.5 text-red-900">
+                  <summary className="cursor-pointer text-brand-danger">失敗 {importResult.failed.length} 列</summary>
+                  <ul className="mt-1 max-h-20 list-inside list-disc overflow-y-auto rounded border border-brand-danger/40 bg-brand-danger/10 p-1.5 text-brand-danger">
                     {importResult.failed.slice(0, 20).map((x) => (
                       <li key={`${x.row}-${x.reason}`}>列 {x.row}: {x.reason}</li>
                     ))}
@@ -546,7 +546,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
             </span>
           )}
           {jobError && (
-            <span className="rounded border border-red-300 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-900" role="alert">
+            <span className="rounded border border-brand-danger/40 bg-brand-danger/10 px-2 py-0.5 text-[11px] font-medium text-brand-danger" role="alert">
               非同步失敗：{jobError}
             </span>
           )}
@@ -1189,7 +1189,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
               </Alert>
             )}
             {!merchantId && (
-              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <div className="mt-3 rounded-lg border border-brand-warning/40 bg-brand-warning/10 px-3 py-2 text-sm text-brand-warning">
                 需先取得 merchantId 才能查詢滯銷品
               </div>
             )}

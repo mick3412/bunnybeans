@@ -582,7 +582,7 @@ export const PosOrderDetailPage: React.FC = () => {
                       {paySubmitting ? '送出…' : '確認補款'}
                     </Button>
                   </div>
-                  {payError && <p className="mt-1 text-[11px] text-red-600">{payError}</p>}
+                  {payError && <p className="mt-1 text-[11px] text-brand-danger">{payError}</p>}
                 </div>
               )}
 

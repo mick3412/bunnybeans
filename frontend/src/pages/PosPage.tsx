@@ -7,6 +7,7 @@ import type { CreateOrderResult, CategoryDto, BrandDto } from '../modules/pos/po
 import {
   getStores,
   getProducts,
+  getPosProducts,
   getCategories,
   getBrands,
   getWarehouses,
@@ -124,39 +125,14 @@ export const PosPage: React.FC = () => {
     setBarcodeChoices(mapped);
   };
 
-  const loadProducts = async (opts?: { categoryId?: string; brandId?: string; tag?: string; sku?: string }) => {
-    const productsRes = await getProducts(opts);
-    if (Array.isArray(productsRes)) {
-      setApiProducts(
-        productsRes.map((p) => ({
-          id: p.id,
-          name: p.name,
-          price: productDtoSalePriceNumber(p),
-          sku: p.sku,
-          categoryId: p.categoryId,
-          brandId: p.brandId,
-          tags: p.tags ?? [],
-          specSize: p.specSize ?? null,
-          specCapacity: p.specCapacity ?? null,
-          specStyle: p.specStyle ?? null,
-        })),
-      );
-      setApiLoadError(null);
-    } else {
-      setApiLoadError(productsRes.message ?? '無法載入商品');
-      setApiProducts(null);
-    }
-  };
-
   useEffect(() => {
     let mounted = true;
     (async () => {
       setApiLoadError(null);
-      const [storesRes, categoriesRes, brandsRes, productsRes] = await Promise.all([
+      const [storesRes, categoriesRes, brandsRes] = await Promise.all([
         getStores(),
         getCategories(),
         getBrands(),
-        getProducts(),
       ]);
       if (!mounted) return;
       if (Array.isArray(storesRes) && storesRes.length > 0) {
@@ -173,11 +149,27 @@ export const PosPage: React.FC = () => {
         setApiStoreId(chosen ?? storesRes[0].id);
         setApiMerchantId(withWh?.merchantId ?? storesRes[0]?.merchantId ?? null);
       } else {
+        setApiStoreId(null);
         setApiMerchantId(null);
       }
       if (!Array.isArray(storesRes)) setApiLoadError(storesRes.message ?? '無法載入門市');
       if (Array.isArray(categoriesRes) && categoriesRes.length > 0) setCategories(categoriesRes);
       if (Array.isArray(brandsRes)) setBrands(brandsRes);
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const storeId = apiStoreId ?? '';
+    let mounted = true;
+    (async () => {
+      setApiLoadError(null);
+      const productsRes = storeId
+        ? await getPosProducts(storeId)
+        : await getProducts();
+      if (!mounted) return;
       if (Array.isArray(productsRes)) {
         setApiProducts(
           productsRes.map((p) => ({
@@ -185,6 +177,7 @@ export const PosPage: React.FC = () => {
             name: p.name,
             price: productDtoSalePriceNumber(p),
             sku: p.sku,
+            onHandQty: 'onHandQty' in p ? (p as { onHandQty?: number }).onHandQty : undefined,
             categoryId: p.categoryId,
             brandId: p.brandId,
             tags: p.tags ?? [],
@@ -193,14 +186,16 @@ export const PosPage: React.FC = () => {
             specStyle: p.specStyle ?? null,
           })),
         );
-      } else if (productsRes && !Array.isArray(productsRes)) {
-        setApiLoadError((productsRes as { message?: string }).message ?? '無法載入商品');
+        setApiLoadError(null);
+      } else {
+        setApiLoadError(productsRes.message ?? '無法載入商品');
+        setApiProducts(null);
       }
     })();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [apiStoreId]);
 
   const storeId = apiStoreId ?? '';
   const [promoPreview, setPromoPreview] = useState<PromotionPreviewResult | null>(null);
@@ -341,15 +336,8 @@ export const PosPage: React.FC = () => {
                     <button
                       key={c.id}
                       type="button"
-                      onClick={async () => {
-                        const nextSelected = c.id === ALL_ID ? [] : [c.id];
-                        setSelectedCategoryIds(nextSelected);
-                        const cat = c.id === ALL_ID ? undefined : c.id;
-                        await loadProducts({
-                          categoryId: cat,
-                          brandId: selectedBrandIds.length === 1 ? selectedBrandIds[0] : undefined,
-                          tag: selectedDiscountTag || undefined,
-                        });
+                      onClick={() => {
+                        setSelectedCategoryIds(c.id === ALL_ID ? [] : [c.id]);
                       }}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                         selected ? 'bg-brand-primary text-white' : 'bg-table-head text-content hover:bg-brand-surface'
@@ -370,14 +358,8 @@ export const PosPage: React.FC = () => {
                     <button
                       key={id}
                       type="button"
-                      onClick={async () => {
-                        const next = id === ALL_ID ? [] : [id];
-                        setSelectedBrandIds(next);
-                        await loadProducts({
-                          categoryId: selectedCategoryIds.length === 1 ? selectedCategoryIds[0] : undefined,
-                          brandId: id === ALL_ID ? undefined : id,
-                          tag: selectedDiscountTag || undefined,
-                        });
+                      onClick={() => {
+                        setSelectedBrandIds(id === ALL_ID ? [] : [id]);
                       }}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                         selected ? 'bg-brand-primary text-white' : 'bg-table-head text-content hover:bg-brand-surface'
@@ -397,13 +379,8 @@ export const PosPage: React.FC = () => {
                       key={d.tag || 'none'}
                       type="button"
                       data-testid={d.tag ? `pos-filter-tag-${d.tag}` : 'pos-filter-tag-none'}
-                      onClick={async () => {
+                      onClick={() => {
                         setSelectedDiscountTag(d.tag);
-                        await loadProducts({
-                          categoryId: selectedCategoryIds.length === 1 ? selectedCategoryIds[0] : undefined,
-                          brandId: selectedBrandIds.length === 1 ? selectedBrandIds[0] : undefined,
-                          tag: d.tag || undefined,
-                        });
                       }}
                       className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                         selected ? 'bg-brand-primary text-white' : 'bg-table-head text-content hover:bg-brand-surface'
@@ -419,10 +396,7 @@ export const PosPage: React.FC = () => {
                 {hasActiveFilters && (
                   <button
                     type="button"
-                    onClick={async () => {
-                      clearFilters();
-                      await loadProducts();
-                    }}
+                    onClick={clearFilters}
                     className="text-xs font-medium text-muted underline hover:text-content"
                   >
                     清除篩選
@@ -482,11 +456,13 @@ export const PosPage: React.FC = () => {
                         }}
                       >
                         <span className="min-w-0 truncate text-content">
-                          {p.name}{' '}
-                          <span className="ml-2 font-mono text-[11px] text-muted">{p.sku}</span>
+                          {p.name}
+                          {(p as { sku?: string }).sku ? (
+                            <span className="ml-2 font-mono text-[11px] text-muted">{(p as { sku?: string }).sku}</span>
+                          ) : null}
                         </span>
                         <span className="shrink-0 font-mono text-[11px] text-muted">
-                          {formatMoney(Number(p.salePrice ?? 0))}
+                          {formatMoney(p.price)}
                         </span>
                       </button>
                     ))}
@@ -564,7 +540,7 @@ export const PosPage: React.FC = () => {
                             e.stopPropagation();
                             setFavoriteDraftIds((prev) => prev.filter((id) => id !== p.id));
                           }}
-                          className="shrink-0 rounded px-1 py-0.5 text-red-600 hover:bg-red-50"
+                          className="shrink-0 rounded px-1 py-0.5 text-brand-danger hover:bg-brand-danger/10"
                           title="移除常用"
                           aria-label="移除常用"
                         >
@@ -582,10 +558,15 @@ export const PosPage: React.FC = () => {
           >
             {filteredProducts.map((product) => {
               const isFav = activeFavoriteIds.includes(product.id);
+              const qty = typeof product.onHandQty === 'number' ? product.onHandQty : null;
+              const isLowStock = qty !== null && qty <= 3 && qty >= 0;
+              const isOutOfStock = qty !== null && qty <= 0;
               return (
                 <div
                   key={product.id}
-                  className="relative flex h-[118px] w-full min-w-0 shrink-0 flex-col items-stretch gap-0.5 rounded-lg bg-white px-2 py-1.5 shadow-sm shadow-black/5 transition hover:-translate-y-0.5 hover:bg-brand-primary/5 sm:h-[120px]"
+                  className={`relative flex h-[118px] w-full min-w-0 shrink-0 flex-col items-stretch gap-0.5 rounded-lg bg-white px-2 py-1.5 shadow-sm shadow-black/5 transition hover:-translate-y-0.5 hover:bg-brand-primary/5 sm:h-[120px] ${
+                    isOutOfStock ? 'opacity-75' : ''
+                  }`}
                 >
                   <button
                     type="button"
@@ -595,8 +576,15 @@ export const PosPage: React.FC = () => {
                     className="absolute inset-0 z-0 rounded-lg text-left"
                   />
                   <div className="relative z-10 flex flex-row items-start justify-between gap-1">
-                    {product.sku && (
-                      <span className="pointer-events-none shrink-0 text-xs text-muted">{product.sku}</span>
+                    {qty !== null && (
+                      <span
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium tabular-nums ${
+                          isLowStock ? 'bg-brand-warning/20 text-brand-warning' : 'bg-table-head text-muted'
+                        }`}
+                        title="庫存"
+                      >
+                        {qty} 件
+                      </span>
                     )}
                     {favoriteEditMode ? (
                       <button
@@ -608,7 +596,7 @@ export const PosPage: React.FC = () => {
                           );
                         }}
                         className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold ${
-                          isFav ? 'text-red-600 hover:bg-red-50' : 'text-brand-success hover:bg-brand-success/10'
+                          isFav ? 'text-brand-danger hover:bg-brand-danger/10' : 'text-brand-success hover:bg-brand-success/10'
                         }`}
                         title={isFav ? '移除常用' : '加入常用'}
                         aria-label={isFav ? '移除常用' : '加入常用'}
@@ -631,7 +619,11 @@ export const PosPage: React.FC = () => {
                       ) : null;
                     })()}
                   </div>
-                  <span className="pointer-events-none relative z-10 ml-auto shrink-0 text-right text-brand-primary">${product.price}</span>
+                  <div className="pointer-events-none relative z-10 flex items-center justify-between gap-1">
+                    <span className="shrink-0 text-right text-sm font-semibold tabular-nums text-brand-primary">
+                      {formatMoney(product.price)}
+                    </span>
+                  </div>
                 </div>
               );
             })}

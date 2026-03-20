@@ -252,7 +252,7 @@ export const AdminCustomersPage: React.FC = () => {
                 {segmentExporting ? '下載中…' : '下載 CSV'}
               </Button>
               {segmentExportErr && (
-                <span className="text-sm text-red-600">{segmentExportErr}</span>
+                <span className="text-sm text-brand-danger">{segmentExportErr}</span>
               )}
             </div>
           )}
@@ -311,7 +311,7 @@ export const AdminCustomersPage: React.FC = () => {
                     <td className="px-3 py-2 tabular-nums">{r.phone ?? '—'}</td>
                     <td className="px-3 py-2">
                       {r.status ? (
-                        <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${r.status === 'BLOCKED' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                        <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${r.status === 'BLOCKED' ? 'bg-brand-danger/20 text-brand-danger' : 'bg-brand-success/20 text-brand-success'}`}>
                           {r.status}
                         </span>
                       ) : (
@@ -339,7 +339,7 @@ export const AdminCustomersPage: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          className="text-xs font-medium text-sky-700 hover:underline"
+                          className="text-xs font-medium text-brand-primary hover:underline"
                           onClick={() => {
                             setContactsCustomer(r);
                             setContactsItems([]);
@@ -358,7 +358,7 @@ export const AdminCustomersPage: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          className="text-xs font-medium text-sky-700 hover:underline"
+                          className="text-xs font-medium text-brand-primary hover:underline"
                           onClick={() => {
                             setEditCustomer(r);
                             setCreateForm({
@@ -376,7 +376,7 @@ export const AdminCustomersPage: React.FC = () => {
                         </button>
                         <Link
                           to={`/admin/loyalty/point-ledger?customerId=${encodeURIComponent(r.id)}`}
-                          className="text-xs font-medium text-sky-700 hover:underline"
+                          className="text-xs font-medium text-brand-primary hover:underline"
                         >
                           點數存摺
                         </Link>
