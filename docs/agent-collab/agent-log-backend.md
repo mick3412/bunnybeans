@@ -24,7 +24,7 @@
   - **#5 供應商採購排行**：新增 **`GET /purchase/reports/supplier-rankings`**（`PurchaseReportsService`／Controller）；僅 **`ReceivingNote` `COMPLETED`**，彙總 **`totalAmount`**（Σ qualifiedQty×unitCost）與 **`receivingNotesCount`**；`api-design-purchase.md` §1.2；`purchase.integration-spec` 一則。
   - **#6 時段分析**：`GET /pos/reports/daily` 支援 **`groupBy=hour`**，回傳 **`byHour`**（0–23，**`createdAt` UTC 小時**）；`api-design-pos.md` 補契約；`pos-reports.integration-spec` 一則。
 - 測試/驗收：`pnpm ci:backend-with-db` 全綠（142 passed）。
-- commits：ed181f47 feat(reports): INSTRUCTIONS 028 — finance byParty, minDaysUntilExpiry, supplier rankings, POS hourly + agent-log；263e81eb docs(agent-log): record sha for INSTRUCTIONS-028
+- commits：ed181f47 feat(reports): INSTRUCTIONS 028 — finance byParty, minDaysUntilExpiry, supplier rankings, POS hourly + agent-log
 
 ### INSTRUCTIONS-027（迴歸 + ci:backend-with-db 驗證 + api-design 對齊 + byStore）
 - 做了：依 `BACKEND-INSTRUCTIONS 027.md` §1 完成 #1～#4。
