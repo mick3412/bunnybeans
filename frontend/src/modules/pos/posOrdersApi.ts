@@ -317,7 +317,7 @@ export async function getPosDaily(
     to: string;
     storeId?: string;
     merchantId?: string;
-    groupBy?: 'day' | 'week' | 'month';
+    groupBy?: 'day' | 'week' | 'month' | 'hour';
   },
   traceId?: string,
 ): Promise<PosDailyChartItem[] | ApiError> {
@@ -345,6 +345,10 @@ export async function getPosDaily(
   const items = (data as { items?: { periodStart: string; revenue: number }[] }).items;
   if (Array.isArray(items)) {
     return items.map((r) => ({ label: r.periodStart, value: r.revenue }));
+  }
+  const byHour = (data as { byHour?: { hour: number; revenue: number }[] }).byHour;
+  if (Array.isArray(byHour)) {
+    return byHour.map((r) => ({ label: `${r.hour}時`, value: r.revenue }));
   }
   return [];
 }

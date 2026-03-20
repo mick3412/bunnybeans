@@ -46,7 +46,7 @@ export const PosReportsPage: React.FC = () => {
   const [daily, setDaily] = useState<PosDailyChartItem[]>([]);
   const [dailyErr, setDailyErr] = useState<string | null>(null);
   const [dailyLoading, setDailyLoading] = useState<boolean>(false);
-  const [dailyGroupBy, setDailyGroupBy] = useState<'day' | 'week' | 'month'>('day');
+  const [dailyGroupBy, setDailyGroupBy] = useState<'day' | 'week' | 'month' | 'hour'>('day');
   const [orderValueDist, setOrderValueDist] = useState<OrderValueDistributionBucket[]>([]);
   const [orderValueDistErr, setOrderValueDistErr] = useState<string | null>(null);
   const [orderValueDistLoading, setOrderValueDistLoading] = useState<boolean>(false);
@@ -518,11 +518,12 @@ export const PosReportsPage: React.FC = () => {
             <select
               className="rounded-lg border border-brand-surface bg-white px-2 py-1 text-xs"
               value={dailyGroupBy}
-              onChange={(e) => setDailyGroupBy(e.target.value as 'day' | 'week' | 'month')}
+              onChange={(e) => setDailyGroupBy(e.target.value as 'day' | 'week' | 'month' | 'hour')}
             >
               <option value="day">依日</option>
               <option value="week">依週</option>
               <option value="month">依月</option>
+              <option value="hour">依小時</option>
             </select>
           </div>
           <MiniLineChart
