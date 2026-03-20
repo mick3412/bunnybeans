@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 /** 與 Admin 側欄一致：選中 = 左線主色；未選 = 灰字 + hover；無圖示 */
@@ -64,7 +64,15 @@ export const PosLayout: React.FC = () => {
           <span className="ml-3 hidden shrink-0 text-sm text-muted sm:inline tabular-nums">{dateStr}</span>
         </header>
         <main id="main-content" className="min-h-0 flex-1 overflow-auto bg-forge-main p-6 text-[0.9375rem] leading-normal" tabIndex={-1}>
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted" role="status">
+                載入中…
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

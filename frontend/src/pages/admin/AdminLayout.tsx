@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { AdminToastProvider } from './AdminToastContext';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
@@ -436,7 +436,15 @@ export const AdminLayout: React.FC = () => {
             </div>
           </header>
           <main id="main-content" className="min-h-0 flex-1 overflow-auto bg-forge-main p-6 text-[0.9375rem] leading-normal" tabIndex={-1}>
-            <Outlet />
+            <Suspense
+              fallback={
+                <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted" role="status">
+                  載入中…
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </main>
         </div>
       </div>
