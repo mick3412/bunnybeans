@@ -15,6 +15,15 @@
 
 ---
 
+### INSTRUCTIONS-038（POS 產品列表含庫存）
+- 做了：依 `BACKEND-INSTRUCTIONS 038.md` §1 完成本輪任務。
+  - **#1 迴歸確認**：037 變更無遺漏、測試全綠。
+  - **#2 POS 產品列表含庫存**：新增 `GET /pos/products?storeId=`（PosProductsController）；依 storeId 取得門市對應倉庫，彙總 InventoryBalance.onHandQty；回傳產品基本欄位 + `onHandQty`；`api-design-pos.md` 補契約（§4.0a）；integration test。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 153 passed；`pnpm ci:backend-with-db` 通過。
+- commits：`69a8b151` feat(pos): GET /pos/products?storeId= with onHandQty
+
+---
+
 ### INSTRUCTIONS-037（Promotion DTO、throw 工廠、pos.service 型別）
 - 做了：依 `BACKEND-INSTRUCTIONS 037.md` §1 完成本輪任務。
   - **#1 迴歸確認**：036 變更無遺漏、測試全綠。
