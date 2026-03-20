@@ -1,10 +1,6 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { InventoryService } from '../../inventory/application/inventory.service';
 import { FinanceService } from '../../finance/application/finance.service';
 import { PosRepository } from '../infrastructure/pos.repository';
@@ -41,6 +37,8 @@ export interface CreatePosOrderInput {
 
 @Injectable()
 export class PosService {
+  private readonly logger = new Logger(PosService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly posRepo: PosRepository,
@@ -66,10 +64,7 @@ export class PosService {
 
   async createOrder(input: CreatePosOrderInput) {
     if (!input.items?.length) {
-      throw new BadRequestException({
-        message: 'items must not be empty',
-        code: 'POS_ITEMS_EMPTY',
-      });
+      throwBadRequest('POS_ITEMS_EMPTY', 'items must not be empty');
     }
 
     const allowCredit = Boolean(input.allowCredit);
@@ -82,11 +77,7 @@ export class PosService {
       const hasPhone = Boolean(phoneTrim);
       const hasEmail = Boolean(emailTrim);
       if (!hasId && !hasPhone && !hasEmail) {
-        throw new BadRequestException({
-          message:
-            'customerId or unique customerPhone/customerEmail is required when allowCredit is true',
-          code: 'POS_CREDIT_REQUIRES_CUSTOMER',
-        });
+        throwBadRequest('POS_CREDIT_REQUIRES_CUSTOMER', 'customerId or unique customerPhone/customerEmail is required when allowCredit is true');
       }
     }
 
@@ -95,10 +86,7 @@ export class PosService {
       include: { warehouses: true },
     });
     if (!store) {
-      throw new NotFoundException({
-        message: 'Store not found',
-        code: 'POS_STORE_NOT_FOUND',
-      });
+      throwNotFound('POS_STORE_NOT_FOUND', 'Store not found');
     }
 
     let resolvedCustomerId: string | null = null;
@@ -107,10 +95,7 @@ export class PosService {
         where: { id: customerIdTrim, merchantId: store.merchantId },
       });
       if (!customer) {
-        throw new NotFoundException({
-          message: 'Customer not found for this store merchant',
-          code: 'POS_CUSTOMER_NOT_FOUND',
-        });
+        throwNotFound('POS_CUSTOMER_NOT_FOUND', 'Customer not found for this store merchant');
       }
       resolvedCustomerId = customer.id;
     } else if (allowCredit && emailTrim) {
@@ -121,25 +106,21 @@ export class PosService {
         },
       });
       if (rows.length === 0) {
-        throw new NotFoundException({
-          message: 'No customer found for this email in merchant',
-          code: 'POS_CREDIT_CUSTOMER_NOT_FOUND',
-        });
+        throwNotFound('POS_CREDIT_CUSTOMER_NOT_FOUND', 'No customer found for this email in merchant');
       }
       if (rows.length > 1) {
-        throw new BadRequestException({
-          message: 'Multiple customers share this email; use customerId',
-          code: 'POS_CREDIT_CUSTOMER_LOOKUP_AMBIGUOUS',
-        });
+        throwBadRequest('POS_CREDIT_CUSTOMER_LOOKUP_AMBIGUOUS', 'Multiple customers share this email; use customerId');
       }
       resolvedCustomerId = rows[0].id;
     } else if (allowCredit && phoneTrim) {
       const needle = PosService.phoneDigitsComparable(phoneTrim);
+      const last9 = needle.length >= 9 ? needle.slice(-9) : needle;
       const candidates = await this.prisma.customer.findMany({
         where: {
           merchantId: store.merchantId,
-          phone: { not: null },
+          phone: { contains: last9 },
         },
+        select: { id: true, phone: true },
       });
       const matches = candidates.filter(
         (c) =>
@@ -148,32 +129,20 @@ export class PosService {
           needle.length >= 8,
       );
       if (matches.length === 0) {
-        throw new NotFoundException({
-          message: 'No customer found for this phone in merchant',
-          code: 'POS_CREDIT_CUSTOMER_NOT_FOUND',
-        });
+        throwNotFound('POS_CREDIT_CUSTOMER_NOT_FOUND', 'No customer found for this phone in merchant');
       }
       if (matches.length > 1) {
-        throw new BadRequestException({
-          message: 'Multiple customers share this phone; use customerId',
-          code: 'POS_CREDIT_CUSTOMER_LOOKUP_AMBIGUOUS',
-        });
+        throwBadRequest('POS_CREDIT_CUSTOMER_LOOKUP_AMBIGUOUS', 'Multiple customers share this phone; use customerId');
       }
       resolvedCustomerId = matches[0].id;
     }
 
     if (allowCredit && !resolvedCustomerId) {
-      throw new BadRequestException({
-        message: 'Could not resolve customer for credit',
-        code: 'POS_CREDIT_REQUIRES_CUSTOMER',
-      });
+      throwBadRequest('POS_CREDIT_REQUIRES_CUSTOMER', 'Could not resolve customer for credit');
     }
 
     if (!store.warehouses.length) {
-      throw new BadRequestException({
-        message: 'Store has no warehouse configured for inventory',
-        code: 'POS_STORE_NO_WAREHOUSE',
-      });
+      throwBadRequest('POS_STORE_NO_WAREHOUSE', 'Store has no warehouse configured for inventory');
     }
 
     const productIds = [...new Set(input.items.map((i) => i.productId))];
@@ -183,41 +152,26 @@ export class PosService {
     if (products.length !== productIds.length) {
       const foundIds = new Set(products.map((p) => p.id));
       const missing = productIds.filter((id) => !foundIds.has(id));
-      throw new NotFoundException({
-        message: `Product not found: ${missing.join(', ')}`,
-        code: 'POS_PRODUCT_NOT_FOUND',
-      });
+      throwNotFound('POS_PRODUCT_NOT_FOUND', `Product not found: ${missing.join(', ')}`);
     }
 
-    /** 多倉掛同一門市時，勿死用 warehouses[0]（測試倉可能無量）；選第一個能滿足整單的倉 */
     let warehouse: (typeof store.warehouses)[0] | null = null;
     for (const wh of store.warehouses) {
-      let canFulfill = true;
-      for (const item of input.items) {
-        const bal = await this.prisma.inventoryBalance.findUnique({
-          where: {
-            productId_warehouseId: {
-              productId: item.productId,
-              warehouseId: wh.id,
-            },
-          },
-        });
-        if ((bal?.onHandQty ?? 0) < item.quantity) {
-          canFulfill = false;
-          break;
-        }
-      }
+      const balances = await this.prisma.inventoryBalance.findMany({
+        where: {
+          warehouseId: wh.id,
+          productId: { in: productIds },
+        },
+      });
+      const balMap = new Map(balances.map((b) => [b.productId, b.onHandQty]));
+      const canFulfill = input.items.every((item) => (balMap.get(item.productId) ?? 0) >= item.quantity);
       if (canFulfill) {
         warehouse = wh;
         break;
       }
     }
     if (!warehouse) {
-      throw new ConflictException({
-        message:
-          'No warehouse under this store has sufficient stock for all line items',
-        code: 'INVENTORY_INSUFFICIENT',
-      });
+      throwConflict('INVENTORY_INSUFFICIENT', 'No warehouse under this store has sufficient stock for all line items');
     }
 
     const promo = await this.promotionService.preview({
@@ -237,26 +191,17 @@ export class PosService {
     const rawPayments = input.payments ?? [];
     for (const p of rawPayments) {
       if (typeof p.amount !== 'number' || p.amount < 0 || Number.isNaN(p.amount)) {
-        throw new BadRequestException({
-          message: 'each payment amount must be a non-negative number',
-          code: 'POS_PAYMENT_AMOUNT_INVALID',
-        });
+        throwBadRequest('POS_PAYMENT_AMOUNT_INVALID', 'each payment amount must be a non-negative number');
       }
     }
     const paymentsSum = rawPayments.reduce((s, p) => s + p.amount, 0);
     if (allowCredit) {
       if (paymentsSum - totalAmount > 0.01) {
-        throw new BadRequestException({
-          message: 'Payments total cannot exceed order total when using credit',
-          code: 'POS_PAYMENT_EXCEEDS_TOTAL',
-        });
+        throwBadRequest('POS_PAYMENT_EXCEEDS_TOTAL', 'Payments total cannot exceed order total when using credit');
       }
     } else {
       if (Math.abs(paymentsSum - totalAmount) > 0.01) {
-        throw new BadRequestException({
-          message: 'Payments total must equal order total amount',
-          code: 'POS_PAYMENT_MISMATCH',
-        });
+        throwBadRequest('POS_PAYMENT_MISMATCH', 'Payments total must equal order total amount');
       }
     }
 
@@ -270,10 +215,7 @@ export class PosService {
     ) {
       const balance = await this.loyaltyService.getBalance(resolvedCustomerId);
       if (balance < pointsToRedeem) {
-        throw new BadRequestException({
-          message: 'Points balance insufficient for redemption',
-          code: 'LOYALTY_INSUFFICIENT_POINTS',
-        });
+        throwBadRequest('LOYALTY_INSUFFICIENT_POINTS', 'Points balance insufficient for redemption');
       }
     }
 
@@ -283,59 +225,63 @@ export class PosService {
     const occurredAtStr = occurredAt.toISOString();
 
     const orderNumber = this.generateOrderNumber();
-    const order = await this.posRepo.createOrder({
-      orderNumber,
-      storeId: input.storeId,
-      customerId: resolvedCustomerId,
-      exchangeFromOrderId: input.exchangeFromOrderId?.trim() || null,
-      subtotalAmount,
-      discountAmount,
-      totalAmount,
-      promotionApplied,
-      items: input.items,
-      payments: paymentsToStore,
-    });
-
-    for (const item of input.items) {
-      await this.inventoryService.recordInventoryEvent({
-        productId: item.productId,
-        warehouseId: warehouse.id,
-        type: 'SALE_OUT',
-        quantity: item.quantity,
-        occurredAt: occurredAtStr,
-        referenceId: order.id,
-        note: `POS order ${orderNumber}`,
-      });
-    }
-
     const partyId = resolvedCustomerId ? `customer:${resolvedCustomerId}` : '';
-    await this.financeService.recordFinanceEvent({
-      type: 'SALE_RECEIVABLE',
-      partyId,
-      currency: 'TWD',
-      amount: totalAmount,
-      taxAmount: 0,
-      occurredAt: occurredAtStr,
-      referenceId: order.id,
-      note: allowCredit
-        ? `POS order ${orderNumber} (credit)`
-        : `POS order ${orderNumber}`,
-    });
+    const warehouseId = warehouse.id;
 
-    if (allowCredit) {
-      for (const p of paymentsToStore) {
-        await this.financeService.recordFinanceEvent({
-          type: 'SALE_PAYMENT',
-          partyId,
-          currency: 'TWD',
-          amount: p.amount,
-          taxAmount: 0,
+    const order = await this.prisma.$transaction(async () => {
+      const created = await this.posRepo.createOrder({
+        orderNumber,
+        storeId: input.storeId,
+        customerId: resolvedCustomerId,
+        exchangeFromOrderId: input.exchangeFromOrderId?.trim() || null,
+        subtotalAmount,
+        discountAmount,
+        totalAmount,
+        promotionApplied,
+        items: input.items,
+        payments: paymentsToStore,
+      });
+
+      await Promise.all(input.items.map((item) =>
+        this.inventoryService.recordInventoryEvent({
+          productId: item.productId,
+          warehouseId,
+          type: 'SALE_OUT',
+          quantity: item.quantity,
           occurredAt: occurredAtStr,
-          referenceId: order.id,
-          note: `POS ${orderNumber} ${p.method}`,
-        });
+          referenceId: created.id,
+          note: `POS order ${orderNumber}`,
+        }),
+      ));
+
+      await this.financeService.recordFinanceEvent({
+        type: 'SALE_RECEIVABLE',
+        partyId,
+        currency: 'TWD',
+        amount: totalAmount,
+        taxAmount: 0,
+        occurredAt: occurredAtStr,
+        referenceId: created.id,
+        note: allowCredit ? `POS order ${orderNumber} (credit)` : `POS order ${orderNumber}`,
+      });
+
+      if (allowCredit) {
+        await Promise.all(paymentsToStore.map((p) =>
+          this.financeService.recordFinanceEvent({
+            type: 'SALE_PAYMENT',
+            partyId,
+            currency: 'TWD',
+            amount: p.amount,
+            taxAmount: 0,
+            occurredAt: occurredAtStr,
+            referenceId: created.id,
+            note: `POS ${orderNumber} ${p.method}`,
+          }),
+        ));
       }
-    }
+
+      return created;
+    });
 
     const ruleIds = (promotionApplied.applied ?? [])
       .filter((a: { discount?: number }) => (a.discount ?? 0) > 0)
@@ -360,6 +306,7 @@ export class PosService {
       }
     }
 
+    this.logger.log(`createOrder ${orderNumber} store=${input.storeId} total=${totalAmount} items=${input.items.length}`);
     return this.toOrderDetail(order);
   }
 
@@ -368,75 +315,41 @@ export class PosService {
     input: { method: string; amount: number; occurredAt?: string },
   ) {
     const order = await this.posRepo.findById(orderId);
-    if (!order) {
-      throw new NotFoundException({
-        message: 'Order not found',
-        code: 'POS_ORDER_NOT_FOUND',
-      });
-    }
-    if (
-      typeof input.amount !== 'number' ||
-      input.amount <= 0 ||
-      Number.isNaN(input.amount)
-    ) {
-      throw new BadRequestException({
-        message: 'amount must be a positive number',
-        code: 'POS_PAYMENT_AMOUNT_INVALID',
-      });
+    if (!order) throwNotFound('POS_ORDER_NOT_FOUND', 'Order not found');
+    if (typeof input.amount !== 'number' || input.amount <= 0 || Number.isNaN(input.amount)) {
+      throwBadRequest('POS_PAYMENT_AMOUNT_INVALID', 'amount must be a positive number');
     }
     const method = input.method?.trim();
-    if (!method) {
-      throw new BadRequestException({
-        message: 'method is required',
-        code: 'POS_PAYMENT_AMOUNT_INVALID',
-      });
-    }
+    if (!method) throwBadRequest('POS_PAYMENT_AMOUNT_INVALID', 'method is required');
 
     const total = Number(order.totalAmount);
-    const paid = (order.payments ?? []).reduce(
-      (s, x) => s + Number(x.amount),
-      0,
-    );
+    const paid = (order.payments ?? []).reduce((s, x) => s + Number(x.amount), 0);
     const remaining = Math.round((total - paid) * 100) / 100;
-    if (remaining <= 0.01) {
-      throw new BadRequestException({
-        message: 'Order is already fully paid',
-        code: 'POS_ORDER_ALREADY_SETTLED',
-      });
-    }
-    if (input.amount - remaining > 0.01) {
-      throw new BadRequestException({
-        message: 'Payment amount exceeds remaining balance',
-        code: 'POS_PAYMENT_EXCEEDS_REMAINING',
-      });
-    }
+    if (remaining <= 0.01) throwBadRequest('POS_ORDER_ALREADY_SETTLED', 'Order is already fully paid');
+    if (input.amount - remaining > 0.01) throwBadRequest('POS_PAYMENT_EXCEEDS_REMAINING', 'Payment amount exceeds remaining balance');
 
     const receivable = await this.prisma.financeEvent.findFirst({
       where: { referenceId: orderId, type: 'SALE_RECEIVABLE' },
     });
-    if (!receivable) {
-      throw new BadRequestException({
-        message: 'No SALE_RECEIVABLE for this order; cannot append payment',
-        code: 'POS_CREDIT_NO_RECEIVABLE',
-      });
-    }
+    if (!receivable) throwBadRequest('POS_CREDIT_NO_RECEIVABLE', 'No SALE_RECEIVABLE for this order; cannot append payment');
 
-    const updated = await this.posRepo.appendPayment(orderId, {
-      method,
-      amount: input.amount,
-    });
     const occurredAtStr = input.occurredAt
       ? new Date(input.occurredAt).toISOString()
       : new Date().toISOString();
-    await this.financeService.recordFinanceEvent({
-      type: 'SALE_PAYMENT',
-      partyId: receivable.partyId || null,
-      currency: receivable.currency,
-      amount: input.amount,
-      taxAmount: 0,
-      occurredAt: occurredAtStr,
-      referenceId: orderId,
-      note: `POS ${order.orderNumber} append ${method}`,
+
+    const updated = await this.prisma.$transaction(async () => {
+      const u = await this.posRepo.appendPayment(orderId, { method, amount: input.amount });
+      await this.financeService.recordFinanceEvent({
+        type: 'SALE_PAYMENT',
+        partyId: receivable.partyId || null,
+        currency: receivable.currency,
+        amount: input.amount,
+        taxAmount: 0,
+        occurredAt: occurredAtStr,
+        referenceId: orderId,
+        note: `POS ${order.orderNumber} append ${method}`,
+      });
+      return u;
     });
     return this.toOrderDetail(updated);
   }
@@ -446,43 +359,18 @@ export class PosService {
     input: { amount: number; occurredAt?: string; note?: string },
   ) {
     const order = await this.posRepo.findById(orderId);
-    if (!order) {
-      throw new NotFoundException({
-        message: 'Order not found',
-        code: 'POS_ORDER_NOT_FOUND',
-      });
-    }
-    if (
-      typeof input.amount !== 'number' ||
-      input.amount <= 0 ||
-      Number.isNaN(input.amount)
-    ) {
-      throw new BadRequestException({
-        message: 'amount must be a positive number',
-        code: 'POS_PAYMENT_AMOUNT_INVALID',
-      });
+    if (!order) throwNotFound('POS_ORDER_NOT_FOUND', 'Order not found');
+    if (typeof input.amount !== 'number' || input.amount <= 0 || Number.isNaN(input.amount)) {
+      throwBadRequest('POS_PAYMENT_AMOUNT_INVALID', 'amount must be a positive number');
     }
 
-    const collected = (order.payments ?? []).reduce(
-      (s, x) => s + Number(x.amount),
-      0,
-    );
-    if (collected < 0.01) {
-      throw new BadRequestException({
-        message: 'No payment on order; cannot refund',
-        code: 'POS_REFUND_NO_PAYMENT',
-      });
-    }
+    const collected = (order.payments ?? []).reduce((s, x) => s + Number(x.amount), 0);
+    if (collected < 0.01) throwBadRequest('POS_REFUND_NO_PAYMENT', 'No payment on order; cannot refund');
 
     const receivable = await this.prisma.financeEvent.findFirst({
       where: { referenceId: orderId, type: 'SALE_RECEIVABLE' },
     });
-    if (!receivable) {
-      throw new BadRequestException({
-        message: 'No SALE_RECEIVABLE for this order; cannot refund',
-        code: 'POS_CREDIT_NO_RECEIVABLE',
-      });
-    }
+    if (!receivable) throwBadRequest('POS_CREDIT_NO_RECEIVABLE', 'No SALE_RECEIVABLE for this order; cannot refund');
 
     const refundedAgg = await this.prisma.financeEvent.aggregate({
       where: { referenceId: orderId, type: 'SALE_REFUND' },
@@ -490,13 +378,9 @@ export class PosService {
     });
     const alreadyRefunded = Number(refundedAgg._sum.amount ?? 0);
     const maxRefund = Math.round((collected - alreadyRefunded) * 100) / 100;
-    if (input.amount - maxRefund > 0.01) {
-      throw new BadRequestException({
-        message: 'Refund amount exceeds refundable balance',
-        code: 'POS_REFUND_EXCEEDS_PAID',
-      });
-    }
+    if (input.amount - maxRefund > 0.01) throwBadRequest('POS_REFUND_EXCEEDS_PAID', 'Refund amount exceeds refundable balance');
 
+    this.logger.log(`refundToOrder ${order.orderNumber} amount=${input.amount}`);
     const occurredAtStr = input.occurredAt
       ? new Date(input.occurredAt).toISOString()
       : new Date().toISOString();
@@ -523,31 +407,16 @@ export class PosService {
     },
   ) {
     const order = await this.posRepo.findById(orderId);
-    if (!order) {
-      throw new NotFoundException({
-        message: 'Order not found',
-        code: 'POS_ORDER_NOT_FOUND',
-      });
-    }
+    if (!order) throwNotFound('POS_ORDER_NOT_FOUND', 'Order not found');
     const items = input.items ?? [];
-    if (!items.length) {
-      throw new BadRequestException({
-        message: 'items must not be empty',
-        code: 'POS_RETURN_ITEMS_EMPTY',
-      });
-    }
+    if (!items.length) throwBadRequest('POS_RETURN_ITEMS_EMPTY', 'items must not be empty');
 
     const store = await this.prisma.store.findUnique({
       where: { id: order.storeId },
       include: { warehouses: true },
     });
     const warehouse = store?.warehouses[0];
-    if (!warehouse) {
-      throw new BadRequestException({
-        message: 'Store has no warehouse',
-        code: 'POS_STORE_NO_WAREHOUSE',
-      });
-    }
+    if (!warehouse) throwBadRequest('POS_STORE_NO_WAREHOUSE', 'Store has no warehouse');
 
     const soldByProduct = new Map<string, number>();
     for (const line of order.items ?? []) {
@@ -578,36 +447,16 @@ export class PosService {
 
     for (const row of items) {
       const pid = row.productId?.trim();
-      if (!pid) {
-        throw new BadRequestException({
-          message: 'each item needs productId',
-          code: 'POS_RETURN_PRODUCT_NOT_ON_ORDER',
-        });
-      }
+      if (!pid) throwBadRequest('POS_RETURN_PRODUCT_NOT_ON_ORDER', 'each item needs productId');
       const q =
         typeof row.quantity === 'number' && row.quantity > 0
           ? Math.floor(row.quantity)
           : 0;
-      if (q < 1) {
-        throw new BadRequestException({
-          message: 'each item quantity must be a positive integer',
-          code: 'POS_RETURN_EXCEEDS_SOLD',
-        });
-      }
+      if (q < 1) throwBadRequest('POS_RETURN_EXCEEDS_SOLD', 'each item quantity must be a positive integer');
       const sold = soldByProduct.get(pid);
-      if (sold == null || sold < 1) {
-        throw new BadRequestException({
-          message: `Product ${pid} not on this order`,
-          code: 'POS_RETURN_PRODUCT_NOT_ON_ORDER',
-        });
-      }
+      if (sold == null || sold < 1) throwBadRequest('POS_RETURN_PRODUCT_NOT_ON_ORDER', `Product ${pid} not on this order`);
       const already = alreadyByProduct.get(pid) ?? 0;
-      if (already + q - sold > 0) {
-        throw new BadRequestException({
-          message: 'Return quantity exceeds sold less already returned',
-          code: 'POS_RETURN_EXCEEDS_SOLD',
-        });
-      }
+      if (already + q - sold > 0) throwBadRequest('POS_RETURN_EXCEEDS_SOLD', 'Return quantity exceeds sold less already returned');
       await this.inventoryService.recordInventoryEvent({
         productId: pid,
         warehouseId: warehouse.id,
@@ -620,6 +469,7 @@ export class PosService {
       alreadyByProduct.set(pid, already + q);
     }
 
+    this.logger.log(`returnToStock ${order.orderNumber} items=${items.length}`);
     const reloaded = await this.posRepo.findById(orderId);
     if (!reloaded) throw new Error('Order missing after return');
     return this.toOrderDetail(reloaded);
@@ -627,12 +477,7 @@ export class PosService {
 
   async getOrderById(id: string) {
     const order = await this.posRepo.findById(id);
-    if (!order) {
-      throw new NotFoundException({
-        message: 'Order not found',
-        code: 'POS_ORDER_NOT_FOUND',
-      });
-    }
+    if (!order) throwNotFound('POS_ORDER_NOT_FOUND', 'Order not found');
     const detail = this.toOrderDetail(order);
     try {
       const sourceOrderId = detail.exchangeFromOrderId;
@@ -770,18 +615,8 @@ export class PosService {
   }): Promise<string> {
     const from = filter.from?.trim() ? new Date(filter.from) : undefined;
     const to = filter.to?.trim() ? new Date(filter.to) : undefined;
-    if (from && Number.isNaN(from.getTime())) {
-      throw new BadRequestException({
-        message: 'invalid from',
-        code: 'POS_EXPORT_INVALID_RANGE',
-      });
-    }
-    if (to && Number.isNaN(to.getTime())) {
-      throw new BadRequestException({
-        message: 'invalid to',
-        code: 'POS_EXPORT_INVALID_RANGE',
-      });
-    }
+    if (from && Number.isNaN(from.getTime())) throwBadRequest('POS_EXPORT_INVALID_RANGE', 'invalid from');
+    if (to && Number.isNaN(to.getTime())) throwBadRequest('POS_EXPORT_INVALID_RANGE', 'invalid to');
     const num = (d: { toNumber: () => number }) => d.toNumber();
     if (filter.includeLines) {
       const lineRows = await this.posRepo.findLineRowsForExport(

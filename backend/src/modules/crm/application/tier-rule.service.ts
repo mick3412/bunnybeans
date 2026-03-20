@@ -88,10 +88,7 @@ export class TierRuleService {
     for (const rule of rules) {
       const since = new Date();
       since.setDate(since.getDate() - rule.lookbackDays);
-      const threshold =
-        typeof (rule.threshold as any)?.toNumber === 'function'
-          ? (rule.threshold as any).toNumber()
-          : Number(rule.threshold as any);
+      const threshold = Number(rule.threshold);
 
       const orders = await this.prisma.posOrder.findMany({
         where: {
@@ -105,10 +102,7 @@ export class TierRuleService {
       const sumByCustomer = new Map<string, number>();
       for (const o of orders) {
         if (!o.customerId) continue;
-        const amt =
-          typeof (o.totalAmount as any)?.toNumber === 'function'
-            ? (o.totalAmount as any).toNumber()
-            : Number(o.totalAmount as any);
+        const amt = Number(o.totalAmount);
         sumByCustomer.set(o.customerId, (sumByCustomer.get(o.customerId) ?? 0) + amt);
       }
 

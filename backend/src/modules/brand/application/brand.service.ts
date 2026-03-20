@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { Prisma } from '@prisma/client';
 import { dedupeCode, isValidCode, resolveCode } from '../../../shared/utils/canonical-code';
 import { createMasterWithCode } from '../../../shared/utils/create-master-with-code';
@@ -33,37 +34,25 @@ export class BrandService {
   async updateBrand(id: string, input: { code?: string; name?: string }) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException({
-        message: 'Brand not found',
-        code: 'BRAND_NOT_FOUND',
-      });
+      throwNotFound('BRAND_NOT_FOUND', 'Brand not found');
     }
     const data: { code?: string; name?: string } = {};
     if (input.name !== undefined) {
       const n = input.name.trim();
       if (!n) {
-        throw new BadRequestException({
-          message: 'name cannot be empty',
-          code: 'BRAND_NAME_REQUIRED',
-        });
+        throwBadRequest('BRAND_NAME_REQUIRED', 'name cannot be empty');
       }
       data.name = n;
     }
     if (input.code !== undefined) {
       const raw = input.code.trim();
       if (!raw) {
-        throw new BadRequestException({
-          message: 'code cannot be empty',
-          code: 'BRAND_CODE_REQUIRED',
-        });
+        throwBadRequest('BRAND_CODE_REQUIRED', 'code cannot be empty');
       }
       const lower = raw.toLowerCase();
       if (lower !== existing.code.toLowerCase()) {
         if (!isValidCode(lower)) {
-          throw new BadRequestException({
-            message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
-            code: 'BRAND_CODE_INVALID',
-          });
+          throwBadRequest('BRAND_CODE_INVALID', 'code must match a-z0-9- (lowercase, no leading/trailing dash)');
         }
         const existingCodes = await this.repo.findCodes();
         const others = existingCodes.filter((c) => c.toLowerCase() !== existing.code.toLowerCase());
@@ -75,10 +64,7 @@ export class BrandService {
       return await this.repo.update(id, data);
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({
-          message: 'Brand code already exists',
-          code: 'BRAND_CODE_CONFLICT',
-        });
+        throwConflict('BRAND_CODE_CONFLICT', 'Brand code already exists');
       }
       throw e;
     }
@@ -87,31 +73,19 @@ export class BrandService {
   async reorderBrands(ids: string[]) {
     const cleaned = ids.map((x) => String(x ?? '').trim()).filter(Boolean);
     if (!cleaned.length) {
-      throw new BadRequestException({
-        message: 'ids required',
-        code: 'BRAND_REORDER_EMPTY',
-      });
+      throwBadRequest('BRAND_REORDER_EMPTY', 'ids required');
     }
     const uniq = [...new Set(cleaned)];
     if (uniq.length !== cleaned.length) {
-      throw new BadRequestException({
-        message: 'duplicate ids',
-        code: 'BRAND_REORDER_DUPLICATE_IDS',
-      });
+      throwBadRequest('BRAND_REORDER_DUPLICATE_IDS', 'duplicate ids');
     }
     const total = await this.repo.countAll();
     const count = await this.repo.countByIds(uniq);
     if (count !== uniq.length) {
-      throw new BadRequestException({
-        message: 'some ids not found',
-        code: 'BRAND_NOT_FOUND',
-      });
+      throwBadRequest('BRAND_NOT_FOUND', 'some ids not found');
     }
     if (uniq.length !== total) {
-      throw new BadRequestException({
-        message: 'ids must include all brands',
-        code: 'BRAND_REORDER_INVALID',
-      });
+      throwBadRequest('BRAND_REORDER_INVALID', 'ids must include all brands');
     }
     await this.repo.reorder(uniq);
   }
@@ -119,17 +93,11 @@ export class BrandService {
   async deleteBrand(id: string) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException({
-        message: 'Brand not found',
-        code: 'BRAND_NOT_FOUND',
-      });
+      throwNotFound('BRAND_NOT_FOUND', 'Brand not found');
     }
     const n = await this.repo.countProducts(id);
     if (n > 0) {
-      throw new ConflictException({
-        message: 'Brand still has products',
-        code: 'BRAND_IN_USE',
-      });
+      throwConflict('BRAND_IN_USE', 'Brand still has products');
     }
     await this.repo.deleteById(id);
   }

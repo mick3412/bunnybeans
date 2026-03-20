@@ -1,7 +1,9 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { PurchaseReportsService } from '../application/purchase-reports.service';
 
 @Controller('purchase/reports')
+@UseGuards(AdminApiKeyGuard)
 export class PurchaseReportsController {
   constructor(private readonly svc: PurchaseReportsService) {}
 

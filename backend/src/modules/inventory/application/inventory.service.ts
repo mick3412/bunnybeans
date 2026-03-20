@@ -5,6 +5,7 @@ import {
   BadRequestException,
   HttpException,
 } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { randomUUID } from 'crypto';
 import { InventoryEventType } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -124,20 +125,14 @@ export class InventoryService {
       where: { id: input.productId },
     });
     if (!product) {
-      throw new NotFoundException({
-        message: 'Product not found',
-        code: 'INVENTORY_PRODUCT_NOT_FOUND',
-      });
+      throwNotFound('INVENTORY_PRODUCT_NOT_FOUND', 'Product not found');
     }
 
     const warehouse = await this.prisma.warehouse.findUnique({
       where: { id: input.warehouseId },
     });
     if (!warehouse) {
-      throw new NotFoundException({
-        message: 'Warehouse not found',
-        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
-      });
+      throwNotFound('INVENTORY_WAREHOUSE_NOT_FOUND', 'Warehouse not found');
     }
 
     if (
@@ -149,10 +144,7 @@ export class InventoryService {
         where: { referenceId: input.referenceId.trim() },
       });
       if (existing) {
-        throw new ConflictException({
-          message: 'Duplicate referenceId for inventory event',
-          code: 'INVENTORY_REFERENCE_ID_DUPLICATE',
-        });
+        throwConflict('INVENTORY_REFERENCE_ID_DUPLICATE', 'Duplicate referenceId for inventory event');
       }
     }
 
@@ -172,10 +164,7 @@ export class InventoryService {
     const existing = await this.repo.findBalance(input.productId, input.warehouseId);
     const newQty = (existing?.onHandQty ?? 0) + delta;
     if (newQty < 0) {
-      throw new ConflictException({
-        message: 'Insufficient stock for this adjustment',
-        code: 'INVENTORY_INSUFFICIENT',
-      });
+      throwConflict('INVENTORY_INSUFFICIENT', 'Insufficient stock for this adjustment');
     }
 
     const balance = await this.repo.upsertBalance({
@@ -200,26 +189,17 @@ export class InventoryService {
   }> {
     const whId = input.warehouseId?.trim();
     if (!whId) {
-      throw new BadRequestException({
-        message: 'warehouseId is required',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'warehouseId is required');
     }
     const lines = Array.isArray(input.lines) ? input.lines : [];
     if (lines.length === 0) {
-      throw new BadRequestException({
-        message: 'lines is required and must be non-empty',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'lines is required and must be non-empty');
     }
     const warehouse = await this.prisma.warehouse.findUnique({
       where: { id: whId },
     });
     if (!warehouse) {
-      throw new NotFoundException({
-        message: 'Warehouse not found',
-        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
-      });
+      throwNotFound('INVENTORY_WAREHOUSE_NOT_FOUND', 'Warehouse not found');
     }
     const productIds = lines.map((l) => l.productId).filter(Boolean);
     const balances = await this.prisma.inventoryBalance.findMany({
@@ -285,17 +265,11 @@ export class InventoryService {
   async scanStocktake(input: ScanStocktakeInput) {
     const whId = input.warehouseId?.trim();
     if (!whId) {
-      throw new BadRequestException({
-        message: 'warehouseId is required',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'warehouseId is required');
     }
     const lines = Array.isArray(input.lines) ? input.lines : [];
     if (lines.length === 0) {
-      throw new BadRequestException({
-        message: 'lines is required and must be non-empty',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'lines is required and must be non-empty');
     }
 
     const codes = [...new Set(lines.map((l) => (l?.sku ?? '').trim()).filter(Boolean))];
@@ -343,23 +317,14 @@ export class InventoryService {
     const fromId = input.fromWarehouseId?.trim();
     const toId = input.toWarehouseId?.trim();
     if (!fromId || !toId) {
-      throw new BadRequestException({
-        message: 'fromWarehouseId and toWarehouseId are required',
-        code: 'INVENTORY_TRANSFER_INVALID',
-      });
+      throwBadRequest('INVENTORY_TRANSFER_INVALID', 'fromWarehouseId and toWarehouseId are required');
     }
     if (fromId === toId) {
-      throw new BadRequestException({
-        message: 'Source and destination warehouse must differ',
-        code: 'INVENTORY_TRANSFER_SAME_WAREHOUSE',
-      });
+      throwBadRequest('INVENTORY_TRANSFER_SAME_WAREHOUSE', 'Source and destination warehouse must differ');
     }
     const qty = Math.abs(Number(input.quantity));
     if (!Number.isFinite(qty) || qty < 1) {
-      throw new BadRequestException({
-        message: 'quantity must be a positive integer',
-        code: 'INVENTORY_TRANSFER_INVALID_QTY',
-      });
+      throwBadRequest('INVENTORY_TRANSFER_INVALID_QTY', 'quantity must be a positive integer');
     }
     const occurredAt = this.resolveOccurredAt(input.occurredAt);
     const referenceId = randomUUID();
@@ -368,26 +333,17 @@ export class InventoryService {
       where: { id: input.productId },
     });
     if (!product) {
-      throw new NotFoundException({
-        message: 'Product not found',
-        code: 'INVENTORY_PRODUCT_NOT_FOUND',
-      });
+      throwNotFound('INVENTORY_PRODUCT_NOT_FOUND', 'Product not found');
     }
     const [fromWh, toWh] = await Promise.all([
       this.prisma.warehouse.findUnique({ where: { id: fromId } }),
       this.prisma.warehouse.findUnique({ where: { id: toId } }),
     ]);
     if (!fromWh) {
-      throw new NotFoundException({
-        message: 'Source warehouse not found',
-        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
-      });
+      throwNotFound('INVENTORY_WAREHOUSE_NOT_FOUND', 'Source warehouse not found');
     }
     if (!toWh) {
-      throw new NotFoundException({
-        message: 'Destination warehouse not found',
-        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
-      });
+      throwNotFound('INVENTORY_WAREHOUSE_NOT_FOUND', 'Destination warehouse not found');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -398,10 +354,7 @@ export class InventoryService {
       });
       const fromQty = fromBal?.onHandQty ?? 0;
       if (fromQty < qty) {
-        throw new ConflictException({
-          message: 'Insufficient stock at source warehouse for transfer',
-          code: 'INVENTORY_INSUFFICIENT',
-        });
+        throwConflict('INVENTORY_INSUFFICIENT', 'Insufficient stock at source warehouse for transfer');
       }
 
       const outEvent = await tx.inventoryEvent.create({
@@ -467,19 +420,13 @@ export class InventoryService {
   /** 後台用：同一倉庫下餘額列附 sku、name，避免前端 N+1 */
   async getBalancesEnriched(warehouseId: string) {
     if (!warehouseId?.trim()) {
-      throw new BadRequestException({
-        message: 'warehouseId is required',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'warehouseId is required');
     }
     const wh = await this.prisma.warehouse.findUnique({
       where: { id: warehouseId.trim() },
     });
     if (!wh) {
-      throw new NotFoundException({
-        message: 'Warehouse not found',
-        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
-      });
+      throwNotFound('INVENTORY_WAREHOUSE_NOT_FOUND', 'Warehouse not found');
     }
     const balances = await this.repo.findBalances({
       warehouseIds: [warehouseId.trim()],
@@ -536,10 +483,7 @@ export class InventoryService {
     if (filter.from) {
       const d = new Date(filter.from);
       if (Number.isNaN(d.getTime())) {
-        throw new BadRequestException({
-          message: 'invalid from',
-          code: 'INVENTORY_INVALID_INPUT',
-        });
+        throwBadRequest('INVENTORY_INVALID_INPUT', 'invalid from');
       }
       from = d;
     } else {
@@ -549,29 +493,20 @@ export class InventoryService {
     if (filter.to) {
       const d = new Date(filter.to);
       if (Number.isNaN(d.getTime())) {
-        throw new BadRequestException({
-          message: 'invalid to',
-          code: 'INVENTORY_INVALID_INPUT',
-        });
+        throwBadRequest('INVENTORY_INVALID_INPUT', 'invalid to');
       }
       to = d;
     } else {
       const daysAhead = filter.daysAhead ?? 30;
       if (!Number.isFinite(daysAhead) || daysAhead <= 0 || daysAhead > 365) {
-        throw new BadRequestException({
-          message: 'daysAhead must be between 1 and 365',
-          code: 'INVENTORY_INVALID_INPUT',
-        });
+        throwBadRequest('INVENTORY_INVALID_INPUT', 'daysAhead must be between 1 and 365');
       }
       to = new Date(from);
       to.setDate(to.getDate() + daysAhead);
     }
 
     if (from && to && from > to) {
-      throw new BadRequestException({
-        message: 'from must not be after to',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'from must not be after to');
     }
 
     return this.repo.findExpiringBatches({
@@ -598,10 +533,7 @@ export class InventoryService {
     if (filter.from) {
       const d = new Date(filter.from);
       if (Number.isNaN(d.getTime())) {
-        throw new BadRequestException({
-          message: 'invalid from',
-          code: 'INVENTORY_INVALID_INPUT',
-        });
+        throwBadRequest('INVENTORY_INVALID_INPUT', 'invalid from');
       }
       from = d;
     } else {
@@ -611,29 +543,20 @@ export class InventoryService {
     if (filter.to) {
       const d = new Date(filter.to);
       if (Number.isNaN(d.getTime())) {
-        throw new BadRequestException({
-          message: 'invalid to',
-          code: 'INVENTORY_INVALID_INPUT',
-        });
+        throwBadRequest('INVENTORY_INVALID_INPUT', 'invalid to');
       }
       to = d;
     } else {
       const daysAhead = filter.daysAhead ?? 30;
       if (!Number.isFinite(daysAhead) || daysAhead <= 0 || daysAhead > 365) {
-        throw new BadRequestException({
-          message: 'daysAhead must be between 1 and 365',
-          code: 'INVENTORY_INVALID_INPUT',
-        });
+        throwBadRequest('INVENTORY_INVALID_INPUT', 'daysAhead must be between 1 and 365');
       }
       to = new Date(from);
       to.setDate(to.getDate() + daysAhead);
     }
 
     if (from && to && from > to) {
-      throw new BadRequestException({
-        message: 'from must not be after to',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'from must not be after to');
     }
 
     return this.repo.findExpiringProductSummary({
@@ -677,39 +600,24 @@ export class InventoryService {
   async getReplenishmentSuggestions(filter: ReplenishmentSuggestionsFilter) {
     const merchantId = filter.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'merchantId is required');
     }
 
     const daysLookback = Math.floor(Number(filter.daysLookback ?? 30));
     if (!Number.isFinite(daysLookback) || daysLookback < 7 || daysLookback > 90) {
-      throw new BadRequestException({
-        message: 'daysLookback must be between 7 and 90',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'daysLookback must be between 7 and 90');
     }
     const daysAhead = Math.floor(Number(filter.daysAhead ?? 30));
     if (!Number.isFinite(daysAhead) || daysAhead < 1 || daysAhead > 365) {
-      throw new BadRequestException({
-        message: 'daysAhead must be between 1 and 365',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'daysAhead must be between 1 and 365');
     }
     const safetyDays = Math.floor(Number(filter.safetyDays ?? 7));
     if (!Number.isFinite(safetyDays) || safetyDays < 0 || safetyDays > 90) {
-      throw new BadRequestException({
-        message: 'safetyDays must be between 0 and 90',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'safetyDays must be between 0 and 90');
     }
     const minSuggestedQty = Math.floor(Number(filter.minSuggestedQty ?? 0));
     if (!Number.isFinite(minSuggestedQty) || minSuggestedQty < 0 || minSuggestedQty > 100_000) {
-      throw new BadRequestException({
-        message: 'minSuggestedQty must be a non-negative integer',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'minSuggestedQty must be a non-negative integer');
     }
 
     const page = filter.page && filter.page > 0 ? filter.page : 1;
@@ -723,10 +631,7 @@ export class InventoryService {
         select: { id: true },
       });
       if (!wh) {
-        throw new NotFoundException({
-          message: 'Warehouse not found',
-          code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
-        });
+        throwNotFound('INVENTORY_WAREHOUSE_NOT_FOUND', 'Warehouse not found');
       }
     }
 
@@ -832,10 +737,7 @@ export class InventoryService {
   async getSlowMoving(filter: SlowMovingFilter) {
     const merchantId = filter.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'merchantId is required');
     }
     const lookbackDays = Math.floor(Number(filter.lookbackDays ?? 30));
     const salesThreshold = Math.floor(Number(filter.salesThreshold ?? 0));
@@ -971,18 +873,12 @@ export class InventoryService {
    */
   async exportBalancesCsv(warehouseId: string): Promise<string> {
     if (!warehouseId?.trim()) {
-      throw new BadRequestException({
-        message: 'warehouseId is required',
-        code: 'INVENTORY_INVALID_INPUT',
-      });
+      throwBadRequest('INVENTORY_INVALID_INPUT', 'warehouseId is required');
     }
     const whId = warehouseId.trim();
     const wh = await this.prisma.warehouse.findUnique({ where: { id: whId } });
     if (!wh) {
-      throw new NotFoundException({
-        message: 'Warehouse not found',
-        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
-      });
+      throwNotFound('INVENTORY_WAREHOUSE_NOT_FOUND', 'Warehouse not found');
     }
     const balances = await this.repo.findBalancesForExport(whId);
     const productIds = [...new Set(balances.map((b) => b.productId))];
@@ -1039,16 +935,10 @@ export class InventoryService {
     const whIdIdx = header.indexOf('warehouseid');
     const deltaIdx = header.indexOf('quantitydelta');
     if (skuIdx < 0 || deltaIdx < 0) {
-      throw new BadRequestException({
-        message: 'CSV header must include sku and quantityDelta',
-        code: 'INVENTORY_IMPORT_HEADER',
-      });
+      throwBadRequest('INVENTORY_IMPORT_HEADER', 'CSV header must include sku and quantityDelta');
     }
     if (whCodeIdx < 0 && whIdIdx < 0) {
-      throw new BadRequestException({
-        message: 'CSV header must include warehouseCode or warehouseId',
-        code: 'INVENTORY_IMPORT_HEADER',
-      });
+      throwBadRequest('INVENTORY_IMPORT_HEADER', 'CSV header must include warehouseCode or warehouseId');
     }
     const dataRows = table.slice(1);
     if (dataRows.length > INVENTORY_IMPORT_MAX_ROWS) {

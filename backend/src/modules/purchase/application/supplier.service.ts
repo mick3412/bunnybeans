@@ -4,6 +4,7 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -14,10 +15,7 @@ export class SupplierService {
   async list(merchantId: string, q?: string) {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId required',
-        code: 'SUPPLIER_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('SUPPLIER_MERCHANT_REQUIRED', 'merchantId required');
     }
     const where: Prisma.SupplierWhereInput = { merchantId: m };
     if (q?.trim()) {
@@ -37,16 +35,10 @@ export class SupplierService {
   async getById(id: string, merchantId?: string) {
     const s = await this.prisma.supplier.findUnique({ where: { id } });
     if (!s) {
-      throw new NotFoundException({
-        message: 'Supplier not found',
-        code: 'SUPPLIER_NOT_FOUND',
-      });
+      throwNotFound('SUPPLIER_NOT_FOUND', 'Supplier not found');
     }
     if (merchantId && s.merchantId !== merchantId) {
-      throw new NotFoundException({
-        message: 'Supplier not found',
-        code: 'SUPPLIER_NOT_FOUND',
-      });
+      throwNotFound('SUPPLIER_NOT_FOUND', 'Supplier not found');
     }
     const onTimeThresholdDays = 3;
     const [kpisRow] = await this.prisma.$queryRaw<
@@ -165,10 +157,7 @@ export class SupplierService {
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({
-          message: 'Supplier code already exists for merchant',
-          code: 'SUPPLIER_CODE_CONFLICT',
-        });
+        throwConflict('SUPPLIER_CODE_CONFLICT', 'Supplier code already exists for merchant');
       }
       throw e;
     }
@@ -216,10 +205,7 @@ export class SupplierService {
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({
-          message: 'Supplier code already exists for merchant',
-          code: 'SUPPLIER_CODE_CONFLICT',
-        });
+        throwConflict('SUPPLIER_CODE_CONFLICT', 'Supplier code already exists for merchant');
       }
       throw e;
     }
@@ -234,10 +220,7 @@ export class SupplierService {
       },
     });
     if (openPo) {
-      throw new ConflictException({
-        message: 'Supplier has open purchase orders',
-        code: 'SUPPLIER_IN_USE',
-      });
+      throwConflict('SUPPLIER_IN_USE', 'Supplier has open purchase orders');
     }
     const openRn = await this.prisma.receivingNote.findFirst({
       where: {
@@ -246,10 +229,7 @@ export class SupplierService {
       },
     });
     if (openRn) {
-      throw new ConflictException({
-        message: 'Supplier has open receiving notes',
-        code: 'SUPPLIER_IN_USE',
-      });
+      throwConflict('SUPPLIER_IN_USE', 'Supplier has open receiving notes');
     }
     await this.prisma.supplier.delete({ where: { id } });
     return { ok: true };

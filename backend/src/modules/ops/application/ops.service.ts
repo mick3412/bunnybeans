@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable, forwardRef } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { DispatchRuleRunnerService } from '../../crm/application/dispatch-rule-runner.service';
 import { FinanceService } from '../../finance/application/finance.service';
@@ -53,22 +54,13 @@ export class OpsService {
     const from = fromStr ? new Date(fromStr) : undefined;
     const to = toStr ? new Date(toStr) : undefined;
     if (fromStr && (!from || Number.isNaN(from.getTime()))) {
-      throw new BadRequestException({
-        code: 'REPORT_INVALID_RANGE',
-        message: 'invalid from/to',
-      });
+      throwBadRequest('REPORT_INVALID_RANGE', 'invalid from/to');
     }
     if (toStr && (!to || Number.isNaN(to.getTime()))) {
-      throw new BadRequestException({
-        code: 'REPORT_INVALID_RANGE',
-        message: 'invalid from/to',
-      });
+      throwBadRequest('REPORT_INVALID_RANGE', 'invalid from/to');
     }
     if (from && to && from > to) {
-      throw new BadRequestException({
-        code: 'REPORT_INVALID_RANGE',
-        message: 'from must be <= to',
-      });
+      throwBadRequest('REPORT_INVALID_RANGE', 'from must be <= to');
     }
     if (from || to) {
       where.createdAt = {
@@ -145,7 +137,7 @@ export class OpsService {
     const source = params.source?.trim();
     const referenceId = params.referenceId ?? '';
     if (!source) {
-      throw new BadRequestException({ code: 'OPS_REPORT_CLICK_AUDIT_INVALID', message: 'source is required' });
+      throwBadRequest('OPS_REPORT_CLICK_AUDIT_INVALID', 'source is required');
     }
     const field = params.field?.trim() || 'referenceId';
     const resolved = await this.resolveReference(referenceId);
@@ -186,13 +178,13 @@ export class OpsService {
     const from = fromS ? new Date(fromS) : undefined;
     const to = toS ? new Date(toS) : undefined;
     if (fromS && (!from || Number.isNaN(from.getTime()))) {
-      throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'invalid from/to' });
+      throwBadRequest('REPORT_INVALID_RANGE', 'invalid from/to');
     }
     if (toS && (!to || Number.isNaN(to.getTime()))) {
-      throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'invalid from/to' });
+      throwBadRequest('REPORT_INVALID_RANGE', 'invalid from/to');
     }
     if (from && to && from > to) {
-      throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'from must be <= to' });
+      throwBadRequest('REPORT_INVALID_RANGE', 'from must be <= to');
     }
     return { from, to };
   }
@@ -246,7 +238,7 @@ export class OpsService {
     }
     if (q.source?.trim()) where.source = q.source.trim();
     if (q.resolvedKind?.trim()) where.resolvedKind = q.resolvedKind.trim();
-    if (q.resultCode?.trim()) (where as any).resultCode = q.resultCode.trim();
+    if (q.resultCode?.trim()) where.resultCode = q.resultCode.trim();
     const ok = this.parseOptionalBool(q.success);
     if (ok !== undefined) where.success = ok;
     if (q.referenceId?.trim()) where.referenceId = q.referenceId.trim();
@@ -268,8 +260,8 @@ export class OpsService {
         source: r.source,
         field: r.field,
         referenceId: r.referenceId,
-        resultCode: (r as any).resultCode ?? null,
-        fixHint: this.fixHintFromResultCode(((r as any).resultCode ?? null) as any),
+        resultCode: r.resultCode ?? null,
+        fixHint: this.fixHintFromResultCode(r.resultCode ?? null),
         resolvedKind: r.resolvedKind,
         success: r.success,
         createdAt: r.createdAt.toISOString(),
@@ -334,17 +326,17 @@ export class OpsService {
         this.prisma.reportClickAudit.count({ where }),
         this.prisma.reportClickAudit.groupBy({ by: ['success'], where, _count: { _all: true } }),
         this.prisma.reportClickAudit.groupBy({ by: ['source'], where, _count: { _all: true } }),
-        this.prisma.reportClickAudit.groupBy({ by: ['resultCode'], where, _count: { _all: true } } as any),
+        this.prisma.reportClickAudit.groupBy({ by: ['resultCode'], where, _count: { _all: true } }),
         this.prisma.reportClickAudit.groupBy({ by: ['resolvedKind'], where, _count: { _all: true } }),
         // topSources: rank sources by NOT_FOUND/MULTI_MATCH frequency (within current filters)
         this.prisma.reportClickAudit.groupBy({
           by: ['source', 'resultCode'],
           where: {
             ...where,
-            resultCode: { in: ['NOT_FOUND', 'MULTI_MATCH'] } as any,
-          } as any,
+            resultCode: { in: ['NOT_FOUND', 'MULTI_MATCH'] },
+          },
           _count: { _all: true },
-        } as any),
+        }),
         // trendByDay: recent N days (or within from/to if specified)
         (async () => {
           // Don't read where.createdAt (union type); use parsed from/to directly.
@@ -396,10 +388,10 @@ export class OpsService {
       ]);
 
     const topSourcesMap = new Map<string, { source: string; notFound: number; multiMatch: number; total: number }>();
-    for (const r of topSourcesRows as any[]) {
-      const source = r.source as string;
-      const resultCode = (r as any).resultCode as string | null;
-      const count = (r as any)._count?._all ?? 0;
+    for (const r of topSourcesRows) {
+      const source = r.source;
+      const resultCode = r.resultCode ?? null;
+      const count = r._count?._all ?? 0;
       const cur = topSourcesMap.get(source) ?? { source, notFound: 0, multiMatch: 0, total: 0 };
       if (resultCode === 'NOT_FOUND') cur.notFound += count;
       if (resultCode === 'MULTI_MATCH') cur.multiMatch += count;
@@ -408,10 +400,7 @@ export class OpsService {
     }
     const topSources = [...topSourcesMap.values()].sort((a, b) => b.total - a.total).slice(0, top);
 
-    const byResultCode = (byResultCodeRows as any[]).map((r) => ({ resultCode: r.resultCode ?? null, count: r._count._all })) as Array<{
-      resultCode: string | null;
-      count: number;
-    }>;
+    const byResultCode = byResultCodeRows.map((r) => ({ resultCode: r.resultCode ?? null, count: r._count._all }));
     const notFound = byResultCode.find((x) => x.resultCode === 'NOT_FOUND')?.count ?? 0;
     const multiMatch = byResultCode.find((x) => x.resultCode === 'MULTI_MATCH')?.count ?? 0;
     const navigated = byResultCode.find((x) => x.resultCode === 'NAVIGATED')?.count ?? 0;
@@ -447,7 +436,7 @@ export class OpsService {
       byResolvedKind: byKindRows.map((r) => ({ resolvedKind: r.resolvedKind, count: r._count._all })),
       topSources,
       trendByDay: trendRows,
-      topReferenceIds: topRefRows as any,
+      topReferenceIds: topRefRows,
       health: {
         notFoundRate,
         multiMatchRate,
@@ -493,6 +482,6 @@ export class OpsService {
         throw e;
       }
     }
-    throw new BadRequestException({ code: 'OPS_JOB_KIND_INVALID', message: 'Unsupported kind' });
+    throwBadRequest('OPS_JOB_KIND_INVALID', 'Unsupported kind');
   }
 }

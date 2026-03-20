@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { Prisma } from '@prisma/client';
 import { dedupeCode, isValidCode, resolveCode } from '../../../shared/utils/canonical-code';
 import { createMasterWithCode } from '../../../shared/utils/create-master-with-code';
@@ -16,10 +17,7 @@ export class ProductTagService {
   list(merchantId: string) {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'PRODUCT_TAG_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('PRODUCT_TAG_MERCHANT_REQUIRED', 'merchantId is required');
     }
     return this.repo.findMany(m);
   }
@@ -27,10 +25,7 @@ export class ProductTagService {
   async create(input: { merchantId: string; name: string; code?: string }) {
     const merchantId = input.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'PRODUCT_TAG_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('PRODUCT_TAG_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const tag = await createMasterWithCode<{ merchantId: string }, Awaited<ReturnType<ProductTagRepository['create']>>>({
       name: input.name,
@@ -56,37 +51,25 @@ export class ProductTagService {
   async update(id: string, input: { name?: string; code?: string }) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException({
-        message: 'ProductTag not found',
-        code: 'PRODUCT_TAG_NOT_FOUND',
-      });
+      throwNotFound('PRODUCT_TAG_NOT_FOUND', 'ProductTag not found');
     }
     const data: { name?: string; code?: string } = {};
     if (input.name !== undefined) {
       const n = input.name.trim();
       if (!n) {
-        throw new BadRequestException({
-          message: 'name cannot be empty',
-          code: 'PRODUCT_TAG_NAME_REQUIRED',
-        });
+        throwBadRequest('PRODUCT_TAG_NAME_REQUIRED', 'name cannot be empty');
       }
       data.name = n;
     }
     if (input.code !== undefined) {
       const raw = input.code.trim();
       if (!raw) {
-        throw new BadRequestException({
-          message: 'code cannot be empty',
-          code: 'PRODUCT_TAG_CODE_REQUIRED',
-        });
+        throwBadRequest('PRODUCT_TAG_CODE_REQUIRED', 'code cannot be empty');
       }
       const lower = raw.toLowerCase();
       if (lower !== existing.code.toLowerCase()) {
         if (!isValidCode(lower)) {
-          throw new BadRequestException({
-            message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
-            code: 'PRODUCT_TAG_CODE_INVALID',
-          });
+          throwBadRequest('PRODUCT_TAG_CODE_INVALID', 'code must match a-z0-9- (lowercase, no leading/trailing dash)');
         }
         const existingCodes = await this.repo.findCodes(existing.merchantId);
         const others = existingCodes.filter((c) => c.toLowerCase() !== existing.code.toLowerCase());
@@ -115,10 +98,7 @@ export class ProductTagService {
       };
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({
-          message: 'ProductTag code already exists for this merchant',
-          code: 'PRODUCT_TAG_CODE_CONFLICT',
-        });
+        throwConflict('PRODUCT_TAG_CODE_CONFLICT', 'ProductTag code already exists for this merchant');
       }
       throw e;
     }
@@ -127,38 +107,23 @@ export class ProductTagService {
   async reorder(merchantId: string, ids: string[]) {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'PRODUCT_TAG_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('PRODUCT_TAG_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const cleaned = ids.map((x) => String(x ?? '').trim()).filter(Boolean);
     if (!cleaned.length) {
-      throw new BadRequestException({
-        message: 'ids required',
-        code: 'PRODUCT_TAG_REORDER_EMPTY',
-      });
+      throwBadRequest('PRODUCT_TAG_REORDER_EMPTY', 'ids required');
     }
     const uniq = [...new Set(cleaned)];
     if (uniq.length !== cleaned.length) {
-      throw new BadRequestException({
-        message: 'duplicate ids',
-        code: 'PRODUCT_TAG_REORDER_DUPLICATE_IDS',
-      });
+      throwBadRequest('PRODUCT_TAG_REORDER_DUPLICATE_IDS', 'duplicate ids');
     }
     const total = await this.repo.countByMerchant(m);
     const count = await this.repo.countByIdsAndMerchant(m, uniq);
     if (count !== uniq.length) {
-      throw new BadRequestException({
-        message: 'some ids not found for merchant',
-        code: 'PRODUCT_TAG_NOT_FOUND',
-      });
+      throwBadRequest('PRODUCT_TAG_NOT_FOUND', 'some ids not found for merchant');
     }
     if (uniq.length !== total) {
-      throw new BadRequestException({
-        message: 'ids must include all product tags for merchant',
-        code: 'PRODUCT_TAG_REORDER_INVALID',
-      });
+      throwBadRequest('PRODUCT_TAG_REORDER_INVALID', 'ids must include all product tags for merchant');
     }
     await this.repo.reorder(m, uniq);
   }
@@ -166,10 +131,7 @@ export class ProductTagService {
   async delete(id: string) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException({
-        message: 'ProductTag not found',
-        code: 'PRODUCT_TAG_NOT_FOUND',
-      });
+      throwNotFound('PRODUCT_TAG_NOT_FOUND', 'ProductTag not found');
     }
     await this.repo.delete(id);
     return { success: true };

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { ProductService } from '../../product/application/product.service';
 import { InventoryService } from '../../inventory/application/inventory.service';
@@ -57,10 +58,7 @@ export class ImportsService {
   async getJob(id: string) {
     const job = await this.prisma.bulkImportJob.findUnique({ where: { id } });
     if (!job) {
-      throw new NotFoundException({
-        message: 'job not found',
-        code: 'IMPORT_JOB_NOT_FOUND',
-      });
+      throwNotFound('IMPORT_JOB_NOT_FOUND', 'job not found');
     }
     return {
       id: job.id,

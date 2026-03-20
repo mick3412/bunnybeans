@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
 const SCHEDULE_TYPES = ['manual', 'daily', 'weekly', 'monthly'];
@@ -9,7 +10,7 @@ export class DispatchRuleService {
 
   async list(merchantId: string, enabled?: boolean) {
     const m = merchantId?.trim();
-    if (!m) throw new BadRequestException({ code: 'CRM_MERCHANT_REQUIRED', message: 'merchantId is required' });
+    if (!m) throwBadRequest('CRM_MERCHANT_REQUIRED', 'merchantId is required');
     const where: { merchantId: string; enabled?: boolean } = { merchantId: m };
     if (enabled !== undefined) where.enabled = enabled;
     return this.prisma.crmCouponDispatchRule.findMany({
@@ -31,12 +32,9 @@ export class DispatchRuleService {
     },
   ) {
     const m = merchantId?.trim();
-    if (!m) throw new BadRequestException({ code: 'CRM_MERCHANT_REQUIRED', message: 'merchantId is required' });
+    if (!m) throwBadRequest('CRM_MERCHANT_REQUIRED', 'merchantId is required');
     if (!SCHEDULE_TYPES.includes(body.scheduleType)) {
-      throw new BadRequestException({
-        code: 'CRM_DISPATCH_SCHEDULE_INVALID',
-        message: 'scheduleType must be manual, daily, weekly, or monthly',
-      });
+      throwBadRequest('CRM_DISPATCH_SCHEDULE_INVALID', 'scheduleType must be manual, daily, weekly, or monthly');
     }
     return this.prisma.crmCouponDispatchRule.create({
       data: {
@@ -66,14 +64,11 @@ export class DispatchRuleService {
     }>,
   ) {
     const m = merchantId?.trim();
-    if (!m) throw new BadRequestException({ code: 'CRM_MERCHANT_REQUIRED', message: 'merchantId is required' });
+    if (!m) throwBadRequest('CRM_MERCHANT_REQUIRED', 'merchantId is required');
     const existing = await this.prisma.crmCouponDispatchRule.findFirst({ where: { id, merchantId: m } });
-    if (!existing) throw new NotFoundException({ code: 'CRM_DISPATCH_RULE_NOT_FOUND', message: 'Rule not found' });
+    if (!existing) throwNotFound('CRM_DISPATCH_RULE_NOT_FOUND', 'Rule not found');
     if (body.scheduleType != null && !SCHEDULE_TYPES.includes(body.scheduleType)) {
-      throw new BadRequestException({
-        code: 'CRM_DISPATCH_SCHEDULE_INVALID',
-        message: 'scheduleType must be manual, daily, weekly, or monthly',
-      });
+      throwBadRequest('CRM_DISPATCH_SCHEDULE_INVALID', 'scheduleType must be manual, daily, weekly, or monthly');
     }
     return this.prisma.crmCouponDispatchRule.update({
       where: { id },
@@ -91,9 +86,9 @@ export class DispatchRuleService {
 
   async delete(merchantId: string, id: string) {
     const m = merchantId?.trim();
-    if (!m) throw new BadRequestException({ code: 'CRM_MERCHANT_REQUIRED', message: 'merchantId is required' });
+    if (!m) throwBadRequest('CRM_MERCHANT_REQUIRED', 'merchantId is required');
     const existing = await this.prisma.crmCouponDispatchRule.findFirst({ where: { id, merchantId: m } });
-    if (!existing) throw new NotFoundException({ code: 'CRM_DISPATCH_RULE_NOT_FOUND', message: 'Rule not found' });
+    if (!existing) throwNotFound('CRM_DISPATCH_RULE_NOT_FOUND', 'Rule not found');
     await this.prisma.crmCouponDispatchRule.delete({ where: { id } });
     return { ok: true };
   }

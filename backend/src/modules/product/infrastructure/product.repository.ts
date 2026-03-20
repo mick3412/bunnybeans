@@ -59,6 +59,7 @@ export class ProductRepository {
     return this.prisma.product.findMany({
       where: Object.keys(where).length ? where : undefined,
       orderBy: { sku: 'asc' },
+      take: 5000,
     });
   }
 

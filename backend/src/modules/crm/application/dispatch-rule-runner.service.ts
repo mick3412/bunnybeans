@@ -127,15 +127,15 @@ export class DispatchRuleRunnerService {
   }
 
   private formatError(e: unknown): string {
-    const anyE = e as any;
-    const res = anyE?.response;
+    const err = e as Record<string, unknown> | null;
+    const res = err?.response as Record<string, unknown> | undefined;
     const code = typeof res?.code === 'string' ? res.code : undefined;
     const msg = typeof res?.message === 'string' ? res.message : undefined;
     if (code && msg) return `${code} ${msg}`;
     if (code) return code;
-    if (typeof anyE?.message === 'string' && anyE.message.trim()) return anyE.message;
+    if (e instanceof Error && e.message.trim()) return e.message;
     try {
-      return JSON.stringify(res ?? anyE);
+      return JSON.stringify(res ?? err);
     } catch {
       return 'unknown error';
     }

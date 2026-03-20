@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
 export type SegmentRow = {
@@ -22,10 +23,7 @@ export class SegmentService {
   async listSegments(merchantId: string, page = 1, pageSize = 20): Promise<{ items: SegmentRow[]; total: number }> {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        code: 'CRM_MERCHANT_REQUIRED',
-        message: 'merchantId is required',
-      });
+      throwBadRequest('CRM_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const size = Math.min(Math.max(1, pageSize), 100);
     const skip = (Math.max(1, page) - 1) * size;
@@ -59,10 +57,7 @@ export class SegmentService {
       where: { id: segmentId?.trim() },
     });
     if (!segment) {
-      throw new NotFoundException({
-        message: 'Segment not found',
-        code: 'SEGMENT_NOT_FOUND',
-      });
+      throwNotFound('SEGMENT_NOT_FOUND', 'Segment not found');
     }
 
     const conditions = segment.conditions as Record<string, unknown> | null;

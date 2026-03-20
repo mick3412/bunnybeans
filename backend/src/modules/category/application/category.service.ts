@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { Prisma } from '@prisma/client';
 import { dedupeCode, isValidCode, resolveCode } from '../../../shared/utils/canonical-code';
 import { createMasterWithCode } from '../../../shared/utils/create-master-with-code';
@@ -76,39 +77,27 @@ export class CategoryService {
   ) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException({
-        message: 'Category not found',
-        code: 'CATEGORY_NOT_FOUND',
-      });
+      throwNotFound('CATEGORY_NOT_FOUND', 'Category not found');
     }
     const data: { code?: string; name?: string } = {};
     if (input.name !== undefined) {
       const n = input.name.trim();
       if (!n) {
-        throw new BadRequestException({
-          message: 'name cannot be empty',
-          code: 'CATEGORY_NAME_REQUIRED',
-        });
+        throwBadRequest('CATEGORY_NAME_REQUIRED', 'name cannot be empty');
       }
       data.name = n;
     }
     if (input.code !== undefined) {
       const raw = input.code.trim();
       if (!raw) {
-        throw new BadRequestException({
-          message: 'code cannot be empty',
-          code: 'CATEGORY_CODE_REQUIRED',
-        });
+        throwBadRequest('CATEGORY_CODE_REQUIRED', 'code cannot be empty');
       }
       const lower = raw.toLowerCase();
       if (lower === existing.code.toLowerCase()) {
         // No change
       } else {
         if (!isValidCode(lower)) {
-          throw new BadRequestException({
-            message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
-            code: 'CATEGORY_CODE_INVALID',
-          });
+          throwBadRequest('CATEGORY_CODE_INVALID', 'code must match a-z0-9- (lowercase, no leading/trailing dash)');
         }
         const existingCodes = await this.repo.findCodes();
         const others = existingCodes.filter((c) => c.toLowerCase() !== existing.code.toLowerCase());
@@ -122,10 +111,7 @@ export class CategoryService {
       return await this.repo.update(id, data);
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({
-          message: 'Category code already exists',
-          code: 'CATEGORY_CODE_CONFLICT',
-        });
+        throwConflict('CATEGORY_CODE_CONFLICT', 'Category code already exists');
       }
       throw e;
     }
@@ -134,31 +120,19 @@ export class CategoryService {
   async reorderCategories(ids: string[]) {
     const cleaned = ids.map((x) => String(x ?? '').trim()).filter(Boolean);
     if (!cleaned.length) {
-      throw new BadRequestException({
-        message: 'ids required',
-        code: 'CATEGORY_REORDER_EMPTY',
-      });
+      throwBadRequest('CATEGORY_REORDER_EMPTY', 'ids required');
     }
     const uniq = [...new Set(cleaned)];
     if (uniq.length !== cleaned.length) {
-      throw new BadRequestException({
-        message: 'duplicate ids',
-        code: 'CATEGORY_REORDER_DUPLICATE_IDS',
-      });
+      throwBadRequest('CATEGORY_REORDER_DUPLICATE_IDS', 'duplicate ids');
     }
     const total = await this.repo.countAll();
     const count = await this.repo.countByIds(uniq);
     if (count !== uniq.length) {
-      throw new BadRequestException({
-        message: 'some ids not found',
-        code: 'CATEGORY_NOT_FOUND',
-      });
+      throwBadRequest('CATEGORY_NOT_FOUND', 'some ids not found');
     }
     if (uniq.length !== total) {
-      throw new BadRequestException({
-        message: 'ids must include all categories',
-        code: 'CATEGORY_REORDER_INVALID',
-      });
+      throwBadRequest('CATEGORY_REORDER_INVALID', 'ids must include all categories');
     }
     await this.repo.reorder(uniq);
   }
@@ -166,17 +140,11 @@ export class CategoryService {
   async deleteCategory(id: string) {
     const existing = await this.repo.findById(id);
     if (!existing) {
-      throw new NotFoundException({
-        message: 'Category not found',
-        code: 'CATEGORY_NOT_FOUND',
-      });
+      throwNotFound('CATEGORY_NOT_FOUND', 'Category not found');
     }
     const n = await this.repo.countProducts(id);
     if (n > 0) {
-      throw new ConflictException({
-        message: 'Category still has products',
-        code: 'CATEGORY_IN_USE',
-      });
+      throwConflict('CATEGORY_IN_USE', 'Category still has products');
     }
     await this.repo.deleteById(id);
   }

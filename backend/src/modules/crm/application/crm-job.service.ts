@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { throwBadRequest, throwNotFound } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { SegmentService } from './segment.service';
 
@@ -8,6 +9,8 @@ type JobResultOk = { sent: number; skipped: number; errors?: string[] };
 
 @Injectable()
 export class CrmJobService {
+  private readonly logger = new Logger(CrmJobService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly segmentService: SegmentService,
@@ -22,40 +25,25 @@ export class CrmJobService {
     body: { merchantId?: string; segmentId?: string; couponId?: string; couponCode?: string },
   ): Promise<{ jobId: string }> {
     if (!ALLOWED_KINDS.includes(kind)) {
-      throw new BadRequestException({
-        code: 'CRM_JOB_KIND_INVALID',
-        message: 'kind must be segment-coupon, birthday-coupon, or repurchase-coupon',
-      });
+      throwBadRequest('CRM_JOB_KIND_INVALID', 'kind must be segment-coupon, birthday-coupon, or repurchase-coupon');
     }
     const merchantId = body?.merchantId?.trim();
     const segmentId = body?.segmentId?.trim();
     const couponId = body?.couponId?.trim();
     const couponCode = body?.couponCode?.trim();
     if (!merchantId) {
-      throw new BadRequestException({
-        code: 'CRM_JOB_MERCHANT_REQUIRED',
-        message: 'merchantId is required',
-      });
+      throwBadRequest('CRM_JOB_MERCHANT_REQUIRED', 'merchantId is required');
     }
     if (!segmentId) {
-      throw new BadRequestException({
-        code: 'CRM_JOB_SEGMENT_REQUIRED',
-        message: 'segmentId is required',
-      });
+      throwBadRequest('CRM_JOB_SEGMENT_REQUIRED', 'segmentId is required');
     }
     if (!couponId && !couponCode) {
-      throw new BadRequestException({
-        code: 'CRM_JOB_COUPON_REQUIRED',
-        message: 'couponId or couponCode is required',
-      });
+      throwBadRequest('CRM_JOB_COUPON_REQUIRED', 'couponId or couponCode is required');
     }
 
     const resolvedCouponId = await this.resolveCouponId(merchantId, couponId, couponCode);
     if (!resolvedCouponId) {
-      throw new BadRequestException({
-        code: 'CRM_JOB_COUPON_NOT_FOUND',
-        message: 'Coupon not found by couponId or couponCode',
-      });
+      throwBadRequest('CRM_JOB_COUPON_NOT_FOUND', 'Coupon not found by couponId or couponCode');
     }
 
     const job = await this.prisma.crmMarketingJob.create({
@@ -68,7 +56,7 @@ export class CrmJobService {
       },
     });
 
-    setImmediate(() => this.runJob(job.id).catch(() => {}));
+    setImmediate(() => this.runJob(job.id).catch((e) => this.logger.error(`runJob ${job.id} failed`, e)));
     return { jobId: job.id };
   }
 
@@ -105,10 +93,7 @@ export class CrmJobService {
       where: { id: id?.trim() },
     });
     if (!job) {
-      throw new NotFoundException({
-        code: 'CRM_JOB_NOT_FOUND',
-        message: 'Job not found',
-      });
+      throwNotFound('CRM_JOB_NOT_FOUND', 'Job not found');
     }
     const out: {
       id: string;
@@ -146,7 +131,7 @@ export class CrmJobService {
   }> {
     const merchantId = params.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({ code: 'CRM_JOB_MERCHANT_REQUIRED', message: 'merchantId is required' });
+      throwBadRequest('CRM_JOB_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const page = params.page && params.page > 0 ? params.page : 1;
     const pageSize = params.pageSize && params.pageSize > 0 ? Math.min(params.pageSize, 100) : 20;
@@ -156,13 +141,13 @@ export class CrmJobService {
     const from = fromStr ? new Date(fromStr) : undefined;
     const to = toStr ? new Date(toStr) : undefined;
     if (fromStr && (!from || Number.isNaN(from.getTime()))) {
-      throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'invalid from/to' });
+      throwBadRequest('REPORT_INVALID_RANGE', 'invalid from/to');
     }
     if (toStr && (!to || Number.isNaN(to.getTime()))) {
-      throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'invalid from/to' });
+      throwBadRequest('REPORT_INVALID_RANGE', 'invalid from/to');
     }
     if (from && to && from > to) {
-      throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'from must be <= to' });
+      throwBadRequest('REPORT_INVALID_RANGE', 'from must be <= to');
     }
 
     const where: {

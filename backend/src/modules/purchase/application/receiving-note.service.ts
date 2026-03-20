@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { InventoryService } from '../../inventory/application/inventory.service';
@@ -28,10 +25,7 @@ export class ReceivingNoteService {
   async list(merchantId: string, status?: string, q?: string) {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId required',
-        code: 'RN_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('RN_MERCHANT_REQUIRED', 'merchantId required');
     }
     const where: Prisma.ReceivingNoteWhereInput = { merchantId: m };
     if (status?.trim()) {
@@ -67,10 +61,10 @@ export class ReceivingNoteService {
       },
     });
     if (!rn) {
-      throw new NotFoundException({ message: 'Receiving note not found', code: 'RN_NOT_FOUND' });
+      throwNotFound('RN_NOT_FOUND', 'Receiving note not found');
     }
     if (merchantId && rn.merchantId !== merchantId) {
-      throw new NotFoundException({ message: 'Receiving note not found', code: 'RN_NOT_FOUND' });
+      throwNotFound('RN_NOT_FOUND', 'Receiving note not found');
     }
     return rn;
   }
@@ -86,13 +80,10 @@ export class ReceivingNoteService {
       include: { lines: true },
     });
     if (!po || po.merchantId !== data.merchantId.trim()) {
-      throw new NotFoundException({ message: 'PO not found', code: 'PO_NOT_FOUND' });
+      throwNotFound('PO_NOT_FOUND', 'PO not found');
     }
     if (po.status !== 'ORDERED' && po.status !== 'PARTIALLY_RECEIVED') {
-      throw new BadRequestException({
-        message: 'PO status does not allow receiving note',
-        code: 'PO_INVALID_STATUS',
-      });
+      throwBadRequest('PO_INVALID_STATUS', 'PO status does not allow receiving note');
     }
     const lineCreates: Prisma.ReceivingNoteLineCreateWithoutReceivingNoteInput[] = [];
     for (const pl of po.lines) {
@@ -107,10 +98,7 @@ export class ReceivingNoteService {
       });
     }
     if (!lineCreates.length) {
-      throw new BadRequestException({
-        message: 'No remaining qty to receive on PO',
-        code: 'PO_INVALID_STATUS',
-      });
+      throwBadRequest('PO_INVALID_STATUS', 'No remaining qty to receive on PO');
     }
     return this.prisma.receivingNote.create({
       data: {
@@ -171,33 +159,21 @@ export class ReceivingNoteService {
   ) {
     const rn = await this.getById(id);
     if (rn.status === 'COMPLETED' || rn.status === 'RETURNED') {
-      throw new BadRequestException({
-        message: 'Receiving note not editable',
-        code: 'RN_NOT_EDITABLE',
-      });
+      throwBadRequest('RN_NOT_EDITABLE', 'Receiving note not editable');
     }
     for (const u of lines) {
       const line = rn.lines.find((l) => l.id === u.lineId);
       if (!line) {
-        throw new BadRequestException({
-          message: 'RN line not found',
-          code: 'PO_LINE_NOT_FOUND',
-        });
+        throwBadRequest('PO_LINE_NOT_FOUND', 'RN line not found');
       }
       const received = u.receivedQty ?? line.receivedQty;
       const qualified = u.qualifiedQty ?? line.qualifiedQty;
       const returned = u.returnedQty ?? line.returnedQty;
       if (qualified > received) {
-        throw new BadRequestException({
-          message: 'qualifiedQty cannot exceed receivedQty',
-          code: 'RN_COMPLETE_INVALID',
-        });
+        throwBadRequest('RN_COMPLETE_INVALID', 'qualifiedQty cannot exceed receivedQty');
       }
       if (returned > received) {
-        throw new BadRequestException({
-          message: 'returnedQty cannot exceed receivedQty',
-          code: 'RN_COMPLETE_INVALID',
-        });
+        throwBadRequest('RN_COMPLETE_INVALID', 'returnedQty cannot exceed receivedQty');
       }
       if (received + returned > line.orderedQty + 1) {
         // allow small tolerance - actually received+returned should <= orderedQty for the batch
@@ -248,8 +224,8 @@ export class ReceivingNoteService {
               WHERE "id" = ${u.lineId}
             `;
           }
-        } catch {
-          // ignore
+        } catch (e) {
+          new Logger(ReceivingNoteService.name).warn(`patchLines raw update failed: ${(e as Error).message}`);
         }
       }
     }
@@ -266,37 +242,28 @@ export class ReceivingNoteService {
       return rn;
     }
     if (rn.status === 'RETURNED') {
-      throw new BadRequestException({
-        message: 'Cannot complete returned note',
-        code: 'RN_NOT_EDITABLE',
-      });
+      throwBadRequest('RN_NOT_EDITABLE', 'Cannot complete returned note');
     }
     const po = await this.prisma.purchaseOrder.findUnique({
       where: { id: rn.purchaseOrderId },
       include: { lines: true },
     });
-    if (!po) throw new NotFoundException({ message: 'PO not found', code: 'PO_NOT_FOUND' });
+    if (!po) throwNotFound('PO_NOT_FOUND', 'PO not found');
 
     let payableTotal = 0;
     for (const rl of rn.lines) {
       const pl = po.lines.find((l) => l.id === rl.purchaseOrderLineId)!;
       const remaining = pl.qtyOrdered - pl.qtyReceived;
       if (rl.qualifiedQty < 0 || rl.qualifiedQty > remaining) {
-        throw new BadRequestException({
-          message: `qualifiedQty invalid for line ${rl.id}`,
-          code: 'RN_COMPLETE_INVALID',
-        });
+        throwBadRequest('RN_COMPLETE_INVALID', `qualifiedQty invalid for line ${rl.id}`);
       }
       if (rl.qualifiedQty > rl.receivedQty) {
-        throw new BadRequestException({
-          message: 'qualifiedQty cannot exceed receivedQty',
-          code: 'RN_COMPLETE_INVALID',
-        });
+        throwBadRequest('RN_COMPLETE_INVALID', 'qualifiedQty cannot exceed receivedQty');
       }
       payableTotal += rl.qualifiedQty * Number(pl.unitCost);
     }
 
-    for (const rl of rn.lines as any[]) {
+    for (const rl of rn.lines) {
       if (rl.qualifiedQty <= 0) continue;
       await this.inventory.recordInventoryEvent({
         productId: rl.purchaseOrderLine.productId,
@@ -305,12 +272,9 @@ export class ReceivingNoteService {
         quantity: rl.qualifiedQty,
         referenceId: rl.id,
         note: `RN ${rn.receiptNumber}`,
-        // batchCode / expiryDate 欄位目前僅於 schema 定義，待 Prisma Client 更新後再正式串接
-        batchCode: (rl as any).batchCode ?? undefined,
-        expiryDate: (rl as any).expiryDate
-          ? (rl as any).expiryDate.toISOString()
-          : undefined,
-        weightUnit: (rl as any).weightUnit ?? undefined,
+        batchCode: rl.batchCode ?? undefined,
+        expiryDate: rl.expiryDate ? rl.expiryDate.toISOString() : undefined,
+        weightUnit: rl.weightUnit ?? undefined,
       });
       await this.prisma.purchaseOrderLine.update({
         where: { id: rl.purchaseOrderLineId },
@@ -356,10 +320,7 @@ export class ReceivingNoteService {
   async reject(id: string) {
     const rn = await this.getById(id);
     if (rn.status === 'COMPLETED') {
-      throw new BadRequestException({
-        message: 'Cannot reject completed note',
-        code: 'RN_NOT_EDITABLE',
-      });
+      throwBadRequest('RN_NOT_EDITABLE', 'Cannot reject completed note');
     }
     return this.prisma.receivingNote.update({
       where: { id },
@@ -378,25 +339,19 @@ export class ReceivingNoteService {
   ) {
     const rn = await this.getById(id);
     if (rn.status !== 'COMPLETED') {
-      throw new BadRequestException({
-        message: 'Only completed receiving note can return to supplier',
-        code: 'RN_NOT_EDITABLE',
-      });
+      throwBadRequest('RN_NOT_EDITABLE', 'Only completed receiving note can return to supplier');
     }
     const po = await this.prisma.purchaseOrder.findUnique({
       where: { id: rn.purchaseOrderId },
       include: { lines: true },
     });
-    if (!po) throw new NotFoundException({ message: 'PO not found', code: 'PO_NOT_FOUND' });
+    if (!po) throwNotFound('PO_NOT_FOUND', 'PO not found');
     const supplierId = po.supplierId;
     const warehouseId = po.warehouseId;
 
     const lines = body.lines ?? [];
     if (!lines.length) {
-      throw new BadRequestException({
-        message: 'lines required with at least one item',
-        code: 'RN_COMPLETE_INVALID',
-      });
+      throwBadRequest('RN_COMPLETE_INVALID', 'lines required with at least one item');
     }
 
     let totalReturnAmount = 0;
@@ -404,17 +359,11 @@ export class ReceivingNoteService {
 
     for (const { receivingNoteLineId, quantity } of lines) {
       if (quantity <= 0 || !Number.isFinite(quantity)) {
-        throw new BadRequestException({
-          message: 'quantity must be a positive number',
-          code: 'RN_COMPLETE_INVALID',
-        });
+        throwBadRequest('RN_COMPLETE_INVALID', 'quantity must be a positive number');
       }
       const rl = rn.lines.find((l) => l.id === receivingNoteLineId);
       if (!rl) {
-        throw new BadRequestException({
-          message: 'Receiving note line not found',
-          code: 'PO_LINE_NOT_FOUND',
-        });
+        throwBadRequest('PO_LINE_NOT_FOUND', 'Receiving note line not found');
       }
       const pl = po.lines.find((l) => l.id === rl.purchaseOrderLineId)!;
       const qualifiedQty = rl.qualifiedQty;
@@ -427,12 +376,7 @@ export class ReceivingNoteService {
       });
       const returnedSum = Math.abs(alreadyReturned._sum.quantity ?? 0);
       if (quantity > qualifiedQty - returnedSum) {
-        throw new BadRequestException({
-          message:
-            'quantity exceeds qualified qty minus already returned for line ' +
-            rl.id,
-          code: 'RN_COMPLETE_INVALID',
-        });
+        throwBadRequest('RN_COMPLETE_INVALID', `quantity exceeds qualified qty minus already returned for line ${rl.id}`);
       }
       await this.inventory.recordInventoryEvent({
         productId: pl.productId,

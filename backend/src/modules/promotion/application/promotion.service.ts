@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { PromotionRepository } from '../infrastructure/promotion.repository';
 import {
@@ -86,10 +87,7 @@ export class PromotionService {
   async get(id: string) {
     const r = await this.repo.findById(id);
     if (!r) {
-      throw new NotFoundException({
-        message: 'Promotion rule not found',
-        code: 'PROMOTION_NOT_FOUND',
-      });
+      throwNotFound('PROMOTION_NOT_FOUND', 'Promotion rule not found');
     }
     const at = new Date();
     return {
@@ -163,10 +161,7 @@ export class PromotionService {
   ) {
     const existing = await this.repo.findById(id);
     if (!existing || existing.merchantId !== merchantId) {
-      throw new NotFoundException({
-        message: 'Promotion rule not found',
-        code: 'PROMOTION_NOT_FOUND',
-      });
+      throwNotFound('PROMOTION_NOT_FOUND', 'Promotion rule not found');
     }
     const data: Record<string, unknown> = {};
     if (body.name != null) data.name = body.name.trim();
@@ -188,49 +183,31 @@ export class PromotionService {
   async remove(id: string, merchantId: string) {
     const existing = await this.repo.findById(id);
     if (!existing || existing.merchantId !== merchantId) {
-      throw new NotFoundException({
-        message: 'Promotion rule not found',
-        code: 'PROMOTION_NOT_FOUND',
-      });
+      throwNotFound('PROMOTION_NOT_FOUND', 'Promotion rule not found');
     }
     await this.repo.delete(id);
   }
 
   async reorder(merchantId: string, ids: string[]) {
     if (!merchantId?.trim()) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'PROMOTION_BODY_INVALID',
-      });
+      throwBadRequest('PROMOTION_BODY_INVALID', 'merchantId is required');
     }
     if (!ids.length) {
-      throw new BadRequestException({
-        message: 'ids required',
-        code: 'PROMOTION_REORDER_EMPTY',
-      });
+      throwBadRequest('PROMOTION_REORDER_EMPTY', 'ids required');
     }
     const cleaned = ids.map((x) => String(x ?? '').trim()).filter(Boolean);
     if (!cleaned.length) {
-      throw new BadRequestException({
-        message: 'ids required',
-        code: 'PROMOTION_REORDER_EMPTY',
-      });
+      throwBadRequest('PROMOTION_REORDER_EMPTY', 'ids required');
     }
     const uniq = [...new Set(cleaned)];
     if (uniq.length !== cleaned.length) {
-      throw new BadRequestException({
-        message: 'duplicate ids',
-        code: 'PROMOTION_REORDER_DUPLICATE_IDS',
-      });
+      throwBadRequest('PROMOTION_REORDER_DUPLICATE_IDS', 'duplicate ids');
     }
     const count = await this.prisma.promotionRule.count({
       where: { merchantId: merchantId.trim(), id: { in: uniq } },
     });
     if (count !== uniq.length) {
-      throw new BadRequestException({
-        message: 'some ids not found for merchant',
-        code: 'PROMOTION_NOT_FOUND',
-      });
+      throwBadRequest('PROMOTION_NOT_FOUND', 'some ids not found for merchant');
     }
 
     // Must include all rules for the merchant; partial reorder is rejected for UI consistency.
@@ -238,10 +215,7 @@ export class PromotionService {
       where: { merchantId: merchantId.trim() },
     });
     if (uniq.length !== totalForMerchant) {
-      throw new BadRequestException({
-        message: 'ids must include all promotion rules for merchant',
-        code: 'PROMOTION_REORDER_INVALID',
-      });
+      throwBadRequest('PROMOTION_REORDER_INVALID', 'ids must include all promotion rules for merchant');
     }
 
     await this.repo.reorder(merchantId.trim(), uniq);
@@ -260,10 +234,7 @@ export class PromotionService {
       where: { id: input.storeId },
     });
     if (!store) {
-      throw new NotFoundException({
-        message: 'Store not found',
-        code: 'POS_STORE_NOT_FOUND',
-      });
+      throwNotFound('POS_STORE_NOT_FOUND', 'Store not found');
     }
     const rules = await this.prisma.promotionRule.findMany({
       where: { merchantId: store.merchantId },
@@ -330,14 +301,14 @@ export class PromotionService {
       const s = new Date(filter.from.trim());
       const e = new Date(filter.to.trim());
       if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
-        throw new BadRequestException({ message: 'Invalid from or to date', code: 'REPORT_INVALID_RANGE' });
+        throwBadRequest('REPORT_INVALID_RANGE', 'Invalid from or to date');
       }
       start = s;
       start.setHours(0, 0, 0, 0);
       end = e;
       end.setHours(23, 59, 59, 999);
       if (start.getTime() > end.getTime()) {
-        throw new BadRequestException({ message: 'from must be before or equal to to', code: 'REPORT_INVALID_RANGE' });
+        throwBadRequest('REPORT_INVALID_RANGE', 'from must be before or equal to to');
       }
     } else {
       const p = REPORT_PRESETS.includes((filter.preset ?? '') as any) ? (filter.preset as string) : 'last30d';

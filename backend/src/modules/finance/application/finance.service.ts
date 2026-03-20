@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { FinanceEvent, FinanceEventType } from '@prisma/client';
 import { FinanceRepository } from '../infrastructure/finance.repository';
 
@@ -66,22 +67,13 @@ export class FinanceService {
 
   async recordFinanceEvent(input: RecordFinanceEventInput, opts?: { actor?: string; source?: string }) {
     if (!VALID_FINANCE_EVENT_TYPES.includes(input.type)) {
-      throw new BadRequestException({
-        message: 'Unsupported FinanceEventType',
-        code: 'FINANCE_UNSUPPORTED_EVENT_TYPE',
-      });
+      throwBadRequest('FINANCE_UNSUPPORTED_EVENT_TYPE', 'Unsupported FinanceEventType');
     }
     if (!input.currency?.trim()) {
-      throw new BadRequestException({
-        message: 'currency is required',
-        code: 'FINANCE_CURRENCY_REQUIRED',
-      });
+      throwBadRequest('FINANCE_CURRENCY_REQUIRED', 'currency is required');
     }
     if (typeof input.amount !== 'number' || Number.isNaN(input.amount)) {
-      throw new BadRequestException({
-        message: 'amount must be a number',
-        code: 'FINANCE_AMOUNT_INVALID',
-      });
+      throwBadRequest('FINANCE_AMOUNT_INVALID', 'amount must be a number');
     }
 
     const occurredAt = input.occurredAt ? new Date(input.occurredAt) : new Date();
@@ -89,10 +81,7 @@ export class FinanceService {
 
     const closed = await this.repo.hasClosedPeriodContaining(occurredAt);
     if (closed) {
-      throw new BadRequestException({
-        message: 'Finance period is closed for this date',
-        code: 'FINANCE_PERIOD_CLOSED',
-      });
+      throwBadRequest('FINANCE_PERIOD_CLOSED', 'Finance period is closed for this date');
     }
 
     const created = await this.repo.appendEvent({
@@ -131,10 +120,7 @@ export class FinanceService {
     const page = q.page ?? 1;
     const pageSize = Math.min(100, Math.max(1, q.pageSize ?? 50));
     if (page < 1 || pageSize < 1) {
-      throw new BadRequestException({
-        message: 'page must be >= 1, pageSize between 1 and 100',
-        code: 'FINANCE_LIST_PAGE_INVALID',
-      });
+      throwBadRequest('FINANCE_LIST_PAGE_INVALID', 'page must be >= 1, pageSize between 1 and 100');
     }
     let from = q.from ? new Date(q.from) : undefined;
     let to = q.to ? new Date(q.to) : undefined;
@@ -147,16 +133,10 @@ export class FinanceService {
       from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
     if (from && Number.isNaN(from.getTime())) {
-      throw new BadRequestException({
-        message: 'invalid from',
-        code: 'FINANCE_LIST_PAGE_INVALID',
-      });
+      throwBadRequest('FINANCE_LIST_PAGE_INVALID', 'invalid from');
     }
     if (to && Number.isNaN(to.getTime())) {
-      throw new BadRequestException({
-        message: 'invalid to',
-        code: 'FINANCE_LIST_PAGE_INVALID',
-      });
+      throwBadRequest('FINANCE_LIST_PAGE_INVALID', 'invalid to');
     }
     const { items, total } = await this.repo.listEvents({
       partyId: q.partyId,
@@ -203,16 +183,10 @@ export class FinanceService {
       from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
     if (from && Number.isNaN(from.getTime())) {
-      throw new BadRequestException({
-        message: 'invalid from',
-        code: 'FINANCE_LIST_PAGE_INVALID',
-      });
+      throwBadRequest('FINANCE_LIST_PAGE_INVALID', 'invalid from');
     }
     if (to && Number.isNaN(to.getTime())) {
-      throw new BadRequestException({
-        message: 'invalid to',
-        code: 'FINANCE_LIST_PAGE_INVALID',
-      });
+      throwBadRequest('FINANCE_LIST_PAGE_INVALID', 'invalid to');
     }
     const rows = await this.repo.listEventsExport({
       partyId: q.partyId,
@@ -271,16 +245,10 @@ export class FinanceService {
       from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
     if (from && Number.isNaN(from.getTime())) {
-      throw new BadRequestException({
-        message: 'invalid from',
-        code: 'FINANCE_LIST_PAGE_INVALID',
-      });
+      throwBadRequest('FINANCE_LIST_PAGE_INVALID', 'invalid from');
     }
     if (to && Number.isNaN(to.getTime())) {
-      throw new BadRequestException({
-        message: 'invalid to',
-        code: 'FINANCE_LIST_PAGE_INVALID',
-      });
+      throwBadRequest('FINANCE_LIST_PAGE_INVALID', 'invalid to');
     }
     if (q.groupBy === 'type') {
       return this.repo.summaryByType({ from, to });
@@ -325,10 +293,7 @@ export class FinanceService {
     const page = q.page ?? 1;
     const pageSize = Math.min(100, Math.max(1, q.pageSize ?? 50));
     if (page < 1 || pageSize < 1) {
-      throw new BadRequestException({
-        message: 'page must be >= 1, pageSize between 1 and 100',
-        code: 'FINANCE_LIST_PAGE_INVALID',
-      });
+      throwBadRequest('FINANCE_LIST_PAGE_INVALID', 'page must be >= 1, pageSize between 1 and 100');
     }
     return this.repo.balancesByPartyId({
       merchantId: q.merchantId,
@@ -350,23 +315,14 @@ export class FinanceService {
     const start = new Date(body.startDate);
     const end = new Date(body.endDate);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      throw new BadRequestException({
-        code: 'FINANCE_PERIOD_OVERLAP',
-        message: 'Invalid startDate or endDate',
-      });
+      throwBadRequest('FINANCE_PERIOD_OVERLAP', 'Invalid startDate or endDate');
     }
     if (start > end) {
-      throw new BadRequestException({
-        code: 'FINANCE_PERIOD_OVERLAP',
-        message: 'startDate must be before endDate',
-      });
+      throwBadRequest('FINANCE_PERIOD_OVERLAP', 'startDate must be before endDate');
     }
     const overlapping = await this.repo.hasOverlappingClosedPeriod(start, end, body.merchantId?.trim());
     if (overlapping) {
-      throw new BadRequestException({
-        code: 'FINANCE_PERIOD_ALREADY_CLOSED',
-        message: 'Period overlaps with an already closed period',
-      });
+      throwBadRequest('FINANCE_PERIOD_ALREADY_CLOSED', 'Period overlaps with an already closed period');
     }
     return this.repo.createPeriod({
       merchantId: body.merchantId?.trim(),
@@ -407,10 +363,7 @@ export class FinanceService {
   async createSnapshot(body: { asOfDate: string; type: 'daily' | 'monthly' }) {
     const asOf = new Date(body.asOfDate);
     if (Number.isNaN(asOf.getTime())) {
-      throw new BadRequestException({
-        code: 'FINANCE_AMOUNT_INVALID',
-        message: 'Invalid asOfDate',
-      });
+      throwBadRequest('FINANCE_AMOUNT_INVALID', 'Invalid asOfDate');
     }
     const type = body.type === 'monthly' ? 'monthly' : 'daily';
     let from: Date;
@@ -475,12 +428,9 @@ export class FinanceService {
   async getSnapshotById(id: string) {
     const row = await this.repo.findSnapshotById(id);
     if (!row) {
-      throw new NotFoundException({
-        code: 'FINANCE_SNAPSHOT_NOT_FOUND',
-        message: 'Snapshot not found',
-      });
+      throwNotFound('FINANCE_SNAPSHOT_NOT_FOUND', 'Snapshot not found');
     }
-    const summary = row.summaryJson as any;
+    const summary = row.summaryJson as Record<string, unknown> | null;
     const generatedAt =
       summary && typeof summary === 'object' && typeof summary.generatedAt === 'string'
         ? summary.generatedAt

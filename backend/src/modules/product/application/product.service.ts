@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { throwBadRequest, throwNotFound } from '../../../shared/utils/throw-exceptions';
 import { Decimal } from '@prisma/client/runtime/library';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { ProductRepository } from '../infrastructure/product.repository';
@@ -134,7 +131,7 @@ export class ProductService {
   async getProduct(id: string, options?: { includeBalances?: boolean }) {
     const product = await this.repo.findById(id);
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throwNotFound('PRODUCT_NOT_FOUND', 'Product not found');
     }
     const out = toProductResponse(product) as Record<string, unknown>;
     if (options?.includeBalances) {
@@ -174,20 +171,14 @@ export class ProductService {
       ? productIds.filter((id) => typeof id === 'string' && id.trim())
       : [];
     if (ids.length === 0) {
-      throw new BadRequestException({
-        message: 'productIds required and must be non-empty',
-        code: 'PRODUCT_BATCH_EMPTY',
-      });
+      throwBadRequest('PRODUCT_BATCH_EMPTY', 'productIds required and must be non-empty');
     }
     const val =
       typeof salePrice === 'number'
         ? salePrice
         : parseFloat(String(salePrice ?? ''));
     if (Number.isNaN(val) || val < 0) {
-      throw new BadRequestException({
-        message: 'salePrice must be a non-negative number',
-        code: 'PRODUCT_BATCH_INVALID',
-      });
+      throwBadRequest('PRODUCT_BATCH_INVALID', 'salePrice must be a non-negative number');
     }
     const result = await this.prisma.product.updateMany({
       where: { id: { in: ids } },
@@ -218,17 +209,11 @@ export class ProductService {
     const header = table[0].map((h) => h.trim().toLowerCase());
     const skuIdx = header.indexOf('sku');
     if (skuIdx < 0) {
-      throw new BadRequestException({
-        message: 'CSV must include header column sku',
-        code: 'PRODUCT_IMPORT_HEADER_SKU',
-      });
+      throwBadRequest('PRODUCT_IMPORT_HEADER_SKU', 'CSV must include header column sku');
     }
     const dataRows = table.slice(1);
     if (dataRows.length > PRODUCT_IMPORT_MAX_ROWS) {
-      throw new BadRequestException({
-        message: `at most ${PRODUCT_IMPORT_MAX_ROWS} data rows`,
-        code: 'PRODUCT_IMPORT_TOO_MANY_ROWS',
-      });
+      throwBadRequest('PRODUCT_IMPORT_TOO_MANY_ROWS', `at most ${PRODUCT_IMPORT_MAX_ROWS} data rows`);
     }
     const col = (name: string, cells: string[]) => {
       const j = header.indexOf(name);

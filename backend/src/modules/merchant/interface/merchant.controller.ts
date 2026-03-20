@@ -1,5 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { MerchantService } from '../application/merchant.service';
+import { CreateMerchantDto } from '../dto/create-merchant.dto';
 
 @Controller()
 export class MerchantController {
@@ -24,17 +26,13 @@ export class MerchantController {
   }
 
   @Post('merchants')
-  createMerchant(
-    @Body()
-    body: {
-      code: string;
-      name: string;
-    },
-  ) {
+  @UseGuards(AdminApiKeyGuard)
+  createMerchant(@Body() body: CreateMerchantDto) {
     return this.service.createMerchant(body);
   }
 
   @Patch('merchants/:id')
+  @UseGuards(AdminApiKeyGuard)
   updateMerchant(
     @Param('id') id: string,
     @Body()
@@ -47,6 +45,7 @@ export class MerchantController {
   }
 
   @Delete('merchants/:id')
+  @UseGuards(AdminApiKeyGuard)
   deleteMerchant(@Param('id') id: string) {
     return this.service.deleteMerchant(id);
   }
@@ -64,6 +63,7 @@ export class MerchantController {
   }
 
   @Post('stores')
+  @UseGuards(AdminApiKeyGuard)
   createStore(
     @Body()
     body: {
@@ -76,6 +76,7 @@ export class MerchantController {
   }
 
   @Patch('stores/:id')
+  @UseGuards(AdminApiKeyGuard)
   updateStore(
     @Param('id') id: string,
     @Body()
@@ -88,6 +89,7 @@ export class MerchantController {
   }
 
   @Delete('stores/:id')
+  @UseGuards(AdminApiKeyGuard)
   deleteStore(@Param('id') id: string) {
     return this.service.deleteStore(id);
   }
@@ -105,6 +107,7 @@ export class MerchantController {
   }
 
   @Post('warehouses')
+  @UseGuards(AdminApiKeyGuard)
   createWarehouse(
     @Body()
     body: {
@@ -118,6 +121,7 @@ export class MerchantController {
   }
 
   @Patch('warehouses/:id')
+  @UseGuards(AdminApiKeyGuard)
   updateWarehouse(
     @Param('id') id: string,
     @Body()
@@ -131,6 +135,7 @@ export class MerchantController {
   }
 
   @Delete('warehouses/:id')
+  @UseGuards(AdminApiKeyGuard)
   deleteWarehouse(@Param('id') id: string) {
     return this.service.deleteWarehouse(id);
   }

@@ -7,10 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { SupplierService } from '../application/supplier.service';
 
 @Controller('suppliers')
+@UseGuards(AdminApiKeyGuard)
 export class SupplierController {
   constructor(private readonly svc: SupplierService) {}
 

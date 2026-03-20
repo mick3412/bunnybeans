@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { Prisma, PurchaseOrderStatus } from '@prisma/client';
 import { ReceivingNoteService } from './receiving-note.service';
@@ -18,10 +19,7 @@ export class PurchaseOrderService {
   async list(merchantId: string, status?: string, q?: string) {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId required',
-        code: 'PO_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('PO_MERCHANT_REQUIRED', 'merchantId required');
     }
     const where: Prisma.PurchaseOrderWhereInput = { merchantId: m };
     if (status?.trim()) {
@@ -63,10 +61,10 @@ export class PurchaseOrderService {
       },
     });
     if (!po) {
-      throw new NotFoundException({ message: 'PO not found', code: 'PO_NOT_FOUND' });
+      throwNotFound('PO_NOT_FOUND', 'PO not found');
     }
     if (merchantId && po.merchantId !== merchantId) {
-      throw new NotFoundException({ message: 'PO not found', code: 'PO_NOT_FOUND' });
+      throwNotFound('PO_NOT_FOUND', 'PO not found');
     }
     const lines = po.lines as Array<{ qtyOrdered: number; qtyReceived: number }>;
     const totalOrdered = lines.reduce((s, l) => s + Number(l.qtyOrdered ?? 0), 0);
@@ -96,10 +94,7 @@ export class PurchaseOrderService {
     lines: { productId: string; qtyOrdered: number; unitCost: number }[];
   }) {
     if (!data.lines?.length) {
-      throw new BadRequestException({
-        message: 'At least one line required',
-        code: 'PO_LINES_REQUIRED',
-      });
+      throwBadRequest('PO_LINES_REQUIRED', 'At least one line required');
     }
     try {
       return await this.prisma.purchaseOrder.create({
@@ -122,10 +117,7 @@ export class PurchaseOrderService {
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({
-          message: 'orderNumber already exists',
-          code: 'PO_ORDER_NUMBER_CONFLICT',
-        });
+        throwConflict('PO_ORDER_NUMBER_CONFLICT', 'orderNumber already exists');
       }
       throw e;
     }
@@ -140,10 +132,7 @@ export class PurchaseOrderService {
   ) {
     const po = await this.getById(id);
     if (po.status !== 'DRAFT') {
-      throw new BadRequestException({
-        message: 'Only DRAFT can be patched',
-        code: 'PO_NOT_DRAFT',
-      });
+      throwBadRequest('PO_NOT_DRAFT', 'Only DRAFT can be patched');
     }
     if (data.lines?.length) {
       await this.prisma.purchaseOrderLine.deleteMany({ where: { poId: id } });
@@ -186,16 +175,10 @@ export class PurchaseOrderService {
   async submit(id: string) {
     const po = await this.getById(id);
     if (po.status !== 'DRAFT') {
-      throw new BadRequestException({
-        message: 'Only DRAFT can submit',
-        code: 'PO_INVALID_STATUS',
-      });
+      throwBadRequest('PO_INVALID_STATUS', 'Only DRAFT can submit');
     }
     if (!po.lines.length) {
-      throw new BadRequestException({
-        message: 'PO has no lines',
-        code: 'PO_LINES_REQUIRED',
-      });
+      throwBadRequest('PO_LINES_REQUIRED', 'PO has no lines');
     }
     return this.prisma.purchaseOrder.update({
       where: { id },
@@ -207,10 +190,7 @@ export class PurchaseOrderService {
   async cancel(id: string) {
     const po = await this.getById(id);
     if (po.status !== 'DRAFT') {
-      throw new BadRequestException({
-        message: 'Only DRAFT can cancel',
-        code: 'PO_INVALID_STATUS',
-      });
+      throwBadRequest('PO_INVALID_STATUS', 'Only DRAFT can cancel');
     }
     return this.prisma.purchaseOrder.update({
       where: { id },
@@ -226,30 +206,24 @@ export class PurchaseOrderService {
     suggestions: { productId: string; suggestedQty: number }[];
   }): Promise<{ id: string; orderNumber: string }> {
     if (!data.suggestions?.length) {
-      throw new BadRequestException({
-        message: 'At least one suggestion required',
-        code: 'PO_LINES_REQUIRED',
-      });
+      throwBadRequest('PO_LINES_REQUIRED', 'At least one suggestion required');
     }
     const supplier = await this.prisma.supplier.findUnique({
       where: { id: data.supplierId },
       select: { id: true, merchantId: true },
     });
     if (!supplier) {
-      throw new NotFoundException({ message: 'Supplier not found', code: 'SUPPLIER_NOT_FOUND' });
+      throwNotFound('SUPPLIER_NOT_FOUND', 'Supplier not found');
     }
     const warehouse = await this.prisma.warehouse.findUnique({
       where: { id: data.warehouseId },
       select: { id: true, merchantId: true },
     });
     if (!warehouse) {
-      throw new NotFoundException({ message: 'Warehouse not found', code: 'INVENTORY_WAREHOUSE_NOT_FOUND' });
+      throwNotFound('INVENTORY_WAREHOUSE_NOT_FOUND', 'Warehouse not found');
     }
     if (warehouse.merchantId !== supplier.merchantId) {
-      throw new BadRequestException({
-        message: 'Supplier and warehouse must belong to same merchant',
-        code: 'PO_MERCHANT_MISMATCH',
-      });
+      throwBadRequest('PO_MERCHANT_MISMATCH', 'Supplier and warehouse must belong to same merchant');
     }
     const productIds = [...new Set(data.suggestions.map((s) => s.productId))];
     const products = await this.prisma.product.findMany({
@@ -267,10 +241,7 @@ export class PurchaseOrderService {
       }));
 
     if (lines.length === 0) {
-      throw new BadRequestException({
-        message: 'At least one suggestion with suggestedQty > 0 required',
-        code: 'PO_LINES_REQUIRED',
-      });
+      throwBadRequest('PO_LINES_REQUIRED', 'At least one suggestion with suggestedQty > 0 required');
     }
 
     const orderNumber = `PO-RPL-${Date.now()}`;
@@ -310,35 +281,20 @@ export class PurchaseOrderService {
   }) {
     const merchantId = data.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({
-        message: 'merchantId required',
-        code: 'PO_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('PO_MERCHANT_REQUIRED', 'merchantId required');
     }
     if (!data.supplierId?.trim()) {
-      throw new BadRequestException({
-        message: 'supplierId required',
-        code: 'SUPPLIER_NOT_FOUND',
-      });
+      throwBadRequest('SUPPLIER_NOT_FOUND', 'supplierId required');
     }
     if (!data.warehouseId?.trim()) {
-      throw new BadRequestException({
-        message: 'warehouseId required',
-        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
-      });
+      throwBadRequest('INVENTORY_WAREHOUSE_NOT_FOUND', 'warehouseId required');
     }
     const orderNumber = (data.orderNumber ?? '').trim();
     if (!orderNumber) {
-      throw new BadRequestException({
-        message: 'orderNumber required',
-        code: 'PO_LINES_REQUIRED',
-      });
+      throwBadRequest('PO_LINES_REQUIRED', 'orderNumber required');
     }
     if (!Array.isArray(data.lines) || data.lines.length === 0) {
-      throw new BadRequestException({
-        message: 'At least one line required',
-        code: 'PO_LINES_REQUIRED',
-      });
+      throwBadRequest('PO_LINES_REQUIRED', 'At least one line required');
     }
 
     const supplier = await this.prisma.supplier.findUnique({
@@ -346,13 +302,10 @@ export class PurchaseOrderService {
       select: { id: true, merchantId: true, status: true },
     });
     if (!supplier || supplier.merchantId !== merchantId) {
-      throw new NotFoundException({ message: 'Supplier not found', code: 'SUPPLIER_NOT_FOUND' });
+      throwNotFound('SUPPLIER_NOT_FOUND', 'Supplier not found');
     }
     if (supplier.status === 'INACTIVE') {
-      throw new BadRequestException({
-        message: 'Supplier inactive',
-        code: 'SUPPLIER_IN_USE',
-      });
+      throwBadRequest('SUPPLIER_IN_USE', 'Supplier inactive');
     }
 
     const warehouse = await this.prisma.warehouse.findUnique({
@@ -360,10 +313,7 @@ export class PurchaseOrderService {
       select: { id: true, merchantId: true },
     });
     if (!warehouse || warehouse.merchantId !== merchantId) {
-      throw new NotFoundException({
-        message: 'Warehouse not found',
-        code: 'INVENTORY_WAREHOUSE_NOT_FOUND',
-      });
+      throwNotFound('INVENTORY_WAREHOUSE_NOT_FOUND', 'Warehouse not found');
     }
 
     const productIds = [...new Set(data.lines.map((l) => l.productId))];
@@ -376,25 +326,16 @@ export class PurchaseOrderService {
     const lines = data.lines.map((l) => {
       const qty = Number(l.qty);
       if (!Number.isFinite(qty) || qty <= 0 || !Number.isInteger(qty)) {
-        throw new BadRequestException({
-          message: 'qty must be a positive integer',
-          code: 'RN_COMPLETE_INVALID',
-        });
+        throwBadRequest('RN_COMPLETE_INVALID', 'qty must be a positive integer');
       }
       const p = byProductId.get(l.productId);
       if (!p) {
-        throw new BadRequestException({
-          message: 'Unknown productId',
-          code: 'INVENTORY_PRODUCT_NOT_FOUND',
-        });
+        throwBadRequest('INVENTORY_PRODUCT_NOT_FOUND', 'Unknown productId');
       }
       const unitCost =
         l.unitCost != null ? Number(l.unitCost) : Number(p.costPrice ?? 0);
       if (!Number.isFinite(unitCost) || unitCost < 0) {
-        throw new BadRequestException({
-          message: 'unitCost must be a non-negative number',
-          code: 'RN_COMPLETE_INVALID',
-        });
+        throwBadRequest('RN_COMPLETE_INVALID', 'unitCost must be a non-negative number');
       }
       return {
         productId: l.productId,

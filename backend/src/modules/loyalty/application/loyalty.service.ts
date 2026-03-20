@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { PointLedgerType } from '@prisma/client';
 
@@ -171,10 +172,7 @@ export class LoyaltyService {
     if (params.points <= 0) return null;
     const balance = await this.getBalance(params.customerId);
     if (balance < params.points) {
-      throw new BadRequestException({
-        message: 'Points balance insufficient for redemption',
-        code: 'LOYALTY_INSUFFICIENT_POINTS',
-      });
+      throwBadRequest('LOYALTY_INSUFFICIENT_POINTS', 'Points balance insufficient for redemption');
     }
     return this.appendLedger({
       merchantId: params.merchantId,
@@ -413,7 +411,7 @@ export class LoyaltyService {
   async getReportsActivity(merchantId: string, q: { from?: string; to?: string; preset?: string; groupBy?: string }) {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId is required' });
+      throwBadRequest('VALIDATION_ERROR', 'merchantId is required');
     }
     const { from, to, presetUsed } = parseReportRange(q.preset, q.from, q.to);
 
@@ -547,7 +545,7 @@ export class LoyaltyService {
   async getReportsMembers(merchantId: string, q: { from?: string; to?: string; preset?: string }) {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId is required' });
+      throwBadRequest('VALIDATION_ERROR', 'merchantId is required');
     }
     const { from, to, presetUsed } = parseReportRange(q.preset, q.from, q.to);
 

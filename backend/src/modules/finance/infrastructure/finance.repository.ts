@@ -455,9 +455,7 @@ export class FinanceRepository {
         data: { status: 'UNLOCKED' },
       });
     } catch (e) {
-      const anyE = e as any;
-      // tolerate concurrent deletion in test/CI runs
-      if (anyE?.code === 'P2025') return null;
+      if (e instanceof Error && 'code' in e && (e as { code: string }).code === 'P2025') return null;
       throw e;
     }
   }

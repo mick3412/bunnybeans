@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
 const PRESETS = ['today', 'last7d', 'last30d', 'currentMonth', 'last60d', 'lastHalfYear'] as const;
@@ -44,12 +45,12 @@ function parseFromToOrThrow(
   const start = new Date(fromStr.trim());
   const end = new Date(toStr.trim());
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'Invalid from or to date' });
+    throwBadRequest('REPORT_INVALID_RANGE', 'Invalid from or to date');
   }
   start.setHours(0, 0, 0, 0);
   end.setHours(23, 59, 59, 999);
   if (start.getTime() > end.getTime()) {
-    throw new BadRequestException({ code: 'REPORT_INVALID_RANGE', message: 'from must be before or equal to to' });
+    throwBadRequest('REPORT_INVALID_RANGE', 'from must be before or equal to to');
   }
   const days = Math.ceil((end.getTime() - start.getTime()) / 86400000);
   if (days > MAX_REPORT_DAYS) {
@@ -99,7 +100,7 @@ export class PosReportsService {
       select: { id: true },
     });
     if (!ok) {
-      throw new NotFoundException({ code: 'POS_STORE_NOT_FOUND', message: 'Store not found' });
+      throwNotFound('POS_STORE_NOT_FOUND', 'Store not found');
     }
   }
 
@@ -133,7 +134,7 @@ export class PosReportsService {
 
     const merchantId = filter.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId is required' });
+      throwBadRequest('VALIDATION_ERROR', 'merchantId is required');
     }
     const orderWhere: {
       createdAt: { gte: Date; lte: Date };
@@ -318,7 +319,7 @@ export class PosReportsService {
     }
     const merchantId = filter.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId is required' });
+      throwBadRequest('VALIDATION_ERROR', 'merchantId is required');
     }
     const orderWhere: {
       createdAt: { gte: Date; lte: Date };
@@ -411,7 +412,7 @@ export class PosReportsService {
     }
     const merchantId = filter.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId is required' });
+      throwBadRequest('VALIDATION_ERROR', 'merchantId is required');
     }
     const orderWhere: {
       createdAt: { gte: Date; lte: Date };
@@ -510,7 +511,7 @@ export class PosReportsService {
 
     const merchantId = filter.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId is required' });
+      throwBadRequest('VALIDATION_ERROR', 'merchantId is required');
     }
     const orderWhere: {
       createdAt: { gte: Date; lte: Date };

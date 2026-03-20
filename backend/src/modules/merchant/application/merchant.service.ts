@@ -1,9 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { throwBadRequest, throwNotFound } from '../../../shared/utils/throw-exceptions';
 import { MerchantRepository } from '../infrastructure/merchant.repository';
 
 interface CreateMerchantInput {
@@ -56,15 +53,9 @@ export class MerchantService {
     const all = await this.repo.findAllMerchants();
     if (all.length === 1) return all[0];
     if (all.length === 0) {
-      throw new NotFoundException({
-        message: 'No merchant found',
-        code: 'MERCHANT_NOT_FOUND',
-      });
+      throwNotFound('MERCHANT_NOT_FOUND', 'No merchant found');
     }
-    throw new BadRequestException({
-      message: 'Multiple merchants; set DEFAULT_MERCHANT_ID',
-      code: 'MERCHANT_AMBIGUOUS',
-    });
+    throwBadRequest('MERCHANT_AMBIGUOUS', 'Multiple merchants; set DEFAULT_MERCHANT_ID');
   }
 
   listMerchants() {
@@ -74,7 +65,7 @@ export class MerchantService {
   async getMerchant(id: string) {
     const merchant = await this.repo.findMerchantById(id);
     if (!merchant) {
-      throw new NotFoundException('Merchant not found');
+      throwNotFound('MERCHANT_NOT_FOUND', 'Merchant not found');
     }
     return merchant;
   }
@@ -108,7 +99,7 @@ export class MerchantService {
   async getStore(id: string) {
     const store = await this.repo.findStoreById(id);
     if (!store) {
-      throw new NotFoundException('Store not found');
+      throwNotFound('STORE_NOT_FOUND', 'Store not found');
     }
     return store;
   }
@@ -135,7 +126,7 @@ export class MerchantService {
   async getWarehouse(id: string) {
     const warehouse = await this.repo.findWarehouseById(id);
     if (!warehouse) {
-      throw new NotFoundException('Warehouse not found');
+      throwNotFound('WAREHOUSE_NOT_FOUND', 'Warehouse not found');
     }
     return warehouse;
   }

@@ -17,6 +17,8 @@ import {
   CustomerService,
   type CustomerImportApplyDecision,
 } from '../application/customer.service';
+import { CreateCustomerDto } from '../dto/create-customer.dto';
+import { MergeCustomersDto } from '../dto/merge-customers.dto';
 
 @Controller('customers')
 export class CustomerController {
@@ -97,18 +99,7 @@ export class CustomerController {
   /** POST 建立會員（Admin） */
   @Post()
   @UseGuards(AdminApiKeyGuard)
-  create(
-    @Body()
-    body: {
-      merchantId: string;
-      name: string;
-      phone?: string | null;
-      email?: string | null;
-      memberLevel?: string | null;
-      code?: string | null;
-      memberCode?: string | null;
-    },
-  ) {
+  create(@Body() body: CreateCustomerDto) {
     return this.service.create(body);
   }
 

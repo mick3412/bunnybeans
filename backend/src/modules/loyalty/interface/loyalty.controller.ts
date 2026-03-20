@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
   Param,
   Patch,
   Post,
@@ -171,7 +172,8 @@ export class LoyaltyController {
         discountType: c.discountType,
         value: Number(c.value),
       };
-    } catch {
+    } catch (e) {
+      if (e instanceof HttpException) throw e;
       return { error: { code: 'LOYALTY_COUPON_DUPLICATE', message: 'code exists' } };
     }
   }
@@ -197,7 +199,8 @@ export class LoyaltyController {
     try {
       const c = await this.loyalty.updateCoupon(merchantId.trim(), id, body);
       return { id: c.id, code: c.code, name: c.name, active: c.active };
-    } catch {
+    } catch (e) {
+      if (e instanceof HttpException) throw e;
       return { error: { code: 'NOT_FOUND', message: 'coupon' } };
     }
   }

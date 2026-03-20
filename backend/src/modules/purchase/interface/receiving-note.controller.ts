@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { ReceivingNoteService } from '../application/receiving-note.service';
 
 @Controller('receiving-notes')
+@UseGuards(AdminApiKeyGuard)
 export class ReceivingNoteController {
   constructor(private readonly svc: ReceivingNoteService) {}
 

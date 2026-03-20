@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
@@ -66,67 +63,54 @@ function parseCustomerCsv(
 } {
   const table = parseCsvRows(buf.toString('utf8'));
   if (table.length === 0) {
-    throw new BadRequestException({
-      message: 'empty csv',
-      code: 'CUSTOMER_IMPORT_EMPTY',
-    });
+    throwBadRequest('CUSTOMER_IMPORT_EMPTY', 'empty csv');
   }
   const header = table[0].map((h) => h.trim().toLowerCase());
   const nameIdx = header.indexOf('name');
   if (nameIdx < 0) {
-    throw new BadRequestException({
-      message: 'CSV header must include name',
-      code: 'CUSTOMER_IMPORT_HEADER',
-    });
+    throwBadRequest('CUSTOMER_IMPORT_HEADER', 'CSV header must include name');
   }
   const phoneIdx = header.indexOf('phone');
   const memberIdx = header.indexOf('memberlevel');
   const codeIdx = header.indexOf('code');
   const dataRows = table.slice(1);
   if (dataRows.length > MAX_ROWS) {
-    throw new BadRequestException({
-      message: `at most ${MAX_ROWS} rows`,
-      code: 'CUSTOMER_IMPORT_TOO_MANY',
-    });
+    throwBadRequest('CUSTOMER_IMPORT_TOO_MANY', `at most ${MAX_ROWS} rows`);
   }
   return { header, nameIdx, phoneIdx, memberIdx, codeIdx, dataRows };
 }
 
 @Injectable()
 export class CustomerService {
+  private readonly logger = new Logger(CustomerService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   private async getConsumptionInsights(customerId: string) {
-    const lastOrder = await this.prisma.posOrder.findFirst({
-      where: { customerId },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        orderNumber: true,
-        totalAmount: true,
-        discountAmount: true,
-        createdAt: true,
-      },
-    });
-
-    const firstOrder = await this.prisma.posOrder.findFirst({
-      where: { customerId },
-      orderBy: { createdAt: 'asc' },
-      select: { createdAt: true },
-    });
-
-    const totals = await this.prisma.posOrder.aggregate({
-      where: { customerId },
-      _count: { _all: true },
-      _sum: { totalAmount: true },
-    });
-
     const now = new Date();
     const since30d = new Date(now);
     since30d.setDate(since30d.getDate() - 30);
-    const ordersLast30d = await this.prisma.posOrder.count({
-      where: { customerId, createdAt: { gte: since30d } },
-    });
+
+    const [lastOrder, firstOrder, totals, ordersLast30d] = await Promise.all([
+      this.prisma.posOrder.findFirst({
+        where: { customerId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, orderNumber: true, totalAmount: true, discountAmount: true, createdAt: true },
+      }),
+      this.prisma.posOrder.findFirst({
+        where: { customerId },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true },
+      }),
+      this.prisma.posOrder.aggregate({
+        where: { customerId },
+        _count: { _all: true },
+        _sum: { totalAmount: true },
+      }),
+      this.prisma.posOrder.count({
+        where: { customerId, createdAt: { gte: since30d } },
+      }),
+    ]);
 
     const preferredCategories = (await this.prisma.$queryRaw<
       CustomerPreferredCategory[]
@@ -184,10 +168,7 @@ export class CustomerService {
   async search(merchantId: string, q: string) {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'CUSTOMER_LIST_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('CUSTOMER_LIST_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const term = (q ?? '').trim();
     if (!term) return { items: [] };
@@ -226,10 +207,7 @@ export class CustomerService {
   ) {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'CUSTOMER_LIST_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('CUSTOMER_LIST_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const where: Prisma.CustomerWhereInput = { merchantId: m };
     if (filters?.status?.trim()) {
@@ -259,6 +237,7 @@ export class CustomerService {
         tags: true,
       },
       orderBy: [{ code: 'asc' }, { name: 'asc' }],
+      take: 5000,
     });
     if (filters?.tag?.trim()) {
       const tag = filters.tag.trim();
@@ -347,34 +326,28 @@ export class CustomerService {
       where: { id: id?.trim() },
     });
     if (!c) {
-      throw new NotFoundException({
-        message: 'Customer not found',
-        code: 'CUSTOMER_NOT_FOUND',
-      });
+      throwNotFound('CUSTOMER_NOT_FOUND', 'Customer not found');
     }
     if (merchantId?.trim() && c.merchantId !== merchantId.trim()) {
-      throw new NotFoundException({
-        message: 'Customer not found',
-        code: 'CUSTOMER_NOT_FOUND',
-      });
+      throwNotFound('CUSTOMER_NOT_FOUND', 'Customer not found');
     }
     const m = c.merchantId;
-    const balanceRow = await this.prisma.pointLedger.findFirst({
-      where: { customerId: c.id },
-      orderBy: { createdAt: 'desc' },
-    });
+    const [balanceRow, settings, lastEarned] = await Promise.all([
+      this.prisma.pointLedger.findFirst({
+        where: { customerId: c.id },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.loyaltySettings.findUnique({
+        where: { merchantId: m },
+      }),
+      this.prisma.pointLedger.findFirst({
+        where: { customerId: c.id, type: 'EARNED' },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
     const pointBalance = balanceRow?.balanceAfter ?? 0;
-
-    const settings = await this.prisma.loyaltySettings.findUnique({
-      where: { merchantId: m },
-    });
     const rollingDays = settings?.rollingDays ?? 365;
     const notifyDaysBefore = settings?.notifyDaysBefore ?? 30;
-
-    const lastEarned = await this.prisma.pointLedger.findFirst({
-      where: { customerId: c.id, type: 'EARNED' },
-      orderBy: { createdAt: 'desc' },
-    });
     let expiringAt: string | null = null;
     let expiringSoon = 0;
     if (lastEarned) {
@@ -429,24 +402,15 @@ export class CustomerService {
   }) {
     const m = (body.merchantId ?? '').trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'CUSTOMER_LIST_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('CUSTOMER_LIST_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const name = (body.name ?? '').trim();
     if (!name) {
-      throw new BadRequestException({
-        message: 'name is required',
-        code: 'CUSTOMER_NAME_REQUIRED',
-      });
+      throwBadRequest('CUSTOMER_NAME_REQUIRED', 'name is required');
     }
     const merchant = await this.prisma.merchant.findUnique({ where: { id: m } });
     if (!merchant) {
-      throw new NotFoundException({
-        message: 'Merchant not found',
-        code: 'CUSTOMER_MERCHANT_NOT_FOUND',
-      });
+      throwNotFound('CUSTOMER_MERCHANT_NOT_FOUND', 'Merchant not found');
     }
     const c = await this.prisma.customer.create({
       data: {
@@ -492,10 +456,7 @@ export class CustomerService {
       where: { id: id?.trim() },
     });
     if (!c) {
-      throw new NotFoundException({
-        message: 'Customer not found',
-        code: 'CUSTOMER_NOT_FOUND',
-      });
+      throwNotFound('CUSTOMER_NOT_FOUND', 'Customer not found');
     }
     const updated = await this.prisma.customer.update({
       where: { id: c.id },
@@ -527,26 +488,17 @@ export class CustomerService {
       where: { id: primaryId?.trim() },
     });
     if (!primary) {
-      throw new NotFoundException({
-        message: 'Primary customer not found',
-        code: 'CUSTOMER_NOT_FOUND',
-      });
+      throwNotFound('CUSTOMER_NOT_FOUND', 'Primary customer not found');
     }
     const ids = mergeIds.filter((id) => id?.trim() && id.trim() !== primaryId.trim());
     if (ids.length === 0) {
-      throw new BadRequestException({
-        message: 'mergeIds must contain at least one different customer id',
-        code: 'CUSTOMER_MERGE_INVALID',
-      });
+      throwBadRequest('CUSTOMER_MERGE_INVALID', 'mergeIds must contain at least one different customer id');
     }
     const others = await this.prisma.customer.findMany({
       where: { id: { in: ids }, merchantId: primary.merchantId },
     });
     if (others.length !== ids.length) {
-      throw new BadRequestException({
-        message: 'Some merge ids not found or not same merchant',
-        code: 'CUSTOMER_MERGE_INVALID',
-      });
+      throwBadRequest('CUSTOMER_MERGE_INVALID', 'Some merge ids not found or not same merchant');
     }
     const mergeIdSet = new Set(ids);
     await this.prisma.$transaction([
@@ -570,6 +522,7 @@ export class CustomerService {
         },
       }),
     ]);
+    this.logger.log(`merge customers primary=${primaryId} merged=${ids.join(',')}`);
     return { primaryId, merged: ids };
   }
 
@@ -579,16 +532,10 @@ export class CustomerService {
       where: { id: customerId?.trim() },
     });
     if (!c) {
-      throw new NotFoundException({
-        message: 'Customer not found',
-        code: 'CUSTOMER_NOT_FOUND',
-      });
+      throwNotFound('CUSTOMER_NOT_FOUND', 'Customer not found');
     }
     if (merchantId?.trim() && c.merchantId !== merchantId.trim()) {
-      throw new NotFoundException({
-        message: 'Customer not found',
-        code: 'CUSTOMER_NOT_FOUND',
-      });
+      throwNotFound('CUSTOMER_NOT_FOUND', 'Customer not found');
     }
     const logs = await this.prisma.customerContactLog.findMany({
       where: { customerId: c.id },
@@ -616,23 +563,14 @@ export class CustomerService {
       where: { id: customerId?.trim() },
     });
     if (!c) {
-      throw new NotFoundException({
-        message: 'Customer not found',
-        code: 'CUSTOMER_NOT_FOUND',
-      });
+      throwNotFound('CUSTOMER_NOT_FOUND', 'Customer not found');
     }
     if (merchantId?.trim() && c.merchantId !== merchantId.trim()) {
-      throw new NotFoundException({
-        message: 'Customer not found',
-        code: 'CUSTOMER_NOT_FOUND',
-      });
+      throwNotFound('CUSTOMER_NOT_FOUND', 'Customer not found');
     }
     const type = (body.type ?? '').trim();
     if (!type) {
-      throw new BadRequestException({
-        message: 'type is required',
-        code: 'CUSTOMER_CONTACT_TYPE_REQUIRED',
-      });
+      throwBadRequest('CUSTOMER_CONTACT_TYPE_REQUIRED', 'type is required');
     }
     const log = await this.prisma.customerContactLog.create({
       data: {
@@ -663,17 +601,11 @@ export class CustomerService {
   ): Promise<{ ok: number; failed: { row: number; reason: string }[] }> {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'CUSTOMER_IMPORT_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('CUSTOMER_IMPORT_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const merchant = await this.prisma.merchant.findUnique({ where: { id: m } });
     if (!merchant) {
-      throw new BadRequestException({
-        message: 'merchant not found',
-        code: 'CUSTOMER_IMPORT_MERCHANT_NOT_FOUND',
-      });
+      throwBadRequest('CUSTOMER_IMPORT_MERCHANT_NOT_FOUND', 'merchant not found');
     }
     const { nameIdx, phoneIdx, memberIdx, codeIdx, dataRows } = parseCustomerCsv(buf);
     let ok = 0;
@@ -738,17 +670,11 @@ export class CustomerService {
   }> {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'CUSTOMER_IMPORT_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('CUSTOMER_IMPORT_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const merchant = await this.prisma.merchant.findUnique({ where: { id: m } });
     if (!merchant) {
-      throw new BadRequestException({
-        message: 'merchant not found',
-        code: 'CUSTOMER_IMPORT_MERCHANT_NOT_FOUND',
-      });
+      throwBadRequest('CUSTOMER_IMPORT_MERCHANT_NOT_FOUND', 'merchant not found');
     }
     const fileHash = sha256(buf);
     const { nameIdx, phoneIdx, memberIdx, codeIdx, dataRows } = parseCustomerCsv(buf);
@@ -844,31 +770,19 @@ export class CustomerService {
   }> {
     const m = merchantId?.trim();
     if (!m) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'CUSTOMER_IMPORT_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('CUSTOMER_IMPORT_MERCHANT_REQUIRED', 'merchantId is required');
     }
     const hashExpected = (fileHash ?? '').trim().toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(hashExpected)) {
-      throw new BadRequestException({
-        message: 'fileHash required (sha256 hex)',
-        code: 'CUSTOMER_IMPORT_FILE_HASH_REQUIRED',
-      });
+      throwBadRequest('CUSTOMER_IMPORT_FILE_HASH_REQUIRED', 'fileHash required (sha256 hex)');
     }
     const actual = sha256(buf);
     if (actual !== hashExpected) {
-      throw new BadRequestException({
-        message: 'file content does not match fileHash (re-upload same file as preview)',
-        code: 'CUSTOMER_IMPORT_FILE_HASH_MISMATCH',
-      });
+      throwBadRequest('CUSTOMER_IMPORT_FILE_HASH_MISMATCH', 'file content does not match fileHash (re-upload same file as preview)');
     }
     const merchant = await this.prisma.merchant.findUnique({ where: { id: m } });
     if (!merchant) {
-      throw new BadRequestException({
-        message: 'merchant not found',
-        code: 'CUSTOMER_IMPORT_MERCHANT_NOT_FOUND',
-      });
+      throwBadRequest('CUSTOMER_IMPORT_MERCHANT_NOT_FOUND', 'merchant not found');
     }
     const preview = await this.previewImport(m, buf);
     const decisionByRow = new Map<number, CustomerImportApplyDecision>();

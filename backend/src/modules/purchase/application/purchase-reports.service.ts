@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
 @Injectable()
@@ -12,10 +13,7 @@ export class PurchaseReportsService {
   async supplierRankings(q: { merchantId: string; from?: string; to?: string }) {
     const merchantId = q.merchantId?.trim();
     if (!merchantId) {
-      throw new BadRequestException({
-        message: 'merchantId required',
-        code: 'PURCHASE_REPORT_MERCHANT_REQUIRED',
-      });
+      throwBadRequest('PURCHASE_REPORT_MERCHANT_REQUIRED', 'merchantId required');
     }
 
     let from: Date | undefined;
@@ -23,26 +21,17 @@ export class PurchaseReportsService {
     if (q.from?.trim()) {
       from = new Date(q.from.trim());
       if (Number.isNaN(from.getTime())) {
-        throw new BadRequestException({
-          message: 'invalid from',
-          code: 'REPORT_INVALID_RANGE',
-        });
+        throwBadRequest('REPORT_INVALID_RANGE', 'invalid from');
       }
     }
     if (q.to?.trim()) {
       to = new Date(q.to.trim());
       if (Number.isNaN(to.getTime())) {
-        throw new BadRequestException({
-          message: 'invalid to',
-          code: 'REPORT_INVALID_RANGE',
-        });
+        throwBadRequest('REPORT_INVALID_RANGE', 'invalid to');
       }
     }
     if (from && to && from > to) {
-      throw new BadRequestException({
-        message: 'from must be <= to',
-        code: 'REPORT_INVALID_RANGE',
-      });
+      throwBadRequest('REPORT_INVALID_RANGE', 'from must be <= to');
     }
 
     const createdAt: { gte?: Date; lte?: Date } = {};

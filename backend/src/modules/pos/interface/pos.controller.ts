@@ -13,27 +13,15 @@ import {
 import type { Response } from 'express';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { PosService } from '../application/pos.service';
+import { CreatePosOrderDto } from '../dto/create-pos-order.dto';
 
 @Controller('pos/orders')
 export class PosController {
   constructor(private readonly service: PosService) {}
 
   @Post()
-  create(
-    @Body()
-    body: {
-      storeId: string;
-      occurredAt?: string;
-      items: Array<{ productId: string; quantity: number; unitPrice: number }>;
-      payments: Array<{ method: string; amount: number }>;
-      customerId?: string | null;
-      exchangeFromOrderId?: string | null;
-      customerPhone?: string | null;
-      customerEmail?: string | null;
-      allowCredit?: boolean;
-      pointsToRedeem?: number;
-    },
-  ) {
+  @UseGuards(AdminApiKeyGuard)
+  create(@Body() body: CreatePosOrderDto) {
     return this.service.createOrder({
       storeId: body.storeId,
       occurredAt: body.occurredAt,
@@ -51,6 +39,7 @@ export class PosController {
   /** 須在 Get(':id') 之前註冊，避免與單段 id 混淆 */
   @Post(':id/payments')
   @HttpCode(201)
+  @UseGuards(AdminApiKeyGuard)
   appendPayment(
     @Param('id') id: string,
     @Body() body: { method: string; amount: number; occurredAt?: string },
@@ -60,6 +49,7 @@ export class PosController {
 
   @Post(':id/refunds')
   @HttpCode(201)
+  @UseGuards(AdminApiKeyGuard)
   refund(
     @Param('id') id: string,
     @Body() body: { amount: number; occurredAt?: string; note?: string },
@@ -70,6 +60,7 @@ export class PosController {
   /** 舊路徑保留；若環境對連字路徑回 404，請用 returns/stock */
   @Post(':id/return-to-stock')
   @HttpCode(201)
+  @UseGuards(AdminApiKeyGuard)
   returnToStock(
     @Param('id') id: string,
     @Body()
@@ -83,6 +74,7 @@ export class PosController {
 
   @Post(':id/returns/stock')
   @HttpCode(201)
+  @UseGuards(AdminApiKeyGuard)
   returnToStockAlias(
     @Param('id') id: string,
     @Body()
