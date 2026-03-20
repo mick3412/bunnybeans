@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 034
+- 做了：① **前置**：無 033 待提交（`git status` 前端乾淨）。② **E2E**：嘗試跑 `admin-categories`、`admin-ops-report-clicks-full`、`admin-balances`、`admin-pos-reports` — **skip**：`localhost:5173` 已被佔用，Playwright `webServer` 無法再啟一個 Vite（報錯 *already used*）；請關閉既有 dev server 或於可重用 port 環境重跑。③ **AdminDashboardPage**：已僅 **2 個 useEffect**（033 已合併）；034 補註解說明無需再拆 8 段。④ **AdminPromotionEditPage**：`Act` 已含 `multiplier`，無 `@ts-expect-error`；`summarizeHuman` 補 **POINTS_MULTIPLIER** 文案。⑤ **殘留 token**：`AdminCrmJobsPage` 錯誤區改 `<Alert variant="error">`；**ErrorBoundary** 已為 brand token（無 red-/neutral-/slate-）。⑥ **Alert**：傳入 `className` 時與預設錯誤／成功樣式 **合併**，避免僅剩 utility 而無邊框色。⑦ **選配 Drawer**：未抽共用元件。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（5173 佔用）
+- commits：`3cb45c6a`（Alert + CrmJobs）、`cb4faf25`（Dashboard + Promotion）、`3ebc2ce9`（本 log）
+- PR／檔案：`Alert.tsx`、`AdminCrmJobsPage.tsx`、`AdminDashboardPage.tsx`、`AdminPromotionEditPage.tsx`
+
+---
+
 ### INSTRUCTIONS 033 續
 - 做了：① **adminApi 模組拆分**：`modules/admin/api/client.ts`（`ApiError`、`request`、`fetchCsvExport`、`API_BASE_URL` 等）；`crmApi`、`opsApi`、`financeApi`、`dashboardApi`、`inventoryApi`、`productApi`、`customerApi`、`importsApi`、`catalogApi`、`merchantApi`、`promotionApi`；`adminApi.ts` 改為 barrel re-export（既有 `from 'adminApi'` 不需改路徑）。② **AdminReceivingNotesPage**：新增／詳情／即期面板改 `Modal` + `aria-labelledby`；紅／綠／emerald 字色改 `brand-danger`／`brand-success`。③ **Design token 補齊**：`AdminPurchaseOrdersPage` 狀態 pill、驗收單連結、表單必填與刪除鈕 hover；`AdminLayout`／`PosLayout` `neutral-*`→`text-muted`／`text-content`；`AdminReplenishmentPage` `border-slate-100`→`border-brand-surface`；`PosOrderDetailPage` 補款／退貨入庫／錯誤字色；`PosPage` 價格 `sky`→`brand-primary`；`AdminInventoryPage` emerald→`brand-success`；`AdminCustomersPage` 互動紀錄 textarea border；`PosCheckoutModal` 辨識提示色。④ **barrel**：不再 re-export 內部 `request`（僅型別與公開 API）。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑
