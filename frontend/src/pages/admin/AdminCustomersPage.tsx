@@ -501,9 +501,11 @@ export const AdminCustomersPage: React.FC = () => {
             </h2>
             <p className="mb-3 text-sm text-muted">選留存主檔，其餘會員資料將併入主檔（訂單／點數存摺歸戶）。</p>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-muted">留存主檔</label>
+              <label className="mb-1 block text-xs text-muted" id="admin-customers-merge-primary-label">留存主檔</label>
               <select
-                className="w-full rounded-lg border border-brand-surface px-3 py-2 text-sm"
+                id="admin-customers-merge-primary"
+                aria-labelledby="admin-customers-merge-primary-label"
+                className="w-full rounded-lg border border-brand-surface px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                 value={mergePrimaryId}
                 onChange={(e) => setMergePrimaryId(e.target.value)}
               >
