@@ -7,6 +7,7 @@ import type { CreatePosOrderRequest } from '../modules/pos/posOrdersMockService'
 import type { CreateOrderResult } from '../modules/pos/posOrdersApi';
 import { createOrder } from '../modules/pos/posOrdersApi';
 import { searchCustomers, type CustomerSearchItem } from '../modules/admin/loyaltyApi';
+import { getCustomer } from '../modules/admin/adminApi';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -75,6 +76,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [errorTraceId, setErrorTraceId] = useState<string | null>(null);
+  const [pointBalance, setPointBalance] = useState<number | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -82,11 +84,31 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
       setMemberInput(initialMemberInput?.trim() ?? '');
       setPointsToRedeem(0);
       setMemberSearchResults([]);
+      setPointBalance(null);
       setErrorMessage(null);
       setErrorCode(null);
       setErrorTraceId(null);
     }
   }, [open, totalAmount, initialMemberInput]);
+
+  useEffect(() => {
+    if (!parsed.customerId) {
+      setPointBalance(null);
+      return;
+    }
+    let cancelled = false;
+    getCustomer(parsed.customerId).then((out) => {
+      if (cancelled) return;
+      if ('statusCode' in out) {
+        setPointBalance(null);
+        return;
+      }
+      setPointBalance(out.pointBalance ?? 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [parsed.customerId]);
 
   const searchMembers = useCallback(async (q: string) => {
     if (!merchantId || !q.trim()) {
@@ -279,18 +301,24 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
           </div>
 
           <div className="border-b border-brand-surface pb-2">
-            <div className="mb-1 text-[11px] font-semibold text-muted">點數折抵（BURNED）</div>
+            <div className="mb-1 text-[11px] font-semibold text-muted">點數折抵</div>
+            {pointBalance != null && (
+              <p className="mb-1 text-[10px] text-muted">可用點數：{pointBalance}</p>
+            )}
             <input
               type="number"
               min={0}
+              max={pointBalance ?? undefined}
               step={1}
               inputMode="numeric"
-              className="w-24 rounded-lg border border-brand-surface bg-white px-2 py-1.5 text-right text-xs text-[#1e293b] focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+              className="w-24 rounded-lg border border-brand-surface bg-white px-2 py-1.5 text-right text-xs text-content focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               value={pointsToRedeem > 0 ? pointsToRedeem : ''}
               placeholder="0"
               onChange={(e) => {
                 const v = e.target.value.replace(/[^\d]/g, '');
-                setPointsToRedeem(v === '' ? 0 : Math.max(0, parseInt(v, 10) || 0));
+                const n = v === '' ? 0 : Math.max(0, parseInt(v, 10) || 0);
+                const cap = pointBalance != null ? Math.min(n, pointBalance) : n;
+                setPointsToRedeem(cap);
               }}
               data-testid="e2e-checkout-points-redeem"
             />

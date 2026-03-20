@@ -13,10 +13,9 @@ import {
   searchProductsByBarcode,
   productDtoSalePriceNumber,
   previewPromotions,
-  listCustomersForPos,
   type PromotionPreviewResult,
-  type PosCustomerRow,
 } from '../modules/pos/posOrdersApi';
+import { searchCustomers, type CustomerSearchItem } from '../modules/admin/loyaltyApi';
 
 const ALL_ID = '';
 const POS_FAVORITES_KEY = 'pos-favorites';
@@ -80,7 +79,9 @@ export const PosPage: React.FC = () => {
   const [apiMerchantId, setApiMerchantId] = useState<string | null>(null);
   const [apiProducts, setApiProducts] = useState<PosProductDisplay[] | null>(null);
   const [apiLoadError, setApiLoadError] = useState<string | null>(null);
-  const [posCustomers, setPosCustomers] = useState<PosCustomerRow[]>([]);
+  const [previewMemberSearchResults, setPreviewMemberSearchResults] = useState<CustomerSearchItem[]>([]);
+  const [previewMemberSearchLoading, setPreviewMemberSearchLoading] = useState(false);
+  const [previewSelectedCustomer, setPreviewSelectedCustomer] = useState<CustomerSearchItem | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => loadFavorites());
   const [favoriteEditMode, setFavoriteEditMode] = useState(false);
   const [favoriteDraftIds, setFavoriteDraftIds] = useState<string[]>([]);
@@ -159,14 +160,6 @@ export const PosPage: React.FC = () => {
         let chosen: string | null = null;
         const withWh = storesRes.find((s) => (s.warehouseIds?.length ?? 0) > 0);
         if (withWh) chosen = withWh.id;
-        const merchantId = withWh?.merchantId ?? storesRes[0]?.merchantId;
-        if (merchantId) {
-          const cust = await listCustomersForPos(merchantId);
-          if (Array.isArray(cust)) setPosCustomers(cust);
-          else setPosCustomers([]);
-        } else {
-          setPosCustomers([]);
-        }
         if (!withWh) {
           const wh = await getWarehouses();
           if (Array.isArray(wh)) {
@@ -221,6 +214,38 @@ export const PosPage: React.FC = () => {
     }
     return null;
   }, [previewMemberRaw]);
+
+  const searchPreviewMembers = useCallback(async (q: string) => {
+    const merchantId = apiMerchantId ?? '';
+    if (!merchantId || !q.trim()) {
+      setPreviewMemberSearchResults([]);
+      return;
+    }
+    setPreviewMemberSearchLoading(true);
+    const out = await searchCustomers(merchantId, q.trim());
+    setPreviewMemberSearchLoading(false);
+    if ('statusCode' in out) {
+      setPreviewMemberSearchResults([]);
+      return;
+    }
+    setPreviewMemberSearchResults(out.items ?? []);
+  }, [apiMerchantId]);
+
+  useEffect(() => {
+    const merchantId = apiMerchantId ?? '';
+    if (!merchantId || !previewMemberRaw.trim()) {
+      setPreviewMemberSearchResults([]);
+      return;
+    }
+    if (previewSelectedCustomer && previewMemberRaw === previewSelectedCustomer.id) {
+      setPreviewMemberSearchResults([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      searchPreviewMembers(previewMemberRaw);
+    }, 280);
+    return () => clearTimeout(t);
+  }, [apiMerchantId, previewMemberRaw, previewSelectedCustomer, searchPreviewMembers]);
 
   useEffect(() => {
     if (!storeId || !items.length) {
@@ -653,44 +678,68 @@ export const PosPage: React.FC = () => {
               ))
             )}
           </div>
-          <div className="mt-2 border-t border-slate-100 pt-2">
-            <label className="mb-1 block text-xs font-medium text-muted">
-              促銷試算用會員（可選）
-            </label>
-            {posCustomers.length > 0 && (
-              <select
-                className="mb-1.5 w-full rounded-lg border border-brand-surface bg-white px-2 py-1.5 text-xs text-content"
-                value={
-                  posCustomers.some((c) => c.id === previewMemberRaw) ? previewMemberRaw : ''
-                }
-                onChange={(e) => setPreviewMemberRaw(e.target.value)}
-              >
-                <option value="">不指定</option>
-                {posCustomers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} · {c.memberLevel ?? '—'} · {c.code ?? c.phone ?? c.id.slice(0, 8)}
-                  </option>
-                ))}
-              </select>
-            )}
-            <input
-              type="text"
-              placeholder="會員 UUID"
-              data-testid="e2e-pos-preview-customer"
-              value={previewMemberRaw}
-              onChange={(e) => setPreviewMemberRaw(e.target.value)}
-              className="w-full rounded-lg border border-brand-surface bg-white px-2 py-1.5 font-mono text-xs text-content placeholder:text-muted focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-            />
-            {previewCustomerId &&
-              (() => {
-                const c = posCustomers.find((x) => x.id === previewCustomerId);
-                return c?.memberLevel ? (
-                  <div className="mt-1 text-xs font-semibold text-amber-800">
-                    等級：{c.memberLevel}
-                  </div>
-                ) : null;
-              })()}
-          </div>
+          {apiMerchantId && (
+            <div className="mt-2 border-t border-slate-100 pt-2">
+              <label className="mb-1 block text-xs font-medium text-muted">
+                促銷試算用會員（可選）
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="手機、會員代碼或姓名（選填）"
+                  data-testid="e2e-pos-preview-customer"
+                  value={previewSelectedCustomer ? `${previewSelectedCustomer.name}${previewSelectedCustomer.phone ? ` · ${previewSelectedCustomer.phone}` : ''}` : previewMemberRaw}
+                  onChange={(e) => {
+                    setPreviewMemberRaw(e.target.value);
+                    setPreviewSelectedCustomer(null);
+                  }}
+                  className="w-full rounded-lg border border-brand-surface bg-white px-2 py-1.5 text-xs text-content placeholder:text-muted focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                />
+                {previewMemberSearchLoading && (
+                  <p className="absolute left-0 top-full mt-0.5 text-[10px] text-muted">搜尋中…</p>
+                )}
+                {previewMemberSearchResults.length > 0 && (
+                  <ul className="absolute left-0 right-0 top-full z-10 mt-0.5 max-h-40 overflow-y-auto rounded border border-brand-surface bg-white shadow-lg">
+                    <li>
+                      <button
+                        type="button"
+                        className="w-full px-2 py-1.5 text-left text-xs text-muted hover:bg-slate-100"
+                        onClick={() => {
+                          setPreviewMemberRaw('');
+                          setPreviewSelectedCustomer(null);
+                          setPreviewMemberSearchResults([]);
+                        }}
+                      >
+                        不指定
+                      </button>
+                    </li>
+                    {previewMemberSearchResults.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          className="w-full px-2 py-1.5 text-left text-xs hover:bg-slate-100"
+                          onClick={() => {
+                            setPreviewMemberRaw(c.id);
+                            setPreviewSelectedCustomer(c);
+                            setPreviewMemberSearchResults([]);
+                          }}
+                        >
+                          {c.name}
+                          {c.phone ? ` · ${c.phone}` : ''}
+                          {c.memberCode ? ` (${c.memberCode})` : ''}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              {previewSelectedCustomer?.memberLevel && (
+                <div className="mt-1 text-xs font-semibold text-amber-800">
+                  等級：{previewSelectedCustomer.memberLevel}
+                </div>
+              )}
+            </div>
+          )}
           <div className="mt-2 space-y-1 border-t border-brand-surface pt-2 text-xs text-muted">
             {summary.totalQuantity > 0 && (
               <div className="flex justify-between text-muted">
