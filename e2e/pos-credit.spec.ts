@@ -14,6 +14,7 @@ test.describe('POS 掛帳與補款', () => {
     await productCard.click();
     await page.getByTestId('e2e-checkout-open').click();
     await page.getByTestId('e2e-checkout-member').fill(E2E_CUSTOMER_ID);
+    await expect(page.getByTestId('e2e-checkout-member')).toHaveValue(E2E_CUSTOMER_ID);
     await page.getByTestId('e2e-checkout-received').fill('0');
     await page.getByTestId('e2e-checkout-submit').click();
     await expect(page.getByTestId('e2e-checkout-modal')).toBeHidden({ timeout: 15_000 });
