@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 029（商品總覽 UX、會員/行銷 Drawer、促銷 layout、供應商排行、時段分析）
+- 做了：① **028 續 atomic commits**：d671c51 StandardListLayout+AdminOpsJobsPage；17920f8 AdminInventoryPage；f69e286 AdminMerchantsPage；49af462 AdminWarehousesStoresPage；aabf612 agent-log。② **迴歸**：build ✅；E2E skip（port 5173 佔用）。③ **商品總覽 UX**：getProducts 接後端 search/categoryId/brandId/tag/minDaysUntilExpiry；filter 順序 剩餘天數>左、搜尋右；標籤多選 toggle；CSV 匯入與 filter 同列。(e) 類別管理拖曳排序留待後端 schema 支援。④ **會員管理 UX**：操作欄「會員編輯」→「編輯」；新增/編輯改右側懸浮 Drawer（max-w 440px、儲存成功關閉）。⑤ **行銷規則 UX**：發券規則新增/編輯改右側 Drawer（右緣直條展開）。⑥ **促銷管理 layout**：活動卡片觸發/折讓/帶動改 inline、優先級區塊縮小。⑦ **空態/錯誤/載入**：028 已補齊，維持。⑧ **進階圖表**：formatPartyDisplay 已優先 displayName。⑨ **供應商採購排行**：purchaseApi getSupplierRankings；AdminProcurementHubPage 近 30 日排行區塊。⑩ **時段分析**：getPosDaily 支援 groupBy=hour；PosReportsPage 營收趨勢新增「依小時」。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用）
+- commits：1335f191 feat(products)；691fa13e feat(customers)；6e37b208 feat(dispatch-rules)；c9ca4cdf style(promotions)；409a76dc feat(procurement)；ae044ba4 feat(pos-reports)；4b63629f docs
+
+---
+
 ### INSTRUCTIONS 028 續（StandardListLayout、AdminInventoryPage、倉庫門市對齊）
 - 做了：① **AdminOpsJobsPage StandardListLayout**：filters 移入 filters prop、aboveContent 放補跑 banner；error 加重試按鈕；錯誤時不渲染表格。② **StandardListLayout**：error 型別擴充為 ReactNode 以支援重試按鈕。③ **AdminInventoryPage StandardListLayout**：整頁改用 StandardListLayout；filters 含倉庫/匯出/匯入；aboveContent 含匯入結果；retryBalances 重試。④ **AdminMerchantsPage**：error 區塊加重試按鈕。⑤ **倉庫/門市頁對齊**：AdminWarehousesStoresPage 加 mx-auto、items-stretch。⑥ 表格可讀性：既有表格已用 tabular-nums、table-sticky-head，維持現狀。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
