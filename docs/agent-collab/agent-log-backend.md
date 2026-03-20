@@ -15,6 +15,16 @@
 
 ---
 
+### INSTRUCTIONS-026（迴歸 + 有效期限模組 + 即將到期天數 + 產品條碼確認）
+- 做了：依 `BACKEND-INSTRUCTIONS 026.md` §1 完成 #1～#5。
+  - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（139 passed）。
+  - **#2 DB seed 驗證**：`pnpm db:seed` 可執行；品牌 A～D、POS 訂單 60 天分散已確認。
+  - **#3 有效期限模組**：`PATCH /receiving-notes/:id/lines` 與 `POST /purchase-orders/quick-receive` 支援 (a) `expiryDate` 或 (b) `productionDate` + `shelfLifeMonths` 由後端計算到期日；receiving-note.service 新增 `computeExpiryDate` 輔助。
+  - **#4 即將到期天數**：`GET /inventory/expiring` 批次回傳新增 `daysUntilExpiry`（到期日期 − 當天）；`groupBy=product` 新增 `earliestDaysUntilExpiry` 與每 batch 之 `daysUntilExpiry`。
+  - **#5 產品條碼確認**：Product schema 已有 `barcode`；`GET /products/search-barcode?q=`、scan-stocktake 已使用；api-design.md 已載明。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
+- commits：d73b624b feat(purchase,inventory): expiry - productionDate+shelfLifeMonths, daysUntilExpiry；368edbed docs: api-design expiry；bf15a079 docs(agent-log): INSTRUCTIONS-026
+
 ### INSTRUCTIONS-025（迴歸 + Product schema 擴充確認）
 - 做了：依 `BACKEND-INSTRUCTIONS 025.md` §1 完成 #1～#2。
   - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（138 passed）。
