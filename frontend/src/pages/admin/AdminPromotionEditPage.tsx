@@ -173,14 +173,13 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
       if (multiplierAction?.multiplier != null) {
         setPointsMultiplier(String(multiplierAction.multiplier));
       }
-      setConditions(
-        Array.isArray(r.conditions) ? (r.conditions as Cond[]) : [],
-      );
+      const conds = Array.isArray(r.conditions) ? (r.conditions as Cond[]) : [];
+      setConditions(conds.length ? conds : [{ type: 'SPEND', op: '>=', value: 0 }]);
       const loaded = fromActions.map((act) => {
             if (act.type !== 'WHOLE_PERCENT' || !act.tiers?.length) return act;
             return { ...act, tiers: [...act.tiers] };
           });
-      setActions(loaded);
+      setActions(loaded.length ? loaded : [{ type: 'WHOLE_PERCENT', discountPercent: 10 }]);
     })();
   }, [id, isNew]);
 
