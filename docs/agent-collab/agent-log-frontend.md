@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 036（035 收尾 + plan 剩餘項目）
+- 做了：① **035 變更已提交**：PosPage useCallback、PosCheckoutModal TDZ、pos-credit toHaveValue 三則 atomic commits。② **E2E 驗證**：7 支 spec，e2e-seed 未成功（DATABASE_URL/db:seed）→ 2 passed、2 skipped、3 failed（pos-checkout/credit/refund 結帳 modal 未關，疑為後端/DB 未就緒）。③ **Drawer 共用元件**：新增 `shared/components/Drawer.tsx`，AdminCrmJobsPage、AdminReplenishmentPage 右側 Drawer 改用共用。④ **focus ring / aria-label**：AdminCustomersPage 合併 Modal 留存主檔 select 補 focus ring + aria-labelledby；AdminPurchaseOrdersPage、AdminReceivingNotesPage 搜尋 icon+input 補 label/aria-label。⑤ **防重複提交**：採購單建立、驗收單建立 按鈕加 disabled-on-submit。⑥ **StandardListLayout POS**：PosOrdersListPage、PosPromosPage 套用 StandardListLayout；PosReportsPage 為多區塊報表結構，評估後維持現狀。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 環境未就緒，port 許可時重跑
+- commits：`9449ab3f` PosPage useCallback；`5b780b18` PosCheckoutModal TDZ；`d42f7f87` pos-credit；`97d4cbb9` agent-log 035；`090dec81` Drawer；`87d5a812` focus ring；`22952817` disabled-on-submit；`25485776` StandardListLayout POS；`2038c803` agent-log 036
+- 檔案：`Drawer.tsx`、`AdminCrmJobsPage.tsx`、`AdminReplenishmentPage.tsx`、`AdminCustomersPage.tsx`、`AdminPurchaseOrdersPage.tsx`、`AdminReceivingNotesPage.tsx`、`PosOrdersListPage.tsx`、`PosPromosPage.tsx`
+
+---
+
 ### INSTRUCTIONS 035 後續（E2E 驗證＋runtime 修復）
 - 做了：① **伺服器重啟後補跑 E2E**：7 支 spec（admin-barcode-min、admin-barcode-multi-match、admin-receiving-notes-smoke、pos-checkout、pos-credit、pos-refund、pos-return-stock）。② **runtime 修復**：PosPage 補 `useCallback` 匯入；PosCheckoutModal `parsed` 變數提前至 `useEffect` 之前，消除 TDZ（Cannot access 'parsed' before initialization）；pos-credit 掛帳流程補 `await expect(e2e-checkout-member).toHaveValue(E2E_CUSTOMER_ID)` 確保 React 狀態更新後再送出。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E **5 passed**、**2 skipped**（admin-barcode-multi-match、admin-receiving-notes-smoke 預期 skip）；reuseExistingServer 使用 5173 現有 Vite
