@@ -12,14 +12,24 @@ export interface DashboardSummaryDto {
   lowStockThreshold: number;
 }
 
+const CACHE_TTL_MS = 60_000;
+
 @Injectable()
 export class DashboardService {
+  private summaryCache:
+    | { value: DashboardSummaryDto; expiresAt: number }
+    | null = null;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {}
 
   async getSummary(): Promise<DashboardSummaryDto> {
+    const now = Date.now();
+    if (this.summaryCache && this.summaryCache.expiresAt > now) {
+      return this.summaryCache.value;
+    }
     const threshold =
       Number(this.config.get('DASHBOARD_LOW_STOCK_THRESHOLD')) || 10;
 
@@ -68,7 +78,7 @@ export class DashboardService {
     const sumUnits = unitsRow._sum.onHandQty ?? 0;
     const valueStr = valueRow[0]?.val ?? '0';
 
-    return {
+    const result: DashboardSummaryDto = {
       productCount: productCountRow,
       skuOutOfStockCount: Number(buckets.out_of_stock),
       skuLowStockCount: Number(buckets.low_stock),
@@ -77,5 +87,10 @@ export class DashboardService {
       inventoryValueApprox: valueStr,
       lowStockThreshold: threshold,
     };
+    this.summaryCache = {
+      value: result,
+      expiresAt: now + CACHE_TTL_MS,
+    };
+    return result;
   }
 }
