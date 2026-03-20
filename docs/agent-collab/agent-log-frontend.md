@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 035 後續（E2E 驗證＋runtime 修復）
+- 做了：① **伺服器重啟後補跑 E2E**：7 支 spec（admin-barcode-min、admin-barcode-multi-match、admin-receiving-notes-smoke、pos-checkout、pos-credit、pos-refund、pos-return-stock）。② **runtime 修復**：PosPage 補 `useCallback` 匯入；PosCheckoutModal `parsed` 變數提前至 `useEffect` 之前，消除 TDZ（Cannot access 'parsed' before initialization）；pos-credit 掛帳流程補 `await expect(e2e-checkout-member).toHaveValue(E2E_CUSTOMER_ID)` 確保 React 狀態更新後再送出。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E **5 passed**、**2 skipped**（admin-barcode-multi-match、admin-receiving-notes-smoke 預期 skip）；reuseExistingServer 使用 5173 現有 Vite
+- commits：未提交（待 atomic commits）
+- 檔案：`PosPage.tsx`、`PosCheckoutModal.tsx`、`e2e/pos-credit.spec.ts`
+
+---
+
 ### INSTRUCTIONS 035
 - 做了：① **前置**：無 034 待提交。② **E2E barcode**：admin-barcode-min、admin-barcode-multi-match 補 `waitForURL(/\/pos$/)` 與 `toBeVisible({ timeout: 15_000 })`。③ **E2E receiving-notes**：無 Admin Key 時 `test.skip`；斷言改為「本次送出明細」與「E2E test」（toast 3.2s 後消失）。④ **E2E pos 商品**：pos-checkout、pos-credit、pos-refund、pos-return-stock 改用 `[data-testid^="pos-product-"]` 第一個商品。⑤ **Admin Key 隱藏**：AdminOpsJobsPage、AdminProductsPage、AdminMarketingRuleEditPage、AdminFinancePeriodsPage 移除「需管理金鑰」等權限提示，改由 .env `VITE_ADMIN_API_KEY` 配置。⑥ **選配 Drawer**：未做。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 3003/5173 未啟動 → **skip**（待伺服器起後重跑驗證）
