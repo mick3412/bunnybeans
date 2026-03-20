@@ -88,7 +88,16 @@ export const AdminMerchantsPage: React.FC = () => {
       title="商家"
       description="CRUD；代碼須唯一。"
       loading={loading}
-      error={err}
+      error={
+        err ? (
+          <div className="flex items-center justify-between gap-3">
+            <span>{err}</span>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void load()}>
+              重試
+            </Button>
+          </div>
+        ) : null
+      }
       empty={!loading && !err && rows.length === 0}
       emptyMessage="尚無商家"
       aboveContent={
