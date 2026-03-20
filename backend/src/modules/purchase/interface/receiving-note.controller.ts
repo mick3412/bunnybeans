@@ -43,6 +43,11 @@ export class ReceivingNoteController {
         qualifiedQty?: number;
         returnedQty?: number;
         returnReason?: string;
+        batchCode?: string | null;
+        expiryDate?: string | null;
+        productionDate?: string | null;
+        shelfLifeMonths?: number | null;
+        weightUnit?: string | null;
       }[];
     },
   ) {

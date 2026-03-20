@@ -28,6 +28,13 @@ interface ExpiringBatchFilter {
 
 interface ExpiringProductSummaryFilter extends ExpiringBatchFilter {}
 
+/** 以「到期日期 - 當天」計算即將到期天數（整天數）。 */
+function daysUntilExpiry(expiryDate: Date): number {
+  const today = new Date(new Date().toISOString().slice(0, 10));
+  const expDay = new Date(expiryDate.toISOString().slice(0, 10));
+  return Math.round((expDay.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+}
+
 @Injectable()
 export class InventoryRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -257,6 +264,7 @@ export class InventoryRepository {
           warehouseId: r.warehouseId,
           batchCode: r.batchCode,
           expiryDate: r.expiryDate,
+          daysUntilExpiry: daysUntilExpiry(r.expiryDate),
           onHandQty: r.onHandQty,
           sku: r.sku,
           productName: r.productName,
@@ -371,14 +379,27 @@ export class InventoryRepository {
       const total = totalRows[0]?.total ?? 0;
 
       return {
-        items: rows.map((r) => ({
-          productId: r.productId,
-          sku: r.sku,
-          productName: r.productName,
-          earliestExpiryDate: r.earliestExpiryDate,
-          expiringQty: r.expiringQty,
-          batches: Array.isArray(r.batches) ? r.batches : [],
-        })),
+        items: rows.map((r) => {
+          const batches = Array.isArray(r.batches)
+            ? (r.batches as Array<{ warehouseId?: string; batchCode?: string | null; expiryDate?: string | Date; onHandQty?: number }>).map(
+                (b) => ({
+                  ...b,
+                  daysUntilExpiry: b.expiryDate
+                    ? daysUntilExpiry(b.expiryDate instanceof Date ? b.expiryDate : new Date(b.expiryDate))
+                    : undefined,
+                }),
+              )
+            : [];
+          return {
+            productId: r.productId,
+            sku: r.sku,
+            productName: r.productName,
+            earliestExpiryDate: r.earliestExpiryDate,
+            earliestDaysUntilExpiry: daysUntilExpiry(r.earliestExpiryDate),
+            expiringQty: r.expiringQty,
+            batches,
+          };
+        }),
         page,
         pageSize,
         total,

@@ -301,6 +301,10 @@ export class PurchaseOrderService {
       unitCost?: number;
       batchCode?: string | null;
       expiryDate?: string | null;
+      /** 生產日期（與 shelfLifeMonths 搭配，二擇一於 expiryDate） */
+      productionDate?: string | null;
+      /** 有效期限月數（與 productionDate 搭配） */
+      shelfLifeMonths?: number | null;
       weightUnit?: string | null;
     }[];
   }) {
@@ -398,6 +402,8 @@ export class PurchaseOrderService {
         unitCost: Math.round(unitCost * 100) / 100,
         batchCode: l.batchCode,
         expiryDate: l.expiryDate,
+        productionDate: l.productionDate,
+        shelfLifeMonths: l.shelfLifeMonths,
         weightUnit: l.weightUnit,
       };
     });
@@ -434,6 +440,8 @@ export class PurchaseOrderService {
           returnedQty: 0,
           batchCode: src?.batchCode,
           expiryDate: src?.expiryDate,
+          productionDate: src?.productionDate,
+          shelfLifeMonths: src?.shelfLifeMonths,
           weightUnit: src?.weightUnit,
         };
       }),

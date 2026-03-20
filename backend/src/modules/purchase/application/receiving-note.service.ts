@@ -126,6 +126,32 @@ export class ReceivingNoteService {
     });
   }
 
+  /**
+   * 若提供 productionDate + shelfLifeMonths，則計算 expiryDate = productionDate + shelfLifeMonths。
+   * 與直接提供 expiryDate 二擇一。
+   */
+  private computeExpiryDate(line: {
+    expiryDate?: string | null;
+    productionDate?: string | null;
+    shelfLifeMonths?: number | null;
+  }): string | null | undefined {
+    if (line.expiryDate !== undefined && line.expiryDate !== null && line.expiryDate !== '') {
+      return line.expiryDate;
+    }
+    if (
+      line.productionDate &&
+      line.shelfLifeMonths != null &&
+      Number.isFinite(line.shelfLifeMonths) &&
+      line.shelfLifeMonths >= 0
+    ) {
+      const d = new Date(line.productionDate);
+      if (Number.isNaN(d.getTime())) return undefined;
+      d.setUTCMonth(d.getUTCMonth() + line.shelfLifeMonths);
+      return d.toISOString().slice(0, 10);
+    }
+    return line.expiryDate;
+  }
+
   async patchLines(
     id: string,
     lines: {
@@ -136,6 +162,10 @@ export class ReceivingNoteService {
       returnReason?: string;
       batchCode?: string | null;
       expiryDate?: string | null;
+      /** 生產日期（與 shelfLifeMonths 搭配，二擇一於 expiryDate） */
+      productionDate?: string | null;
+      /** 有效期限月數（與 productionDate 搭配） */
+      shelfLifeMonths?: number | null;
       weightUnit?: string | null;
     }[],
   ) {
@@ -184,11 +214,13 @@ export class ReceivingNoteService {
         },
       });
 
+      const resolvedExpiry = this.computeExpiryDate(u);
+
       // Prisma Client schema 可能尚未包含 batchCode/expiryDate/weightUnit；
       // 若 DB 已 migrate，使用 raw SQL UPDATE 補寫欄位，未 migrate 則忽略保持相容。
       if (
         u.batchCode !== undefined ||
-        u.expiryDate !== undefined ||
+        resolvedExpiry !== undefined ||
         u.weightUnit !== undefined
       ) {
         try {
@@ -200,11 +232,11 @@ export class ReceivingNoteService {
               WHERE "id" = ${u.lineId}
             `;
           }
-          if (u.expiryDate !== undefined) {
+          if (resolvedExpiry !== undefined) {
             await this.prisma.$executeRaw`
               UPDATE "ReceivingNoteLine"
               SET "expiryDate" = ${
-                u.expiryDate ? new Date(u.expiryDate) : null
+                resolvedExpiry ? new Date(resolvedExpiry) : null
               }
               WHERE "id" = ${u.lineId}
             `;

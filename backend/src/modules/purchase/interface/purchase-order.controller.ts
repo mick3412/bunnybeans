@@ -51,6 +51,8 @@ export class PurchaseOrderController {
         unitCost?: number;
         batchCode?: string | null;
         expiryDate?: string | null;
+        productionDate?: string | null;
+        shelfLifeMonths?: number | null;
         weightUnit?: string | null;
       }[];
     },

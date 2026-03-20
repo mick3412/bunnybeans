@@ -360,6 +360,7 @@ describe('Purchase receiving + PURCHASE_PAYABLE (integration)', () => {
     if (inv.items?.length > 0) {
       const found = inv.items.find((x: any) => x.batchCode === 'B-PO-RN');
       expect(found).toBeTruthy();
+      expect(typeof (found as any).daysUntilExpiry).toBe('number');
     }
 
     await prisma.financeEvent.deleteMany({ where: { referenceId: rn.id } });
@@ -369,6 +370,73 @@ describe('Purchase receiving + PURCHASE_PAYABLE (integration)', () => {
     await prisma.inventoryBalance.deleteMany({
       where: { productId: prod.id, warehouseId: wh.id },
     });
+    await prisma.receivingNoteLine.deleteMany({ where: { receivingNoteId: rn.id } });
+    await prisma.receivingNote.delete({ where: { id: rn.id } });
+    await prisma.purchaseOrderLine.deleteMany({ where: { poId: po.id } });
+    await prisma.purchaseOrder.delete({ where: { id: po.id } });
+    await prisma.supplier.delete({ where: { id: sup.id } });
+    await prisma.product.delete({ where: { id: prod.id } });
+    await prisma.warehouse.delete({ where: { id: wh.id } });
+    await prisma.merchant.delete({ where: { id: m.id } });
+  }, 30000);
+
+  it('patchLines with productionDate + shelfLifeMonths computes expiryDate', async () => {
+    if (!process.env.DATABASE_URL) return;
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "Supplier" LIMIT 1`;
+    } catch {
+      return;
+    }
+    await prisma.financePeriodClose.deleteMany({});
+    const m = await prisma.merchant.create({
+      data: { code: `PM-PD-${Date.now()}`, name: 'PM PD' },
+    });
+    const sup = await prisma.supplier.create({
+      data: { merchantId: m.id, code: `S-PD-${Date.now()}`, name: 'S', status: 'ACTIVE' },
+    });
+    const wh = await prisma.warehouse.create({
+      data: { merchantId: m.id, code: `W-PD-${Date.now()}`, name: 'W' },
+    });
+    const prod = await prisma.product.create({
+      data: { sku: `SKU-PD-${Date.now()}`, name: 'P' },
+    });
+    const po = await poSvc.create({
+      merchantId: m.id,
+      supplierId: sup.id,
+      warehouseId: wh.id,
+      orderNumber: `PO-PD-${Date.now()}`,
+      lines: [{ productId: prod.id, qtyOrdered: 5, unitCost: 10 }],
+    });
+    await poSvc.submit(po.id);
+    const rn = await rnSvc.create({
+      merchantId: m.id,
+      purchaseOrderId: po.id,
+    });
+    const lineId = rn.lines[0].id;
+    await rnSvc.patchLines(rn.id, [
+      {
+        lineId,
+        receivedQty: 5,
+        qualifiedQty: 5,
+        returnedQty: 0,
+        batchCode: 'B-PD',
+        productionDate: '2024-01-15',
+        shelfLifeMonths: 2,
+      },
+    ]);
+    await rnSvc.complete(rn.id);
+    const detail: any = await rnSvc.getById(rn.id, m.id);
+    const line = detail?.lines?.find((x: any) => x.id === lineId);
+    expect(line).toBeTruthy();
+    expect(line.expiryDate).toBeTruthy();
+    const exp = new Date(line.expiryDate);
+    expect(exp.getUTCFullYear()).toBe(2024);
+    expect(exp.getUTCMonth()).toBe(2); // March (0-indexed)
+    expect(exp.getUTCDate()).toBe(15);
+
+    await prisma.financeEvent.deleteMany({ where: { referenceId: rn.id } });
+    await prisma.inventoryEvent.deleteMany({ where: { productId: prod.id, warehouseId: wh.id } });
+    await prisma.inventoryBalance.deleteMany({ where: { productId: prod.id, warehouseId: wh.id } });
     await prisma.receivingNoteLine.deleteMany({ where: { receivingNoteId: rn.id } });
     await prisma.receivingNote.delete({ where: { id: rn.id } });
     await prisma.purchaseOrderLine.deleteMany({ where: { poId: po.id } });
