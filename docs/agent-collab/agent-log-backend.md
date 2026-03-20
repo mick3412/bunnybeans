@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS-029（迴歸 + ci:backend-with-db 驗證 + api-design 對齊檢查）
+- 做了：依 `BACKEND-INSTRUCTIONS 029.md` §1 完成 #1～#3。
+  - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（142 passed）。
+  - **#2 ci:backend-with-db**：`migrate deploy` → `db:seed` → test 全綠。
+  - **#3 api-design 對齊檢查**：確認 api-design*.md 與實際 API 一致；028 新增 API（minDaysUntilExpiry、supplier-rankings、groupBy=hour、finance/summary byParty displayName/kind）皆已於契約載明，無缺漏。
+- 測試/驗收：`pnpm ci:backend-with-db` 全綠。
+- commits：c9842b22 docs(agent-log): INSTRUCTIONS-029 backend entry
+
 ### INSTRUCTIONS-028（迴歸 + ci:backend-with-db + 金流 byParty displayName + 商品效期篩選 + 採購排行 + 時段分析）
 - 做了：依 `BACKEND-INSTRUCTIONS 028.md` §1 完成 #1～#6。
   - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（142 passed）。
