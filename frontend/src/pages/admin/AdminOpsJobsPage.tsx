@@ -4,7 +4,7 @@ import { listOpsJobs, runOpsJob, type ApiError } from '../../modules/admin/admin
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
-import { EmptyState } from '../../shared/components/EmptyState';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useAdminToast } from './AdminToastContext';
 import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/adminKey';
 
@@ -98,23 +98,24 @@ export const AdminOpsJobsPage: React.FC = () => {
   const totalPages = Math.ceil(total / pageSize) || 1;
 
   return (
-    <div
-      className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm"
-      data-testid="e2e-admin-ops-jobs"
-    >
-      <p className="mb-4 text-sm text-muted">
-        營運工作執行紀錄（OpsJobRunLog）：資料來源 <code className="rounded bg-brand-canvas px-1">GET /ops/jobs</code>。
-      </p>
-      {err && (
-        <Alert variant="error" className="mb-4 flex items-center justify-between gap-3">
+    <StandardListLayout
+      title="營運工作執行紀錄"
+      description={
+        <span>OpsJobRunLog：資料來源 <code className="rounded bg-brand-canvas px-1">GET /ops/jobs</code></span>
+      }
+      loading={loading}
+      error={err ? (
+        <div className="flex items-center justify-between gap-3">
           <span>{err}</span>
-          <Button type="button" variant="secondary" size="sm" onClick={() => void load()}>
-            重試
-          </Button>
-        </Alert>
-      )}
-
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+          <Button type="button" variant="secondary" size="sm" onClick={() => void load()}>重試</Button>
+        </div>
+      ) : null}
+      empty={!loading && !err && items.length === 0}
+      emptyMessage="沒有紀錄"
+      emptyDescription={from.trim() || to.trim() ? `目前條件：${kindLabel} · ${from.trim() || '—'} ～ ${to.trim() || '—'}` : `目前條件：${kindLabel}`}
+      testId="e2e-admin-ops-jobs"
+      filters={
+        <div className="flex flex-wrap items-center gap-3">
         <div>
           <label className="mr-2 text-xs text-muted">類型</label>
           <select
@@ -199,47 +200,39 @@ export const AdminOpsJobsPage: React.FC = () => {
           目前篩選：{kindLabel}
           {from.trim() || to.trim() ? ` · ${from.trim() || '—'} ～ ${to.trim() || '—'}` : ''}
         </span>
-      </div>
-
-      {lastTriggeredRunLogId ? (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-surface bg-table-head px-3 py-2 text-sm">
-          <div className="min-w-0">
-            <div className="text-xs font-semibold text-content">已觸發補跑</div>
-            <div className="mt-0.5 truncate font-mono text-xs text-muted" title={lastTriggeredRunLogId}>
-              runLogId：{lastTriggeredRunLogId}
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              const el = document.getElementById(`runlog-${lastTriggeredRunLogId}`);
-              el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }}
-          >
-            查看（高亮）
-          </Button>
         </div>
-      ) : null}
-
+      }
+      aboveContent={
+        lastTriggeredRunLogId ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-surface bg-table-head px-3 py-2 text-sm">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-content">已觸發補跑</div>
+              <div className="mt-0.5 truncate font-mono text-xs text-muted" title={lastTriggeredRunLogId}>
+                runLogId：{lastTriggeredRunLogId}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const el = document.getElementById(`runlog-${lastTriggeredRunLogId}`);
+                el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+            >
+              查看（高亮）
+            </Button>
+          </div>
+        ) : null
+      }
+    >
+      {!err && (
       <div className="overflow-hidden rounded-xl border border-brand-surface">
         {loading ? (
           <div className="flex min-h-[200px] items-center justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
           </div>
-        ) : items.length === 0 ? (
-          <div className="py-12">
-            <EmptyState
-              message="沒有紀錄"
-              description={
-                from.trim() || to.trim()
-                  ? `目前條件：${kindLabel}${from.trim() || to.trim() ? ` · ${from.trim() || '—'} ～ ${to.trim() || '—'}` : ''}`
-                  : `目前條件：${kindLabel}`
-              }
-            />
-          </div>
-        ) : (
+        ) : items.length === 0 ? null : (
           <div className="table-sticky-head overflow-x-auto bg-white">
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
@@ -322,6 +315,7 @@ export const AdminOpsJobsPage: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {runOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
@@ -424,6 +418,6 @@ export const AdminOpsJobsPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </StandardListLayout>
   );
 };

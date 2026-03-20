@@ -9,7 +9,7 @@ export const StandardListLayout: React.FC<{
   filters?: React.ReactNode;
   aboveContent?: React.ReactNode;
   loading?: boolean;
-  error?: string | null;
+  error?: React.ReactNode;
   empty?: boolean;
   emptyMessage?: string;
   emptyDescription?: string;
