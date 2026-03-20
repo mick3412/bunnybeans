@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { getStores } from '../modules/pos/posOrdersApi';
 import { listPromotionRules, type PromotionRuleDto, type ApiError } from '../modules/admin/adminApi';
 import { getErrorMessage } from '../shared/errors/errorMessages';
+import { Alert } from '../shared/components/Alert';
+import { EmptyState } from '../shared/components/EmptyState';
 
 export const PosPromosPage: React.FC = () => {
   const [merchantId, setMerchantId] = useState<string>('');
@@ -64,11 +66,13 @@ export const PosPromosPage: React.FC = () => {
 
       {loading && <div className="mt-6 text-sm text-muted">載入中…</div>}
       {err && !loading && (
-        <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{err}</div>
+        <div className="mt-6">
+          <Alert variant="error">{err}</Alert>
+        </div>
       )}
       {!loading && !err && rows.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-brand-surface bg-table-head px-4 py-8 text-center text-sm text-muted">
-          目前無進行中之促銷規則
+        <div className="mt-6">
+          <EmptyState message="目前無進行中之促銷規則" />
         </div>
       )}
       {!loading && rows.length > 0 && (

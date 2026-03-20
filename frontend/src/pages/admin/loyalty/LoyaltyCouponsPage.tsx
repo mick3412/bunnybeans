@@ -9,6 +9,7 @@ import {
 import type { ApiError } from '../../../modules/admin/adminApi';
 import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
 import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
+import { Alert } from '../../../shared/components/Alert';
 import { Button } from '../../../shared/components/Button';
 import { TextInput } from '../../../shared/components/TextInput';
 import { useAdminToast } from '../AdminToastContext';
@@ -94,7 +95,7 @@ export const LoyaltyCouponsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {err && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
+        <Alert variant="error">{err}</Alert>
       )}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
         <span className="text-xs font-semibold text-muted">搜尋／篩選</span>

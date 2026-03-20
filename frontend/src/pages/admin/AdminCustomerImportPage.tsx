@@ -297,7 +297,7 @@ export const AdminCustomerImportPage: React.FC = () => {
                   const d = decisions.get(r.row);
                   const canOverwrite = r.conflict && r.reasons.includes('db') && r.existing?.id;
                   return (
-                    <tr key={r.row} className="border-b border-slate-100">
+                    <tr key={r.row} className="border-b border-brand-surface">
                       <td className="px-2 py-1.5 tabular-nums">{r.row}</td>
                       <td className="max-w-[140px] truncate px-2 py-1.5">{r.name}</td>
                       <td className="px-2 py-1.5">{r.phone ?? '—'}</td>

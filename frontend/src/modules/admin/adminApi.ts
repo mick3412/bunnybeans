@@ -1069,8 +1069,25 @@ export interface ProductFullDto {
   updatedAt: string;
 }
 
-export async function getProducts(): Promise<ProductFullDto[] | ApiError> {
-  const out = await request<ProductFullDto[]>('products');
+export async function getProducts(params?: {
+  search?: string;
+  sku?: string;
+  categoryId?: string;
+  brandId?: string;
+  tag?: string;
+  minDaysUntilExpiry?: number;
+}): Promise<ProductFullDto[] | ApiError> {
+  const q = new URLSearchParams();
+  if (params?.search?.trim()) q.set('search', params.search.trim());
+  if (params?.sku?.trim()) q.set('sku', params.sku.trim());
+  if (params?.categoryId?.trim()) q.set('categoryId', params.categoryId.trim());
+  if (params?.brandId?.trim()) q.set('brandId', params.brandId.trim());
+  if (params?.tag?.trim()) q.set('tag', params.tag.trim());
+  if (params?.minDaysUntilExpiry != null && Number.isFinite(params.minDaysUntilExpiry) && params.minDaysUntilExpiry >= 0) {
+    q.set('minDaysUntilExpiry', String(Math.floor(params.minDaysUntilExpiry)));
+  }
+  const path = q.toString() ? `products?${q.toString()}` : 'products';
+  const out = await request<ProductFullDto[]>(path);
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
 }

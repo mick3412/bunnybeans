@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 030（Alert 統一、EmptyState、overflow、色值 token、類別拖曳待後端）
+- 做了：① **迴歸**：build ✅；E2E skip（port 5173 佔用）。② **類別管理拖曳排序**：待後端 030 完成 sortOrder 與 reorder API 後實作。③ **色值 token**：border-slate-100、border-neutral-* → border-brand-surface（AdminMerchantsPage、AdminSuppliersPage、AdminReplenishmentPage、AdminCustomerImportPage、AdminProductsPage、AdminReportsPage、LoyaltyTierRulesPage）。④ **錯誤區塊統一 Alert**：PosPromosPage、AdminDashboardPage、AdminSuppliersPage、LoyaltyDashboardPage、LoyaltyCouponsPage、LoyaltyPointLedgerPage、LoyaltyTierRulesPage、LoyaltyMembersPage 改為 `<Alert variant="error">`。⑤ **表格 overflow**：AdminMerchantsPage、AdminSuppliersPage overflow-hidden → overflow-x-auto。⑥ **空態統一 EmptyState**：PosPromosPage、AdminReplenishmentPage、LoyaltyDashboardPage、LoyaltyPointLedgerPage、LoyaltyTierRulesPage 自訂空態 div 改為 EmptyState。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用）
+- commits：尚未提交
+
+---
+
 ### INSTRUCTIONS 029（商品總覽 UX、會員/行銷 Drawer、促銷 layout、供應商排行、時段分析）
 - 做了：① **028 續 atomic commits**：d671c51 StandardListLayout+AdminOpsJobsPage；17920f8 AdminInventoryPage；f69e286 AdminMerchantsPage；49af462 AdminWarehousesStoresPage；aabf612 agent-log。② **迴歸**：build ✅；E2E skip（port 5173 佔用）。③ **商品總覽 UX**：getProducts 接後端 search/categoryId/brandId/tag/minDaysUntilExpiry；filter 順序 剩餘天數>左、搜尋右；標籤多選 toggle；CSV 匯入與 filter 同列。(e) 類別管理拖曳排序留待後端 schema 支援。④ **會員管理 UX**：操作欄「會員編輯」→「編輯」；新增/編輯改右側懸浮 Drawer（max-w 440px、儲存成功關閉）。⑤ **行銷規則 UX**：發券規則新增/編輯改右側 Drawer（右緣直條展開）。⑥ **促銷管理 layout**：活動卡片觸發/折讓/帶動改 inline、優先級區塊縮小。⑦ **空態/錯誤/載入**：028 已補齊，維持。⑧ **進階圖表**：formatPartyDisplay 已優先 displayName。⑨ **供應商採購排行**：purchaseApi getSupplierRankings；AdminProcurementHubPage 近 30 日排行區塊。⑩ **時段分析**：getPosDaily 支援 groupBy=hour；PosReportsPage 營收趨勢新增「依小時」。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用）

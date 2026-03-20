@@ -652,7 +652,7 @@ export const AdminReportsPage: React.FC = () => {
               </thead>
               <tbody>
                 {rows.map((ev) => (
-                  <tr key={ev.id} className="border-t border-slate-100">
+                  <tr key={ev.id} className="border-t border-brand-surface">
                     <td className="px-4 py-2 whitespace-nowrap text-xs text-muted">
                       {new Date(ev.occurredAt).toLocaleString()}
                     </td>

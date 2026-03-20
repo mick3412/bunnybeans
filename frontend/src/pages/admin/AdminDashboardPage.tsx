@@ -181,9 +181,7 @@ export const AdminDashboardPage: React.FC = () => {
 
       {err && (
         <div className="mb-6">
-          <Alert variant="error" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {err}
-          </Alert>
+          <Alert variant="error">{err}</Alert>
         </div>
       )}
 

@@ -9,7 +9,9 @@ import {
 } from '../../../modules/admin/loyaltyApi';
 import type { ApiError } from '../../../modules/admin/adminApi';
 import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
+import { Alert } from '../../../shared/components/Alert';
 import { Button } from '../../../shared/components/Button';
+import { EmptyState } from '../../../shared/components/EmptyState';
 import { TextInput } from '../../../shared/components/TextInput';
 import { useAdminToast } from '../AdminToastContext';
 
@@ -142,9 +144,7 @@ export const LoyaltyTierRulesPage: React.FC = () => {
         </p>
       </div>
       {err && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {err}
-        </div>
+        <Alert variant="error">{err}</Alert>
       )}
       <div className="grid gap-4 lg:grid-cols-[3fr,2fr]">
         <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
@@ -168,13 +168,13 @@ export const LoyaltyTierRulesPage: React.FC = () => {
               <tbody>
                 {rules.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-sm text-muted">
-                      尚未設定任何等級規則。
+                    <td colSpan={5} className="p-0">
+                      <EmptyState message="尚未設定任何等級規則" />
                     </td>
                   </tr>
                 )}
                 {rules.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100">
+                  <tr key={r.id} className="border-b border-brand-surface">
                     <td className="px-3 py-2 text-sm text-content">{r.name}</td>
                     <td className="px-3 py-2 text-right font-mono text-xs">
                       {Number(r.threshold).toLocaleString('zh-TW')}

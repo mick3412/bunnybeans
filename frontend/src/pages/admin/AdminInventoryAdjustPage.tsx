@@ -130,10 +130,10 @@ export const AdminInventoryAdjustPage: React.FC = () => {
       </p>
       <div className="mt-4 flex min-h-[4rem] flex-col gap-2" aria-live="polite">
         {err && (
-          <div className={`${alertBox} border-[#E3342F]/25 bg-[#E3342F]/08 text-[#B91C1C]`}>{err}</div>
+          <div className={`${alertBox} border-brand-danger/25 bg-brand-danger/8 text-brand-danger`}>{err}</div>
         )}
         {ok && (
-          <div className={`${alertBox} border-[#28A745]/30 bg-[#28A745]/10 text-[#166534]`}>{ok}</div>
+          <div className={`${alertBox} border-brand-success/30 bg-brand-success/10 text-brand-success`}>{ok}</div>
         )}
       </div>
     </div>
@@ -147,12 +147,12 @@ export const AdminInventoryAdjustPage: React.FC = () => {
       </p>
       <div className="mt-4 flex min-h-[4rem] flex-col gap-2" aria-live="polite">
         {transferErr && (
-          <div className={`${alertBox} border-[#E3342F]/25 bg-[#E3342F]/08 text-[#B91C1C]`}>
+          <div className={`${alertBox} border-brand-danger/25 bg-brand-danger/8 text-brand-danger`}>
             {transferErr}
           </div>
         )}
         {transferOk && (
-          <div className={`${alertBox} border-[#28A745]/30 bg-[#28A745]/10 text-[#166534]`}>
+          <div className={`${alertBox} border-brand-success/30 bg-brand-success/10 text-brand-success`}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span>{transferOk}</span>
               {transferRefId && (

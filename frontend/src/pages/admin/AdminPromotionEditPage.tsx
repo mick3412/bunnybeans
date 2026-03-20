@@ -892,7 +892,7 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-[#F4F8F9] pb-16">
+    <div className="flex min-h-full flex-col bg-brand-canvas pb-16">
       {header}
       <div className="min-h-0 flex-1">{content}</div>
     </div>

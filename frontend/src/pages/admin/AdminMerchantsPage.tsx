@@ -123,7 +123,7 @@ export const AdminMerchantsPage: React.FC = () => {
         </div>
       }
     >
-      <div className="table-sticky-head overflow-hidden rounded-xl border border-brand-surface bg-white shadow-sm">
+      <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-brand-surface bg-table-head text-muted">
             <tr>
@@ -135,7 +135,7 @@ export const AdminMerchantsPage: React.FC = () => {
           </thead>
           <tbody>
             {rows.map((m) => (
-              <tr key={m.id} className="border-t border-slate-100">
+              <tr key={m.id} className="border-t border-brand-surface">
                 {editId === m.id ? (
                   <>
                     <td className="px-4 py-2">

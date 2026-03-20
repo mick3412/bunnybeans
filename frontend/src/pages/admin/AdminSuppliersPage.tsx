@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TextInput } from '../../shared/components/TextInput';
@@ -188,14 +189,14 @@ export const AdminSuppliersPage: React.FC = () => {
       }
     >
       {listError && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          <span>載入失敗：{listError}</span>
-          <button type="button" className="rounded-md bg-red-100 px-3 py-1 font-medium hover:bg-red-200" onClick={() => load()}>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <Alert variant="error">載入失敗：{listError}</Alert>
+          <Button type="button" variant="secondary" size="sm" onClick={() => void load()}>
             重試
-          </button>
+          </Button>
         </div>
       )}
-      <div className="table-sticky-head overflow-hidden rounded-xl border border-brand-surface">
+      <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface">
         {listLoading ? (
           <div className="flex min-h-[200px] items-center justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" aria-label="載入中" />
@@ -214,7 +215,7 @@ export const AdminSuppliersPage: React.FC = () => {
           </thead>
           <tbody>
             {rows.map((s) => (
-              <tr key={s.id} className="border-b border-neutral-50 hover:bg-neutral-50/50">
+              <tr key={s.id} className="border-b border-brand-surface hover:bg-table-head">
                 <td className="px-4 py-3.5 font-mono text-xs text-content">{s.code}</td>
                 <td className="px-4 py-3.5 font-medium text-content">{s.name}</td>
                 <td className="px-4 py-3.5 text-muted">{s.contactPerson}</td>
@@ -282,7 +283,7 @@ export const AdminSuppliersPage: React.FC = () => {
               <div>
                 <label className="mb-1 block text-sm font-medium text-muted">付款條件</label>
                 <select
-                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-brand-surface px-3 py-2 text-sm"
                   value={form.paymentTerms}
                   onChange={(e) => setForm({ ...form, paymentTerms: e.target.value })}
                 >
@@ -296,11 +297,11 @@ export const AdminSuppliersPage: React.FC = () => {
               <TextInput label="銀行帳號" value={form.bankAccount} onChange={(e) => setForm({ ...form, bankAccount: e.target.value })} />
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-muted">備註</label>
-                <textarea className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm" rows={2} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+                <textarea className="w-full rounded-lg border border-brand-surface px-3 py-2 text-sm" rows={2} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-muted">狀態</label>
-                <select className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as 'ACTIVE' | 'INACTIVE' })}>
+                <select className="w-full rounded-lg border border-brand-surface px-3 py-2 text-sm" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as 'ACTIVE' | 'INACTIVE' })}>
                   <option value="ACTIVE">啟用</option>
                   <option value="INACTIVE">停用</option>
                 </select>

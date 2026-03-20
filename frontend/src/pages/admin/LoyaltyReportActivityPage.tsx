@@ -197,7 +197,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
           </div>
           {data.byDispatchRule && data.byDispatchRule.length > 0 && (
             <div className="rounded-2xl border border-brand-surface bg-white p-4">
-              <div className="mb-3 text-sm font-semibold text-[#1e293b]">依發券規則</div>
+              <div className="mb-3 text-sm font-semibold text-content">依發券規則</div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead className="border-b border-brand-surface text-muted">
@@ -222,7 +222,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
           )}
           {data.byCoupon && data.byCoupon.length > 0 && (
             <div className="rounded-2xl border border-brand-surface bg-white p-4">
-              <div className="mb-3 text-sm font-semibold text-[#1e293b]">依券成效（發送數／使用數）</div>
+              <div className="mb-3 text-sm font-semibold text-content">依券成效（發送數／使用數）</div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead className="border-b border-brand-surface text-muted">
@@ -254,7 +254,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
           )}
           {data.couponUsageByCoupon && data.couponUsageByCoupon.length > 0 && !data.byCoupon?.length && (
             <div className="rounded-2xl border border-brand-surface bg-white p-4">
-              <div className="mb-2 text-sm font-semibold text-[#1e293b]">依券用券數</div>
+              <div className="mb-2 text-sm font-semibold text-content">依券用券數</div>
               <MiniBarChart
                 items={data.couponUsageByCoupon.map((row) => ({
                   label: row.couponId,

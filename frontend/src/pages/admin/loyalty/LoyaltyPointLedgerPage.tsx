@@ -8,6 +8,8 @@ import {
 } from '../../../modules/admin/loyaltyApi';
 import type { ApiError } from '../../../modules/admin/adminApi';
 import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
+import { Alert } from '../../../shared/components/Alert';
+import { EmptyState } from '../../../shared/components/EmptyState';
 import { TextInput } from '../../../shared/components/TextInput';
 import { ReferenceIdLink } from '../../../shared/components/ReferenceIdLink';
 
@@ -127,7 +129,7 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
         </div>
       </div>
       {err && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
+        <Alert variant="error">{err}</Alert>
       )}
       <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
@@ -146,11 +148,8 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
           <tbody className="divide-y divide-neutral-100">
             {filtered.length === 0 && (
               <tr>
-                <td
-                  colSpan={customerId ? 7 : 8}
-                  className="px-3 py-8 text-center text-muted"
-                >
-                  尚無流水
+                <td colSpan={customerId ? 7 : 8} className="p-0">
+                  <EmptyState message="尚無流水" />
                 </td>
               </tr>
             )}

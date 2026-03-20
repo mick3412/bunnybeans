@@ -365,7 +365,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
                   type="text"
                   inputMode="numeric"
                   data-testid="e2e-checkout-received"
-                  className="w-32 rounded-lg border border-brand-surface bg-white px-2 py-1 text-right text-xs text-[#1e293b] focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                  className="w-32 rounded-lg border border-brand-surface bg-white px-2 py-1 text-right text-xs text-content focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                   value={receivedAmount.toString()}
                   onChange={(e) => changeReceived(e.target.value)}
                 />

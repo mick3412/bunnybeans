@@ -11,6 +11,7 @@ import {
 import { listSuppliers } from '../../modules/admin/purchaseApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 
 export const AdminReplenishmentPage: React.FC = () => {
@@ -280,11 +281,8 @@ export const AdminReplenishmentPage: React.FC = () => {
     >
       <>
       {loading ? null : rows.length === 0 ? (
-          <div
-            className="py-12 text-center text-sm text-muted"
-            data-testid="e2e-admin-replenishment-empty"
-          >
-            目前沒有需要補貨的商品。
+          <div data-testid="e2e-admin-replenishment-empty">
+            <EmptyState message="目前沒有需要補貨的商品" />
           </div>
         ) : rows.length > 0 ? (
           <div className="overflow-hidden rounded-xl border border-brand-surface">
@@ -295,7 +293,7 @@ export const AdminReplenishmentPage: React.FC = () => {
                   <th className="px-3 py-2">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-[#cbd5e1] text-brand-primary focus:ring-1 focus:ring-brand-primary"
+                      className="h-4 w-4 rounded border-brand-surface text-brand-primary focus:ring-1 focus:ring-brand-primary"
                       checked={allSelected}
                       aria-label="全選 / 全不選"
                       onChange={toggleAll}
@@ -315,12 +313,12 @@ export const AdminReplenishmentPage: React.FC = () => {
                 {rows.map((r) => (
                   <tr
                     key={`${r.productId}-${r.warehouseId}`}
-                    className="border-b border-slate-100 hover:bg-table-head"
+                    className="border-b border-brand-surface hover:bg-table-head"
                   >
                     <td className="px-3 py-2">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-[#cbd5e1] text-brand-primary focus:ring-1 focus:ring-brand-primary"
+                        className="h-4 w-4 rounded border-brand-surface text-brand-primary focus:ring-1 focus:ring-brand-primary"
                         checked={selectedKeys.has(`${r.productId}-${r.warehouseId}`)}
                         onChange={() => toggleRow(`${r.productId}-${r.warehouseId}`)}
                         data-testid="e2e-admin-replenishment-suggestion-checkbox"
@@ -356,7 +354,7 @@ export const AdminReplenishmentPage: React.FC = () => {
             onClick={() => setShowPoDraft(false)}
           />
           <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-brand-surface bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-brand-surface px-4 py-3">
               <div>
                 <h2 className="text-sm font-semibold text-content">補貨採購草稿（預覽）</h2>
                 <p className="mt-0.5 text-xs text-muted">

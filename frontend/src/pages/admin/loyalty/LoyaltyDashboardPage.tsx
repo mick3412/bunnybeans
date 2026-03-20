@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { getLoyaltyDashboard, type LoyaltyDashboardDto } from '../../../modules/admin/loyaltyApi';
 import type { ApiError } from '../../../modules/admin/adminApi';
 import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
+import { Alert } from '../../../shared/components/Alert';
+import { EmptyState } from '../../../shared/components/EmptyState';
 import { Link } from 'react-router-dom';
 
 function Card({
@@ -69,7 +71,7 @@ export const LoyaltyDashboardPage: React.FC = () => {
         </p>
       </div>
       {err && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
+        <Alert variant="error">{err}</Alert>
       )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card
@@ -112,8 +114,8 @@ export const LoyaltyDashboardPage: React.FC = () => {
               <tbody className="divide-y divide-neutral-100">
                 {recent.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-muted">
-                      尚無流水
+                    <td colSpan={5} className="p-0">
+                      <EmptyState message="尚無流水" />
                     </td>
                   </tr>
                 )}
@@ -137,7 +139,11 @@ export const LoyaltyDashboardPage: React.FC = () => {
         <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
           <div className="mb-3 text-sm font-semibold text-content">進行中活動</div>
           <ul className="space-y-2 text-sm">
-            {promos.length === 0 && <li className="text-muted">尚無進行中促銷（或皆為草稿）</li>}
+            {promos.length === 0 && (
+              <li>
+                <EmptyState message="尚無進行中促銷（或皆為草稿）" />
+              </li>
+            )}
             {promos.map((p) => (
               <li
                 key={p.id}

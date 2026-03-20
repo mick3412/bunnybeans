@@ -24,7 +24,7 @@ function tabButtonClass(active: boolean) {
   return [
     'rounded-full px-3 py-1.5 text-xs font-semibold transition',
     active
-      ? '!bg-[#1e293b] !text-white shadow-sm ring-2 ring-brand-primary/40'
+      ? '!bg-forge-sidebar !text-white shadow-sm ring-2 ring-brand-primary/40'
       : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
   ].join(' ');
 }

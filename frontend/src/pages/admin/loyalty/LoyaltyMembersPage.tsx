@@ -20,6 +20,7 @@ import {
 import type { ApiError } from '../../../modules/admin/adminApi';
 import { useDefaultMerchantId } from '../../../shared/hooks/useDefaultMerchantId';
 import { TextInput } from '../../../shared/components/TextInput';
+import { Alert } from '../../../shared/components/Alert';
 import { Button } from '../../../shared/components/Button';
 import { useAdminToast } from '../AdminToastContext';
 
@@ -202,7 +203,7 @@ export const LoyaltyMembersPage: React.FC = () => {
         </div>
       </div>
       {err && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{err}</div>
+        <Alert variant="error">{err}</Alert>
       )}
       <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
@@ -344,16 +345,16 @@ export const LoyaltyMembersPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-dashed border-[#cbd5f5] bg-[#eff6ff] p-3 text-xs">
+                  <div className="rounded-lg border border-dashed border-brand-surface bg-brand-canvas p-3 text-xs">
                     <div className="mb-1 flex items-center justify-between">
-                      <div className="font-medium text-[#1d4ed8]">手動調整會員等級</div>
+                      <div className="font-medium text-brand-primary">手動調整會員等級</div>
                       <span className="text-[11px] text-muted">
                         僅限有 Admin Key 者在後台修改
                       </span>
                     </div>
-                    <p className="mb-2 text-[11px] text-[#1e293b]">輸入會員等級以更新畫面呈現。</p>
-                    <div className="mb-2 rounded-md border border-dashed border-[#bfdbfe] bg-white/70 px-2 py-1.5">
-                      <div className="text-[11px] font-medium text-[#1d4ed8]">
+                    <p className="mb-2 text-[11px] text-content">輸入會員等級以更新畫面呈現。</p>
+                    <div className="mb-2 rounded-md border border-dashed border-brand-surface bg-white/70 px-2 py-1.5">
+                      <div className="text-[11px] font-medium text-brand-primary">
                         最近一次自動升降級（預留）
                       </div>
                       <p className="mt-0.5 text-[11px] text-muted">預留資訊區塊。</p>

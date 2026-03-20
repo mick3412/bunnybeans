@@ -572,7 +572,7 @@ export const PosOrderDetailPage: React.FC = () => {
 
               {displayPaid >= 0.01 && (
                 <div id="refund" className="rounded-lg border border-brand-surface bg-table-head px-3 py-2">
-                  <div className="mb-1 text-[11px] font-semibold text-[#1e293b]">退款（沖帳）</div>
+                  <div className="mb-1 text-[11px] font-semibold text-content">退款（沖帳）</div>
                   <p className="mb-2 text-[10px] text-muted">
                     已實收範圍內登記退款，不超過實收合計；全賒未收單不可退。
                   </p>

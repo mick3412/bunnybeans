@@ -30,29 +30,24 @@ export const AdminQuickReceivingPage: React.FC = () => {
   const [lines, setLines] = useState<LineDraft[]>([{ productId: '', qty: 1, unitCost: 0 }]);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setLoadErr(null);
-      const [wh, pr] = await Promise.all([getWarehouses(), getProducts()]);
-      if (cancelled) return;
-      setLoading(false);
-      const whArr = Array.isArray(wh) ? wh : [];
-      const prArr = Array.isArray(pr) ? pr : [];
-      if (!Array.isArray(wh)) setLoadErr(getErrorMessage(wh as ApiError) || '載入倉庫失敗');
-      else if (!Array.isArray(pr)) setLoadErr(getErrorMessage(pr as ApiError) || '載入商品失敗');
-      else setLoadErr(null);
-      setWarehouses(whArr);
-      if (whArr[0] && !warehouseId) setWarehouseId(whArr[0].id);
-      setProducts(prArr);
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // warehouseId intentionally omitted (avoid resetting user selection)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loadData = React.useCallback(async () => {
+    setLoading(true);
+    setLoadErr(null);
+    const [wh, pr] = await Promise.all([getWarehouses(), getProducts()]);
+    setLoading(false);
+    const whArr = Array.isArray(wh) ? wh : [];
+    const prArr = Array.isArray(pr) ? pr : [];
+    if (!Array.isArray(wh)) setLoadErr(getErrorMessage(wh as ApiError) || '載入倉庫失敗');
+    else if (!Array.isArray(pr)) setLoadErr(getErrorMessage(pr as ApiError) || '載入商品失敗');
+    else setLoadErr(null);
+    setWarehouses(whArr);
+    setProducts(prArr);
+    if (whArr[0]) setWarehouseId((prev) => (prev ? prev : whArr[0].id));
   }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   useEffect(() => {
     if (!merchantId) return;
@@ -138,8 +133,11 @@ export const AdminQuickReceivingPage: React.FC = () => {
         </div>
 
         {loadErr && (
-          <Alert variant="error" className="mb-4">
-            {loadErr}
+          <Alert variant="error" className="mb-4 flex items-center justify-between gap-3">
+            <span>{loadErr}</span>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void loadData()}>
+              重試
+            </Button>
           </Alert>
         )}
         {loading && (

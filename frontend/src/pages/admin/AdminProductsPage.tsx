@@ -1035,7 +1035,7 @@ export const AdminProductsPage: React.FC = () => {
                   </tr>
                 ) : (
                   sortedProducts.map((p) => (
-                  <tr key={p.id} className="group border-t border-slate-100 hover:bg-table-head">
+                  <tr key={p.id} className="group border-t border-brand-surface hover:bg-table-head">
                     <td className="sticky left-0 z-[1] bg-white px-3 py-2 group-hover:bg-table-head">
                       <input
                         type="checkbox"
