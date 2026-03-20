@@ -172,7 +172,7 @@ export const AdminPromotionsPage: React.FC = () => {
                 onClick={() => setStatus(t.key)}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                   status === t.key
-                    ? 'bg-[#1e293b] text-white shadow-sm'
+                    ? 'bg-forge-sidebar text-white shadow-sm'
                     : 'bg-white text-muted shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
                 }`}
               >
@@ -247,7 +247,7 @@ export const AdminPromotionsPage: React.FC = () => {
                 aria-disabled={sorting ? true : undefined}
               >
                 <div className="flex min-w-0 flex-1 flex-col justify-center">
-                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       draggable
@@ -291,20 +291,20 @@ export const AdminPromotionsPage: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">{r.summary}</p>
-                  {(() => {
-                    const eff = effectiveness[r.id];
-                    if (!eff) return null;
-                    return (
-                      <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted">
-                        <span>觸發 {eff.triggerCount} 次</span>
-                        <span>折讓 {eff.discountTotal.toLocaleString()}</span>
-                        <span>帶動 {eff.drivenRevenue.toLocaleString()}</span>
-                      </div>
-                    );
-                  })()}
+                  <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                    <p className="text-sm leading-relaxed text-muted">{r.summary}</p>
+                    {(() => {
+                      const eff = effectiveness[r.id];
+                      if (!eff) return null;
+                      return (
+                        <span className="shrink-0 text-xs text-muted">
+                          觸發 {eff.triggerCount} · 折讓 {eff.discountTotal.toLocaleString()} · 帶動 {eff.drivenRevenue.toLocaleString()}
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
-                <div className="flex shrink-0 flex-col items-center justify-center rounded-xl bg-table-head px-5 py-3 text-center ring-1 ring-brand-surface">
+                <div className="flex shrink-0 flex-col items-center justify-center rounded-xl bg-table-head px-4 py-2 text-center ring-1 ring-brand-surface">
                   <span className="text-xs font-medium text-muted">優先級</span>
                   <span className="text-2xl font-bold tabular-nums text-content">
                     {r.priority}
