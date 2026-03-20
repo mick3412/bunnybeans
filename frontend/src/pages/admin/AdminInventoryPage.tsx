@@ -25,6 +25,7 @@ import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { StandardFloatBar } from '../../shared/components/StandardFloatBar';
+import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { getErrorMessage, showAdminApiErrorToast } from '../../shared/errors/errorMessages';
 import { useAdminToast } from './AdminToastContext';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
@@ -319,20 +320,42 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
 
   const totalPages = events ? Math.max(1, Math.ceil(events.total / pageSize)) : 1;
 
+  const retryBalances = useCallback(() => {
+    setErr(null);
+    if (warehouseId) {
+      setBalancesLoading(true);
+      getBalancesEnriched(warehouseId).then((b) => {
+        setBalancesLoading(false);
+        if (!Array.isArray(b)) {
+          setErr(getErrorMessage(b as ApiError));
+          setBalances([]);
+        } else {
+          setBalances(b);
+        }
+      });
+    }
+  }, [warehouseId]);
+
   return (
-    <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-admin-inventory">
-      <p className="mb-4 text-sm text-muted">
-        選擇倉庫後檢視即時庫存與事件歷史（append-only）。
-      </p>
-
-      {err && (
-        <Alert variant="error" className="mb-4">
-          {err}
-        </Alert>
-      )}
-
+    <StandardListLayout
+      title="庫存"
+      description="選擇倉庫後檢視即時庫存與事件歷史（append-only）。"
+      loading={balancesLoading}
+      error={
+        err ? (
+          <div className="flex items-center justify-between gap-3">
+            <span>{err}</span>
+            <Button type="button" variant="secondary" size="sm" onClick={retryBalances}>
+              重試
+            </Button>
+          </div>
+        ) : null
+      }
+      empty={false}
+      testId="e2e-admin-inventory"
+      filters={
       <div
-        className="mb-6 flex flex-wrap items-center justify-between gap-3 sm:gap-4"
+        className="flex flex-wrap items-center justify-between gap-3 sm:gap-4"
         data-testid="e2e-admin-inventory-header"
       >
         <div className="flex flex-wrap items-center gap-3">
@@ -496,7 +519,8 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
             </span>
         </div>
       </div>
-      {(importResult || jobId || jobError) && (
+      }
+      aboveContent={(importResult || jobId || jobError) ? (
         <div className="mb-6 flex flex-wrap items-start gap-3 rounded-lg border border-brand-surface bg-table-head px-3 py-2">
           {importResult && (
             <span className="text-[11px] font-medium text-emerald-700">
@@ -527,15 +551,15 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
             </span>
           )}
         </div>
-      )}
-
+      ) : null}
+    >
       {!embeddedInHub && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               view === 'balances'
-                ? 'bg-[#1e293b] text-white shadow-sm'
+                ? 'bg-forge-sidebar text-white shadow-sm'
                 : 'bg-white text-muted shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
             }`}
             onClick={() => setView('balances')}
@@ -546,7 +570,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
             type="button"
             className={`rounded-full px-4 py-2 text-sm font-medium transition ${
               view === 'slowMoving'
-                ? 'bg-[#1e293b] text-white shadow-sm'
+                ? 'bg-forge-sidebar text-white shadow-sm'
                 : 'bg-white text-muted shadow-sm ring-1 ring-brand-surface hover:bg-table-head'
             }`}
             onClick={() => setView('slowMoving')}
@@ -584,7 +608,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
                     className={[
                       'rounded-full px-3 py-1.5 text-xs font-semibold transition',
                       stocktakeMode === 'list'
-                        ? 'bg-[#1e293b] text-white shadow-sm'
+                        ? 'bg-forge-sidebar text-white shadow-sm'
                         : 'bg-white text-muted shadow-sm ring-1 ring-brand-surface hover:bg-table-head',
                     ].join(' ')}
                     onClick={() => setStocktakeMode('list')}
@@ -1211,6 +1235,6 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
           </div>
         </section>
       )}
-    </div>
+    </StandardListLayout>
   );
 };
