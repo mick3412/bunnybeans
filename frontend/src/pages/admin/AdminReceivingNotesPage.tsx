@@ -335,7 +335,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
-          <div className="flex flex-wrap gap-1 border-b border-neutral-200">
+          <div className="flex flex-wrap gap-1 border-b border-brand-surface">
             {RN_STATUS.map((t) => (
               <button
                 key={t.key}
@@ -364,7 +364,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
       testId="e2e-admin-receiving-notes"
     >
       {!listLoading && rows.length > 0 && (
-      <div className="overflow-hidden rounded-xl border border-neutral-100">
+      <div className="overflow-hidden rounded-xl border border-brand-surface">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
                 <tr>
@@ -380,7 +380,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.id} className="cursor-pointer border-b border-neutral-50 hover:bg-neutral-50/80" onClick={() => openDetail(r.id)}>
+                  <tr key={r.id} className="cursor-pointer border-b border-brand-surface hover:bg-table-head" onClick={() => openDetail(r.id)}>
                     <td className="px-4 py-3.5 font-mono text-xs font-medium">{r.number}</td>
                     <td className="px-4 py-3.5">{r.poNumber ?? '—'}</td>
                     <td className="px-4 py-3.5 text-content">{r.supplierName ?? '—'}</td>
@@ -424,7 +424,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                   採購單 <span className="text-red-500">*</span>
                 </label>
                 <select
-                  className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm"
+                  className="w-full rounded-lg border border-brand-surface px-3 py-2.5 text-sm"
                   value={newRn.purchaseOrderId}
                   onChange={(e) => {
                     const id = e.target.value;
@@ -446,7 +446,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
               <div>
                 <label className="mb-1 block text-sm font-medium text-muted">驗收人員</label>
                 <input
-                  className="w-full rounded-lg border border-neutral-200 px-3 py-2.5 text-sm"
+                  className="w-full rounded-lg border border-brand-surface px-3 py-2.5 text-sm"
                   value={newRn.inspectorName}
                   onChange={(e) => setNewRn({ ...newRn, inspectorName: e.target.value })}
                   placeholder="姓名"
@@ -455,10 +455,10 @@ export const AdminReceivingNotesPage: React.FC = () => {
             </div>
 
             {selectedPo && selectedPo.lines.length > 0 && (
-              <div className="mt-6 overflow-hidden rounded-xl border border-neutral-200 bg-table-head p-4">
+              <div className="mt-6 overflow-hidden rounded-xl border border-brand-surface bg-table-head p-4">
                 <h3 className="text-sm font-semibold text-content">驗收品項</h3>
                 <table className="mt-3 w-full text-sm">
-                  <thead className="border-b border-neutral-200 text-left text-xs text-muted">
+                  <thead className="border-b border-brand-surface text-left text-xs text-muted">
                     <tr>
                       <th className="py-2 pr-2">商品</th>
                       <th className="w-28 py-2 text-right">待收數量</th>
@@ -473,7 +473,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                       const d = lineDrafts[l.id] ?? { receivedQty: pending, returnedQty: 0 };
                       const qualified = Math.max(0, d.receivedQty - d.returnedQty);
                       return (
-                        <tr key={l.id} className="border-b border-neutral-100">
+                        <tr key={l.id} className="border-b border-brand-surface">
                           <td className="py-3 pr-2">
                             <span className="font-medium text-content">{l.name ?? '—'}</span>
                             <span className="ml-2 text-xs text-muted">{l.sku ?? ''}</span>
@@ -483,7 +483,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                             <input
                               type="number"
                               min={0}
-                              className="w-full rounded-xl border border-neutral-200 px-2.5 py-2 text-right text-sm tabular-nums"
+                              className="w-full rounded-xl border border-brand-surface px-2.5 py-2 text-right text-sm tabular-nums"
                               value={d.receivedQty}
                               onChange={(e) =>
                                 setLineDrafts({
@@ -497,7 +497,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                             <input
                               type="number"
                               min={0}
-                              className="w-full rounded-xl border border-neutral-200 px-2.5 py-2 text-right text-sm tabular-nums"
+                              className="w-full rounded-xl border border-brand-surface px-2.5 py-2 text-right text-sm tabular-nums"
                               value={d.returnedQty}
                               onChange={(e) =>
                                 setLineDrafts({
@@ -519,13 +519,13 @@ export const AdminReceivingNotesPage: React.FC = () => {
             <div className="mt-6">
               <label className="mb-1 block text-sm font-medium text-muted">備註</label>
               <textarea
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-brand-surface px-3 py-2 text-sm"
                 rows={3}
                 value={newRn.remark}
                 onChange={(e) => setNewRn({ ...newRn, remark: e.target.value })}
               />
             </div>
-            <div className="mt-6 flex justify-end gap-3 border-t border-neutral-100 pt-4">
+            <div className="mt-6 flex justify-end gap-3 border-t border-brand-surface pt-4">
               <button
                 type="button"
                 onClick={() => setCreateOpen(false)}

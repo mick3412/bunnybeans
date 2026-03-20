@@ -10,6 +10,7 @@ import {
   type ApiError,
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
 import { ReferenceIdLink } from '../../shared/components/ReferenceIdLink';
 import { useAdminToast } from './AdminToastContext';
@@ -130,7 +131,7 @@ export const AdminInventoryAdjustPage: React.FC = () => {
       </p>
       <div className="mt-4 flex min-h-[4rem] flex-col gap-2" aria-live="polite">
         {err && (
-          <div className={`${alertBox} border-brand-danger/25 bg-brand-danger/8 text-brand-danger`}>{err}</div>
+          <Alert variant="error">{err}</Alert>
         )}
         {ok && (
           <div className={`${alertBox} border-brand-success/30 bg-brand-success/10 text-brand-success`}>{ok}</div>
@@ -147,9 +148,7 @@ export const AdminInventoryAdjustPage: React.FC = () => {
       </p>
       <div className="mt-4 flex min-h-[4rem] flex-col gap-2" aria-live="polite">
         {transferErr && (
-          <div className={`${alertBox} border-brand-danger/25 bg-brand-danger/8 text-brand-danger`}>
-            {transferErr}
-          </div>
+          <Alert variant="error">{transferErr}</Alert>
         )}
         {transferOk && (
           <div className={`${alertBox} border-brand-success/30 bg-brand-success/10 text-brand-success`}>

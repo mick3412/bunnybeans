@@ -15,6 +15,7 @@ import {
   type PosOrderListResponse,
   type OrderValueDistributionBucket,
 } from '../modules/pos/posOrdersApi';
+import { Alert } from '../shared/components/Alert';
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import { getPaymentMethodLabel } from '../shared/utils/paymentMethodLabels';
 import { MiniBarChart } from '../shared/components/MiniBarChart';
@@ -259,8 +260,8 @@ export const PosReportsPage: React.FC = () => {
                 key={i}
                 className={`${cardBase} animate-pulse`}
               >
-                <div className="h-3 w-16 rounded bg-slate-200" />
-                <div className="mt-3 h-6 w-20 rounded bg-slate-200" />
+                <div className="h-3 w-16 rounded bg-brand-surface" />
+                <div className="mt-3 h-6 w-20 rounded bg-brand-surface" />
               </div>
             ))}
           </>
@@ -376,13 +377,13 @@ export const PosReportsPage: React.FC = () => {
       )}
 
       {(topItemsErr || dailyErr) && (
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <Alert variant="error" className="mt-4">
           {topItemsErr && <div>熱銷品項：{topItemsErr}</div>}
           {dailyErr && <div className={topItemsErr ? 'mt-1' : ''}>區間趨勢：{dailyErr}</div>}
           <div className="mt-1 text-xs opacity-90">
             除錯：merchantId={merchantId ?? 'null'}；VITE_API_BASE_URL={import.meta.env.VITE_API_BASE_URL ? '已設定' : '未設定'}；API 連線請確認後端服務已啟動。
           </div>
-        </div>
+        </Alert>
       )}
       {topItemsLoading && !topItemsErr && (
         <div className="mt-8 rounded-2xl border border-brand-surface bg-white p-4">
@@ -390,9 +391,9 @@ export const PosReportsPage: React.FC = () => {
           <div className="space-y-2">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="flex items-center justify-between gap-3 animate-pulse">
-                <div className="h-4 flex-1 rounded bg-slate-200" />
-                <div className="h-4 w-10 rounded bg-slate-200" />
-                <div className="h-4 w-16 rounded bg-slate-200" />
+                <div className="h-4 flex-1 rounded bg-brand-surface" />
+                <div className="h-4 w-10 rounded bg-brand-surface" />
+                <div className="h-4 w-16 rounded bg-brand-surface" />
               </div>
             ))}
           </div>
@@ -446,9 +447,9 @@ export const PosReportsPage: React.FC = () => {
       )}
 
       {ordersErr && (
-        <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <Alert variant="error" className="mt-8">
           銷售明細載入失敗：{ordersErr}
-        </div>
+        </Alert>
       )}
       {orders && (
         <div className="mt-8 rounded-2xl border border-brand-surface bg-white p-4">
@@ -497,10 +498,10 @@ export const PosReportsPage: React.FC = () => {
           <div className="space-y-2">
             {[0, 1, 2, 3, 4].map((i) => (
               <div key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="h-3 w-20 rounded bg-slate-200" />
-                <div className="h-2 flex-1 rounded-full bg-slate-200" />
-                <div className="h-3 w-16 rounded bg-slate-200" />
-                <div className="h-3 w-10 rounded bg-slate-200" />
+                <div className="h-3 w-20 rounded bg-brand-surface" />
+                <div className="h-2 flex-1 rounded-full bg-brand-surface" />
+                <div className="h-3 w-16 rounded bg-brand-surface" />
+                <div className="h-3 w-10 rounded bg-brand-surface" />
               </div>
             ))}
           </div>
@@ -539,9 +540,9 @@ export const PosReportsPage: React.FC = () => {
           <div className="space-y-2">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="h-3 w-16 rounded bg-slate-200" />
-                <div className="h-2 flex-1 rounded-full bg-slate-200" />
-                <div className="h-3 w-10 rounded bg-slate-200" />
+                <div className="h-3 w-16 rounded bg-brand-surface" />
+                <div className="h-2 flex-1 rounded-full bg-brand-surface" />
+                <div className="h-3 w-10 rounded bg-brand-surface" />
               </div>
             ))}
           </div>

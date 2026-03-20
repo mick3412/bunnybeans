@@ -120,7 +120,7 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
               type="button"
               onClick={() => setTab(t)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                tab === t ? 'bg-slate-900 text-white' : 'bg-white text-muted ring-1 ring-brand-surface'
+                tab === t ? 'bg-forge-sidebar text-white' : 'bg-white text-muted ring-1 ring-brand-surface'
               }`}
             >
               {TYPE_LABELS[t] ?? t}
@@ -145,7 +145,7 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
               <th className="px-3 py-2">時間</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-brand-surface">
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={customerId ? 7 : 8} className="p-0">

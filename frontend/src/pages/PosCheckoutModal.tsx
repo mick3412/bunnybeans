@@ -243,10 +243,16 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4" data-testid="e2e-checkout-modal">
+    <div
+      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="checkout-modal-title"
+      data-testid="e2e-checkout-modal"
+    >
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-content">結帳</h2>
+          <h2 id="checkout-modal-title" className="text-sm font-semibold text-content">結帳</h2>
           <button
             type="button"
             onClick={onClose}
@@ -278,7 +284,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
                     <li key={c.id}>
                       <button
                         type="button"
-                        className="w-full px-2 py-1.5 text-left text-xs hover:bg-slate-100"
+                        className="w-full px-2 py-1.5 text-left text-xs hover:bg-table-head"
                         onClick={() => {
                           setMemberInput(c.id);
                           setMemberSearchResults([]);
@@ -377,7 +383,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
             {!allowCredit && (
               <div className="flex items-center justify-between text-muted">
                 <span>找零</span>
-                <span className="font-semibold text-emerald-700">${change.toLocaleString()}</span>
+                <span className="font-semibold text-brand-success">${change.toLocaleString()}</span>
               </div>
             )}
             {allowCredit && (

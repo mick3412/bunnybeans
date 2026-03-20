@@ -256,7 +256,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
-          <div className="flex flex-wrap gap-1 border-b border-neutral-200">
+          <div className="flex flex-wrap gap-1 border-b border-brand-surface">
             {STATUS_TABS.map((t) => (
               <button
                 key={t.key}
@@ -285,7 +285,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
       testId="e2e-admin-purchase-orders"
     >
       {!listLoading && rows.length > 0 && (
-      <div className="overflow-hidden rounded-xl border border-neutral-100">
+      <div className="overflow-hidden rounded-xl border border-brand-surface">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
                 <tr>
@@ -299,7 +299,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
               </thead>
               <tbody>
                 {rows.map((p) => (
-                  <tr key={p.id} className="cursor-pointer border-b border-neutral-50 hover:bg-neutral-50/80" onClick={() => openDetail(p.id)}>
+                  <tr key={p.id} className="cursor-pointer border-b border-brand-surface hover:bg-table-head" onClick={() => openDetail(p.id)}>
                     <td className="px-4 py-3.5 font-mono text-xs font-medium">{p.orderNumber}</td>
                     <td className="px-4 py-3.5 text-content">{p.supplierName ?? '—'}</td>
                     <td className="px-4 py-3.5 text-center tabular-nums">{(p.lines ?? []).length}</td>
@@ -384,7 +384,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                       {detailRns.map((rn) => (
                         <tr
                           key={rn.id}
-                          className="cursor-pointer border-b border-neutral-50 hover:bg-neutral-50/80"
+                          className="cursor-pointer border-b border-brand-surface hover:bg-table-head"
                           onClick={() => {
                             setDetail(null);
                             navigate(`/admin/receiving-notes?id=${encodeURIComponent(rn.id)}`);
@@ -487,14 +487,14 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
           <div className="max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl">
             <div className="max-h-[92vh] overflow-y-auto">
               {/* Header */}
-              <div className="flex items-start justify-between border-b border-neutral-200 px-6 py-5">
+              <div className="flex items-start justify-between border-b border-brand-surface px-6 py-5">
                 <div>
-                  <h2 id="create-po-title" className="text-xl font-semibold tracking-tight text-neutral-900">新增採購單</h2>
-                  <p className="mt-1 text-sm text-neutral-500">建立新的採購訂單</p>
+                  <h2 id="create-po-title" className="text-xl font-semibold tracking-tight text-content">新增採購單</h2>
+                  <p className="mt-1 text-sm text-muted">建立新的採購訂單</p>
                 </div>
                 <button
                   type="button"
-                  className="rounded-xl p-2 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors"
+                  className="rounded-xl p-2 text-muted hover:bg-table-head hover:text-neutral-600 transition-colors"
                   onClick={() => setCreateOpen(false)}
                   aria-label="關閉"
                 >
@@ -507,11 +507,11 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 {/* 基本資訊 */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-neutral-700">
+                    <label className="mb-2 block text-sm font-medium text-content">
                       供應商 <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                      className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2.5 text-sm text-content shadow-sm transition-colors placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                       value={newPo.supplierId}
                       onChange={(e) => setNewPo({ ...newPo, supplierId: e.target.value })}
                     >
@@ -522,10 +522,10 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-neutral-700">預計到貨日</label>
+                    <label className="mb-2 block text-sm font-medium text-content">預計到貨日</label>
                     <input
                       type="date"
-                      className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                      className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2.5 text-sm text-content shadow-sm transition-colors placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                       value={newPo.expectedDate}
                       onChange={(e) => setNewPo({ ...newPo, expectedDate: e.target.value })}
                     />
@@ -533,28 +533,28 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 </div>
 
                 {/* 訂購品項 */}
-                <div className="overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50/80">
-                  <div className="border-b border-neutral-200 bg-white px-4 py-3">
-                    <h3 className="text-sm font-semibold text-neutral-800">訂購品項</h3>
+                <div className="overflow-hidden rounded-xl border border-brand-surface bg-table-head">
+                  <div className="border-b border-brand-surface bg-white px-4 py-3">
+                    <h3 className="text-sm font-semibold text-content">訂購品項</h3>
                   </div>
                   <div className="p-4">
-                    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+                    <div className="overflow-hidden rounded-lg border border-brand-surface bg-white">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-neutral-200 bg-neutral-50">
-                            <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-neutral-500">商品</th>
-                            <th className="w-20 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-neutral-500">數量</th>
-                            <th className="w-24 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-neutral-500">單價</th>
-                            <th className="w-24 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-neutral-500">小計</th>
+                          <tr className="border-b border-brand-surface bg-table-head">
+                            <th className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted">商品</th>
+                            <th className="w-20 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted">數量</th>
+                            <th className="w-24 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted">單價</th>
+                            <th className="w-24 px-3 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted">小計</th>
                             <th className="w-12 px-2 py-3" aria-hidden />
                           </tr>
                         </thead>
                         <tbody>
                           {newPo.lines.map((line, idx) => (
-                            <tr key={idx} className="border-b border-neutral-100 last:border-0">
+                            <tr key={idx} className="border-b border-brand-surface last:border-0">
                               <td className="px-3 py-2.5">
                                 <select
-                                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                                  className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm text-content shadow-sm transition-colors placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                                   value={line.productId}
                                   onChange={(e) => {
                                     const lines = [...newPo.lines];
@@ -572,7 +572,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                 <input
                                   type="number"
                                   min={1}
-                                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm tabular-nums transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:placeholder:text-neutral-400"
+                                  className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm text-content shadow-sm tabular-nums transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:placeholder:text-muted"
                                   value={line.qty}
                                   onChange={(e) => {
                                     const lines = [...newPo.lines];
@@ -585,7 +585,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                 <input
                                   type="number"
                                   min={0}
-                                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 shadow-sm tabular-nums transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:placeholder:text-neutral-400"
+                                  className="w-full rounded-xl border border-brand-surface bg-white px-3 py-2 text-sm text-content shadow-sm tabular-nums transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:placeholder:text-muted"
                                   value={line.unitCost}
                                   onChange={(e) => {
                                     const lines = [...newPo.lines];
@@ -594,12 +594,12 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                   }}
                                 />
                               </td>
-                              <td className="px-3 py-2.5 text-right font-medium tabular-nums text-neutral-900">${(line.qty * line.unitCost).toLocaleString()}</td>
+                              <td className="px-3 py-2.5 text-right font-medium tabular-nums text-content">${(line.qty * line.unitCost).toLocaleString()}</td>
                               <td className="px-2 py-2.5">
                                 {newPo.lines.length > 1 && (
                                   <button
                                     type="button"
-                                    className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                    className="rounded-lg p-1.5 text-muted hover:bg-red-50 hover:text-red-600 transition-colors"
                                     onClick={() => setNewPo({ ...newPo, lines: newPo.lines.filter((_, i) => i !== idx) })}
                                     aria-label="刪除此列"
                                   >
@@ -614,21 +614,21 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                     </div>
                     <button
                       type="button"
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-neutral-300 bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand-primary hover:text-brand-primary hover:bg-brand-primary/5 transition-colors"
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-brand-surface bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand-primary hover:text-brand-primary hover:bg-brand-primary/5 transition-colors"
                       onClick={() => setNewPo({ ...newPo, lines: [...newPo.lines, { productId: '', qty: 1, unitCost: 0 }] })}
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                       新增品項
                     </button>
-                    <p className="mt-3 text-right text-sm font-semibold text-neutral-900">合計：${totalDraft.toLocaleString()}</p>
+                    <p className="mt-3 text-right text-sm font-semibold text-content">合計：${totalDraft.toLocaleString()}</p>
                   </div>
                 </div>
 
                 {/* 備註 */}
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-neutral-700">備註</label>
+                  <label className="mb-2 block text-sm font-medium text-content">備註</label>
                   <textarea
-                    className="w-full min-h-[80px] resize-y rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 shadow-sm transition-colors placeholder:text-neutral-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                    className="w-full min-h-[80px] resize-y rounded-xl border border-brand-surface bg-white px-3 py-2.5 text-sm text-content shadow-sm transition-colors placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                     rows={3}
                     placeholder="選填"
                     value={newPo.remark}
@@ -638,7 +638,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
               </div>
 
               {/* Footer */}
-              <div className="flex justify-end gap-3 border-t border-neutral-200 bg-neutral-50/50 px-6 py-4">
+              <div className="flex justify-end gap-3 border-t border-brand-surface bg-table-head/50 px-6 py-4">
                 <Button variant="secondary" onClick={() => setCreateOpen(false)}>
                   取消
                 </Button>

@@ -11,6 +11,7 @@ import {
   type FinanceSummaryTrend,
 } from '../../modules/admin/adminApi';
 import { MiniLineChart } from '../../shared/components/MiniLineChart';
+import { Alert } from '../../shared/components/Alert';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
 import { MiniBarChart } from '../../shared/components/MiniBarChart';
@@ -442,12 +443,12 @@ export const AdminReportsPage: React.FC = () => {
     >
 
       {err && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <Alert variant="error" className="mb-4 flex items-center justify-between gap-3">
           <span>{err}</span>
           <Button type="button" size="sm" variant="secondary" onClick={() => void load()}>
             重試
           </Button>
-        </div>
+        </Alert>
       )}
 
       {summary?.byType && Object.keys(summary.byType).length > 0 && (

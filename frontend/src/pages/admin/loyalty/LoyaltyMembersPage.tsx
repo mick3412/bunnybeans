@@ -220,7 +220,7 @@ export const LoyaltyMembersPage: React.FC = () => {
               <th className="px-3 py-2">操作</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-brand-surface">
             {filtered.map((r) => (
               <tr key={r.id} className="hover:bg-table-head">
                 <td className="px-3 py-2 font-mono text-xs">{r.memberCode ?? '—'}</td>
@@ -278,7 +278,7 @@ export const LoyaltyMembersPage: React.FC = () => {
             className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-brand-surface bg-white shadow-xl"
             aria-label={drawerMode === 'create' ? '新增會員' : '編輯會員'}
           >
-            <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-brand-surface px-4 py-3">
               <h3 className="font-semibold text-content">
                 {drawerMode === 'create' ? '新增會員' : '編輯會員'}
               </h3>
@@ -410,7 +410,7 @@ export const LoyaltyMembersPage: React.FC = () => {
                 />
               )}
             </div>
-            <div className="border-t border-neutral-100 p-4">
+            <div className="border-t border-brand-surface p-4">
               <Button
                 type="button"
                 disabled={saving}

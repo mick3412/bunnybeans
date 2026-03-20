@@ -9,6 +9,8 @@ import {
   postRefund,
   postReturnToStock,
 } from '../modules/pos/posOrdersApi';
+import { Alert } from '../shared/components/Alert';
+import { EmptyState } from '../shared/components/EmptyState';
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import type { PosOrderDetail } from '../modules/pos/posOrdersMockService';
 
@@ -270,7 +272,7 @@ export const PosOrderDetailPage: React.FC = () => {
       </div>
       <div className="min-h-0">
         {exchangeOpen && (
-          <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true">
+          <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
             <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-content">換貨（MVP）</h2>
@@ -315,12 +317,22 @@ export const PosOrderDetailPage: React.FC = () => {
         )}
         <div className="w-full rounded-xl border border-brand-surface bg-white p-4">
           {error && (
-            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">
+            <Alert variant="error" className="mb-3">
               {error}
-            </div>
+            </Alert>
           )}
           {loading ? (
-            <div className="py-10 text-center text-xs text-muted">載入中…</div>
+            <div className="space-y-4 py-10">
+              <div className="flex animate-pulse gap-3">
+                <div className="h-4 w-24 rounded bg-brand-surface" />
+                <div className="h-4 flex-1 rounded bg-brand-surface" />
+              </div>
+              <div className="h-20 rounded-lg bg-brand-surface/50" />
+              <div className="h-32 rounded-lg bg-brand-surface/50" />
+              <p className="text-center text-xs text-muted">載入中…</p>
+            </div>
+          ) : !order && !error ? (
+            <EmptyState message="找不到此訂單或訂單已不存在" />
           ) : order ? (
             <div className="space-y-3 text-xs">
               {credit && (
@@ -467,7 +479,7 @@ export const PosOrderDetailPage: React.FC = () => {
                 );
               })()}
 
-              <div className="rounded-lg border border-brand-surface bg-slate-50/90 px-3 py-2 sm:px-4">
+              <div className="rounded-lg border border-brand-surface bg-table-head/90 px-3 py-2 sm:px-4">
                 <div className="text-[10px] font-semibold uppercase text-muted">消費者</div>
                 <div className="mt-1 space-y-0.5 text-content">
                   <div>
@@ -486,15 +498,15 @@ export const PosOrderDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-between border-b border-slate-100 pb-2">
+              <div className="flex justify-between border-b border-brand-surface pb-2">
                 <span className="text-muted">單號</span>
                 <span className="font-medium text-content">{order.orderNumber}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-100 pb-2">
+              <div className="flex justify-between border-b border-brand-surface pb-2">
                 <span className="text-muted">門市</span>
                 <span className="break-all text-right text-content">{order.storeId}</span>
               </div>
-              <div className="flex justify-between border-b border-slate-100 pb-2">
+              <div className="flex justify-between border-b border-brand-surface pb-2">
                 <span className="text-muted">建立時間</span>
                 <span className="text-content">{new Date(order.createdAt).toLocaleString('zh-TW')}</span>
               </div>
@@ -502,7 +514,7 @@ export const PosOrderDetailPage: React.FC = () => {
                 typeof order.discountAmount === 'number' ||
                 order.promotionApplied != null) && (
                 <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-2">
-                  <div className="text-[10px] font-semibold uppercase text-emerald-800">金額明細（促銷）</div>
+                  <div className="text-[10px] font-semibold uppercase text-brand-success">金額明細（促銷）</div>
                   {typeof order.subtotalAmount === 'number' && (
                     <div className="mt-1 flex justify-between text-muted">
                       <span>小計</span>
@@ -609,8 +621,8 @@ export const PosOrderDetailPage: React.FC = () => {
               )}
 
               <div id="return-to-stock" className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2">
-                <div className="mb-1 text-[11px] font-semibold text-emerald-900">退貨入庫（實體回倉）</div>
-                <p className="mb-2 text-[10px] text-emerald-800">
+                <div className="mb-1 text-[11px] font-semibold text-brand-success">退貨入庫（實體回倉）</div>
+                <p className="mb-2 text-[10px] text-brand-success">
                   依本單明細加回庫存（RETURN_FROM_CUSTOMER）；與退款分開；單筆不得超過該列銷量。
                 </p>
                 <div className="space-y-1.5">
@@ -619,8 +631,8 @@ export const PosOrderDetailPage: React.FC = () => {
                     const label = meta?.name ?? line.productId.slice(0, 8);
                     return (
                       <div key={line.id} className="flex flex-wrap items-center gap-2 text-[11px]">
-                        <span className="min-w-0 flex-1 truncate text-emerald-950">{label}</span>
-                        <span className="text-emerald-700">售 {line.quantity}</span>
+                        <span className="min-w-0 flex-1 truncate text-content">{label}</span>
+                        <span className="text-brand-success">售 {line.quantity}</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -650,7 +662,7 @@ export const PosOrderDetailPage: React.FC = () => {
                 </div>
                 {returnStockOk && (
                   <p
-                    className="mt-1 text-[11px] text-emerald-700"
+                    className="mt-1 text-[11px] text-brand-success"
                     data-testid="e2e-detail-return-success"
                   >
                     {returnStockOk}
@@ -678,7 +690,7 @@ export const PosOrderDetailPage: React.FC = () => {
                     </thead>
                     <tbody>
                       {order.items.map((item) => (
-                        <tr key={item.id} className="border-b border-slate-100">
+                        <tr key={item.id} className="border-b border-brand-surface">
                           {(() => {
                             const meta = productMap[item.productId];
                             const category = meta?.categoryId ? categoryMap[meta.categoryId] : undefined;
@@ -724,7 +736,7 @@ export const PosOrderDetailPage: React.FC = () => {
                     掛帳（尚有未收）
                   </div>
                 )}
-                <div className="flex justify-between border-t border-slate-100 pt-2 text-xs font-normal">
+                <div className="flex justify-between border-t border-brand-surface pt-2 text-xs font-normal">
                   <span className="text-muted">收款方式</span>
                   <span className="max-w-[70%] text-right text-content">{paymentMethodsText}</span>
                 </div>

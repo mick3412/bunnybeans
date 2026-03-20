@@ -1228,7 +1228,7 @@ export const AdminProductsPage: React.FC = () => {
 
         {/* 右側懸浮抽屜：向左展開 */}
         <aside
-          className={`fixed right-0 top-0 z-[100] flex h-full max-h-screen w-full max-w-[440px] flex-col border-l border-brand-surface bg-white shadow-[-8px_0_24px_rgba(0,0,0,0.08)] transition-transform duration-300 ease-out ${
+          className={`fixed right-0 top-0 z-[100] flex h-full max-h-screen w-full max-w-[440px] flex-col border-l border-brand-surface bg-white shadow-xl transition-transform duration-300 ease-out ${
             panelOpen ? 'translate-x-0' : 'translate-x-full pointer-events-none'
           }`}
           aria-label="商品表單"

@@ -109,7 +109,7 @@ export const LoyaltyCouponsPage: React.FC = () => {
         <div>
           <label className="mb-1 block text-xs text-muted">狀態</label>
           <select
-            className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm"
+            className="rounded-lg border border-brand-surface px-3 py-1.5 text-sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as CouponStatusFilter)}
           >
@@ -128,7 +128,7 @@ export const LoyaltyCouponsPage: React.FC = () => {
           <div>
             <label className="mb-1 block text-xs text-muted">類型</label>
             <select
-              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-brand-surface px-3 py-2 text-sm"
               value={discountType}
               onChange={(e) => setDiscountType(e.target.value)}
             >

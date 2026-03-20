@@ -140,14 +140,14 @@ export const AdminMerchantsPage: React.FC = () => {
                   <>
                     <td className="px-4 py-2">
                       <input
-                        className="w-full rounded border border-brand-surface px-1 text-sm focus:border-brand-primary"
+                        className="w-full rounded border border-brand-surface px-1 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         value={editCode}
                         onChange={(e) => setEditCode(e.target.value)}
                       />
                     </td>
                     <td className="px-4 py-2">
                       <input
-                        className="w-full rounded border border-brand-surface px-1 text-sm focus:border-brand-primary"
+                        className="w-full rounded border border-brand-surface px-1 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                       />

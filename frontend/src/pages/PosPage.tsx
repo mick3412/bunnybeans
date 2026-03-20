@@ -325,9 +325,9 @@ export const PosPage: React.FC = () => {
         </div>
       )}
       <main className="flex min-h-0 flex-1 flex-col gap-3 pb-[calc(14rem+env(safe-area-inset-bottom))] lg:flex-row lg:pb-4">
-        <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl bg-white p-2 shadow-sm shadow-slate-200 sm:p-3 lg:min-w-0 lg:flex-[3]">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl bg-white p-2 shadow-sm shadow-black/5 sm:p-3 lg:min-w-0 lg:flex-[3]">
           <div className="mb-3 grid grid-cols-1 gap-2 min-[640px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] min-[640px]:grid-rows-[auto_auto]">
-            <div className="rounded-2xl bg-slate-50 px-3 py-2 min-[640px]:row-span-2">
+            <div className="rounded-2xl bg-table-head px-3 py-2 min-[640px]:row-span-2">
               <div className="mb-1 text-xs font-semibold text-muted">篩選</div>
               <div className="mb-1.5 flex flex-wrap items-center gap-1">
                 <span className="mr-1 text-xs font-medium text-muted">品項</span>
@@ -522,7 +522,7 @@ export const PosPage: React.FC = () => {
                 <div className="text-xs font-semibold text-muted">常用</div>
                 <button
                   type="button"
-                  className="rounded px-2 py-0.5 text-xs font-medium text-brand-primary hover:bg-sky-50"
+                  className="rounded px-2 py-0.5 text-xs font-medium text-brand-primary hover:bg-brand-primary/5"
                   onClick={() => {
                     if (favoriteEditMode) {
                       setFavoriteIds(favoriteDraftIds);
@@ -543,7 +543,7 @@ export const PosPage: React.FC = () => {
                   .map((p) => (
                     <div
                       key={p.id}
-                      className="relative inline-flex items-center gap-1 rounded-lg border border-brand-surface bg-table-head px-2 py-1.5 text-left text-xs hover:border-brand-primary/50 hover:bg-sky-50"
+                      className="relative inline-flex items-center gap-1 rounded-lg border border-brand-surface bg-table-head px-2 py-1.5 text-left text-xs hover:border-brand-primary/50 hover:bg-brand-primary/5"
                     >
                       <button
                         type="button"
@@ -582,7 +582,7 @@ export const PosPage: React.FC = () => {
               return (
                 <div
                   key={product.id}
-                  className="relative flex h-[118px] w-full min-w-0 shrink-0 flex-col items-stretch gap-0.5 rounded-lg bg-white px-2 py-1.5 shadow-sm shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-sky-50 sm:h-[120px]"
+                  className="relative flex h-[118px] w-full min-w-0 shrink-0 flex-col items-stretch gap-0.5 rounded-lg bg-white px-2 py-1.5 shadow-sm shadow-black/5 transition hover:-translate-y-0.5 hover:bg-brand-primary/5 sm:h-[120px]"
                 >
                   <button
                     type="button"
@@ -605,7 +605,7 @@ export const PosPage: React.FC = () => {
                           );
                         }}
                         className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold ${
-                          isFav ? 'text-red-600 hover:bg-red-50' : 'text-emerald-700 hover:bg-emerald-50'
+                          isFav ? 'text-red-600 hover:bg-red-50' : 'text-brand-success hover:bg-brand-success/10'
                         }`}
                         title={isFav ? '移除常用' : '加入常用'}
                         aria-label={isFav ? '移除常用' : '加入常用'}
@@ -679,7 +679,7 @@ export const PosPage: React.FC = () => {
             )}
           </div>
           {apiMerchantId && (
-            <div className="mt-2 border-t border-slate-100 pt-2">
+            <div className="mt-2 border-t border-brand-surface pt-2">
               <label className="mb-1 block text-xs font-medium text-muted">
                 促銷試算用會員（可選）
               </label>
@@ -703,7 +703,7 @@ export const PosPage: React.FC = () => {
                     <li>
                       <button
                         type="button"
-                        className="w-full px-2 py-1.5 text-left text-xs text-muted hover:bg-slate-100"
+                        className="w-full px-2 py-1.5 text-left text-xs text-muted hover:bg-table-head"
                         onClick={() => {
                           setPreviewMemberRaw('');
                           setPreviewSelectedCustomer(null);
@@ -717,7 +717,7 @@ export const PosPage: React.FC = () => {
                       <li key={c.id}>
                         <button
                           type="button"
-                          className="w-full px-2 py-1.5 text-left text-xs hover:bg-slate-100"
+                          className="w-full px-2 py-1.5 text-left text-xs hover:bg-table-head"
                           onClick={() => {
                             setPreviewMemberRaw(c.id);
                             setPreviewSelectedCustomer(c);

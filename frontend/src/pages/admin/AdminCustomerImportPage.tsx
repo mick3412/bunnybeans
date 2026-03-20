@@ -6,6 +6,7 @@ import {
   type CustomerImportApplyDecision,
   type ApiError,
 } from '../../modules/admin/adminApi';
+import { Alert } from '../../shared/components/Alert';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
@@ -175,9 +176,9 @@ export const AdminCustomerImportPage: React.FC = () => {
     <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-admin-customers-import">
       <p className="mb-2 text-sm text-muted" aria-hidden="true" />
       {err && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <Alert variant="error" className="mb-4">
           {err}
-        </div>
+        </Alert>
       )}
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-brand-surface bg-table-head p-4 shadow-sm">
         <input
@@ -309,7 +310,7 @@ export const AdminCustomerImportPage: React.FC = () => {
                       </td>
                       <td className="px-2 py-1.5">
                         <select
-                          className="rounded border border-brand-surface px-1 py-0.5 text-xs"
+                          className="rounded border border-brand-surface px-1 py-0.5 text-xs focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                           value={d?.action ?? 'skip'}
                           onChange={(e) => {
                             const action = e.target.value as CustomerImportApplyDecision['action'];

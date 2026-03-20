@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Alert } from '../shared/components/Alert';
 import { Button } from '../shared/components/Button';
 import { TextInput } from '../shared/components/TextInput';
 
@@ -35,26 +36,35 @@ export const LoginPage: React.FC = () => {
   };
 
   const statusColor =
-    healthStatus === 'ok' ? 'text-emerald-600' : healthStatus === 'error' ? 'text-red-700' : 'text-muted';
+    healthStatus === 'ok' ? 'text-brand-success' : healthStatus === 'error' ? 'text-brand-danger' : 'text-muted';
+
+  const [submitting, setSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const handleLogin = (event: React.FormEvent) => {
     event.preventDefault();
+    setLoginError(null);
+    setSubmitting(true);
     navigate('/pos');
+    setSubmitting(false);
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-forge-main px-4">
-      <div className="w-full max-w-md rounded-2xl border border-brand-surface bg-forge-card px-7 py-8 shadow-lg shadow-neutral-900/5">
+      <div className="w-full max-w-md rounded-2xl border border-brand-surface bg-forge-card px-7 py-8 shadow-lg shadow-black/5">
         <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">POS ERP</div>
         <h1 className="mb-2 text-xl font-semibold tracking-tight text-content">登入</h1>
         <p className="mb-6 text-xs text-muted" aria-hidden="true" />
 
         <form onSubmit={handleLogin} className="space-y-4">
+          {loginError && (
+            <Alert variant="error">{loginError}</Alert>
+          )}
           <TextInput label="帳號（暫不驗證）" placeholder="" />
           <TextInput label="密碼（暫不驗證）" type="password" placeholder="" />
 
-          <Button type="submit" fullWidth className="mt-2" data-testid="e2e-login-submit">
-            進入門市收銀
+          <Button type="submit" fullWidth className="mt-2" data-testid="e2e-login-submit" disabled={submitting}>
+            {submitting ? '載入中…' : '進入門市收銀'}
           </Button>
           <Button
             type="button"
@@ -78,7 +88,11 @@ export const LoginPage: React.FC = () => {
             {healthStatus === 'idle' && '尚未檢查'}
             {healthStatus === 'checking' && '正在檢查後端健康狀態…'}
             {healthStatus === 'ok' && healthMessage}
-            {healthStatus === 'error' && healthMessage}
+            {healthStatus === 'error' && (
+              <span className="mt-1 block">
+                <Alert variant="error">{healthMessage}</Alert>
+              </span>
+            )}
           </div>
           {/* 隱藏部署/連線教學內容，相關說明請移至使用手冊 */}
         </div>

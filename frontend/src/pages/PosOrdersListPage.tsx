@@ -127,7 +127,7 @@ export const PosOrdersListPage: React.FC = () => {
                 type="checkbox"
                 checked={includeLines}
                 onChange={(e) => setIncludeLines(e.target.checked)}
-                className="rounded border-slate-300"
+                className="rounded border-brand-surface"
               />
               <span className="text-xs">含明細</span>
             </label>

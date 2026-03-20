@@ -203,7 +203,7 @@ export const AdminQuickReceivingPage: React.FC = () => {
               </thead>
               <tbody>
                 {lines.map((l, idx) => (
-                  <tr key={idx} className="border-b border-neutral-50">
+                  <tr key={idx} className="border-b border-brand-surface">
                     <td className="px-4 py-2.5">
                       <select
                         className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"

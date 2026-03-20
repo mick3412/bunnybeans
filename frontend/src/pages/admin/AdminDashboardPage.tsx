@@ -42,6 +42,7 @@ export const AdminDashboardPage: React.FC = () => {
   const { items: todoItems } = useAdminTodoItems(merchantId);
   const { isHidden, dismiss, snooze } = useTodoDismiss();
   const [data, setData] = useState<DashboardSummaryDto | null>(null);
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [enrichedHint, setEnrichedHint] = useState<string | null>(null);
   const [todayRevenue, setTodayRevenue] = useState<string | null>(null);
@@ -52,9 +53,11 @@ export const AdminDashboardPage: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
       const res = await getDashboardSummary();
       if (cancelled) return;
+      setLoading(false);
       if ('statusCode' in res) {
         const msg = getErrorMessage(res as ApiError);
         setErr(msg);
@@ -185,6 +188,18 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       )}
 
+      {loading && !err ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="animate-pulse rounded-lg border border-brand-surface bg-forge-card p-3">
+              <div className="h-3 w-16 rounded bg-brand-surface" />
+              <div className="mt-2 h-6 w-24 rounded bg-brand-surface" />
+            </div>
+          ))}
+          <p className="col-span-full text-center text-xs text-muted">載入中…</p>
+        </div>
+      ) : (
+      <>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" data-testid="e2e-admin-dashboard">
         <Link to="/pos/reports" className={`kpi-card-accent-blue ${cardLinkClass}`}>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">今日營收</p>
@@ -335,6 +350,8 @@ export const AdminDashboardPage: React.FC = () => {
             ))}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

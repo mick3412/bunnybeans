@@ -111,7 +111,7 @@ export const LoyaltyDashboardPage: React.FC = () => {
                   <th className="py-2">時間</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-brand-surface">
                 {recent.length === 0 && (
                   <tr>
                     <td colSpan={5} className="p-0">

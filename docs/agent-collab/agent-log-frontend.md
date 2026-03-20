@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 031
+- 做了：① **前置**：無 030 待提交（前端已提交）。② **迴歸**：build ✅；E2E skip（port 5173 佔用）。③ **四組報表 E2E**：admin-pos-reports 擴充會員營收貢獻、營收趨勢日/週/月、客單價分布、金流連結驗證。④ **POS／Login token**：PosPage、PosCheckoutModal、PosOrderDetailPage、PosOrdersListPage、PosReportsPage、LoginPage slate/neutral/emerald/shadow→token。⑤ **LoginPage**：表單 submitting 時按鈕顯示「載入中…」；健康檢查錯誤改 Alert。⑥ **Admin 區塊**：AdminReportsPage、AdminInventoryAdjustPage 錯誤→Alert；AdminDashboardPage、PosOrderDetailPage 載入 skeleton；PosReportsPage 錯誤→Alert、skeleton bg→bg-brand-surface。⑦ **採購／進貨／庫存 token**：AdminPurchaseOrdersPage、AdminReceivingNotesPage、AdminQuickReceivingPage、AdminProductsPage 側欄 shadow→token。⑧ **Loyalty／倉庫／門市 token**：LoyaltyPointLedgerPage、LoyaltyDashboardPage、LoyaltyCouponsPage、LoyaltyMembersPage divide-neutral/border-neutral/bg-slate-900→token。⑨ **PosCheckoutModal 可及性**：role="dialog"、aria-modal="true"、aria-labelledby。⑩ **PosOrderDetailPage 空態**：EmptyState「找不到此訂單」。⑪ **PosOrdersListPage**：border-slate-300→border-brand-surface。⑫ **表單 focus ring**：AdminMerchantsPage、AdminCustomerImportPage select/input 補 focus:ring。⑬ **StandardListLayout／max-width**：評估後維持現狀。⑭ **載入統一**：PosReportsPage skeleton bg-slate-200→bg-brand-surface。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用）
+- commits：25b06234 feat(frontend): INSTRUCTIONS 031
+
+---
+
 ### INSTRUCTIONS 030（Alert 統一、EmptyState、overflow、色值 token、類別拖曳）
 - 做了：① **迴歸**：build ✅；E2E skip（port 5173 佔用）。② **類別管理拖曳排序**：品項／品牌／標籤三欄支援原生 HTML5 拖曳；新增 reorderCategories、reorderBrands、reorderProductTags API；MasterSection 可選 onReorder，拖曳後呼叫 PATCH .../reorder。③ **色值 token**：border-slate-100、border-neutral-* → border-brand-surface（AdminMerchantsPage、AdminSuppliersPage、AdminReplenishmentPage、AdminCustomerImportPage、AdminProductsPage、AdminReportsPage、LoyaltyTierRulesPage）。④ **錯誤區塊統一 Alert**：PosPromosPage、AdminDashboardPage、AdminSuppliersPage、LoyaltyDashboardPage、LoyaltyCouponsPage、LoyaltyPointLedgerPage、LoyaltyTierRulesPage、LoyaltyMembersPage 改為 `<Alert variant="error">`。⑤ **表格 overflow**：AdminMerchantsPage、AdminSuppliersPage overflow-hidden → overflow-x-auto。⑥ **空態統一 EmptyState**：PosPromosPage、AdminReplenishmentPage、LoyaltyDashboardPage、LoyaltyPointLedgerPage、LoyaltyTierRulesPage 自訂空態 div 改為 EmptyState。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用）
