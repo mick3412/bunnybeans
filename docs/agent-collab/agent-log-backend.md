@@ -16,21 +16,30 @@
 ---
 
 ### INSTRUCTIONS-033（Guard 一致性、throw 工廠遷移、DTO 擴展、POS Transaction、N+1/並行優化、分頁上限、as any 清理、catch 修正、Logger、測試覆蓋）
-- 做了：依 `BACKEND-INSTRUCTIONS 033.md` §1 完成 #1～#12。
+- 做了：依 `BACKEND-INSTRUCTIONS 033.md` §1 完成 #1～#12，並補齊第二輪項目。
   - **#1 AdminApiKeyGuard**：為 MerchantController（寫入端點）、PurchaseOrderController、ReceivingNoteController、SupplierController、PurchaseReportsController、DashboardController（class-level）、PosController（POST 端點）加上 AdminApiKeyGuard。
   - **#2 純字串 throw**：merchant.service.ts getMerchant/getStore/getWarehouse、product.service.ts getProduct 改為 throwNotFound({code, message})。
   - **#3 throw-exceptions 工廠遷移**：18 個 service 檔、221+ 處 throw 遷移至 throwBadRequest/throwNotFound/throwConflict。
-  - **#4 DTO / ValidationPipe**：新增 CreatePosOrderDto、CreateCustomerDto、MergeCustomersDto、CreateMerchantDto 並接入 controller。
-  - **#5 POS Transaction**：createOrder 核心寫入（order+inventory+finance）包入 $transaction；appendPaymentToOrder 包入 $transaction。
+  - **#4 DTO / ValidationPipe**：新增 CreatePosOrderDto、CreateCustomerDto、MergeCustomersDto、CreateMerchantDto；**補齊** CreatePurchaseOrderDto、QuickReceiveDto、PatchPurchaseOrderDto、CreateFromReplenishmentDto、CreateReceivingNoteDto、PatchReceivingNoteLinesDto、ReturnToSupplierDto、RecordFinanceEventDto、ClosePeriodDto、CreateSnapshotDto；Customer merge 改用 MergeCustomersDto（primaryId、mergeIds）。
+  - **#5 POS Transaction**：createOrder 核心寫入包入 $transaction；appendPaymentToOrder 包入 $transaction；**補齊** refundToOrder、returnToStock 包入 $transaction。
   - **#6 N+1 與並行**：warehouse 庫存檢查改批次 findMany；inventory/finance 迴圈改 Promise.all；customer getConsumptionInsights 4 查詢並行；getById pointLedger+settings+lastEarned 並行。
   - **#7 手機查詢**：全表掃描改 SQL contains 末 9 碼，加 select 精簡。
   - **#8 分頁上限**：product findAll take=5000、customer listByMerchant take=5000。
-  - **#9 as any 清理**：ops.service resultCode 欄位去除 as any（Prisma client 已有型別）、tier-rule Decimal 改 Number()、finance.repository error 型別守衛、receiving-note batchCode/expiryDate 去除 as any、promotion.controller 保留必要 cast。
+  - **#9 as any 清理**：ops.service resultCode 欄位去除 as any、tier-rule Decimal 改 Number()、finance.repository error 型別守衛、receiving-note batchCode/expiryDate 去除 as any、promotion.controller 保留必要 cast。
   - **#10 catch 修正**：loyalty.controller rethrow HttpException、crm-job setImmediate catch 加 Logger.error、receiving-note 靜默 catch 加 Logger.warn、dispatch-rule-runner formatError 去除 as any。
   - **#11 業務日誌**：createOrder/refundToOrder/returnToStock/customer merge 加 Logger.log。
-  - **#12 測試覆蓋**：新增 merchant.integration-spec、dashboard.integration-spec（148 tests 全綠）。
-- 測試/驗收：`pnpm --filter pos-erp-backend test` 148 passed；`pnpm ci:backend-with-db` 通過。
-- commits：`233b798c` feat(backend): INSTRUCTIONS 033 — guard, throw-factory, DTO, $transaction, N+1, pagination, as-any, catch, logging, tests
+  - **#12 測試覆蓋**：新增 merchant.integration-spec、dashboard.integration-spec；**補齊** edge case：pos-create-order（並行 createOrder 至少一成功、sequential second refund exceeds → POS_REFUND_EXCEEDS_PAID）、customer.integration-spec（merge CUSTOMER_MERGE_INVALID when secondary not found / mergeIds empty or same as primary）。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 152 passed；`pnpm ci:backend-with-db` 通過。
+- commits：`233b798c` feat(backend): INSTRUCTIONS 033 — guard, throw-factory, DTO, $transaction, N+1, pagination, as-any, catch, logging, tests；`16472261` DTOs for Purchase/ReceivingNote/Finance/Customer merge；`8c522c46` POS refundToOrder/returnToStock $transaction；`ddf564ef` edge case tests
+
+---
+
+### INSTRUCTIONS-034（迴歸確認、033 補齊提交）
+- 做了：依 `BACKEND-INSTRUCTIONS 034.md` §1 完成迴歸維護與本輪任務。
+  - **迴歸維護**：`pnpm --filter pos-erp-backend test` 152 passed；`pnpm ci:backend-with-db` 通過。
+  - **#1 迴歸確認**：確認 033 變更無遺漏、033 補齊未提交變更已補 atomic commits。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
+- commits：`16472261` feat(backend): INSTRUCTIONS 033 補齊 — DTOs for Purchase, ReceivingNote, Finance, Customer merge；`8c522c46` POS refundToOrder/returnToStock $transaction；`ddf564ef` test(backend): edge case tests
 
 ---
 
