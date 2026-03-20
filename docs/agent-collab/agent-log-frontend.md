@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 037（036 收尾 + 驗收 + 優化審查剩餘）
+- 做了：① **formatMoney 全面替換**：PosOrderDetailPage、PosCheckoutModal、PosPage、PosOrdersListPage、AdminPurchaseOrdersPage、AdminQuickReceivingPage、AdminFinanceBalancesPage、AdminPromotionsPage、AdminReportsPage（含 formatValue）、AdminProcurementHubPage、LoyaltyReportActivityPage 等將 `toLocaleString` 金額改為 `formatMoney`。② **大列表虛擬化評估**：多數 admin 列表已有 server-side 分頁（pageSize 20–200）；PosPage 商品網格、AdminProductsPage、AdminCustomersPage 若無分頁且資料量破千可考慮 react-window；暫不實作，待實測後決策。③ **前端單元測試**：新增 vitest 4、@testing-library/react、jsdom；`formatMoney.test.ts`、`EmptyState.test.tsx` 共 9 支通過。④ **Design Token**：PosCheckoutModal 掛帳提示 amber→brand-warning。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm --filter pos-erp-frontend test` 9 passed
+- commits：`cfdd4d34` formatMoney；`91b444da` vitest unit tests；agent-log 037
+- 檔案：formatMoney 替換 12 檔、vitest 設定、test/setup.ts、formatMoney.test.ts、EmptyState.test.tsx、PosCheckoutModal.tsx、agent-log-frontend.md
+
+---
+
 ### INSTRUCTIONS 036（035 收尾 + plan 剩餘項目）
 - 做了：① **035 變更已提交**：PosPage useCallback、PosCheckoutModal TDZ、pos-credit toHaveValue 三則 atomic commits。② **E2E 驗證**：7 支 spec，e2e-seed 未成功（DATABASE_URL/db:seed）→ 2 passed、2 skipped、3 failed（pos-checkout/credit/refund 結帳 modal 未關，疑為後端/DB 未就緒）。③ **Drawer 共用元件**：新增 `shared/components/Drawer.tsx`，AdminCrmJobsPage、AdminReplenishmentPage 右側 Drawer 改用共用。④ **focus ring / aria-label**：AdminCustomersPage 合併 Modal 留存主檔 select 補 focus ring + aria-labelledby；AdminPurchaseOrdersPage、AdminReceivingNotesPage 搜尋 icon+input 補 label/aria-label。⑤ **防重複提交**：採購單建立、驗收單建立 按鈕加 disabled-on-submit。⑥ **StandardListLayout POS**：PosOrdersListPage、PosPromosPage 套用 StandardListLayout；PosReportsPage 為多區塊報表結構，評估後維持現狀。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 環境未就緒，port 許可時重跑
