@@ -18,7 +18,7 @@
 ### INSTRUCTIONS 032
 - 做了：① **前置**：無 031 待提交。② **迴歸**：build ✅；E2E skip（port 5173 佔用）。③ **Admin 其餘頁 token**：所列頁面無 slate/neutral 硬編碼殘留。④ **AdminOpsJobsPage 載入統一**：自訂 animate-spin 改為「載入中…」；Modal 內 select/input 補 focus ring。⑤ **LoyaltyCouponsPage focus ring**：狀態、類型兩 select 補 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20。⑥ **空態／錯誤／載入補齊**：AdminInventoryPage、AdminProductsPage、AdminCategoriesPage、AdminQuickReceivingPage、AdminMerchantsPage 已具備 EmptyState、Alert、載入中；AdminProductsPage jobError 區塊改 Alert。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip
-- commits：待提交
+- commits：c43864f5 feat(frontend) INSTRUCTIONS 032；46259ece docs
 
 ---
 
