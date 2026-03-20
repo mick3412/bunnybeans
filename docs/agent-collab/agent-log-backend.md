@@ -15,6 +15,17 @@
 
 ---
 
+### INSTRUCTIONS-028（迴歸 + ci:backend-with-db + 金流 byParty displayName + 商品效期篩選 + 採購排行 + 時段分析）
+- 做了：依 `BACKEND-INSTRUCTIONS 028.md` §1 完成 #1～#6。
+  - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（142 passed）。
+  - **#2 ci:backend-with-db**：`migrate deploy` → `db:seed` → test 全綠。
+  - **#3 金流 summary**：`GET /finance/summary?groupBy=partyId` 之 `byParty[]` 每筆擴充 **`displayName?`**、**`kind?`**（`finance.repository` 沿用 **`resolvePartyDisplayAndKind`**）；`api-design-inventory-finance.md` 補契約；`finance.integration-spec` 斷言欄位存在。
+  - **#4 商品剩餘天數**：`GET /products` 支援 **`minDaysUntilExpiry`**（UTC 日界、嚴格大於 N 天且須有 `expiryDate`）；`api-design.md` §6.2 補充；非法 query → **`PRODUCT_FILTER_INVALID`**。
+  - **#5 供應商採購排行**：新增 **`GET /purchase/reports/supplier-rankings`**（`PurchaseReportsService`／Controller）；僅 **`ReceivingNote` `COMPLETED`**，彙總 **`totalAmount`**（Σ qualifiedQty×unitCost）與 **`receivingNotesCount`**；`api-design-purchase.md` §1.2；`purchase.integration-spec` 一則。
+  - **#6 時段分析**：`GET /pos/reports/daily` 支援 **`groupBy=hour`**，回傳 **`byHour`**（0–23，**`createdAt` UTC 小時**）；`api-design-pos.md` 補契約；`pos-reports.integration-spec` 一則。
+- 測試/驗收：`pnpm ci:backend-with-db` 全綠（142 passed）。
+- commits：單一 commit「feat(reports): INSTRUCTIONS 028 — finance byParty, minDaysUntilExpiry, supplier rankings, POS hourly + agent-log」（請 `git log -1 --oneline` 查 short sha）
+
 ### INSTRUCTIONS-027（迴歸 + ci:backend-with-db 驗證 + api-design 對齊 + byStore）
 - 做了：依 `BACKEND-INSTRUCTIONS 027.md` §1 完成 #1～#4。
   - **#1 迴歸**：`pnpm ci:backend-with-db` 全綠（140 passed）。註：`pnpm --filter pos-erp-backend test` 單獨執行時，e2e-seed 需 DB 已執行 db:seed，建議使用 `ci:backend-with-db`。

@@ -132,10 +132,14 @@ export class FinanceRepository {
       }
       map[r.type] = Number(r._sum.amount ?? 0);
     }
+    const partyIds = Array.from(byParty.keys());
+    const resolved = await this.resolvePartyDisplayAndKind(partyIds);
     return {
-      byParty: Array.from(byParty.entries()).map(([partyId, amountsByType]) => ({
+      byParty: partyIds.map((partyId) => ({
         partyId,
-        amountsByType,
+        amountsByType: byParty.get(partyId)!,
+        displayName: resolved.get(partyId)?.displayName,
+        kind: resolved.get(partyId)?.kind,
       })),
     };
   }

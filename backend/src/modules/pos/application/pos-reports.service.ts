@@ -396,7 +396,7 @@ export class PosReportsService {
     from?: string;
     to?: string;
     storeId?: string;
-    groupBy?: 'day' | 'week' | 'month';
+    groupBy?: 'day' | 'week' | 'month' | 'hour';
   }) {
     let start: Date;
     let end: Date;
@@ -427,12 +427,31 @@ export class PosReportsService {
       orderWhere.storeId = storeId;
     }
 
-    const groupBy = ['day', 'week', 'month'].includes(filter.groupBy ?? '') ? filter.groupBy : 'day';
+    const groupBy = ['day', 'week', 'month', 'hour'].includes(filter.groupBy ?? '')
+      ? filter.groupBy
+      : 'day';
 
     const orders = await this.prisma.posOrder.findMany({
       where: orderWhere,
       select: { createdAt: true, totalAmount: true },
     });
+
+    if (groupBy === 'hour') {
+      const byHour: { hour: number; revenue: number; ordersCount: number }[] = [];
+      for (let h = 0; h < 24; h++) {
+        byHour.push({ hour: h, revenue: 0, ordersCount: 0 });
+      }
+      for (const o of orders) {
+        const h = o.createdAt.getUTCHours();
+        const slot = byHour[h]!;
+        const amt = Number(o.totalAmount);
+        slot.revenue += amt;
+        slot.ordersCount += 1;
+      }
+      const fromStr = start.toISOString().slice(0, 10);
+      const toStr = end.toISOString().slice(0, 10);
+      return { byHour, from: fromStr, to: toStr, groupBy: 'hour' as const };
+    }
 
     const bucketMap = new Map<string, { revenue: number; ordersCount: number }>();
     for (const o of orders) {

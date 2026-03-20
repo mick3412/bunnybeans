@@ -114,6 +114,7 @@ export class ProductService {
     categoryId?: string;
     brandId?: string;
     tag?: string;
+    minDaysUntilExpiry?: number;
   }) {
     const rows = await this.repo.findAll(filter);
     return rows.map(toProductResponse);

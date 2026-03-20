@@ -146,7 +146,7 @@
 
 ### 6.2 `GET /products`（stable）
 
-- **Query**：`search?`、`sku?`、`categoryId?`、`brandId?`、`tag?`（標籤需與 `tags` 陣列中某一元素**完全相等**，含繁體與空白）。`search` 亦會比對 `description` 與 `barcode`。
+- **Query**：`search?`、`sku?`、`categoryId?`、`brandId?`、`tag?`（標籤需與 `tags` 陣列中某一元素**完全相等**，含繁體與空白）。`search` 亦會比對 `description` 與 `barcode`。**`minDaysUntilExpiry?`**（非負整數）：僅回傳有 **`expiryDate`** 且「日曆剩餘天數」**嚴格大於** N 之商品（UTC 日界；供商品總覽「剩餘天數 &gt; N」篩選）。非法值 → **400 `PRODUCT_FILTER_INVALID`**。
 
 ### 6.2b `GET /products/search-barcode?q=`（stable）
 

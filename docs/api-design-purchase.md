@@ -37,6 +37,14 @@
 
 ---
 
+## 1.2 採購報表（stable）
+
+| Method | Path | 說明 |
+|--------|------|------|
+| GET | `/purchase/reports/supplier-rankings?merchantId=&from?=&to?` | 依 **已完成驗收單（ReceivingNote `COMPLETED`）** 彙總各供應商 **`totalAmount`**（Σ `qualifiedQty` × `unitCost`，與驗收完成時應付一致）與 **`receivingNotesCount`**；`from`／`to` 篩 **驗收單 `createdAt`**（與其他報表相同 ISO 日期／區間語意）。回傳 **`{ items: { supplierId, supplierCode, supplierName, receivingNotesCount, totalAmount }[], from?, to? }`**，**`items` 依 `totalAmount` 降序**。 |
+
+---
+
 ## 2. PurchaseOrder（採購單）
 
 **狀態**（與 UI 篩選一致，**無已核准**）：

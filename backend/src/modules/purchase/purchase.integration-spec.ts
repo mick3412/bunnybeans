@@ -8,6 +8,7 @@ import { PurchaseOrderService } from './application/purchase-order.service';
 import { ReceivingNoteService } from './application/receiving-note.service';
 import { SupplierService } from './application/supplier.service';
 import { InventoryService } from '../inventory/application/inventory.service';
+import { PurchaseReportsService } from './application/purchase-reports.service';
 
 describe('Purchase receiving + PURCHASE_PAYABLE (integration)', () => {
   let app: TestingModule;
@@ -16,6 +17,7 @@ describe('Purchase receiving + PURCHASE_PAYABLE (integration)', () => {
   let rnSvc: ReceivingNoteService;
   let supplierSvc: SupplierService;
   let invSvc: InventoryService;
+  let purchaseReports: PurchaseReportsService;
 
   beforeAll(async () => {
     if (!process.env.DATABASE_URL) return;
@@ -27,6 +29,7 @@ describe('Purchase receiving + PURCHASE_PAYABLE (integration)', () => {
     rnSvc = app.get(ReceivingNoteService);
     supplierSvc = app.get(SupplierService);
     invSvc = app.get(InventoryService);
+    purchaseReports = app.get(PurchaseReportsService);
   });
   afterAll(async () => {
     if (app) await app.close();
@@ -666,4 +669,79 @@ describe('Purchase receiving + PURCHASE_PAYABLE (integration)', () => {
     await prisma.supplier.deleteMany({ where: { id: sup.id } });
     await prisma.merchant.deleteMany({ where: { id: m.id } });
   }, 30000);
+
+  it('supplier rankings: aggregates amount and note count by supplier', async () => {
+    if (!process.env.DATABASE_URL) return;
+    try {
+      await prisma.$queryRaw`SELECT 1 FROM "Supplier" LIMIT 1`;
+    } catch {
+      return;
+    }
+    const m = await prisma.merchant.create({
+      data: { code: `SR-${Date.now()}`, name: 'SR' },
+    });
+    const sHigh = await prisma.supplier.create({
+      data: { merchantId: m.id, code: `SR-H-${Date.now()}`, name: 'HighSpend', status: 'ACTIVE' },
+    });
+    const sLow = await prisma.supplier.create({
+      data: { merchantId: m.id, code: `SR-L-${Date.now()}`, name: 'LowSpend', status: 'ACTIVE' },
+    });
+    const wh = await prisma.warehouse.create({
+      data: { merchantId: m.id, code: `SR-W-${Date.now()}`, name: 'SR W' },
+    });
+    const prod = await prisma.product.create({
+      data: { sku: `SR-P-${Date.now()}`, name: 'SR P' },
+    });
+
+    const po1 = await poSvc.create({
+      merchantId: m.id,
+      supplierId: sHigh.id,
+      warehouseId: wh.id,
+      orderNumber: `SR-PO1-${Date.now()}`,
+      lines: [{ productId: prod.id, qtyOrdered: 5, unitCost: 100 }],
+    });
+    await poSvc.submit(po1.id);
+    const rn1 = await rnSvc.create({ merchantId: m.id, purchaseOrderId: po1.id });
+    await rnSvc.patchLines(rn1.id, [
+      { lineId: rn1.lines[0].id, receivedQty: 5, qualifiedQty: 5, returnedQty: 0 },
+    ]);
+    await rnSvc.complete(rn1.id);
+
+    const po2 = await poSvc.create({
+      merchantId: m.id,
+      supplierId: sLow.id,
+      warehouseId: wh.id,
+      orderNumber: `SR-PO2-${Date.now()}`,
+      lines: [{ productId: prod.id, qtyOrdered: 2, unitCost: 10 }],
+    });
+    await poSvc.submit(po2.id);
+    const rn2 = await rnSvc.create({ merchantId: m.id, purchaseOrderId: po2.id });
+    await rnSvc.patchLines(rn2.id, [
+      { lineId: rn2.lines[0].id, receivedQty: 2, qualifiedQty: 2, returnedQty: 0 },
+    ]);
+    await rnSvc.complete(rn2.id);
+
+    const out = await purchaseReports.supplierRankings({ merchantId: m.id });
+    expect(out.items.length).toBeGreaterThanOrEqual(2);
+    const high = out.items.find((i) => i.supplierId === sHigh.id);
+    const low = out.items.find((i) => i.supplierId === sLow.id);
+    expect(high?.totalAmount).toBe(500);
+    expect(high?.receivingNotesCount).toBe(1);
+    expect(low?.totalAmount).toBe(20);
+    expect(out.items[0]!.totalAmount).toBeGreaterThanOrEqual(out.items[1]!.totalAmount);
+
+    await prisma.financeEvent.deleteMany({ where: { referenceId: { in: [rn1.id, rn2.id] } } });
+    await prisma.inventoryEvent.deleteMany({ where: { warehouseId: wh.id } });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: prod.id, warehouseId: wh.id },
+    });
+    await prisma.receivingNoteLine.deleteMany({ where: { receivingNoteId: { in: [rn1.id, rn2.id] } } });
+    await prisma.receivingNote.deleteMany({ where: { id: { in: [rn1.id, rn2.id] } } });
+    await prisma.purchaseOrderLine.deleteMany({ where: { poId: { in: [po1.id, po2.id] } } });
+    await prisma.purchaseOrder.deleteMany({ where: { id: { in: [po1.id, po2.id] } } });
+    await prisma.product.delete({ where: { id: prod.id } });
+    await prisma.warehouse.delete({ where: { id: wh.id } });
+    await prisma.supplier.deleteMany({ where: { id: { in: [sHigh.id, sLow.id] } } });
+    await prisma.merchant.delete({ where: { id: m.id } });
+  }, 40000);
 });

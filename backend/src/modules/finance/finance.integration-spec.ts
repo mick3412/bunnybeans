@@ -216,6 +216,8 @@ describe('FinanceService (integration)', () => {
     for (const row of byParty) {
       expect(row).toHaveProperty('partyId');
       expect(typeof row.amountsByType).toBe('object');
+      expect(row).toHaveProperty('displayName');
+      expect(row).toHaveProperty('kind');
       for (const v of Object.values(row.amountsByType)) {
         expect(typeof v).toBe('number');
       }
@@ -225,8 +227,8 @@ describe('FinanceService (integration)', () => {
   it('getSummary groupBy=day returns trend buckets', async () => {
     if (!process.env.DATABASE_URL) return;
     const pid = `trend-${Date.now()}`;
-    const d1 = new Date('2026-03-01T10:00:00.000Z').toISOString();
-    const d2 = new Date('2026-03-02T10:00:00.000Z').toISOString();
+    const d1 = new Date('2024-03-01T10:00:00.000Z').toISOString();
+    const d2 = new Date('2024-03-02T10:00:00.000Z').toISOString();
     await financeService.recordFinanceEvent({
       type: 'SALE_RECEIVABLE',
       partyId: pid,
@@ -250,15 +252,15 @@ describe('FinanceService (integration)', () => {
     });
     try {
       const out = await financeService.getSummary({
-        from: '2026-03-01T00:00:00.000Z',
-        to: '2026-03-03T00:00:00.000Z',
+        from: '2024-03-01T00:00:00.000Z',
+        to: '2024-03-03T00:00:00.000Z',
         groupBy: 'day',
       });
       expect(out).toHaveProperty('bucket', 'day');
       const items = (out as { items: Array<{ periodStart: string; amountsByType: Record<string, number> }> }).items;
       expect(items.length).toBeGreaterThanOrEqual(2);
-      const day1 = items.find((x) => x.periodStart.startsWith('2026-03-01'));
-      const day2 = items.find((x) => x.periodStart.startsWith('2026-03-02'));
+      const day1 = items.find((x) => x.periodStart.startsWith('2024-03-01'));
+      const day2 = items.find((x) => x.periodStart.startsWith('2024-03-02'));
       expect(day1?.amountsByType.SALE_RECEIVABLE).toBe(10);
       expect(day1?.amountsByType.SALE_PAYMENT).toBe(3);
       expect(day2?.amountsByType.ADJUSTMENT).toBe(2);

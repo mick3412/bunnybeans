@@ -418,8 +418,8 @@ interface PosOrderListResponse {
 
 **GET /pos/reports/daily**
 
-- **Query**：`merchantId?`（多商家時必填；單一商家可省略）、`from`、`to`（未帶則預設 last30d）、`storeId?`、**`groupBy?`**（day｜week｜month，預設 day）。
-- **Response**：`groupBy=day` 時 `byDay: { date, revenue, ordersCount }[]`；`groupBy=week|month` 時 `items: { periodStart, revenue, ordersCount }[]`。`from`、`to`。week 以週一為起點；month 以月為單位。
+- **Query**：`merchantId?`（多商家時必填；單一商家可省略）、`from`、`to`（未帶則預設 last30d）、`storeId?`、**`groupBy?`**（day｜week｜month｜hour，預設 day）。
+- **Response**：`groupBy=day` 時 `byDay: { date, revenue, ordersCount }[]`；`groupBy=week|month` 時 `items: { periodStart, revenue, ordersCount }[]`；**`groupBy=hour`** 時 **`byHour: { hour: 0..23, revenue, ordersCount }[]`**（區間內依訂單 **`createdAt` 之 UTC 小時**加總，未命中之小時仍回傳 0）。`from`、`to`。week 以週一為起點；month 以月為單位。
 
 **GET /pos/reports/order-value-distribution**
 

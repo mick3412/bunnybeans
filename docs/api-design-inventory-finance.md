@@ -80,7 +80,7 @@ interface PagedResult<T> {
 | `/finance/events`       | GET    | 查詢金流事件（只讀、分頁／篩選） | Finance    | **stable** |
 | `/finance/events/export` | GET | 金流事件 CSV（query 同 GET events；最多 1 萬列；BOM；**X-Admin-Key** 若已設） | Finance | **stable** |
 | `/finance/events`       | POST   | 新增一筆金流事件（append-only） | Finance    | **stable** |
-| `/finance/summary`     | GET    | 金流彙總（query：from、to、preset=last30d、**groupBy=type｜partyId｜day｜week**；回應 byType / byParty / trend） | Finance | **stable** |
+| `/finance/summary`     | GET    | 金流彙總（query：from、to、preset=last30d、**groupBy=type｜partyId｜day｜week**；回應 byType / byParty / trend；**groupBy=partyId** 時 `byParty[]` 每筆含 **`displayName?`**、**`kind?`**（與 balances 相同解析） | Finance | **stable** |
 | `/finance/balances`   | GET    | 應收／應付餘額（Phase 4；query **merchantId** 選填；**單一商家友善**：未傳 merchantId 且 DB 僅一筆 Merchant 時自動使用該 merchant；回傳 partyId、receivable、payable、**displayName?**、**kind?**；kind 篩選：`customer`｜`supplier`） | Finance | **stable** |
 
 金流報表（GET /finance/events、GET /finance/summary）若未來對 `from`／`to` 做區間驗證，將與 POS 報表一致回傳 **`REPORT_INVALID_RANGE`**／**`REPORT_RANGE_TOO_LARGE`**，見 [backend-error-format.md](backend-error-format.md)。
@@ -607,7 +607,7 @@ interface PagedResult<T> {
 **查詢與彙總建議**
 
 - `GET /finance/events?partyId=PLATFORM:shopee` 可查平台相關收付與費用。
-- `GET /finance/summary?groupBy=partyId` 可得到各 party 的應收／應付維度（需後端彙總邏輯以 type 分組）。
+- `GET /finance/summary?groupBy=partyId` 可得到各 party 的應收／應付維度（需後端彙總邏輯以 type 分組）；每筆 **`{ partyId, amountsByType, displayName?, kind? }`**，`displayName`／`kind` 與 **`GET /finance/balances`** 相同（`Party` 視圖或 `customer:`／`supplier:` 前綴＋主檔）。
 
 ---
 

@@ -17,6 +17,8 @@ export class ProductRepository {
     categoryId?: string;
     brandId?: string;
     tag?: string;
+    /** 僅回傳 expiryDate 之「日曆剩餘天數」嚴格大於 N 之商品（UTC 日界；需有 expiryDate） */
+    minDaysUntilExpiry?: number;
   }) {
     type Where = Prisma.ProductWhereInput;
     const and: Where[] = [];
@@ -43,6 +45,15 @@ export class ProductRepository {
       and.push({
         tags: { array_contains: filter.tag.trim() },
       });
+    }
+    if (filter?.minDaysUntilExpiry != null && Number.isFinite(filter.minDaysUntilExpiry)) {
+      const n = Math.floor(filter.minDaysUntilExpiry);
+      if (n >= 0) {
+        const boundary = new Date();
+        boundary.setUTCHours(0, 0, 0, 0);
+        boundary.setUTCDate(boundary.getUTCDate() + n + 1);
+        and.push({ expiryDate: { not: null, gte: boundary } });
+      }
     }
     const where: Where = and.length ? { AND: and } : {};
     return this.prisma.product.findMany({

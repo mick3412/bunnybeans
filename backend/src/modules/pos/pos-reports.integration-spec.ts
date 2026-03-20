@@ -581,6 +581,58 @@ describe('PosReportsService (integration)', () => {
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 25000);
 
+  it('daily with groupBy=hour returns byHour 0..23 with UTC bucketing', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `MR-HR-${Date.now()}`, name: 'Hour Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SR-HR-${Date.now()}`, name: 'Hour Store', merchantId: merchant.id },
+    });
+
+    await prisma.posOrder.create({
+      data: {
+        orderNumber: `ORD-HR-${Date.now()}-a`,
+        storeId: store.id,
+        subtotalAmount: 30,
+        discountAmount: 0,
+        totalAmount: 30,
+        createdAt: new Date('2025-06-15T14:25:00.000Z'),
+      },
+    });
+    await prisma.posOrder.create({
+      data: {
+        orderNumber: `ORD-HR-${Date.now()}-b`,
+        storeId: store.id,
+        subtotalAmount: 70,
+        discountAmount: 0,
+        totalAmount: 70,
+        createdAt: new Date('2025-06-15T14:40:00.000Z'),
+      },
+    });
+
+    const out = await reports.getDaily({
+      merchantId: merchant.id,
+      storeId: store.id,
+      from: '2025-06-15',
+      to: '2025-06-15',
+      groupBy: 'hour',
+    });
+
+    expect(out.groupBy).toBe('hour');
+    expect(out.byHour).toBeDefined();
+    const bh = out.byHour ?? [];
+    expect(bh.length).toBe(24);
+    expect(bh[14]!.ordersCount).toBe(2);
+    expect(bh[14]!.revenue).toBe(100);
+    expect(bh[13]!.ordersCount).toBe(0);
+
+    await prisma.posOrder.deleteMany({ where: { storeId: store.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 20000);
+
   it('order-value-distribution returns buckets for order amounts', async () => {
     if (!process.env.DATABASE_URL) return;
 

@@ -51,14 +51,14 @@ export class PosReportsController {
     return this.reports.getTopItems({ merchantId: resolved, from, to, storeId, limit: lim, sortBy });
   }
 
-  /** 區間內按日／週／月彙總；query from、to、storeId?、groupBy?（day｜week｜month） */
+  /** 區間內按日／週／月／時段彙總；query from、to、storeId?、groupBy?（day｜week｜month｜hour） */
   @Get('daily')
   async daily(
     @Query('merchantId') merchantId?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('storeId') storeId?: string,
-    @Query('groupBy') groupBy?: 'day' | 'week' | 'month',
+    @Query('groupBy') groupBy?: 'day' | 'week' | 'month' | 'hour',
   ) {
     const resolved = await this.resolveMerchantId(merchantId);
     return this.reports.getDaily({ merchantId: resolved, from, to, storeId, groupBy });

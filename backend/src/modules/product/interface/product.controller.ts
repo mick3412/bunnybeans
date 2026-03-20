@@ -27,9 +27,21 @@ export class ProductController {
     @Query('categoryId') categoryId?: string,
     @Query('brandId') brandId?: string,
     @Query('tag') tag?: string,
+    @Query('minDaysUntilExpiry') minDaysUntilExpiry?: string,
   ) {
+    let minDays: number | undefined;
+    if (minDaysUntilExpiry?.trim()) {
+      const n = parseInt(minDaysUntilExpiry.trim(), 10);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new BadRequestException({
+          message: 'minDaysUntilExpiry must be a non-negative integer',
+          code: 'PRODUCT_FILTER_INVALID',
+        });
+      }
+      minDays = n;
+    }
     const hasFilter =
-      search || sku || categoryId || brandId || tag;
+      search || sku || categoryId || brandId || tag || minDays !== undefined;
     return this.service.listProducts(
       hasFilter
         ? {
@@ -38,6 +50,7 @@ export class ProductController {
             categoryId: categoryId?.trim() || undefined,
             brandId: brandId?.trim() || undefined,
             tag: tag?.trim() || undefined,
+            minDaysUntilExpiry: minDays,
           }
         : undefined,
     );
