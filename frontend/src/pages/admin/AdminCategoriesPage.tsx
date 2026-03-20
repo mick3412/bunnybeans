@@ -7,14 +7,17 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  reorderCategories,
   getBrands,
   createBrand,
   updateBrand,
   deleteBrand,
+  reorderBrands,
   listProductTags,
   createProductTag,
   updateProductTag,
   deleteProductTag,
+  reorderProductTags,
   type CategoryDto,
   type BrandDto,
   type ProductTagDto,
@@ -87,6 +90,8 @@ function MasterSection(props: {
     onCancel: () => void;
   };
   onDelete: (row: MasterRow) => void;
+  /** 提供時顯示拖曳把手並支援拖曳排序；ids 為新順序 */
+  onReorder?: (ids: string[]) => void | Promise<void>;
   emptyText: string;
   testId?: string;
 }) {
@@ -99,9 +104,31 @@ function MasterSection(props: {
     editingId,
     edit,
     onDelete,
+    onReorder,
     emptyText,
     testId,
   } = props;
+
+  const [dragId, setDragId] = React.useState<string | null>(null);
+  const [dragOverId, setDragOverId] = React.useState<string | null>(null);
+  const [sorting, setSorting] = React.useState(false);
+
+  const handleDrop = React.useCallback(
+    (fromId: string, toId: string) => {
+      setDragOverId(null);
+      setDragId(null);
+      if (!onReorder || fromId === toId) return;
+      const fromIdx = rows.findIndex((x) => x.id === fromId);
+      const toIdx = rows.findIndex((x) => x.id === toId);
+      if (fromIdx < 0 || toIdx < 0) return;
+      const next = rows.slice();
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      setSorting(true);
+      void Promise.resolve(onReorder(next.map((r) => r.id))).finally(() => setSorting(false));
+    },
+    [onReorder, rows],
+  );
 
   return (
     <div className={cardClass} data-testid={testId}>
@@ -139,10 +166,41 @@ function MasterSection(props: {
           新增
         </Button>
       </div>
-      <div className="max-h-64 overflow-y-auto rounded-lg border border-brand-surface">
+      <div
+        className={[
+          'max-h-64 overflow-y-auto rounded-lg border border-brand-surface',
+          sorting ? 'pointer-events-none opacity-70' : '',
+        ].join(' ')}
+      >
         <ul className="divide-y divide-brand-surface text-sm">
           {rows.map((r) => (
-            <li key={r.id} className="flex items-center justify-between gap-2 px-3 py-2">
+            <li
+              key={r.id}
+              className={[
+                'flex items-center justify-between gap-2 px-3 py-2',
+                dragOverId === r.id ? 'ring-1 ring-inset ring-brand-primary/30' : '',
+              ].join(' ')}
+              onDragOver={
+                onReorder
+                  ? (e) => {
+                      if (!dragId || dragId === r.id) return;
+                      e.preventDefault();
+                      setDragOverId(r.id);
+                    }
+                  : undefined
+              }
+              onDragLeave={
+                onReorder ? () => (dragOverId === r.id ? setDragOverId(null) : undefined) : undefined
+              }
+              onDrop={
+                onReorder
+                  ? (e) => {
+                      e.preventDefault();
+                      handleDrop(dragId ?? '', r.id);
+                    }
+                  : undefined
+              }
+            >
               {editingId === r.id ? (
                 <>
                   <div className="flex flex-1 flex-wrap gap-1">
@@ -184,6 +242,36 @@ function MasterSection(props: {
                 </>
               ) : (
                 <>
+                  {onReorder && (
+                    <button
+                      type="button"
+                      draggable
+                      disabled={sorting}
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border border-brand-surface bg-white text-muted hover:border-brand-primary/30 disabled:opacity-50"
+                      title="拖曳調整排序"
+                      aria-label="拖曳調整排序"
+                      data-testid={testId ? `${testId}-row-drag-handle` : undefined}
+                      onClick={(e) => e.stopPropagation()}
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        setDragId(r.id);
+                        try {
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', r.id);
+                        } catch {
+                          /* ignore */
+                        }
+                      }}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setDragOverId(null);
+                      }}
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                        <path d="M10 6h4v2h-4V6zm0 5h4v2h-4v-2zm0 5h4v2h-4v-2z" />
+                      </svg>
+                    </button>
+                  )}
                   <span className="truncate font-medium">{r.code}</span>
                   <span className="truncate text-muted">{r.name}</span>
                   <div className="flex shrink-0 gap-1">
@@ -343,6 +431,19 @@ export const AdminCategoriesPage: React.FC = () => {
     await loadCategories();
   };
 
+  const handleReorderCategories = useCallback(
+    async (ids: string[]) => {
+      const out = await reorderCategories(ids);
+      if (out && typeof out === 'object' && 'statusCode' in out) {
+        setCatErr(getErrorMessage(out as ApiError));
+        return;
+      }
+      showToast('已更新排序');
+      await loadCategories();
+    },
+    [showToast, loadCategories],
+  );
+
   const handleDeleteCategory = async (c: CategoryDto) => {
     if (!confirm(`確定刪除類別「${c.name}」？`)) return;
     setCatErr(null);
@@ -466,6 +567,19 @@ export const AdminCategoriesPage: React.FC = () => {
     if (next && next !== brandEditCode) setBrandEditCode(next);
   }, [brandEditId, brandEditName, brandEditCodeTouched, brands, brandEditCode]);
 
+  const handleReorderBrands = useCallback(
+    async (ids: string[]) => {
+      const out = await reorderBrands(ids);
+      if (out && typeof out === 'object' && 'statusCode' in out) {
+        setBrandErr(getErrorMessage(out as ApiError));
+        return;
+      }
+      showToast('已更新排序');
+      await loadBrands();
+    },
+    [showToast, loadBrands],
+  );
+
   const handleDeleteBrand = async (b: BrandDto) => {
     if (!confirm(`確定刪除品牌「${b.name}」？`)) return;
     setBrandErr(null);
@@ -574,6 +688,20 @@ export const AdminCategoriesPage: React.FC = () => {
     if (next && next !== tagEditCode) setTagEditCode(next);
   }, [tagEditId, tagEditName, tagEditCodeTouched, tagMaster, tagEditCode]);
 
+  const handleReorderTags = useCallback(
+    async (ids: string[]) => {
+      if (!merchantId) return;
+      const out = await reorderProductTags(merchantId, ids);
+      if (out && typeof out === 'object' && 'statusCode' in out) {
+        setTagErr(getErrorMessage(out as ApiError));
+        return;
+      }
+      showToast('已更新排序');
+      await loadTags();
+    },
+    [merchantId, showToast, loadTags],
+  );
+
   const deleteTag = async (t: ProductTagDto) => {
     if (!confirm(`確定刪除標籤「${t.name}」？`)) return;
     setTagErr(null);
@@ -619,6 +747,7 @@ export const AdminCategoriesPage: React.FC = () => {
             onCancel: () => setCatEditId(null),
           }}
           onDelete={(r) => void handleDeleteCategory({ id: r.id, code: r.code, name: r.name })}
+          onReorder={handleReorderCategories}
           emptyText="尚無類別"
         />
 
@@ -651,6 +780,7 @@ export const AdminCategoriesPage: React.FC = () => {
             onCancel: () => setBrandEditId(null),
           }}
           onDelete={(r) => void handleDeleteBrand({ id: r.id, code: r.code, name: r.name })}
+          onReorder={handleReorderBrands}
           emptyText="尚無品牌"
         />
 
@@ -696,6 +826,7 @@ export const AdminCategoriesPage: React.FC = () => {
               code: r.code,
             } as ProductTagDto)
           }
+          onReorder={merchantId ? handleReorderTags : undefined}
           emptyText="尚無標籤"
         />
       </div>

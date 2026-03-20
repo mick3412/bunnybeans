@@ -15,8 +15,8 @@
 
 ---
 
-### INSTRUCTIONS 030（Alert 統一、EmptyState、overflow、色值 token、類別拖曳待後端）
-- 做了：① **迴歸**：build ✅；E2E skip（port 5173 佔用）。② **類別管理拖曳排序**：待後端 030 完成 sortOrder 與 reorder API 後實作。③ **色值 token**：border-slate-100、border-neutral-* → border-brand-surface（AdminMerchantsPage、AdminSuppliersPage、AdminReplenishmentPage、AdminCustomerImportPage、AdminProductsPage、AdminReportsPage、LoyaltyTierRulesPage）。④ **錯誤區塊統一 Alert**：PosPromosPage、AdminDashboardPage、AdminSuppliersPage、LoyaltyDashboardPage、LoyaltyCouponsPage、LoyaltyPointLedgerPage、LoyaltyTierRulesPage、LoyaltyMembersPage 改為 `<Alert variant="error">`。⑤ **表格 overflow**：AdminMerchantsPage、AdminSuppliersPage overflow-hidden → overflow-x-auto。⑥ **空態統一 EmptyState**：PosPromosPage、AdminReplenishmentPage、LoyaltyDashboardPage、LoyaltyPointLedgerPage、LoyaltyTierRulesPage 自訂空態 div 改為 EmptyState。
+### INSTRUCTIONS 030（Alert 統一、EmptyState、overflow、色值 token、類別拖曳）
+- 做了：① **迴歸**：build ✅；E2E skip（port 5173 佔用）。② **類別管理拖曳排序**：品項／品牌／標籤三欄支援原生 HTML5 拖曳；新增 reorderCategories、reorderBrands、reorderProductTags API；MasterSection 可選 onReorder，拖曳後呼叫 PATCH .../reorder。③ **色值 token**：border-slate-100、border-neutral-* → border-brand-surface（AdminMerchantsPage、AdminSuppliersPage、AdminReplenishmentPage、AdminCustomerImportPage、AdminProductsPage、AdminReportsPage、LoyaltyTierRulesPage）。④ **錯誤區塊統一 Alert**：PosPromosPage、AdminDashboardPage、AdminSuppliersPage、LoyaltyDashboardPage、LoyaltyCouponsPage、LoyaltyPointLedgerPage、LoyaltyTierRulesPage、LoyaltyMembersPage 改為 `<Alert variant="error">`。⑤ **表格 overflow**：AdminMerchantsPage、AdminSuppliersPage overflow-hidden → overflow-x-auto。⑥ **空態統一 EmptyState**：PosPromosPage、AdminReplenishmentPage、LoyaltyDashboardPage、LoyaltyPointLedgerPage、LoyaltyTierRulesPage 自訂空態 div 改為 EmptyState。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用）
 - commits：尚未提交
 

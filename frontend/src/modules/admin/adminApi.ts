@@ -19,9 +19,11 @@ function needsAdminKey(path: string, method: string): boolean {
   if (p === 'products/batch-price' && m === 'PATCH') return true;
   if (p.startsWith('products/') && (m === 'PATCH' || m === 'DELETE')) return true;
   if (p === 'categories' && m === 'POST') return true;
+  if (p === 'categories/reorder' && m === 'PATCH') return true;
   if (/^categories\/.+/.test(p) && m === 'PATCH') return true;
   if (/^categories\/.+/.test(p) && m === 'DELETE') return true;
   if (p === 'brands' && m === 'POST') return true;
+  if (p === 'brands/reorder' && m === 'PATCH') return true;
   if (/^brands\/.+/.test(p) && m === 'PATCH') return true;
   if (/^brands\/.+/.test(p) && m === 'DELETE') return true;
   if (p === 'promotion-rules' && m === 'POST') return true;
@@ -63,6 +65,7 @@ function needsAdminKey(path: string, method: string): boolean {
   if (pathOnly === 'crm/dispatch-rules' && (m === 'GET' || m === 'POST')) return true;
   if ((m === 'PATCH' || m === 'DELETE') && /^crm\/dispatch-rules\/[^/]+$/.test(pathOnly)) return true;
   if (pathOnly === 'product-tags' && m === 'POST') return true;
+  if (pathOnly === 'product-tags/reorder' && m === 'PATCH') return true;
   if (m === 'PATCH' && /^product-tags\/[^/]+$/.test(pathOnly)) return true;
   if (m === 'DELETE' && /^product-tags\/[^/]+$/.test(pathOnly)) return true;
   if (pathOnly === 'purchase-orders/from-replenishment' && m === 'POST') return true;
@@ -1234,6 +1237,18 @@ export async function deleteProductTag(id: string): Promise<void | ApiError> {
   if (!out.ok) return out.error;
 }
 
+/** PATCH /product-tags/reorder — 拖曳排序；body: { merchantId: string; ids: string[] } */
+export async function reorderProductTags(
+  merchantId: string,
+  ids: string[],
+): Promise<void | ApiError> {
+  const out = await request<unknown>('product-tags/reorder', {
+    method: 'PATCH',
+    body: JSON.stringify({ merchantId, ids }),
+  });
+  if (!out.ok) return out.error;
+}
+
 export type ProductImportResult = {
   ok: number;
   failed: { row: number; reason: string }[];
@@ -1836,6 +1851,15 @@ export async function updateCategory(
   return out.data;
 }
 
+/** PATCH /categories/reorder — 拖曳排序；body: { ids: string[] } */
+export async function reorderCategories(ids: string[]): Promise<void | ApiError> {
+  const out = await request<unknown>('categories/reorder', {
+    method: 'PATCH',
+    body: JSON.stringify({ ids }),
+  });
+  if (!out.ok) return out.error;
+}
+
 /** 後端若已上 DELETE /categories/:id 再使用；否則 404 */
 export async function deleteCategory(id: string): Promise<void | ApiError> {
   const out = await request<unknown>(`categories/${encodeURIComponent(id)}`, {
@@ -1870,6 +1894,15 @@ export async function updateBrand(
 
 export async function deleteBrand(id: string): Promise<void | ApiError> {
   const out = await request<unknown>(`brands/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!out.ok) return out.error;
+}
+
+/** PATCH /brands/reorder — 拖曳排序；body: { ids: string[] } */
+export async function reorderBrands(ids: string[]): Promise<void | ApiError> {
+  const out = await request<unknown>('brands/reorder', {
+    method: 'PATCH',
+    body: JSON.stringify({ ids }),
+  });
   if (!out.ok) return out.error;
 }
 
