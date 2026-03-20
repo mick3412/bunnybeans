@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../shared/components/Button';
 import { usePosCart, POS_TAX_RATE } from '../modules/pos/usePosCart';
 import type { PosProduct, PosProductDisplay } from '../modules/pos/types';
