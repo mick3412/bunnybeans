@@ -284,11 +284,19 @@ export async function getPosTopItems(
   if (params.merchantId) q.set('merchantId', params.merchantId);
   if (params.limit != null) q.set('limit', String(params.limit));
   if (params.sortBy) q.set('sortBy', params.sortBy);
-  const out = await request<PosTopItemRow[]>(`pos/reports/top-items?${q.toString()}`, {
+  const out = await request<{ items: PosTopItemRow[]; from?: string; to?: string }>(`pos/reports/top-items?${q.toString()}`, {
     traceId: traceId ?? genTraceId(),
   });
   if (!out.ok) return out.error;
-  return out.data;
+  const data = out.data as { items?: Array<PosTopItemRow & { productName?: string }> };
+  const raw = Array.isArray(data?.items) ? data.items : [];
+  return raw.map((r) => ({
+    productId: r.productId,
+    sku: r.sku,
+    name: r.name ?? r.productName,
+    quantity: r.quantity,
+    revenue: r.revenue,
+  }));
 }
 
 export interface PosDailyRow {
