@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
@@ -253,8 +254,10 @@ export const AdminCrmJobsPage: React.FC = () => {
     >
 
       {err && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          <span>{err}</span>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <Alert variant="error" className="flex-1 min-w-[200px]">
+            {err}
+          </Alert>
           <Button type="button" size="sm" variant="secondary" onClick={() => void load()}>
             重試
           </Button>
@@ -374,9 +377,9 @@ export const AdminCrmJobsPage: React.FC = () => {
 
             <div className="h-[calc(100%-52px)] overflow-y-auto p-4">
               {drawerErr && (
-                <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                <Alert variant="error" className="mb-3">
                   {drawerErr}
-                </div>
+                </Alert>
               )}
               {drawerLoading ? (
                 <div className="py-10 text-center text-sm text-muted">載入中…</div>
@@ -400,9 +403,9 @@ export const AdminCrmJobsPage: React.FC = () => {
                     </div>
                   </div>
                   {drawerJob.error && (
-                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                    <Alert variant="error" className="mt-3">
                       {drawerJob.error}
-                    </div>
+                    </Alert>
                   )}
                   {(drawerJob.result?.errors?.length ?? 0) > 0 && (
                     <details className="mt-3 rounded-xl border border-brand-surface bg-table-head p-3">
