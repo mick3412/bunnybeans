@@ -21,7 +21,9 @@ import {
   type SlowMovingItem,
   type ApiError,
 } from '../../modules/admin/adminApi';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { StandardFloatBar } from '../../shared/components/StandardFloatBar';
 import { getErrorMessage, showAdminApiErrorToast } from '../../shared/errors/errorMessages';
 import { useAdminToast } from './AdminToastContext';
@@ -43,6 +45,7 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
     invViewParam === 'slowMoving' ? 'slowMoving' : 'balances',
   );
   const [balances, setBalances] = useState<BalanceEnrichedRow[]>([]);
+  const [balancesLoading, setBalancesLoading] = useState(false);
   const [events, setEvents] = useState<{
     items: {
       id: string;
@@ -235,8 +238,10 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
   useEffect(() => {
     if (!warehouseId) return;
     setErr(null);
+    setBalancesLoading(true);
     (async () => {
       const b = await getBalancesEnriched(warehouseId);
+      setBalancesLoading(false);
       if (!Array.isArray(b)) {
         const msg = getErrorMessage(b as ApiError);
         setErr(msg);
@@ -321,9 +326,9 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
       </p>
 
       {err && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <Alert variant="error" className="mb-4">
           {err}
-        </div>
+        </Alert>
       )}
 
       <div
@@ -727,12 +732,27 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredBalancesForStocktake.length === 0 ? (
+                  {balancesLoading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-muted">
-                        {balances.length === 0
-                          ? '此倉尚無庫存匯總（可自「入庫／盤點」或 POS 銷售後產生）'
-                          : '無符合篩選的品項'}
+                      <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted">
+                        載入中…
+                      </td>
+                    </tr>
+                  ) : filteredBalancesForStocktake.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8">
+                        <EmptyState
+                          message={
+                            balances.length === 0
+                              ? '此倉尚無庫存匯總'
+                              : '無符合篩選的品項'
+                          }
+                          description={
+                            balances.length === 0
+                              ? '可自「入庫／盤點」或 POS 銷售後產生'
+                              : undefined
+                          }
+                        />
                       </td>
                     </tr>
                   ) : (
@@ -846,7 +866,9 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
                 <Button type="button" size="sm" variant="secondary" onClick={() => void loadExpiring()} disabled={expiringLoading}>
                   {expiringLoading ? '載入中…' : '重新整理'}
                 </Button>
-                {expiringErr ? <div className="text-xs text-brand-danger">{expiringErr}</div> : null}
+                {expiringErr ? (
+                  <Alert variant="error" className="shrink-0">{expiringErr}</Alert>
+                ) : null}
               </div>
 
               <div className="rounded-xl border border-brand-surface">
@@ -1138,9 +1160,9 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
               {slowLoading && <span className="text-xs text-muted">載入中…</span>}
             </div>
             {slowErr && (
-              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <Alert variant="error" className="mt-3">
                 {slowErr}
-              </div>
+              </Alert>
             )}
             {!merchantId && (
               <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -1161,10 +1183,16 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
                 </tr>
               </thead>
               <tbody>
-                {slowItems.length === 0 && !slowLoading ? (
+                {slowLoading ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-10 text-center text-muted">
-                      目前條件下沒有滯銷品
+                    <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">
+                      載入中…
+                    </td>
+                  </tr>
+                ) : slowItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10">
+                      <EmptyState message="目前條件下沒有滯銷品" />
                     </td>
                   </tr>
                 ) : (
