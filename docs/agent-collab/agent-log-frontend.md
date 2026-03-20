@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 026（getPosTopItems、Vite proxy、客單價分布、庫存 tab、盤點 filter、商品 Filter）
+- 做了：① **getPosTopItems** 修復：後端回傳 `{ items }` 時正確取出，productName→name。② **Vite proxy** `/pos` 涵蓋 `/pos/reports/*`。③ **PosReportsPage** 客單價分布 response 解析加強。④ **庫存 tab 重複**：AdminInventoryPage embeddedInHub 時隱藏庫存餘額/滯銷品 tab。⑤ **盤點列表**：新增 SKU/品名篩選、表格 max-h 60vh 可滾動。⑥ **AdminProductsPage** 分類/品牌 Filter。⑦ **POS 會員**（AD-HOC）：購物車 searchCustomers typeahead、結帳點數餘額顯示。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 許可時補跑 admin-categories、admin-ops-report-clicks-full、admin-balances、admin-pos-reports）。
+- commits：99aca88e fix(inventory)；23cd772d feat(products) Filter；885f7285 fix(reports)；e7fcf482 fix(api)+proxy；3a5efe47 feat(pos) 會員；9706cc4f chore AD-HOC；85cae184 docs
+
+---
+
 ### INSTRUCTIONS 025（色值 token 統一、AdminMerchantsPage StandardListLayout、四組報表 E2E）
 - 做了：① **色值 token 全站統一**：border-[#e2e8f0]→border-brand-surface、#0ea5e9→brand-primary 系、bg-[#f8fafc]→bg-table-head、stroke→var(--color-brand-*)。② **AdminMerchantsPage** 改用 StandardListLayout（loading/error/empty/aboveContent）。③ **admin-pos-reports E2E** 擴充：會員營收貢獻、營收趨勢（日/週/月切換）、客單價分布、金流報表連結四區塊驗證。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 5173 佔用，補跑時機：`pnpm exec playwright test e2e/admin-pos-reports.spec.ts`）。
