@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../shared/components/Button';
+import { StandardListLayout } from '../shared/components/StandardListLayout';
 import { listOrders, getStores } from '../modules/pos/posOrdersApi';
 import { fetchCsvExport } from '../modules/admin/adminApi';
 import { getErrorMessage } from '../shared/errors/errorMessages';
@@ -82,13 +83,11 @@ export const PosOrdersListPage: React.FC = () => {
   }, [load]);
 
   return (
-    <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-pos-orders">
-      <div className="border-b border-brand-surface pb-2">
-        <h2 className="text-lg font-semibold text-content">訂單查詢</h2>
-        <p className="mt-1 text-sm text-muted">共 {total} 筆</p>
-      </div>
-      <div className="mt-4">
-          <div className="mb-2 flex flex-wrap items-end gap-2 text-xs">
+    <StandardListLayout
+      title="訂單查詢"
+      description={`共 ${total} 筆`}
+      filters={
+          <div className="flex flex-wrap items-end gap-2 text-xs">
             <div className="flex min-w-[120px] flex-col">
               <label className="mb-0.5 text-muted">門市</label>
               <select
@@ -180,19 +179,21 @@ export const PosOrdersListPage: React.FC = () => {
               </Button>
             </div>
           </div>
-          {error && (
-            <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">
-              <div>{error}</div>
-              {errorTraceId && (
-                <div className="mt-1 break-all text-xs text-red-500">traceId: {errorTraceId}</div>
-              )}
-            </div>
-          )}
-          {loading ? (
-            <div className="py-10 text-center text-xs text-muted">載入中…</div>
-          ) : orders.length === 0 ? (
-            <div className="py-10 text-center text-xs text-muted">目前尚無訂單。</div>
-          ) : (
+      }
+      error={
+        error ? (
+          <>
+            {error}
+            {errorTraceId ? <div className="mt-1 break-all text-xs opacity-80">traceId: {errorTraceId}</div> : null}
+          </>
+        ) : undefined
+      }
+      loading={loading}
+      empty={!loading && orders.length === 0}
+      emptyMessage="目前尚無訂單。"
+      testId="e2e-pos-orders"
+    >
+          {orders.length > 0 ? (
             <>
               {/* 小螢幕：卡片 */}
               <ul className="space-y-2 md:hidden">
@@ -327,8 +328,7 @@ export const PosOrdersListPage: React.FC = () => {
                 </div>
               )}
             </>
-          )}
-      </div>
-    </div>
+          ) : null}
+    </StandardListLayout>
   );
 };

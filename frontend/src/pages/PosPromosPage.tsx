@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { StandardListLayout } from '../shared/components/StandardListLayout';
 import { getStores } from '../modules/pos/posOrdersApi';
 import { listPromotionRules, type PromotionRuleDto, type ApiError } from '../modules/admin/adminApi';
 import { getErrorMessage } from '../shared/errors/errorMessages';
-import { Alert } from '../shared/components/Alert';
-import { EmptyState } from '../shared/components/EmptyState';
 
 export const PosPromosPage: React.FC = () => {
   const [merchantId, setMerchantId] = useState<string>('');
@@ -51,32 +50,27 @@ export const PosPromosPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-pos-promos">
-      <div className="border-b border-brand-surface pb-2">
-        <h2 className="text-lg font-semibold text-content">進行中促銷</h2>
-        <p className="mt-1 text-sm text-muted">
-          與收銀門市同源 <span className="font-mono text-xs">merchantId</span>，僅列出狀態為進行中之規則（唯讀）。
-        </p>
-        <p className="mt-1 text-sm">
-          <Link to="/admin/promotions" className="font-medium text-brand-primary hover:underline">
-            後台編輯促銷規則
-          </Link>
-        </p>
-      </div>
-
-      {loading && <div className="mt-6 text-sm text-muted">載入中…</div>}
-      {err && !loading && (
-        <div className="mt-6">
-          <Alert variant="error">{err}</Alert>
-        </div>
-      )}
-      {!loading && !err && rows.length === 0 && (
-        <div className="mt-6">
-          <EmptyState message="目前無進行中之促銷規則" />
-        </div>
-      )}
-      {!loading && rows.length > 0 && (
-        <ul className="mt-6 max-w-2xl space-y-3">
+    <StandardListLayout
+      title="進行中促銷"
+      description={
+        <>
+          <p className="text-sm text-muted">
+            與收銀門市同源 <span className="font-mono text-xs">merchantId</span>，僅列出狀態為進行中之規則（唯讀）。
+          </p>
+          <p className="mt-1 text-sm">
+            <Link to="/admin/promotions" className="font-medium text-brand-primary hover:underline">
+              後台編輯促銷規則
+            </Link>
+          </p>
+        </>
+      }
+      loading={loading}
+      error={err ?? undefined}
+      empty={!loading && !err && rows.length === 0}
+      emptyMessage="目前無進行中之促銷規則"
+      testId="e2e-pos-promos"
+    >
+        <ul className="max-w-2xl space-y-3">
           {rows.map((p) => (
             <li
               key={p.id}
@@ -99,7 +93,6 @@ export const PosPromosPage: React.FC = () => {
             </li>
           ))}
         </ul>
-      )}
-    </div>
+    </StandardListLayout>
   );
 };
