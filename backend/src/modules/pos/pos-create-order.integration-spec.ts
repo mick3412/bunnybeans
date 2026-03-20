@@ -43,6 +43,54 @@ describe('PosService (integration)', () => {
     if (app) await app.close();
   });
 
+  it('listProductsWithInventory returns products with onHandQty for store warehouse', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `T-LPI-${Date.now()}`, name: 'Test Merchant LPI' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `S-LPI-${Date.now()}`, name: 'Test Store LPI', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: {
+        code: `W-LPI-${Date.now()}`,
+        name: 'Test WH LPI',
+        merchantId: merchant.id,
+        storeId: store.id,
+      },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-LPI-${Date.now()}`, name: 'Product LPI' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: {
+        productId_warehouseId: { productId: product.id, warehouseId: warehouse.id },
+      },
+      create: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        onHandQty: 42,
+      },
+      update: { onHandQty: 42 },
+    });
+
+    const items = await posService.listProductsWithInventory(store.id);
+    expect(Array.isArray(items)).toBe(true);
+    const found = items.find((p) => p.id === product.id);
+    expect(found).toBeDefined();
+    expect(found!.onHandQty).toBe(42);
+    expect(found!.name).toBe('Product LPI');
+
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  });
+
   it('creates order, deducts inventory, and records finance event', async () => {
     if (!process.env.DATABASE_URL) return;
 

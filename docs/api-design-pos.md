@@ -126,6 +126,7 @@ interface PosOrderListResponse {
 
 | Path               | Method | 說明                            | 狀態   |
 |--------------------|--------|---------------------------------|--------|
+| `/pos/products`    | GET    | 取得產品列表含庫存（依 storeId 彙總門市倉庫 onHandQty） | **stable** |
 | `/pos/orders`      | POST   | 建立一筆 POS 銷售單             | **stable** |
 | `/pos/orders`      | GET    | 取得 POS 銷售單列表（分頁）     | **stable** |
 | `/pos/orders/export` | GET | 訂單 CSV；**`includeLines=1`** 時每明細一列（最多 1 萬**明細列**）；否則訂單層級最多 1 萬列；BOM；Admin Key | **stable** |
@@ -142,6 +143,16 @@ interface PosOrderListResponse {
   - **Finance**：`SALE_RECEIVABLE`、`SALE_PAYMENT`、`SALE_REFUND` 之 referenceId = PosOrder.id；可用 `GET /finance/events?referenceId={orderId}` 查該訂單對應金流。
   - **Loyalty**：PointLedger 的 EARNED／BURNED 之 referenceId = PosOrder.id；點數存摺可依 referenceId 跳至 `GET /pos/orders/:id` 訂單明細。
 - 前端報表可依訂單 id 提供「穿透」至金流事件或點數存摺；反之從 Finance／Loyalty 報表點擊 referenceId 可連回 POS 訂單明細。
+
+#### 4.0a 產品列表含庫存 `GET /pos/products`（stable）
+
+- **Query**（必填）：`storeId` — 門市 id，用以解析該門市所屬倉庫並彙總庫存。
+- **用途**：供 POS 收銀區產品塊顯示；回傳產品基本欄位（id、sku、barcode、name、salePrice 等）及該門市對應倉庫之 **`onHandQty`**（InventoryBalance 彙總）。
+- **回應**：`200`，`items: Array<{ id, sku, barcode, name, salePrice, ... , onHandQty: number }>`。
+- **錯誤**：`400` **`POS_PRODUCTS_STORE_REQUIRED`**（未帶 storeId）；`404` **`POS_STORE_NOT_FOUND`**（門市不存在）。
+- **說明**：門市無關聯倉庫時，各產品 `onHandQty` 為 0。
+
+---
 
 > **統一規則（stable）**：PosOrder.id（UUID）是 POS/Finance/Loyalty 三個模組共用的單據 referenceId。
 
