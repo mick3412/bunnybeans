@@ -372,30 +372,32 @@ export class PosService {
     });
     if (!receivable) throwBadRequest('POS_CREDIT_NO_RECEIVABLE', 'No SALE_RECEIVABLE for this order; cannot refund');
 
-    const refundedAgg = await this.prisma.financeEvent.aggregate({
-      where: { referenceId: orderId, type: 'SALE_REFUND' },
-      _sum: { amount: true },
-    });
-    const alreadyRefunded = Number(refundedAgg._sum.amount ?? 0);
-    const maxRefund = Math.round((collected - alreadyRefunded) * 100) / 100;
-    if (input.amount - maxRefund > 0.01) throwBadRequest('POS_REFUND_EXCEEDS_PAID', 'Refund amount exceeds refundable balance');
-
-    this.logger.log(`refundToOrder ${order.orderNumber} amount=${input.amount}`);
     const occurredAtStr = input.occurredAt
       ? new Date(input.occurredAt).toISOString()
       : new Date().toISOString();
-    await this.financeService.recordFinanceEvent({
-      type: 'SALE_REFUND',
-      partyId: receivable.partyId || null,
-      currency: receivable.currency,
-      amount: input.amount,
-      taxAmount: 0,
-      occurredAt: occurredAtStr,
-      referenceId: orderId,
-      note:
-        input.note?.trim() ||
-        `POS ${order.orderNumber} refund`,
+
+    await this.prisma.$transaction(async () => {
+      const refundedAgg = await this.prisma.financeEvent.aggregate({
+        where: { referenceId: orderId, type: 'SALE_REFUND' },
+        _sum: { amount: true },
+      });
+      const alreadyRefunded = Number(refundedAgg._sum.amount ?? 0);
+      const maxRefund = Math.round((collected - alreadyRefunded) * 100) / 100;
+      if (input.amount - maxRefund > 0.01) throwBadRequest('POS_REFUND_EXCEEDS_PAID', 'Refund amount exceeds refundable balance');
+
+      await this.financeService.recordFinanceEvent({
+        type: 'SALE_REFUND',
+        partyId: receivable.partyId || null,
+        currency: receivable.currency,
+        amount: input.amount,
+        taxAmount: 0,
+        occurredAt: occurredAtStr,
+        referenceId: orderId,
+        note: input.note?.trim() || `POS ${order.orderNumber} refund`,
+      });
     });
+
+    this.logger.log(`refundToOrder ${order.orderNumber} amount=${input.amount}`);
     return this.toOrderDetail(order);
   }
 
@@ -445,6 +447,7 @@ export class PosService {
       ? new Date(input.occurredAt).toISOString()
       : new Date().toISOString();
 
+    const inventoryOps: Array<{ pid: string; q: number }> = [];
     for (const row of items) {
       const pid = row.productId?.trim();
       if (!pid) throwBadRequest('POS_RETURN_PRODUCT_NOT_ON_ORDER', 'each item needs productId');
@@ -457,17 +460,22 @@ export class PosService {
       if (sold == null || sold < 1) throwBadRequest('POS_RETURN_PRODUCT_NOT_ON_ORDER', `Product ${pid} not on this order`);
       const already = alreadyByProduct.get(pid) ?? 0;
       if (already + q - sold > 0) throwBadRequest('POS_RETURN_EXCEEDS_SOLD', 'Return quantity exceeds sold less already returned');
-      await this.inventoryService.recordInventoryEvent({
-        productId: pid,
-        warehouseId: warehouse.id,
-        type: 'RETURN_FROM_CUSTOMER',
-        quantity: q,
-        occurredAt: occurredAtStr,
-        referenceId: orderId,
-        note: `POS ${order.orderNumber} return-to-stock`,
-      });
-      alreadyByProduct.set(pid, already + q);
+      inventoryOps.push({ pid, q });
     }
+
+    await this.prisma.$transaction(async () => {
+      await Promise.all(inventoryOps.map(({ pid, q }) =>
+        this.inventoryService.recordInventoryEvent({
+          productId: pid,
+          warehouseId: warehouse.id,
+          type: 'RETURN_FROM_CUSTOMER',
+          quantity: q,
+          occurredAt: occurredAtStr,
+          referenceId: orderId,
+          note: `POS ${order.orderNumber} return-to-stock`,
+        }),
+      ));
+    });
 
     this.logger.log(`returnToStock ${order.orderNumber} items=${items.length}`);
     const reloaded = await this.posRepo.findById(orderId);
