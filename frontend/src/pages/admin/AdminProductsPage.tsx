@@ -23,7 +23,9 @@ import {
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
+import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
+import { EmptyState } from '../../shared/components/EmptyState';
 import { StandardFloatBar } from '../../shared/components/StandardFloatBar';
 import { TextInput } from '../../shared/components/TextInput';
 import { useAdminToast } from './AdminToastContext';
@@ -33,6 +35,7 @@ import { ADMIN_KEY_REQUIRED_HINT, hasAdminApiKey } from '../../shared/rbac/admin
 const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v3';
 const PRODUCTS_TABLE_COL_DEFAULTS = {
   sku: 120,
+  barcode: 100,
   name: 180,
   category: 100,
   brand: 100,
@@ -41,6 +44,7 @@ const PRODUCTS_TABLE_COL_DEFAULTS = {
   costPrice: 80,
   stock: 104,
   expiry: 120,
+  daysLeft: 80,
   spec: 120,
   actions: 120,
 } as const;
@@ -51,6 +55,64 @@ function warehouseColWidthPx(name: string): number {
   return Math.min(220, Math.max(100, 12 * n + 28));
 }
 
+/** 解析「N年N月」「N年」「N月」或純數字為月數，無效回 null */
+function parseShelfLifeToMonths(s: string): number | null {
+  const t = String(s).trim().replace(/\s/g, '');
+  if (!t) return null;
+  let months = 0;
+  const yearMatch = t.match(/(\d+)\s*年/);
+  if (yearMatch) months += Number(yearMatch[1]) * 12;
+  const monthMatch = t.match(/(\d+)\s*月/);
+  if (monthMatch) months += Number(monthMatch[1]);
+  if (months > 0) return months;
+  const numOnly = /^\d+$/.exec(t);
+  if (numOnly) {
+    const n = Number(numOnly[0]);
+    return n > 0 ? n : null;
+  }
+  return null;
+}
+
+/** 月數轉為「N年N月」顯示 */
+function monthsToShelfLifeDisplay(months: number): string {
+  if (!Number.isFinite(months) || months < 0) return '';
+  if (months === 0) return '';
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  if (y > 0 && m > 0) return `${y}年${m}月`;
+  if (y > 0) return `${y}年`;
+  return `${m}月`;
+}
+
+/** 取得商品到期日（若有），否則 null */
+function productExpiryDate(p: ProductFullDto): Date | null {
+  if (p.expiryDate) return new Date(p.expiryDate);
+  if (p.productionDate && p.shelfLifeMonths != null && Number.isFinite(p.shelfLifeMonths)) {
+    const d = new Date(p.productionDate);
+    d.setUTCMonth(d.getUTCMonth() + p.shelfLifeMonths);
+    return d;
+  }
+  return null;
+}
+
+/** 計算商品效期顯示：到期日 > 生產日+月數 > 文字說明 */
+function productExpiryDisplay(p: ProductFullDto): string {
+  const d = productExpiryDate(p);
+  if (d) return d.toISOString().slice(0, 10);
+  return p.expiryDescription?.trim() || '—';
+}
+
+/** 剩餘天數 = 到期日 - 當天；無到期日回 null */
+function productDaysUntilExpiry(p: ProductFullDto): number | null {
+  const exp = productExpiryDate(p);
+  if (!exp) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expDay = new Date(exp);
+  expDay.setHours(0, 0, 0, 0);
+  return Math.round((expDay.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+}
+
 export const AdminProductsPage: React.FC = () => {
   const location = useLocation();
   const merchantId = useDefaultMerchantId();
@@ -58,6 +120,7 @@ export const AdminProductsPage: React.FC = () => {
   const canWrite = hasAdminApiKey();
   const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [products, setProducts] = useState<ProductFullDto[]>([]);
+  const [listLoading, setListLoading] = useState(true);
   const [stockByProduct, setStockByProduct] = useState<Record<string, number>>({});
   /** productId -> warehouseId -> onHandQty */
   const [stockByProductWarehouse, setStockByProductWarehouse] = useState<
@@ -99,12 +162,17 @@ export const AdminProductsPage: React.FC = () => {
 
   const [form, setForm] = useState({
     sku: '',
+    barcode: '',
     name: '',
     description: '',
     specSize: '',
     specCapacity: '',
     specStyle: '',
     expiryDescription: '',
+    expiryMode: 'expiry' as 'production' | 'expiry',
+    productionDate: '',
+    shelfLifeMonths: '',
+    expiryDate: '',
     specWeight: '',
     listPrice: '0',
     salePrice: '0',
@@ -117,12 +185,13 @@ export const AdminProductsPage: React.FC = () => {
   const [filterCategoryId, setFilterCategoryId] = useState('');
   const [filterBrandId, setFilterBrandId] = useState('');
   const [sortBy, setSortBy] = useState<
-    'sku' | 'name' | 'category' | 'brand' | 'listPrice' | 'salePrice' | 'costPrice' | 'stock' | 'expiry'
+    'sku' | 'barcode' | 'name' | 'category' | 'brand' | 'listPrice' | 'salePrice' | 'costPrice' | 'stock' | 'expiry'
   >('sku');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const load = async () => {
     setErr(null);
+    setListLoading(true);
     const [p, c, b, bal, wh] = await Promise.all([
       getProducts(),
       getCategories(),
@@ -130,6 +199,7 @@ export const AdminProductsPage: React.FC = () => {
       getInventoryBalances(),
       getWarehouses(),
     ]);
+    setListLoading(false);
     if (!Array.isArray(p)) {
       setErr(getErrorMessage(p as ApiError));
       return;
@@ -215,8 +285,9 @@ export const AdminProductsPage: React.FC = () => {
       const q = searchQ.trim().toLowerCase();
       list = list.filter((p) => {
         const sku = p.sku?.toLowerCase() ?? '';
+        const barcode = p.barcode?.toLowerCase() ?? '';
         const name = p.name?.toLowerCase() ?? '';
-        return sku.includes(q) || name.includes(q);
+        return sku.includes(q) || barcode.includes(q) || name.includes(q);
       });
     }
     if (filterCategoryId) {
@@ -240,8 +311,10 @@ export const AdminProductsPage: React.FC = () => {
       const av =
         sortBy === 'sku'
           ? a.sku
-          : sortBy === 'name'
-            ? a.name
+          : sortBy === 'barcode'
+            ? (a.barcode ?? '')
+            : sortBy === 'name'
+              ? a.name
             : sortBy === 'category'
               ? categoryName(a.categoryId)
               : sortBy === 'brand'
@@ -252,14 +325,16 @@ export const AdminProductsPage: React.FC = () => {
                     ? num(a.salePrice)
                     : sortBy === 'costPrice'
                       ? num(a.costPrice)
-                      : sortBy === 'stock'
+                        : sortBy === 'stock'
                         ? stockByProduct[a.id] ?? 0
-                        : a.expiryDescription ?? '';
+                        : productExpiryDisplay(a);
       const bv =
         sortBy === 'sku'
           ? b.sku
-          : sortBy === 'name'
-            ? b.name
+          : sortBy === 'barcode'
+            ? (b.barcode ?? '')
+            : sortBy === 'name'
+              ? b.name
             : sortBy === 'category'
               ? categoryName(b.categoryId)
               : sortBy === 'brand'
@@ -270,9 +345,9 @@ export const AdminProductsPage: React.FC = () => {
                     ? num(b.salePrice)
                     : sortBy === 'costPrice'
                       ? num(b.costPrice)
-                      : sortBy === 'stock'
+                        : sortBy === 'stock'
                         ? stockByProduct[b.id] ?? 0
-                        : b.expiryDescription ?? '';
+                        : productExpiryDisplay(b);
       const delta =
         typeof av === 'number' && typeof bv === 'number'
           ? av - bv
@@ -303,12 +378,17 @@ export const AdminProductsPage: React.FC = () => {
     setEditing(null);
     setForm({
       sku: '',
+      barcode: '',
       name: '',
       description: '',
       specSize: '',
       specCapacity: '',
       specStyle: '',
       expiryDescription: '',
+      expiryMode: 'expiry',
+      productionDate: '',
+      shelfLifeMonths: '',
+      expiryDate: '',
       specWeight: '',
       listPrice: '0',
       salePrice: '0',
@@ -325,12 +405,25 @@ export const AdminProductsPage: React.FC = () => {
     setPanelOpen(true);
     setForm({
       sku: row.sku,
+      barcode: row.barcode ?? '',
       name: row.name,
       description: row.description ?? '',
       specSize: row.specSize ?? '',
       specCapacity: row.specCapacity ?? '',
       specStyle: row.specStyle ?? row.specColor ?? '',
       expiryDescription: row.expiryDescription ?? '',
+      expiryMode:
+        row.expiryDate
+          ? 'expiry'
+          : row.productionDate && row.shelfLifeMonths != null
+            ? 'production'
+            : 'expiry',
+      productionDate: row.productionDate ?? '',
+      shelfLifeMonths:
+        row.shelfLifeMonths != null
+          ? monthsToShelfLifeDisplay(row.shelfLifeMonths)
+          : '',
+      expiryDate: row.expiryDate ?? '',
       specWeight: row.specWeight ?? (row.weightGrams != null ? `${row.weightGrams}g` : ''),
       listPrice: row.listPrice ?? '0',
       salePrice: row.salePrice ?? '0',
@@ -347,6 +440,7 @@ export const AdminProductsPage: React.FC = () => {
     const tags = form.tags.map((t) => t.trim()).filter(Boolean);
     const body = {
       sku: form.sku.trim(),
+      barcode: form.barcode.trim() || null,
       name: form.name.trim(),
       description: form.description.trim() || null,
       specSize: form.specSize.trim() || null,
@@ -354,6 +448,18 @@ export const AdminProductsPage: React.FC = () => {
       specStyle: form.specStyle.trim() || null,
       specWeight: form.specWeight.trim() || null,
       expiryDescription: form.expiryDescription.trim() || null,
+      productionDate:
+        form.expiryMode === 'production' && form.productionDate.trim()
+          ? form.productionDate.trim()
+          : null,
+      shelfLifeMonths:
+        form.expiryMode === 'production' && form.shelfLifeMonths.trim()
+          ? parseShelfLifeToMonths(form.shelfLifeMonths)
+          : null,
+      expiryDate:
+        form.expiryMode === 'expiry' && form.expiryDate.trim()
+          ? form.expiryDate.trim()
+          : null,
       listPrice: form.listPrice.trim() || '0',
       salePrice: form.salePrice.trim() || '0',
       costPrice: form.costPrice.trim() || null,
@@ -399,6 +505,7 @@ export const AdminProductsPage: React.FC = () => {
   const whColsSum = showWhDetail ? whColWidths.reduce((a, b) => a + b, 0) : 0;
   const tableMinWidth =
     colW.sku +
+    colW.barcode +
     colW.name +
     colW.category +
     colW.brand +
@@ -408,6 +515,7 @@ export const AdminProductsPage: React.FC = () => {
     colW.stock +
     whColsSum +
     colW.expiry +
+    colW.daysLeft +
     colW.spec +
     colW.actions;
 
@@ -547,9 +655,9 @@ export const AdminProductsPage: React.FC = () => {
         </details>
       </div>
       {err && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <Alert variant="error" className="mb-4">
           {err}
-        </div>
+        </Alert>
       )}
 
       {/* 行動版：展開時遮罩 */}
@@ -608,7 +716,7 @@ export const AdminProductsPage: React.FC = () => {
             </div>
             <TextInput
               label="搜尋"
-              placeholder="SKU 或名稱"
+              placeholder="SKU、條碼或名稱"
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
               className="w-56 !py-1.5"
@@ -622,6 +730,7 @@ export const AdminProductsPage: React.FC = () => {
               <colgroup>
                 <col style={{ width: 44 }} />
                 <col style={{ width: colW.sku }} />
+                <col style={{ width: colW.barcode }} />
                 <col style={{ width: colW.name }} />
                 <col style={{ width: colW.category }} />
                 <col style={{ width: colW.brand }} />
@@ -634,6 +743,7 @@ export const AdminProductsPage: React.FC = () => {
                     <col key={w.id} style={{ width: whColWidths[i] }} />
                   ))}
                 <col style={{ width: colW.expiry }} />
+                <col style={{ width: colW.daysLeft }} />
                 <col style={{ width: colW.spec }} />
                 <col style={{ width: colW.actions }} />
               </colgroup>
@@ -656,6 +766,7 @@ export const AdminProductsPage: React.FC = () => {
                   {(
                     [
                       ['sku', 'SKU'],
+                      ['barcode', '條碼'],
                       ['name', '名稱'],
                       ['category', '類別'],
                       ['brand', '品牌'],
@@ -669,12 +780,20 @@ export const AdminProductsPage: React.FC = () => {
                       className={[
                         'relative px-3 py-2 select-none',
                         key === 'sku' ? 'sticky z-[1] bg-table-head' : '',
+                        key === 'barcode' ? 'sticky z-[1] bg-table-head' : '',
                         key === 'name' ? 'sticky z-[1] bg-table-head' : '',
                         key === 'listPrice' || key === 'salePrice' || key === 'costPrice' ? 'text-right' : '',
                       ].join(' ')}
                       style={{
                         width: colW[key],
-                        left: key === 'sku' ? 44 : key === 'name' ? 44 + colW.sku : undefined,
+                        left:
+                          key === 'sku'
+                            ? 44
+                            : key === 'barcode'
+                              ? 44 + colW.sku
+                              : key === 'name'
+                                ? 44 + colW.sku + colW.barcode
+                                : undefined,
                       }}
                     >
                       <button
@@ -683,6 +802,7 @@ export const AdminProductsPage: React.FC = () => {
                         onClick={() => {
                           const next = key as
                             | 'sku'
+                            | 'barcode'
                             | 'name'
                             | 'category'
                             | 'brand'
@@ -772,7 +892,7 @@ export const AdminProductsPage: React.FC = () => {
                         }
                       }}
                     >
-                      <span className="truncate">效期</span>
+                      <span className="truncate">到期日</span>
                       <span className="text-[10px] text-muted">
                         {sortBy === 'expiry' ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
                       </span>
@@ -784,6 +904,12 @@ export const AdminProductsPage: React.FC = () => {
                       className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-brand-primary/15 active:bg-brand-primary/25"
                       onMouseDown={(e) => onResizeStart('expiry', e)}
                     />
+                  </th>
+                  <th
+                    className="relative px-3 py-2 select-none text-right"
+                    style={{ width: colW.daysLeft }}
+                  >
+                    <span className="truncate">剩餘天數</span>
                   </th>
                   {(
                     [
@@ -825,7 +951,35 @@ export const AdminProductsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {sortedProducts.map((p) => (
+                {listLoading ? (
+                  <tr>
+                    <td
+                      colSpan={
+                        14 + (showWhDetail ? warehousesOrdered.length : 0)
+                      }
+                      className="px-4 py-12 text-center text-sm text-muted"
+                    >
+                      載入中…
+                    </td>
+                  </tr>
+                ) : sortedProducts.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={
+                        14 + (showWhDetail ? warehousesOrdered.length : 0)
+                      }
+                      className="px-4 py-12"
+                    >
+                      <EmptyState
+                        message={products.length === 0 ? '尚無商品' : '無符合篩選的商品'}
+                        description={
+                          products.length === 0 ? '可點「新增商品」或 CSV 匯入' : undefined
+                        }
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  sortedProducts.map((p) => (
                   <tr key={p.id} className="group border-t border-slate-100 hover:bg-table-head">
                     <td className="sticky left-0 z-[1] bg-white px-3 py-2 group-hover:bg-table-head">
                       <input
@@ -851,8 +1005,15 @@ export const AdminProductsPage: React.FC = () => {
                       {p.sku}
                     </td>
                     <td
-                      className="sticky z-[1] bg-white px-3 py-2 truncate group-hover:bg-table-head"
+                      className="sticky z-[1] bg-white px-3 py-2 font-mono text-xs truncate group-hover:bg-table-head"
                       style={{ left: 44 + colW.sku }}
+                      title={p.barcode ?? undefined}
+                    >
+                      {p.barcode?.trim() || '—'}
+                    </td>
+                    <td
+                      className="sticky z-[1] bg-white px-3 py-2 truncate group-hover:bg-table-head"
+                      style={{ left: 44 + colW.sku + colW.barcode }}
                       title={p.name + (p.description ? ` — ${p.description}` : '')}
                     >
                       {p.name}
@@ -883,8 +1044,19 @@ export const AdminProductsPage: React.FC = () => {
                           {stockByProductWarehouse[p.id]?.[w.id] ?? 0}
                         </td>
                       ))}
-                    <td className="px-3 py-2 text-xs text-muted truncate" title={p.expiryDescription ?? undefined}>
-                      {p.expiryDescription?.trim() || '—'}
+                    <td
+                      className="px-3 py-2 text-xs text-muted truncate tabular-nums"
+                      title={productExpiryDisplay(p)}
+                    >
+                      {productExpiryDisplay(p)}
+                    </td>
+                    <td className="px-3 py-2 text-right text-xs tabular-nums">
+                      {(() => {
+                        const d = productDaysUntilExpiry(p);
+                        if (d === null) return <span className="text-muted">—</span>;
+                        if (d < 0) return <span className="text-brand-danger">已過期 {Math.abs(d)} 天</span>;
+                        return <span className="text-muted">{d} 天</span>;
+                      })()}
                     </td>
                     <td className="px-3 py-2 text-xs text-muted">
                       {showSpecDetail ? (
@@ -927,7 +1099,8 @@ export const AdminProductsPage: React.FC = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                )))
+                }
               </tbody>
             </table>
           </div>
@@ -1044,6 +1217,12 @@ export const AdminProductsPage: React.FC = () => {
                       required
                     />
                     <TextInput
+                      label="條碼"
+                      value={form.barcode}
+                      onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
+                      placeholder="選填"
+                    />
+                    <TextInput
                       label="名稱"
                       value={form.name}
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -1141,8 +1320,81 @@ export const AdminProductsPage: React.FC = () => {
                       onChange={(e) => setForm((f) => ({ ...f, specStyle: e.target.value }))}
                       placeholder=""
                     />
+                    <div className="sm:col-span-2">
+                      <div className="mb-2 text-xs font-medium text-muted">效期模式</div>
+                      <div className="flex flex-wrap gap-4">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="expiryMode"
+                            checked={form.expiryMode === 'production'}
+                            onChange={() =>
+                              setForm((f) => ({ ...f, expiryMode: 'production', expiryDate: '' }))
+                            }
+                          />
+                          <span className="text-sm">(a) 生產日期 + 效期（年/月）</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="expiryMode"
+                            checked={form.expiryMode === 'expiry'}
+                            onChange={() =>
+                              setForm((f) => ({
+                                ...f,
+                                expiryMode: 'expiry',
+                                productionDate: '',
+                                shelfLifeMonths: '',
+                              }))
+                            }
+                          />
+                          <span className="text-sm">(b) 到期日期</span>
+                        </label>
+                      </div>
+                      {form.expiryMode === 'production' ? (
+                        <div className="mt-2 flex flex-wrap gap-3">
+                          <div>
+                            <label className="mb-1 block text-xs text-muted">生產日期</label>
+                            <input
+                              type="date"
+                              className="h-9 w-40 rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                              value={form.productionDate}
+                              onChange={(e) =>
+                                setForm((f) => ({ ...f, productionDate: e.target.value }))
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs text-muted">
+                              效期（N年N月，如 1年6月、18月）
+                            </label>
+                            <input
+                              type="text"
+                              className="h-9 w-36 rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                              placeholder="1年6月 或 18月"
+                              value={form.shelfLifeMonths}
+                              onChange={(e) =>
+                                setForm((f) => ({ ...f, shelfLifeMonths: e.target.value }))
+                              }
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2">
+                          <label className="mb-1 block text-xs text-muted">到期日期</label>
+                          <input
+                            type="date"
+                            className="h-9 w-40 rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                            value={form.expiryDate}
+                            onChange={(e) =>
+                              setForm((f) => ({ ...f, expiryDate: e.target.value }))
+                            }
+                          />
+                        </div>
+                      )}
+                    </div>
                     <TextInput
-                      label="保存說明（非效期日）(expiryDescription)"
+                      label="保存說明（選填，如「常溫 1 年」）"
                       value={form.expiryDescription}
                       onChange={(e) => setForm((f) => ({ ...f, expiryDescription: e.target.value }))}
                       placeholder=""

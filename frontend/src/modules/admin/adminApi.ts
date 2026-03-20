@@ -1044,6 +1044,7 @@ export async function getExpiringInventorySummaryByProduct(params: {
 export interface ProductFullDto {
   id: string;
   sku: string;
+  barcode?: string | null;
   name: string;
   description?: string | null;
   specSize?: string | null;
@@ -1051,6 +1052,9 @@ export interface ProductFullDto {
   specStyle?: string | null;
   specWeight?: string | null;
   expiryDescription?: string | null;
+  productionDate?: string | null;
+  shelfLifeMonths?: number | null;
+  expiryDate?: string | null;
   /** @deprecated use specStyle */
   specColor?: string | null;
   /** @deprecated use specWeight */
@@ -1086,6 +1090,7 @@ export async function searchProductsByBarcode(
 
 export async function createProduct(body: {
   sku: string;
+  barcode?: string | null;
   name: string;
   description?: string | null;
   specSize?: string | null;
@@ -1093,6 +1098,9 @@ export async function createProduct(body: {
   specStyle?: string | null;
   specWeight?: string | null;
   expiryDescription?: string | null;
+  productionDate?: string | null;
+  shelfLifeMonths?: number | null;
+  expiryDate?: string | null;
   listPrice?: string | number | null;
   salePrice?: string | number | null;
   costPrice?: string | number | null;
@@ -1128,6 +1136,7 @@ export async function updateProduct(
   id: string,
   body: {
     sku?: string;
+    barcode?: string | null;
     name?: string;
     description?: string | null;
     specSize?: string | null;
@@ -1135,6 +1144,9 @@ export async function updateProduct(
     specStyle?: string | null;
     specWeight?: string | null;
     expiryDescription?: string | null;
+    productionDate?: string | null;
+    shelfLifeMonths?: number | null;
+    expiryDate?: string | null;
     listPrice?: string | number | null;
     salePrice?: string | number | null;
     costPrice?: string | number | null;
