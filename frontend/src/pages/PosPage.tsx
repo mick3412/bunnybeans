@@ -17,6 +17,7 @@ import {
 } from '../modules/pos/posOrdersApi';
 import { searchCustomers, type CustomerSearchItem } from '../modules/admin/loyaltyApi';
 import { useDebouncedValue } from '../shared/hooks/useDebouncedValue';
+import { formatMoney } from '../shared/utils/formatMoney';
 
 const ALL_ID = '';
 const POS_FAVORITES_KEY = 'pos-favorites';
@@ -322,7 +323,7 @@ export const PosPage: React.FC = () => {
   return (
     <div className="flex min-h-full flex-col">
       {apiLoadError && !apiStoreId && (
-        <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div className="mb-3 rounded-lg border border-brand-warning/40 bg-brand-warning/10 px-3 py-2 text-sm text-brand-warning">
           {apiLoadError}
         </div>
       )}
@@ -457,7 +458,7 @@ export const PosPage: React.FC = () => {
                 </div>
               </div>
               {barcodeHint && (
-                <div className="mt-1 text-xs text-amber-800" data-testid="e2e-pos-barcode-hint">
+                <div className="mt-1 text-xs text-brand-warning" data-testid="e2e-pos-barcode-hint">
                   {barcodeHint}
                 </div>
               )}
@@ -485,7 +486,7 @@ export const PosPage: React.FC = () => {
                           <span className="ml-2 font-mono text-[11px] text-muted">{p.sku}</span>
                         </span>
                         <span className="shrink-0 font-mono text-[11px] text-muted">
-                          ${Number(p.salePrice ?? 0).toLocaleString()}
+                          {formatMoney(Number(p.salePrice ?? 0))}
                         </span>
                       </button>
                     ))}
@@ -514,7 +515,7 @@ export const PosPage: React.FC = () => {
           </div>
 
           {apiLoadError && (
-            <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+            <div className="mb-2 rounded-lg border border-brand-warning/40 bg-brand-warning/10 px-2 py-1.5 text-xs text-brand-warning">
               {apiLoadError}，結帳將使用 mock 資料。
             </div>
           )}
@@ -736,7 +737,7 @@ export const PosPage: React.FC = () => {
                 )}
               </div>
               {previewSelectedCustomer?.memberLevel && (
-                <div className="mt-1 text-xs font-semibold text-amber-800">
+                <div className="mt-1 text-xs font-semibold text-brand-warning">
                   等級：{previewSelectedCustomer.memberLevel}
                 </div>
               )}
@@ -751,25 +752,25 @@ export const PosPage: React.FC = () => {
             <div className="flex justify-between">
               <span>小計</span>
               <span className="tabular-nums">
-                ${(promoPreview?.subtotal ?? summary.subtotal).toLocaleString()}
+                {formatMoney(promoPreview?.subtotal ?? summary.subtotal)}
               </span>
             </div>
             {promoPreview && promoPreview.discount > 0 && (
               <div className="flex justify-between text-brand-success">
                 <span>促銷折讓</span>
-                <span className="tabular-nums">-${promoPreview.discount.toLocaleString()}</span>
+                <span className="tabular-nums">-{formatMoney(promoPreview.discount)}</span>
               </div>
             )}
             {POS_TAX_RATE > 0 && (
               <div className="flex justify-between">
                 <span>稅額 ({Math.round(POS_TAX_RATE * 100)}%)</span>
-                <span className="tabular-nums">${summary.tax.toLocaleString()}</span>
+                <span className="tabular-nums">{formatMoney(summary.tax)}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold text-content">
               <span>應收</span>
               <span className="tabular-nums">
-                ${(promoPreview?.total ?? summary.total).toLocaleString()}
+                {formatMoney(promoPreview?.total ?? summary.total)}
               </span>
             </div>
           </div>

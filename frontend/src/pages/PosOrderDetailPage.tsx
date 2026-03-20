@@ -13,6 +13,7 @@ import { Alert } from '../shared/components/Alert';
 import { EmptyState } from '../shared/components/EmptyState';
 import { Modal } from '../shared/components/Modal';
 import { getErrorMessage } from '../shared/errors/errorMessages';
+import { formatMoney } from '../shared/utils/formatMoney';
 import type { PosOrderDetail } from '../modules/pos/posOrdersMockService';
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
@@ -128,7 +129,7 @@ export const PosOrderDetailPage: React.FC = () => {
     const isCredit = typeof order.credit === 'boolean' ? order.credit : remaining > 0;
     const text =
       payments.length > 0
-        ? payments.map((p) => `${paymentMethodLabel(p.method)} $${p.amount.toLocaleString()}`).join('、')
+        ? payments.map((p) => `${paymentMethodLabel(p.method)} ${formatMoney(p.amount)}`).join('、')
         : paid > 0
           ? '—'
           : '無紀錄';
@@ -340,17 +341,17 @@ export const PosOrderDetailPage: React.FC = () => {
             <div className="space-y-3 text-xs">
               {credit && (
                 <div
-                  className="rounded-xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-orange-50 px-3 py-3 shadow-sm sm:px-4"
+                  className="rounded-xl border-2 border-brand-warning/50 bg-brand-warning/10 px-3 py-3 shadow-sm sm:px-4"
                   role="alert"
                 >
-                  <div className="text-center text-[11px] font-bold uppercase tracking-wide text-amber-900">
+                  <div className="text-center text-[11px] font-bold uppercase tracking-wide text-brand-warning">
                     賒帳單 · 尚有未收
                   </div>
                   <div
-                    className="mt-1 text-center text-lg font-bold tabular-nums text-amber-950"
+                    className="mt-1 text-center text-lg font-bold tabular-nums text-brand-warning"
                     data-testid="e2e-detail-remaining"
                   >
-                    未收 ${remainingAmount.toLocaleString()}
+                    未收 {formatMoney(remainingAmount)}
                   </div>
                 </div>
               )}
@@ -369,8 +370,8 @@ export const PosOrderDetailPage: React.FC = () => {
                     ? delta === 0
                       ? '差額 $0'
                       : delta > 0
-                        ? `需補款 $${Math.abs(delta).toLocaleString()}`
-                        : `需退款 $${Math.abs(delta).toLocaleString()}`
+                        ? `需補款 ${formatMoney(Math.abs(delta))}`
+                        : `需退款 ${formatMoney(Math.abs(delta))}`
                     : null;
                 const refundStatus = st?.refundStatus;
                 const topupStatus = st?.topupStatus;
@@ -521,13 +522,13 @@ export const PosOrderDetailPage: React.FC = () => {
                   {typeof order.subtotalAmount === 'number' && (
                     <div className="mt-1 flex justify-between text-muted">
                       <span>小計</span>
-                      <span className="tabular-nums font-medium">${order.subtotalAmount.toLocaleString()}</span>
+                      <span className="tabular-nums font-medium">{formatMoney(order.subtotalAmount)}</span>
                     </div>
                   )}
                   {typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
                     <div className="flex justify-between text-[#28A745]">
                       <span>折讓</span>
-                      <span className="tabular-nums">-${order.discountAmount.toLocaleString()}</span>
+                      <span className="tabular-nums">-{formatMoney(order.discountAmount)}</span>
                     </div>
                   )}
                   {order.promotionApplied != null && (
@@ -711,9 +712,9 @@ export const PosOrderDetailPage: React.FC = () => {
                             );
                           })()}
                           <td className="py-1.5 text-right tabular-nums">{item.quantity}</td>
-                          <td className="py-1.5 text-right tabular-nums">${item.unitPrice.toLocaleString()}</td>
+                          <td className="py-1.5 text-right tabular-nums">{formatMoney(item.unitPrice)}</td>
                           <td className="py-1.5 text-right tabular-nums font-medium">
-                            ${(item.quantity * item.unitPrice).toLocaleString()}
+                            {formatMoney(item.quantity * item.unitPrice)}
                           </td>
                         </tr>
                       ))}
@@ -724,18 +725,18 @@ export const PosOrderDetailPage: React.FC = () => {
               <div className="space-y-2 border-t border-brand-surface pt-2 text-sm">
                 <div className="flex justify-between font-semibold">
                   <span>應收金額</span>
-                  <span className="tabular-nums">${order.totalAmount.toLocaleString()}</span>
+                  <span className="tabular-nums">{formatMoney(order.totalAmount)}</span>
                 </div>
                 <div className="flex justify-between font-semibold">
                   <span>實收合計</span>
-                  <span className="tabular-nums">${displayPaid.toLocaleString()}</span>
+                  <span className="tabular-nums">{formatMoney(displayPaid)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-muted">
                   <span>未收餘額</span>
-                  <span className="tabular-nums font-medium">${remainingAmount.toLocaleString()}</span>
+                  <span className="tabular-nums font-medium">{formatMoney(remainingAmount)}</span>
                 </div>
                 {credit && (
-                  <div className="rounded-lg bg-amber-50 px-2 py-1 text-center text-[11px] font-medium text-amber-800">
+                  <div className="rounded-lg bg-brand-warning/10 px-2 py-1 text-center text-[11px] font-medium text-brand-warning">
                     掛帳（尚有未收）
                   </div>
                 )}

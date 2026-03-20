@@ -7,6 +7,7 @@ import { getSupplierRankings, type SupplierRankingItem, type ApiError } from '..
 import { AdminPurchaseOrdersPage } from '../AdminPurchaseOrdersPage';
 import { AdminReceivingNotesPage } from '../AdminReceivingNotesPage';
 import { AdminReplenishmentPage } from '../AdminReplenishmentPage';
+import { formatMoney } from '../../../shared/utils/formatMoney';
 
 function toYmd(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -129,7 +130,7 @@ export function AdminProcurementHubPage(props: { initialTab?: ProcurementHubTabK
                       <td className="px-3 py-1.5 font-medium">{r.supplierName ?? r.supplierCode}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{r.receivingNotesCount}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">
-                        {r.totalAmount.toLocaleString('zh-TW')}
+                        {formatMoney(r.totalAmount)}
                       </td>
                     </tr>
                   ))}

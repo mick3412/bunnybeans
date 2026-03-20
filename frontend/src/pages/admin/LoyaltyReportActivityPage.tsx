@@ -9,6 +9,7 @@ import { KpiCard } from '../../shared/components/KpiCard';
 import { MiniBarChart } from '../../shared/components/MiniBarChart';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
+import { formatMoney } from '../../shared/utils/formatMoney';
 
 const PRESETS = [
   { value: '', label: '自訂' },
@@ -190,7 +191,7 @@ export const LoyaltyReportActivityPage: React.FC = () => {
               <KpiCard
                 label="折抵帶來營收"
                 sub="點數折抵相關訂單總額"
-                value={data.revenueFromPointRedemption.toLocaleString()}
+                value={formatMoney(data.revenueFromPointRedemption)}
                 accent="green"
               />
             )}

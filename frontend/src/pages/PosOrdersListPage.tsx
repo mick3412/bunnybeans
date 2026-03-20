@@ -6,6 +6,7 @@ import { fetchCsvExport } from '../modules/admin/adminApi';
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import type { PosOrderSummary } from '../modules/pos/posOrdersMockService';
 import { useNavigate } from 'react-router-dom';
+import { formatMoney } from '../shared/utils/formatMoney';
 
 const PAGE_SIZE = 20;
 
@@ -219,7 +220,7 @@ export const PosOrdersListPage: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-semibold tabular-nums text-content">
-                          ${order.totalAmount.toLocaleString()}
+                          {formatMoney(order.totalAmount)}
                         </div>
                         <Button
                           type="button"
@@ -270,7 +271,7 @@ export const PosOrdersListPage: React.FC = () => {
                           {customerLabel(order)}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums text-content">
-                          ${order.totalAmount.toLocaleString()}
+                          {formatMoney(order.totalAmount)}
                         </td>
                         <td className="px-2 py-2 text-muted">
                           {new Date(order.createdAt).toLocaleTimeString('zh-TW', {

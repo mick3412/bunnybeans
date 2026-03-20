@@ -21,6 +21,7 @@ import { getProducts, getWarehouses } from '../../modules/admin/adminApi';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { useAdminToast } from './AdminToastContext';
 import { Modal } from '../../shared/components/Modal';
+import { formatMoney } from '../../shared/utils/formatMoney';
 
 const STATUS_TABS: { key: string; label: string }[] = [
   { key: 'ALL', label: '全部' },
@@ -45,7 +46,7 @@ function statusLabel(s: PoStatus | string) {
 function statusPill(s: PoStatus | string) {
   const styles: Record<string, string> = {
     RECEIVED: 'bg-brand-success/15 text-brand-success',
-    ORDERED: 'bg-amber-100 text-amber-900',
+    ORDERED: 'bg-brand-warning/20 text-brand-warning',
     PARTIALLY_RECEIVED: 'bg-brand-primary/10 text-brand-primary',
     DRAFT: 'bg-brand-surface text-muted',
     CANCELLED: 'bg-brand-danger/10 text-brand-danger',
@@ -312,7 +313,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                     <td className="px-4 py-3.5 font-mono text-xs font-medium">{p.orderNumber}</td>
                     <td className="px-4 py-3.5 text-content">{p.supplierName ?? '—'}</td>
                     <td className="px-4 py-3.5 text-center tabular-nums">{(p.lines ?? []).length}</td>
-                    <td className="px-4 py-3.5 text-right font-medium tabular-nums">${poTotal({ ...p, lines: p.lines ?? [] }).toLocaleString()}</td>
+                    <td className="px-4 py-3.5 text-right font-medium tabular-nums">{formatMoney(poTotal({ ...p, lines: p.lines ?? [] }))}</td>
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex rounded-md px-2.5 py-0.5 text-xs font-semibold ${statusPill(p.status)}`}>{statusLabel(p.status)}</span>
                     </td>
@@ -417,7 +418,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                   : rn.status === 'IN_PROGRESS'
                                     ? 'bg-brand-primary/10 text-brand-primary'
                                     : rn.status === 'PENDING'
-                                      ? 'bg-amber-100 text-amber-900'
+                                      ? 'bg-brand-warning/20 text-brand-warning'
                                       : rn.status === 'RETURNED'
                                         ? 'bg-brand-danger/10 text-brand-danger'
                                         : 'bg-brand-surface text-muted',
@@ -469,7 +470,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-right font-semibold">總金額 ${poTotal(detail).toLocaleString()}</p>
+            <p className="mt-2 text-right font-semibold">總金額 {formatMoney(poTotal(detail))}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {detail.status === 'DRAFT' && (
                 <>
@@ -513,7 +514,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  className="rounded-xl p-2 text-muted hover:bg-table-head hover:text-neutral-600 transition-colors"
+                  className="rounded-xl p-2 text-muted hover:bg-table-head hover:text-muted transition-colors"
                   onClick={() => setCreateOpen(false)}
                   aria-label="關閉"
                 >
@@ -613,7 +614,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                                   }}
                                 />
                               </td>
-                              <td className="px-3 py-2.5 text-right font-medium tabular-nums text-content">${(line.qty * line.unitCost).toLocaleString()}</td>
+                              <td className="px-3 py-2.5 text-right font-medium tabular-nums text-content">{formatMoney(line.qty * line.unitCost)}</td>
                               <td className="px-2 py-2.5">
                                 {newPo.lines.length > 1 && (
                                   <button
@@ -633,13 +634,13 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                     </div>
                     <button
                       type="button"
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-brand-surface bg-white px-3 py-2 text-sm font-medium text-neutral-600 hover:border-brand-primary hover:text-brand-primary hover:bg-brand-primary/5 transition-colors"
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-brand-surface bg-white px-3 py-2 text-sm font-medium text-muted hover:border-brand-primary hover:text-brand-primary hover:bg-brand-primary/5 transition-colors"
                       onClick={() => setNewPo({ ...newPo, lines: [...newPo.lines, { productId: '', qty: 1, unitCost: 0 }] })}
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                       新增品項
                     </button>
-                    <p className="mt-3 text-right text-sm font-semibold text-content">合計：${totalDraft.toLocaleString()}</p>
+                    <p className="mt-3 text-right text-sm font-semibold text-content">合計：{formatMoney(totalDraft)}</p>
                   </div>
                 </div>
 

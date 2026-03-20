@@ -16,6 +16,7 @@ import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { getErrorMessage, showAdminApiErrorToast } from '../../shared/errors/errorMessages';
 import { useAdminToast } from './AdminToastContext';
 import { AdminPromotionEditPage } from './AdminPromotionEditPage';
+import { formatMoney } from '../../shared/utils/formatMoney';
 
 const STATUS_TABS: { key: string; label: string }[] = [
   { key: 'all', label: '全部' },
@@ -298,7 +299,7 @@ export const AdminPromotionsPage: React.FC = () => {
                       if (!eff) return null;
                       return (
                         <span className="shrink-0 text-xs text-muted">
-                          觸發 {eff.triggerCount} · 折讓 {eff.discountTotal.toLocaleString()} · 帶動 {eff.drivenRevenue.toLocaleString()}
+                          觸發 {eff.triggerCount} · 折讓 {formatMoney(eff.discountTotal)} · 帶動 {formatMoney(eff.drivenRevenue)}
                         </span>
                       );
                     })()}

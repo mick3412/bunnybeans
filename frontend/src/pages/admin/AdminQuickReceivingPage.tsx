@@ -10,6 +10,7 @@ import { getProducts, getWarehouses, type ProductFullDto, type WarehouseDto } fr
 import { createPurchaseOrder, listSuppliers, type ApiError as PurchaseApiError } from '../../modules/admin/purchaseApi';
 import type { ApiError } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
+import { formatMoney } from '../../shared/utils/formatMoney';
 
 type LineDraft = { productId: string; qty: number; unitCost: number };
 
@@ -267,7 +268,7 @@ export const AdminQuickReceivingPage: React.FC = () => {
             >
               + 新增一列
             </button>
-            <span className="ml-auto text-sm font-semibold tabular-nums text-content">預估總額：{total.toLocaleString()}</span>
+            <span className="ml-auto text-sm font-semibold tabular-nums text-content">預估總額：{formatMoney(total)}</span>
           </div>
         </div>
 

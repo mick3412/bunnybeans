@@ -9,6 +9,7 @@ import { createOrder } from '../modules/pos/posOrdersApi';
 import { searchCustomers, type CustomerSearchItem } from '../modules/admin/loyaltyApi';
 import { getCustomer } from '../modules/admin/adminApi';
 import { Modal } from '../shared/components/Modal';
+import { formatMoney } from '../shared/utils/formatMoney';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -333,7 +334,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-muted">
               <span>應收金額</span>
-              <span className="text-base font-semibold text-content">${totalAmount.toLocaleString()}</span>
+              <span className="text-base font-semibold text-content">{formatMoney(totalAmount)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted">付款方式</span>
@@ -383,12 +384,12 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
             {!allowCredit && (
               <div className="flex items-center justify-between text-muted">
                 <span>找零</span>
-                <span className="font-semibold text-brand-success">${change.toLocaleString()}</span>
+                <span className="font-semibold text-brand-success">{formatMoney(change)}</span>
               </div>
             )}
             {allowCredit && (
-              <div className="rounded-lg bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
-                掛帳／部分收款：實收 ${paidInPayments.toLocaleString()}，未收 ${unpaidAmount.toLocaleString()}。需要會員資訊。
+              <div className="rounded-lg bg-brand-warning/10 px-2 py-1.5 text-[11px] text-brand-warning">
+                掛帳／部分收款：實收 {formatMoney(paidInPayments)}，未收 {formatMoney(unpaidAmount)}。需要會員資訊。
               </div>
             )}
           </div>

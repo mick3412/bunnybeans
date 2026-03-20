@@ -24,6 +24,7 @@ import { formatPartyDisplay, getPartyKindFromId } from '../../shared/utils/party
 import { listLoyaltyCustomers } from '../../modules/admin/loyaltyApi';
 import { listSuppliers } from '../../modules/admin/purchaseApi';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
+import { formatMoney } from '../../shared/utils/formatMoney';
 
 function toYmd(d: Date): string {
   const y = d.getFullYear();
@@ -459,7 +460,7 @@ export const AdminReportsPage: React.FC = () => {
               {Object.entries(summary.byType).map(([type, amount]) => (
                 <span key={type} className="rounded bg-white px-3 py-1.5 shadow-sm">
                   <span className="text-muted">{getFinanceEventTypeLabel(type)}</span>
-                  <span className="ml-2 tabular-nums font-medium text-content">{Number(amount).toLocaleString()}</span>
+                  <span className="ml-2 tabular-nums font-medium text-content">{formatMoney(Number(amount))}</span>
                 </span>
               ))}
             </div>
@@ -521,7 +522,7 @@ export const AdminReportsPage: React.FC = () => {
                     stroke: '#f59e0b',
                   },
                 ]}
-                formatValue={(n) => n.toLocaleString()}
+                formatValue={(n) => formatMoney(n)}
               />
             </div>
           )}
@@ -541,7 +542,7 @@ export const AdminReportsPage: React.FC = () => {
                     stroke: 'var(--color-brand-success)',
                   },
                 ]}
-                formatValue={(n) => n.toLocaleString()}
+                formatValue={(n) => formatMoney(n)}
               />
             </div>
           )}
@@ -563,7 +564,7 @@ export const AdminReportsPage: React.FC = () => {
                           stroke: 'var(--color-brand-success)',
                         },
                       ]}
-                      formatValue={(n) => n.toLocaleString()}
+                      formatValue={(n) => formatMoney(n)}
                     />
                   ) : (
                     <div className="py-6 text-center text-xs text-muted">無資料</div>
@@ -580,7 +581,7 @@ export const AdminReportsPage: React.FC = () => {
                           stroke: 'var(--color-brand-success)',
                         },
                       ]}
-                      formatValue={(n) => n.toLocaleString()}
+                      formatValue={(n) => formatMoney(n)}
                     />
                   ) : (
                     <div className="py-6 text-center text-xs text-muted">無資料</div>
@@ -622,7 +623,7 @@ export const AdminReportsPage: React.FC = () => {
                   const label = formatPartyDisplay(p.displayName, kind || undefined, p.partyId, partyNames);
                   return { label, value: total };
                 })}
-                formatValue={(n) => n.toLocaleString()}
+                formatValue={(n) => formatMoney(n)}
               />
             </div>
           )}

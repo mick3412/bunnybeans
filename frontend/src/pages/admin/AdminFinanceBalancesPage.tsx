@@ -10,6 +10,7 @@ import { Button } from '../../shared/components/Button';
 import { PartyViewSegmented, type PartyView } from '../../shared/components/PartyViewSegmented';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { Alert } from '../../shared/components/Alert';
+import { formatMoney } from '../../shared/utils/formatMoney';
 
 export const AdminFinanceBalancesPage: React.FC = () => {
   const merchantId = useDefaultMerchantId();
@@ -171,8 +172,8 @@ export const AdminFinanceBalancesPage: React.FC = () => {
                   <td className="max-w-[140px] truncate px-4 py-2 font-mono text-[10px] text-muted" title={row.partyId}>
                     {row.partyId}
                   </td>
-                  <td className="px-4 py-2 text-right tabular-nums font-medium">{row.receivable.toLocaleString()}</td>
-                  <td className="px-4 py-2 text-right tabular-nums font-medium">{row.payable.toLocaleString()}</td>
+                  <td className="px-4 py-2 text-right tabular-nums font-medium">{formatMoney(row.receivable)}</td>
+                  <td className="px-4 py-2 text-right tabular-nums font-medium">{formatMoney(row.payable)}</td>
                 </tr>
               ))}
             </tbody>
