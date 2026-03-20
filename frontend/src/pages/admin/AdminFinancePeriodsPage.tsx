@@ -47,7 +47,7 @@ export const AdminFinancePeriodsPage: React.FC = () => {
 
   const handleClose = async () => {
     if (!closeStart.trim() || !closeEnd.trim()) {
-      showToast('請填寫起迄日', 'err');
+      showToast('缺少起迄日', 'err');
       return;
     }
     setClosing(true);

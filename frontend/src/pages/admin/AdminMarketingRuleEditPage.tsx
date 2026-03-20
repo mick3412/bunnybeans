@@ -25,7 +25,7 @@ export const AdminMarketingRuleEditPage: React.FC = () => {
   return (
     <StandardListLayout
       title={title}
-      description="最小 CRUD 表單骨架：待後端常駐規則 API 就緒後串接。"
+      description=""
       actions={
         <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/admin/marketing/rules')}>
           返回列表
@@ -39,7 +39,7 @@ export const AdminMarketingRuleEditPage: React.FC = () => {
           <div className="mt-3 space-y-3">
             <TextInput
               label="規則名稱"
-              placeholder="例如：每週一新會員發券"
+              placeholder=""
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
@@ -68,26 +68,23 @@ export const AdminMarketingRuleEditPage: React.FC = () => {
             />
             <TextInput
               label="segmentId"
-              placeholder="待後端常駐規則 API：選擇分群"
+              placeholder=""
               value={form.segmentId}
               onChange={(e) => setForm((f) => ({ ...f, segmentId: e.target.value }))}
             />
             <TextInput
               label="couponId"
-              placeholder="待後端常駐規則 API：選擇優惠券"
+              placeholder=""
               value={form.couponId}
               onChange={(e) => setForm((f) => ({ ...f, couponId: e.target.value }))}
             />
-            <div className="text-xs text-muted">
-              提示：常駐規則需要後端支援（列表/新增/更新/啟用停用），並寫入 OpsJobRunLog 供追蹤。
-            </div>
           </div>
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <Button type="button" variant="primary" disabled>
-          {isNew ? '建立規則（待後端）' : '儲存變更（待後端）'}
+          {isNew ? '建立規則' : '儲存變更'}
         </Button>
         <Button type="button" variant="secondary" onClick={() => navigate('/admin/ops/jobs?kind=crm-run-scheduled')}>
           查看最近一次執行（Job 監控）

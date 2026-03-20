@@ -178,7 +178,7 @@ export function useAdminTodoItems(merchantId: string | null) {
         to: '/admin/ops/jobs',
         tone: jobFailedCount != null && jobFailedCount > 0 ? 'danger' : 'neutral',
         countText: asCountText(jobFailedCount, '筆'),
-        metaText: '請確認重跑或排除',
+        metaText: '需處理',
       },
       {
         key: 'pendingReceiving',

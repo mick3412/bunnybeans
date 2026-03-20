@@ -59,7 +59,7 @@ export const PosLayout: React.FC = () => {
         <div className="shrink-0 border-t border-white/10 px-2 py-2" aria-hidden="true" />
       </aside>
       <div className="flex min-w-0 flex-1 flex-col bg-forge-main">
-        <header className="flex h-14 shrink-0 items-center border-b border-[#e2e8f0] bg-forge-card px-6 shadow-sm">
+        <header className="flex h-14 shrink-0 items-center border-b border-brand-surface bg-forge-card px-6 shadow-sm">
           <h1 className="truncate text-xl font-semibold tracking-tight text-content">{title}</h1>
           <span className="ml-3 hidden shrink-0 text-sm text-muted sm:inline tabular-nums">{dateStr}</span>
         </header>

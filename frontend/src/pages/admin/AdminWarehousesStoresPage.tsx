@@ -2,7 +2,7 @@ import React from 'react';
 import { AdminStoresPage } from './AdminStoresPage';
 import { AdminWarehousesPage } from './AdminWarehousesPage';
 
-const cardClass = 'min-w-0 flex-1 rounded-xl border border-[#e2e8f0] bg-white p-6 shadow-sm';
+const cardClass = 'min-w-0 flex-1 rounded-xl border border-brand-surface bg-white p-6 shadow-sm';
 
 /** 門市 + 倉庫同一頁，雙列表佈局一致（先維護門市，再綁倉庫） */
 export const AdminWarehousesStoresPage: React.FC = () => {

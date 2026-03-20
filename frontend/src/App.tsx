@@ -54,9 +54,9 @@ export const App: React.FC = () => {
         <Route path="promotions/:id" element={<AdminMarketingCenterHubPage initialTab="promotions" />} />
         <Route path="customers" element={<AdminMemberCenterHubPage initialTab="members" />} />
         <Route path="customers/import" element={<AdminCustomerImportPage />} />
-        <Route path="segments" element={<AdminMemberCenterHubPage initialTab="segments" />} />
+        <Route path="segments" element={<AdminMarketingCenterHubPage initialTab="segments" />} />
         <Route path="segments/export" element={<AdminSegmentExportPage />} />
-        <Route path="dispatch-rules" element={<AdminMemberCenterHubPage initialTab="dispatchRules" />} />
+        <Route path="dispatch-rules" element={<AdminMarketingCenterHubPage initialTab="dispatchRules" />} />
         <Route path="crm/jobs" element={<AdminMarketingCenterHubPage initialTab="jobs" />} />
         <Route path="finance/periods" element={<AdminFinanceHubPage initialTab="periods" />} />
         <Route path="finance/audit" element={<AdminFinanceHubPage initialTab="audit" />} />
@@ -75,7 +75,7 @@ export const App: React.FC = () => {
         <Route path="replenishment" element={<AdminProcurementHubPage initialTab="replenishment" />} />
         <Route path="loyalty" element={<AdminMemberCenterHubPage initialTab="dashboard" />} />
         <Route path="loyalty/point-ledger" element={<AdminMemberCenterHubPage initialTab="pointLedger" />} />
-        <Route path="loyalty/coupons" element={<AdminMemberCenterHubPage initialTab="coupons" />} />
+        <Route path="loyalty/coupons" element={<AdminMarketingCenterHubPage initialTab="coupons" />} />
         <Route path="loyalty/reports" element={<AdminMemberCenterHubPage initialTab="reports" />} />
         <Route path="loyalty/settings" element={<AdminMemberCenterHubPage initialTab="settings" />} />
         <Route path="loyalty/tier-rules" element={<AdminMemberCenterHubPage initialTab="tierRules" />} />

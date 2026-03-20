@@ -75,8 +75,14 @@ function headerTitle(
   if (pathname.startsWith('/admin/promotions')) {
     if (marketingTab === 'jobs') return '行銷工作台（Jobs）';
     if (marketingTab === 'marketingRules') return '行銷規則（常駐）';
+    if (marketingTab === 'coupons') return '優惠券';
+    if (marketingTab === 'segments') return '分群管理';
+    if (marketingTab === 'dispatchRules') return '發券規則';
     return '促銷規則';
   }
+  if (pathname.startsWith('/admin/loyalty/coupons')) return '優惠券';
+  if (pathname.startsWith('/admin/segments')) return '分群管理';
+  if (pathname.startsWith('/admin/dispatch-rules')) return '發券規則';
   if (pathname.startsWith('/admin/customers/import')) return '客戶 CSV 匯入';
   // 會員中心/會員管理：依 member.hub.tab 決定
   if (pathname.startsWith('/admin/suppliers')) return '供應商管理';
@@ -85,44 +91,30 @@ function headerTitle(
   if (pathname.startsWith('/admin/receiving-notes')) return '進貨驗收';
   // /admin/loyalty/members 已在路由層 redirect 到 /admin/customers
   if (pathname.startsWith('/admin/loyalty/members')) return '會員管理';
-  if (
-    pathname.startsWith('/admin/loyalty') ||
-    pathname.startsWith('/admin/customers') ||
-    pathname.startsWith('/admin/segments') ||
-    pathname.startsWith('/admin/dispatch-rules')
-  ) {
+  if (pathname.startsWith('/admin/loyalty') || pathname.startsWith('/admin/customers')) {
     const fromTab =
       memberTab === 'members'
         ? '會員管理'
         : memberTab === 'pointLedger'
           ? '點數存摺'
-          : memberTab === 'coupons'
-            ? '優惠券'
-            : memberTab === 'reports'
-              ? '活動報表'
-              : memberTab === 'settings'
-                ? '集點設定'
-                : memberTab === 'tierRules'
-                  ? '會員等級規則'
-                  : memberTab === 'segments'
-                    ? '分群管理'
-                    : memberTab === 'dispatchRules'
-                      ? '發券規則'
-                      : memberTab === 'dashboard'
-                        ? '儀表板'
-                        : null;
+          : memberTab === 'reports'
+            ? '活動報表'
+            : memberTab === 'settings'
+              ? '集點設定'
+              : memberTab === 'tierRules'
+                ? '會員等級規則'
+                : memberTab === 'dashboard'
+                  ? '儀表板'
+                  : null;
 
     if (fromTab) return fromTab;
 
     // 當 member.hub.tab 尚未寫入 URL（例如剛進頁）時，以 pathname 做兜底
     if (pathname.startsWith('/admin/loyalty/settings')) return '集點設定';
     if (pathname.startsWith('/admin/loyalty/point-ledger')) return '點數存摺';
-    if (pathname.startsWith('/admin/loyalty/coupons')) return '優惠券';
     if (pathname.startsWith('/admin/loyalty/reports')) return '活動報表';
     if (pathname.startsWith('/admin/loyalty/tier-rules')) return '會員等級規則';
     if (pathname.startsWith('/admin/loyalty/members')) return '會員管理';
-    if (pathname.startsWith('/admin/dispatch-rules')) return '發券規則';
-    if (pathname.startsWith('/admin/segments')) return '分群管理';
     if (pathname.startsWith('/admin/customers')) return '會員管理';
     return '儀表板';
   }
