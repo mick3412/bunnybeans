@@ -51,6 +51,9 @@ export interface ProductDto {
   categoryId?: string;
   brandId?: string;
   tags?: string[];
+  specSize?: string | null;
+  specCapacity?: string | null;
+  specStyle?: string | null;
 }
 
 export function productDtoSalePriceNumber(p: ProductDto): number {
