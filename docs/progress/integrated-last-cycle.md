@@ -1,55 +1,45 @@
 # 上一輪整合（規格 Agent 每輪覆寫）
 
-**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **015** · 前端 **015**  
+**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **037** · 前端 **037**  
 （路徑：[agent-collab/agent-log-backend.md](../agent-collab/agent-log-backend.md)、[agent-collab/agent-log-frontend.md](../agent-collab/agent-log-frontend.md)）
 
 ## 後端（收斂摘要）
 
-- **INSTRUCTIONS 015 已完成（補貨建議 full gate：擴 suite、seed deterministic、補 contract）**：
-  - **CI：擴充 e2e-full 固定清單**：將 `admin-categories` / `admin-customers-import` / `admin-bulk` / `admin-replenishment` 納入 `.github/workflows/e2e-full.yml` 固定 suite。
-  - **E2E seed：補貨建議 deterministic**：在 `backend/scripts/e2e-seed.ts` 針對 replenishment-suggestions 需要的 inventory 低庫存基準與 `SALE_OUT` lookback 進行 deterministic 補齊，並 fail-fast 驗證 `suggestedQty > 0`，避免 full profile 長期空態。
-  - **Contract/錯誤碼一致性**：補 `AdminApiKeyGuard` 錯誤碼 schema 相關測試，確保前端/ E2E 能穩定預期 401。
-  - **文件對齊**：更新 `docs/e2e-pos.md` 對應 `e2e-full` 指令與新增 spec 驗收摘要。
-- **回歸**：`pnpm --filter pos-erp-backend test` 全綠。
-- **RBAC**：維持長期 skip（客戶不需要）。
+- **INSTRUCTIONS 037 已完成**：
+  - #1 迴歸確認、#2 BACKEND-OPTIMIZATION-REVIEW.md 更新、#3 Promotion DTO、#4 throw 工廠殘留、#5 pos.service L520 型別。
+  - #6 其他 as any（測試檔可暫緩）未執行。
+- **測試**：jest 152 passed；ci:backend-with-db 通過。
 
 ## 前端（收斂摘要）
 
-- **INSTRUCTIONS 015 已完成（admin import/export/replenishment 狀態一致性 + selector 穩定化）**：
-  - **Error schema 一致化**：customers/import preview、inventory export/import、replenishment 建立草稿等頁面，統一錯誤文案走既有 `getErrorMessage`，避免 shared error schema 不一致導致 UI/ E2E 預期漂移。
-  - **selector 穩定化**：replenishment 補上關鍵 UI `data-testid`，並同步更新對應 E2E selectors。
-  - **文件對齊**：更新 `docs/e2e-pos.md` 對應四個新增 spec 驗收摘要（customers-import / replenishment 加上定位說明）。
-- **回歸**：`pnpm --filter pos-erp-frontend build` ✅；full profile 下跑 `admin-categories/admin-customers-import/admin-bulk/admin-replenishment` 對應 E2E ✅。
-- **RBAC**：維持長期 skip（客戶不需要）。
+- **INSTRUCTIONS 037 部分完成**：
+  - **formatMoney 全面替換** ✅：12 檔改用 shared formatMoney。
+  - **大列表虛擬化**：評估後暫不實作（多數列表已有 server-side 分頁）。
+  - **前端單元測試** ✅：vitest、formatMoney.test.ts、EmptyState.test.tsx 共 9 passed。
+  - **Design Token**：PosCheckoutModal amber→brand-warning ✅。
+- **待補**：E2E 完整驗證、Design Token AdminReceivingNotesPage、Design Token 其餘殘留、loading/error 一致性。
+- **測試**：build ✅；unit test 9 passed；E2E 待環境就緒時補跑。
 
-## 前端：Admin 後台側欄 Hub 化與子頁面結構變更 Log
+---
 
-以下為你補充的結構化紀錄（Admin 後台為主），用於下一輪規格/驗收對齊：
+## 全局審查缺口清單（037 後剩餘）
 
-1. SideBar 分層（由多細項 → 3 層架構）
-   - Level 1（不可點）：只顯示分組標題，不連結（如：總覽／監控、商品/庫存、採購管理、財務、會員/行銷）
-   - Level 2（可點主入口）：只保留「Hub 入口」，點擊會切換到對應 Hub 路由（但不再露出所有 Level 3 細項）
-   - Level 3（原本的細項）：從側欄移除，改由 Hub 頁內用 tabs/區塊切換
-   - 參考：`frontend/src/pages/admin/AdminLayout.tsx`（側欄三層標註與入口只剩 Hub）
+> 依 agent-log 037 與 plan 審查。
 
-2. 子頁面（Main 區塊）改為「Hub Page + In-page Tabs」
-   - 新增/使用 Hub Page 作為 Level 2 的單一容器（同一路由框架內切換內容）
-   - Hub 內依 activeTab 條件渲染（Level 3 切換不再跳到新路由）
-   - 參考：`frontend/src/shared/utils/useScopedSearchParams.ts`
+### 驗收與整合
 
-3. URL query 狀態管理改為「scope 命名避免鍵衝突」
-   - scoped key：`finance.hub.tab`、`inventory.query.hub.tab`、`product.hub.tab`、`ops.monitoring.hub.tab`、`member.hub.tab`、`marketing.hub.tab`
-   - `useScopedSearchParams(prefix)`：只讀取 prefix.*，更新只改該 scope，避免污染其他 Hub 參數
-   - 參考：`frontend/src/shared/utils/useScopedSearchParams.ts` + `frontend/src/pages/admin/AdminLayout.tsx` 的 hubs mapping
+| 來源 | 缺口 | 說明 |
+|------|------|------|
+| 037 後續 | **E2E 完整驗證** | DB seed 就緒時執行 `e2e-prepare-db` + `restart-dev-detach` + e2e，確認 5 passed、2 skipped |
+| 037 後續 | **Design Token AdminReceivingNotesPage** | 即期／退供應商區塊 amber→brand-warning（約 35 處） |
+| 037 後續 | **Design Token 其餘殘留** | PosPage、PosOrderDetailPage、AdminPurchaseOrdersPage、AdminInventoryPage 等 amber/orange/slate/neutral |
+| 037 後續 | **loading / error 一致性** | 未用 StandardListLayout 的頁面 loading 統一；AdminReceivingNotesPage、AdminPurchaseOrdersPage 錯誤走 Alert |
 
-4. App Route 改為「Hub 的 thin wrapper + backward compatibility」
-   - `App.tsx` 將原本多個 Level 3 直接對應路由改為渲染 Hub 並帶 `initialTab`
-   - 針對既有深連結（如 loyalty 子頁）保留 wrapper/redirect，落到對應 Hub + 正確 initialTab
-   - 參考：`frontend/src/App.tsx`（大量 initialTab wrapper routes）
+### 功能進階（長期 skip）
 
-5. Header Title 改為依 hub tab 自動顯示
-   - `AdminLayout.tsx` 依 pathname 判斷所屬 Hub，再依 scoped tab 狀態輸出一致頁頭文案
-   - 參考：`frontend/src/pages/admin/AdminLayout.tsx` 的 `headerTitle()`
+| 來源 | 缺口 | 說明 |
+|------|------|------|
+| erp-roadmap Phase 5 | **RBAC** | 依產品決策維持長期 skip |
 
 ---
 
@@ -57,46 +47,22 @@
 
 | 模組 | 後端 | 前端 | 備註 |
 |------|------|------|------|
-| Merchant | list、GET /merchant/current | 單一商家（useDefaultMerchantId） | 完成 |
-| Product / Category / Brand / ProductTag | CRUD、import CSV、ProductTag CRUD | 列表、抽屜、import、分類維護、標籤接 API；UI 對齊 | 完成 |
-| Inventory | events、balances、批次／效期、replenishment-suggestions | 庫存頁、匯出／盤點匯入、補貨建議 UI | 完成；補貨閉環已接 from-replenishment API |
-| Finance | events、export、summary、balances、關帳、Audit、Snapshot | 金流報表、餘額頁、關帳／稽核 | 完成（Party 升級待 Phase 2） |
-| POS | createOrder、orders、export、報表（summary／top-items／daily） | POS 介面、結帳、報表、深連結 | 完成 |
-| Purchase | Supplier／PO／RN、return-to-supplier、**from-replenishment** | 供應商、採購單、驗收、補貨→PO 閉環 | 完成 |
-| Loyalty / Promotion / CRM | settings、ledger、dashboard、TierRule、dispatch-rules、POINTS_MULTIPLIER | 儀表板、存摺、會員、優惠券、發券規則、job 狀態 | 完成 |
-| Ops | OpsJobRunLog、GET /ops/jobs/status、**GET /ops/jobs**（分頁、kind 篩選）、**/ops/jobs/run（可追蹤）**、**click-audit list/summary** | Job 監控頁、穿透點擊審計頁（查詢） | 完成 |
-
----
-
-## 未開發或部分開發項目 + 前期設計問題
-
-> 詳見 [erp-roadmap.md](../erp-roadmap.md)。以下為摘要。
-
-### 全局審查缺口清單（依 roadmap）
-
-> 依 `erp-roadmap.md` 與各模組 roadmap（finance-accounting / crm-member / inventory / order / purchase / product / promotion / ops）交叉盤點。以「可落地的下一步」表述；已完成者不列入缺口。
-
-| 來源 | 缺口 | 優先 |
-|------|------|------|
-| ops-roadmap / CI E2E coverage | **CI fail-fast 偵錯資訊仍需補齊（Expected fixture keys 不完整）**：目前 `.github/workflows/e2e-full.yml` 只列出 dispatch-rules 的 fixture keys，缺少 replenishment-suggestions / barcode / exchange / receiving note / expiring inventory 等 deterministic identifiers，導致 full gate 失敗時難以快速定位缺資料原因。 | 高 |
-| erp-roadmap / Phase 5 / admin-roles | **RBAC（長期 skip）**：客戶不需要角色/權限；維持現有 `AdminApiKeyGuard`（有/無管理金鑰）即可。本專案不落地 Role/Permission 資料模型與 permissions endpoint。 | 低 |
-
-### 後續 Phase
-
-| Phase | 主題 |
-|-------|------|
-| Phase 2 | Party 多方視圖、Finance summary 正式化 |
-| Phase 3 | 會員頁收斂、行銷工作台 |
-| Phase 4 | Ops Job 監控頁、報表穿透 |
-| Phase 5 | 多商家、角色權限（選配） |
+| Merchant | list、current、Guard、DTO | 單一商家 | 完成 |
+| Product / Category / Brand / ProductTag | CRUD、barcode、效期、sortOrder、throw 工廠、DTO | 商品總覽、分類/品牌/標籤 | 完成 |
+| Inventory | 參數化、N+1 優化、throw 工廠 | 庫存總覽、補貨、即期 | 完成 |
+| Purchase | Guard、DTO、throw 工廠 | 採購總覽、驗收、退供 | 完成 |
+| POS / Order | Transaction、N+1、並行、Guard、DTO、Logger | POS 收銀、訂單、業績報表 | 完成 |
+| Finance | SQL 分頁、throw 工廠、DTO | 金流報表、應收應付 | 完成 |
+| Loyalty / CRM / Promotion | throw 工廠、catch 修正、Promotion DTO | 會員、集點、發券、促銷 | 完成 |
+| Ops | as any 清理、catch 修正 | Ops jobs、點擊審計 | 完成 |
+| Dashboard | integration-spec、Guard、TTL 快取 | 儀表板 | 完成 |
 
 ---
 
 ## 整合風險／待對齊
 
-- **migration 可重放性**：歷史 migrations 的「從零建庫」可重放性需持續維持；若依賴 baseline/squash，需明確規範「新環境初始化」與「舊環境升級」兩條路徑，避免 CI/Preview 認知不一致。  
-- **E2E 環境一致性**：前端 E2E 需 DATABASE_URL、後端 :3003、VITE_ADMIN_API_KEY；建議 CI 或專用聯調環境定期跑完整 suite（admin-smoke、admin-bulk、admin-customers-import、admin-loyalty-smoke、admin-pos-reports、admin-replenishment、admin-balances、admin-dispatch-rules、admin-categories）。
+- **E2E**：pos-checkout、pos-credit、pos-refund 需 DB seed 就緒。Agent 可執行 `bash scripts/e2e-prepare-db.sh` 後再跑 E2E。
 
 ---
 
-本檔為**實際進度總結**，下一輪具體任務見 [tasks/instructions/](../tasks/instructions/)（開啟最新編號檔案）§1。
+本檔為**實際進度總結**，下一輪具體任務見 [tasks/instructions/](../tasks/instructions/)（目前最新為 **INSTRUCTIONS 038**）§1。

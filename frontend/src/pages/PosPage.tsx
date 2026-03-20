@@ -583,7 +583,7 @@ export const PosPage: React.FC = () => {
                         }`}
                         title="庫存"
                       >
-                        {qty} 件
+                        {qty}
                       </span>
                     )}
                     {favoriteEditMode ? (
@@ -619,7 +619,7 @@ export const PosPage: React.FC = () => {
                       ) : null;
                     })()}
                   </div>
-                  <div className="pointer-events-none relative z-10 flex items-center justify-between gap-1">
+                  <div className="pointer-events-none relative z-10 flex items-center justify-end">
                     <span className="shrink-0 text-right text-sm font-semibold tabular-nums text-brand-primary">
                       {formatMoney(product.price)}
                     </span>

@@ -25,11 +25,11 @@ test.describe('整合旅程：報表 → 訂單 → 換貨 → 活動成效', ()
 
     await expect(page.getByRole('button', { name: '換貨' })).toBeVisible();
     await page.getByRole('button', { name: '換貨' }).click();
-    await expect(page.getByRole('heading', { name: '換貨導引（MVP）' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '換貨（MVP）' })).toBeVisible();
 
     // 關閉遮罩彈窗，避免擋住「回到來源」按鈕點擊
     await page.getByRole('button', { name: '關閉' }).click();
-    await expect(page.getByRole('heading', { name: '換貨導引（MVP）' })).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: '換貨（MVP）' })).toBeHidden({ timeout: 10_000 });
 
     // 回到來源報表
     await page.getByRole('button', { name: '回到來源' }).click();

@@ -453,7 +453,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                   ))}
                 </select>
                 {receivablePOs.length === 0 && (
-                  <p className="mt-2 text-sm text-amber-700">尚無可驗收採購單。</p>
+                  <p className="mt-2 text-sm text-brand-warning">尚無可驗收採購單。</p>
                 )}
               </div>
               <div>
@@ -577,9 +577,9 @@ export const AdminReceivingNotesPage: React.FC = () => {
               採購單 {detail.poNumber} ｜ {detail.supplierName} ｜ 驗收人：{detail.inspectorName ?? '—'}
             </p>
             {detail.warehouseId && (
-              <div className="mt-3 rounded-lg border border-dashed border-amber-200 bg-amber-50/60 p-3">
+              <div className="mt-3 rounded-lg border border-dashed border-brand-warning/40 bg-brand-warning/10 p-3">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-amber-900">
+                  <span className="text-xs font-semibold text-brand-warning">
                     近 30 天此倉庫即將到期批次
                   </span>
                   <Button
@@ -594,23 +594,23 @@ export const AdminReceivingNotesPage: React.FC = () => {
                     查看即期庫存面板
                   </Button>
                   {expiringDetailLoading && (
-                    <span className="text-[11px] text-amber-700">載入中…</span>
+                    <span className="text-[11px] text-brand-warning">載入中…</span>
                   )}
                 </div>
                 {expiringDetailError && (
-                  <p className="text-[11px] text-amber-900">無法載入批次：{expiringDetailError}</p>
+                  <p className="text-[11px] text-brand-warning">無法載入批次：{expiringDetailError}</p>
                 )}
                 {!expiringDetailError &&
                   !expiringDetailLoading &&
                   (!expiringDetail || expiringDetail.length === 0) && (
-                    <p className="text-[11px] text-amber-800">
+                    <p className="text-[11px] text-brand-warning">
                       目前沒有設定效期的庫存批次。
                     </p>
                   )}
                 {!expiringDetailError && expiringDetail && expiringDetail.length > 0 && (
-                  <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-amber-100 bg-white/80">
+                  <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-brand-warning/20 bg-white/80">
                     <table className="w-full border-collapse text-[11px]">
-                      <thead className="bg-amber-100 text-amber-900">
+                      <thead className="bg-brand-warning/20 text-brand-warning">
                         <tr>
                           <th className="px-2 py-1 text-left">商品</th>
                           <th className="px-2 py-1 text-left">批號</th>
@@ -622,14 +622,14 @@ export const AdminReceivingNotesPage: React.FC = () => {
                         {expiringDetail.map((b) => (
                           <tr
                             key={`${b.productId}-${b.warehouseId}-${b.batchCode ?? 'none'}-${b.expiryDate}`}
-                            className="border-t border-amber-100"
+                            className="border-t border-brand-warning/20"
                           >
                             <td className="px-2 py-1">
-                              <span className="text-[11px] font-medium text-amber-900">
+                              <span className="text-[11px] font-medium text-brand-warning">
                                 {b.productName ?? '—'}
                               </span>
                               {b.sku && (
-                                <span className="ml-1 font-mono text-[10px] text-amber-700">
+                                <span className="ml-1 font-mono text-[10px] text-brand-warning">
                                   {b.sku}
                                 </span>
                               )}
@@ -939,9 +939,9 @@ export const AdminReceivingNotesPage: React.FC = () => {
               </tbody>
             </table>
             {detail.status === 'COMPLETED' && (
-              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/80 p-4">
-                <div className="mb-2 text-sm font-semibold text-amber-900">退回供應商</div>
-                <p className="mb-3 text-xs text-amber-800">
+              <div className="mt-4 rounded-lg border border-brand-warning/40 bg-brand-warning/10 p-4">
+                <div className="mb-2 text-sm font-semibold text-brand-warning">退回供應商</div>
+                <p className="mb-3 text-xs text-brand-warning">
                   每列輸入欲退數量（不得超過合格數），送出後呼叫 POST /receiving-notes/:id/return-to-supplier。
                 </p>
                 {(() => {
@@ -956,15 +956,15 @@ export const AdminReceivingNotesPage: React.FC = () => {
                   const totalQty = picked.reduce((s, x) => s + x.qty, 0);
                   const totalAmount = picked.reduce((s, x) => s + x.qty * x.unitCost, 0);
                   return (
-                    <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-white/70 px-3 py-2 text-xs text-amber-900">
+                    <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-brand-warning/40 bg-white/70 px-3 py-2 text-xs text-brand-warning">
                       <span className="font-semibold">摘要</span>
                       <span>退回總件數：{totalQty}</span>
                       <span>估算金額：{Math.round(totalAmount * 100) / 100}</span>
-                      <span className="text-amber-800">
+                      <span className="text-brand-warning">
                         影響：寫入庫存事件 <span className="font-mono">RETURN_TO_SUPPLIER</span>；寫入金流事件{' '}
                         <span className="font-mono">PURCHASE_RETURN</span>（以採購單 unitCost 計算）。
                       </span>
-                      {!detailPo ? <span className="text-amber-700">（採購單成本載入中或不可用，金額可能為 0）</span> : null}
+                      {!detailPo ? <span className="text-brand-warning">（採購單成本載入中或不可用，金額可能為 0）</span> : null}
                     </div>
                   );
                 })()}
@@ -977,7 +977,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                         type="number"
                         min={0}
                         max={ln.qualifiedQty}
-                        className="w-20 rounded border border-amber-300 px-2 py-1 text-right"
+                        className="w-20 rounded border border-brand-warning/50 px-2 py-1 text-right"
                         value={returnQty[ln.id] ?? 0}
                         onChange={(e) =>
                           setReturnQty((prev) => ({ ...prev, [ln.id]: Math.max(0, Math.min(ln.qualifiedQty, Number(e.target.value) || 0)) }))
@@ -985,7 +985,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                       />
                       <span className="text-muted">件</span>
                       <input
-                        className="h-8 min-w-[180px] flex-1 rounded border border-amber-300 px-2 text-xs"
+                        className="h-8 min-w-[180px] flex-1 rounded border border-brand-warning/50 px-2 text-xs"
                         placeholder="原因（例：瑕疵/規格不符/效期問題…）"
                         value={returnReason[ln.id] ?? ''}
                         onChange={(e) => setReturnReason((prev) => ({ ...prev, [ln.id]: e.target.value }))}
@@ -996,7 +996,7 @@ export const AdminReceivingNotesPage: React.FC = () => {
                 <Button
                   type="button"
                   variant="secondary"
-                  className="border-amber-300 text-amber-900 hover:bg-amber-100"
+                  className="border-brand-warning/50 text-brand-warning hover:bg-brand-warning/20"
                   disabled={returnSubmitting || !(detail.lines ?? []).some((ln) => (returnQty[ln.id] ?? 0) > 0)}
                   onClick={async () => {
                     const lines = (detail.lines ?? [])
@@ -1029,11 +1029,11 @@ export const AdminReceivingNotesPage: React.FC = () => {
                   {returnSubmitting ? '送出中…' : '送出退回供應商'}
                 </Button>
                 {returnLastSubmitted && returnLastSubmitted.length > 0 ? (
-                  <div className="mt-3 rounded-lg border border-amber-200 bg-white/70 p-3 text-xs text-amber-900">
+                  <div className="mt-3 rounded-lg border border-brand-warning/40 bg-white/70 p-3 text-xs text-brand-warning">
                     <div className="mb-2 font-semibold">本次送出明細</div>
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[520px] text-left text-[11px]">
-                        <thead className="border-b border-amber-200 text-amber-800">
+                        <thead className="border-b border-brand-warning/40 text-brand-warning">
                           <tr>
                             <th className="px-2 py-1">列</th>
                             <th className="px-2 py-1 text-right">數量</th>
@@ -1042,16 +1042,16 @@ export const AdminReceivingNotesPage: React.FC = () => {
                         </thead>
                         <tbody>
                           {returnLastSubmitted.map((x) => (
-                            <tr key={x.lineId} className="border-t border-amber-100">
-                              <td className="px-2 py-1 font-mono text-amber-900">{x.lineId.slice(0, 8)}</td>
-                              <td className="px-2 py-1 text-right font-mono text-amber-900">{x.qty}</td>
-                              <td className="px-2 py-1 text-amber-900">{x.reason || '—'}</td>
+                            <tr key={x.lineId} className="border-t border-brand-warning/20">
+                              <td className="px-2 py-1 font-mono text-brand-warning">{x.lineId.slice(0, 8)}</td>
+                              <td className="px-2 py-1 text-right font-mono text-brand-warning">{x.qty}</td>
+                              <td className="px-2 py-1 text-brand-warning">{x.reason || '—'}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                    <div className="mt-2 text-[11px] text-amber-800">原因為前端備註展示。</div>
+                    <div className="mt-2 text-[11px] text-brand-warning">原因為前端備註展示。</div>
                   </div>
                 ) : null}
                 {detail.purchaseOrderId && (

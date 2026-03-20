@@ -55,7 +55,7 @@
 |------|------|------|
 | id | uuid | 主鍵 |
 | type | FinanceEventType | 上表 |
-| partyId | uuid? | 關聯對象（客戶 id、供應商 id）；可空 |
+| partyId | string? | 金流對象（Party）識別；**對外一律使用小寫前綴**：`customer:{customerId}`、`supplier:{supplierId}`（其他對象後續擴充）；可空 |
 | currency | string | 例 TWD |
 | amount | number | 金額（正數；退款、退供仍以正數表示） |
 | taxAmount | number? | 稅額 |
@@ -129,6 +129,12 @@
 
 - **GET /finance/summary**：已支援 `groupBy=type`、`groupBy=partyId`、`groupBy=day`、`groupBy=week`；見 api-design-inventory-finance。
 - **GET /finance/balances**：已實作；依 merchantId（必填或單一商家時自動帶入）查詢應收／應付餘額；支援 partyId、kind（customer/supplier）、分頁；與事件表可重算一致。
+
+### 6.3 Party 視圖（決策：已採用）
+
+- **單一真實來源**：以資料表 `Party` 作為 canonical（包含 `merchantId`、`kind`、`displayName`），供多商家隔離與前端顯示。
+- **partyId 格式（對外）**：`customer:{customerId}`、`supplier:{supplierId}`（小寫前綴）。
+  - 若出現無前綴的 legacy 值，僅視為相容讀取；新寫入與文件契約以「一律前綴」為準。
 
 ---
 

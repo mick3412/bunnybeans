@@ -111,18 +111,21 @@
 
 ### 中優先（UX 一致性）
 
-| # | 任務 | 說明 |
-|---|------|------|
-| 2 | **色值 token 統一** | 批次替換 `border-[#e2e8f0]` → `border-brand-surface`、`#0ea5e9` / `focus:[#0ea5e9]` → `brand-primary` 相關 token；優先處理高流量頁（庫存、商品、金流報表、促銷）。 |
-| 3 | **四組報表 E2E 擴充** | 025 已列；驗證會員營收貢獻、營收趨勢、客單價分布、金流趨勢。 |
+| # | 任務 | 說明 | INSTRUCTIONS |
+|---|------|------|--------------|
+| 2 | **色值 token 統一** | 批次替換 `border-[#e2e8f0]` → `border-brand-surface`、`#0ea5e9` / slate/neutral → brand token；詳見 §6。 | 030 #3 |
+| 3 | **四組報表 E2E 擴充** | 025 已列；驗證會員營收貢獻、營收趨勢、客單價分布、金流趨勢。 | 030 #1 |
+| 4 | **錯誤區塊統一 Alert** | 自訂 amber/red 改為 `<Alert variant="error">`；詳見 §6.7。 | 030 #4 |
+| 5 | **表格 overflow 修正** | AdminMerchantsPage、AdminSuppliersPage overflow-hidden → overflow-x-auto。 | 030 #5 |
+| 6 | **空態統一 EmptyState** | 自訂空態 div 改為 `<EmptyState message="…" />`；詳見 §6.7。 | 030 #6 |
 
 ### 低優先（Phase 1 設計債）
 
 | # | 任務 | 說明 |
 |---|------|------|
-| 4 | **Product schema 擴充** | 後端**已實作**（baseline 含欄位；product.service/repository/CSV 已支援）；前端商品表單對應可選。 |
-| 5 | **AdminMerchantsPage StandardListLayout** | 若結構允許，改用 StandardListLayout 外殼。 |
-| 6 | **空態／錯誤／載入補齊** | AdminInventoryPage、AdminProductsPage 等確認無遺漏情境。 |
+| 7 | **Product schema 擴充** | 後端**已實作**（baseline 含欄位；product.service/repository/CSV 已支援）；前端商品表單對應可選。 |
+| 8 | **AdminMerchantsPage StandardListLayout** | 若結構允許，改用 StandardListLayout 外殼。 |
+| 9 | **空態／錯誤／載入補齊** | AdminInventoryPage、AdminProductsPage 等確認無遺漏情境。 |
 
 ---
 
@@ -145,3 +148,88 @@
 - **必做**：E2E 補跑、四組報表 E2E 擴充（025 已有）。
 - **選配**：色值 token 統一（可拆多個 small PR）、AdminMerchantsPage StandardListLayout。
 - **待產品決策**：Product schema 擴充（影響商品主檔，需與產品規格對齊）。
+
+---
+
+## 六、逐頁 UX/UI 優化審查（補充）
+
+> 產出日期：2026-03-19  
+> 審查維度：色值 token、空態／錯誤／載入、max-width、StandardListLayout、可及性、響應式、一致性
+
+### 6.1 審查維度總覽
+
+| 維度 | 規定／目標 |
+|------|-----------|
+| **色值 token** | 使用 `border-brand-surface`、`text-muted`、`text-content`、`brand-primary`，避免硬編碼 gray/slate/neutral |
+| **空態／錯誤／載入** | EmptyState、`Alert variant="error"`、skeleton 或「載入中…」 |
+| **max-width** | 列表／報表 `max-w-6xl`；總覽 `max-w-6xl`～`max-w-7xl`；表單 `max-w-2xl`～`max-w-4xl` |
+| **StandardListLayout** | 列表／報表類頁面採用，提供 title、actions、filters、loading、error、empty |
+| **可及性** | 表單 label、按鈕 focus ring、role/aria |
+| **響應式** | 表格 `overflow-x-auto`、行動裝置可讀性 |
+| **一致性** | actions 右上、filter 標題下方、卡片樣式統一 |
+
+### 6.2 Login
+
+| 頁面 | 問題 | 優化建議 |
+|------|------|----------|
+| LoginPage | 健康狀態 `text-emerald-600`/`text-red-700`；無 loading；`shadow-neutral-900/5` | 改 token；表單提交加 loading；錯誤改 Alert |
+
+### 6.3 POS
+
+| 頁面 | 問題 | 優化建議 |
+|------|------|----------|
+| PosPage | `shadow-slate-200`、`bg-slate-50`、`hover:bg-slate-100` | 改用 brand-surface、text-muted、bg-table-head |
+| PosCheckoutModal | `bg-slate-900/40`、`hover:bg-slate-100`；可能缺 role/aria | 改 backdrop token；補 role="dialog"、aria-modal |
+| PosOrderDetailPage | `bg-slate-50/90`、`border-slate-100`；自訂 loading；無 EmptyState | 改 token；統一 skeleton；空訂單用 EmptyState |
+| PosOrdersListPage | `border-slate-300`；無 StandardListLayout | 改 border-brand-surface；評估 StandardListLayout |
+| PosPromosPage | 錯誤用 amber 自訂樣式；空態自訂 div | **改 Alert variant="error"**；**改 EmptyState** |
+| PosReportsPage | skeleton `bg-slate-200`；錯誤 inline | 改 token；錯誤改 Alert |
+
+### 6.4 Admin
+
+| 頁面 | 問題 | 優化建議 |
+|------|------|----------|
+| AdminDashboardPage | 錯誤 `border-red-200 bg-red-50`；無 loading skeleton | **改 Alert**；載入加 skeleton |
+| AdminProductsPage | `border-slate-100`；側欄 shadow 硬編碼 | 改 token；陰影共用 |
+| AdminInventoryAdjustPage | max-w-7xl；成功／錯誤非 Alert | 對照規格調 max-width；改 Alert |
+| AdminQuickReceivingPage | `border-neutral-50` 表格列 | 改 border-brand-surface |
+| AdminReplenishmentPage | `border-slate-100`、`border-neutral-100`；空態自訂 | 改 token；**改 EmptyState** |
+| AdminPurchaseOrdersPage | 大量 `border-neutral-*`、`text-neutral-*` | 收斂為 token |
+| AdminReceivingNotesPage | `border-neutral-100`、`border-neutral-200` | 改 token |
+| AdminSuppliersPage | `border-neutral-*`；**overflow-hidden** | 改 token；**overflow-x-auto** |
+| AdminReportsPage | `border-slate-100`；錯誤 inline | 改 token；改 Alert |
+| AdminDispatchRulesPage | `border-slate-100`；無 StandardListLayout | 改 token；評估 StandardListLayout |
+| AdminOpsJobsPage | 自訂 spinner 與 StandardListLayout 並存；`border-neutral-50` | 統一 loading；改 token |
+| AdminMerchantsPage | **overflow-hidden**；`border-slate-100`；部分 input 缺 focus ring | **overflow-x-auto**；改 token；補 focus ring |
+| AdminCustomerImportPage | `border-slate-100` | 改 token |
+| AdminPromotionEditPage | max-w-6xl（表單類可縮窄） | 評估 max-w-2xl～4xl |
+
+### 6.5 Loyalty
+
+| 頁面 | 問題 | 優化建議 |
+|------|------|----------|
+| LoyaltyDashboardPage | 錯誤 `border-red-200 bg-red-50`；`divide-neutral-100`；空態自訂 | **改 Alert**；改 token；**改 EmptyState** |
+| LoyaltyPointLedgerPage | Tab `bg-slate-900`；`divide-neutral-100`；無 EmptyState | 改 token；補 EmptyState |
+| LoyaltyCouponsPage | 錯誤 amber/red 自訂；select `border-neutral-300`；無 focus ring | **改 Alert**；改 token；補 focus ring |
+| LoyaltyTierRulesPage | `border-slate-100`；無 Alert、EmptyState | 改 token；關鍵錯誤改 Alert；補 EmptyState |
+
+### 6.6 跨頁一致性摘要
+
+| 項目 | 現況 | 建議 |
+|------|------|------|
+| **錯誤顯示** | 混用 Alert、inline div、amber/red 自訂 | 統一 `<Alert variant="error">` |
+| **空態** | 混用 EmptyState、自訂 div、表格內文字 | 統一 `<EmptyState message="…" />` |
+| **載入** | 混用「載入中…」、spinner、skeleton | 列表用 StandardListLayout loading，圖表用 skeleton |
+| **表格邊框** | slate-100、neutral-50/100/200 混用 | 統一 `border-brand-surface` |
+| **表單 focus** | 部分 select/textarea 缺 | 全表單 `focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20` |
+| **表格 overflow** | AdminMerchantsPage、AdminSuppliersPage 用 overflow-hidden | 改為 `overflow-x-auto` |
+
+### 6.7 優先修復（對應 INSTRUCTIONS）
+
+| 優先 | 任務 | 影響頁面 |
+|------|------|----------|
+| **高** | 錯誤區塊統一 Alert | PosPromosPage、AdminDashboardPage、LoyaltyDashboardPage、LoyaltyCouponsPage |
+| **高** | 表格 overflow-hidden → overflow-x-auto | AdminMerchantsPage、AdminSuppliersPage |
+| **中** | 硬編碼 gray/slate/neutral → token | 多數 Admin、Loyalty、POS 頁面 |
+| **中** | 空態統一 EmptyState | PosPromosPage、AdminReplenishmentPage、LoyaltyDashboardPage、LoyaltyPointLedgerPage、LoyaltyTierRulesPage |
+| **低** | 表單 focus ring、max-width、StandardListLayout 評估 | 見各頁詳表 |

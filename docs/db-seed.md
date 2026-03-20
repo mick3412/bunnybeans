@@ -39,14 +39,19 @@ pnpm --filter pos-erp-backend db:seed
 | **Merchant / Store / Warehouse** | M001、S001、W001 |
 | **會員／客戶** | **M001～M018** 會員碼、VIP／GOLD／NORMAL、新客／零消費／多筆訂單／折抵點、無電話訪客；見下「會員 ↔ POS ↔ 點數」。**E2E** 客戶由 `pnpm e2e:seed` 建立，不在此列。 |
 | **Supplier** | 3 啟用 + 1 停用；含聯絡人、付款條件等 |
-| **Product** | DEMO-TEE-BLK-M、DEMO-TEE-WHT-M、DEMO-FEED-ADULT 等（與採購／POS 連動） |
+| **Product** | **24 筆**：衣服（T恤多尺寸）、牧草、飼料、用品（食盆、水壺、兔籠）、零食、玩具；**規格欄位**：specSize、specStyle、specWeight、specCapacity、expiryDescription 皆有填寫 |
+| **Category** | 6 筆：衣服、牧草、飼料、用品、零食、玩具 |
+| **Brand** | 4 筆：品牌A、品牌B、品牌C、品牌D |
 | **採購單** | DRAFT、ORDERED、PARTIALLY_RECEIVED、RECEIVED、CANCELLED |
 | **驗收單** | PENDING、IN_PROGRESS、COMPLETED（含部分合格+退回）、RETURNED |
-| **庫存** | 與「驗收合格入庫」一致；低庫存 1、零庫存 0 各一 SKU |
-| **POS** | **12 筆**訂單（`DEMO-POS-{年}-001～012`），多會員、現金／賒帳，已 SALE_OUT；**PointLedger** 與訂單 **referenceId** 對齊；每筆訂單對應 **SALE_RECEIVABLE**＋**SALE_PAYMENT**（金流報表全流程） |
+| **庫存** | 與「驗收合格入庫」一致；低庫存 1、零庫存 0 各一 SKU；零食／兔籠／玩具／水壺另有 SEED-BULK 初始 |
+| **POS** | **30 筆**訂單（`DEMO-POS-{年}-001～030`），**createdAt 分散近 60 天**（供報表區間篩選）；多會員＋**匿名客**（customerId=null）；金額分散（99～2000+）供**客單價分布**、**營收趨勢**、**熱銷品項**測試；**PointLedger** 與訂單 **referenceId** 對齊；每筆訂單對應 **SALE_RECEIVABLE**＋**SALE_PAYMENT**（金流報表全流程）；**FinanceEvent.partyId** 使用 `customer:{id}`、`supplier:{id}`、`STORE:WALKIN`（匿名） |
 | **促銷** | 2 上架 + 1 草稿 |
 | **BulkImportJob** | done / failed 各 1（測 async 列表） |
-| **Segment（分群）** | 2 筆：「全部 ACTIVE 會員」、「VIP 會員」（conditions.memberLevel=VIP）；手測 GET /crm/segments/:id/preview |
+| **Segment（分群）** | 3 筆：「全部 ACTIVE 會員」、「VIP 會員」、「GOLD 會員」；手測 GET /crm/segments/:id/preview |
+| **TierRule** | 2 筆：消費滿 5000 升 VIP、滿 2000 升 GOLD |
+| **LoyaltyCoupon** | 2 筆：WELCOME10、VIP50 |
+| **CrmCouponDispatchRule** | 2 筆：新會員發歡迎券、VIP 發折 50 券 |
 | **ProductTag** | 3 筆：熱銷、新品、清倉（SEED-TAG-HOT／NEW／CLEARANCE）；供前端類別管理／商品頁選用 |
 | **CustomerContactLog** | 1 筆：VIP001 客戶、type=CALL、SEED 示範 |
 
@@ -67,7 +72,11 @@ pnpm --filter pos-erp-backend db:seed
 
 **與 POS 的關係**：FULL 入庫的 T 恤等與 seed 中 POS 可賣品項同一批商品；零庫存 SKU 僅出現在 RETURN 採購明細（敘述用）。其餘 SKU 另以 `SEED-BULK` 補初始庫存，方便列表／報表有量。
 
-**金流（全流程）**：每筆 POS 訂單會寫入 **SALE_RECEIVABLE**（應收）與 **SALE_PAYMENT**（實收），referenceId 為訂單 id；驗收 COMPLETED 的 RN-FULL 有一筆 **PURCHASE_PAYABLE**。金流報表（GET /finance/events、GET /finance/summary）可依 type 篩選與彙總進行人工測試。
+**金流（全流程）**：每筆 POS 訂單會寫入 **SALE_RECEIVABLE**（應收）與 **SALE_PAYMENT**（實收），referenceId 為訂單 id；驗收 COMPLETED 的 RN-FULL 有一筆 **PURCHASE_PAYABLE**。**partyId** 使用 `customer:{customerId}`、`supplier:{supplierId}`（與 Party 視圖對齊）；匿名客使用 `STORE:WALKIN`。金流報表（GET /finance/events、GET /finance/summary）可依 type 篩選與彙總進行人工測試。
+
+## E2E 與測試資料清空
+
+**`db:seed` 會先 `wipeAll()` 清空所有業務表**，包含 CrmCouponDispatchRule、PromotionRule 等。因此執行 `db:seed` 後，**不會殘留 E2E-RULE-*、E2E-ORDER-* 等 E2E 測試資料**。E2E 用 fixture 由 `pnpm e2e:seed` 單獨建立，僅在跑 E2E 測試時使用。
 
 ## E2E 固定客戶（由 e2e-seed 建立）
 
