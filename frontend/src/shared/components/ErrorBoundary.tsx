@@ -32,12 +32,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError && this.state.error) {
       if (this.props.fallback) return this.props.fallback;
       return (
-        <div className="mx-auto max-w-xl rounded-xl border border-red-200 bg-red-50 p-6 mt-8">
-          <h2 className="text-lg font-semibold text-red-800 mb-2">頁面載入發生錯誤</h2>
-          <p className="text-sm text-red-700 mb-3">{this.state.error.message}</p>
+        <div className="mx-auto mt-8 max-w-xl rounded-xl border border-brand-danger/30 bg-brand-danger/10 p-6">
+          <h2 className="mb-2 text-lg font-semibold text-brand-danger">頁面載入發生錯誤</h2>
+          <p className="mb-3 text-sm text-brand-danger">{this.state.error.message}</p>
           <button
             type="button"
-            className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+            className="rounded-md bg-brand-danger px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-danger-hover"
             onClick={() => this.setState({ hasError: false, error: undefined })}
           >
             重試
