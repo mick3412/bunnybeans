@@ -40,7 +40,7 @@
   - **#1 迴歸確認**：確認 033 變更無遺漏、033 補齊未提交變更已補 atomic commits；修正 pos-create-order 並行測試 teardown（by storeId）。
   - **選配 #2 其他優化**：findLineRowsForExport 改 cursor-based pagination；findManyForExport、product.findAll、findLineRowsForExport 加 select 精簡；dashboard getSummary TTL 60s 快取。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
-- commits：`16472261` DTOs；`8c522c46` POS $transaction；`ddf564ef` edge case tests；`2840f10c` agent-log；`39149e85` fix teardown；`896774b1` perf: cursor pagination + select 精簡；`19ec7ce2` perf: dashboard TTL cache；`d8ef4e3d` fix: teardown by storeId + agent-log update
+- commits：`16472261` DTOs；`8c522c46` POS $transaction；`ddf564ef` edge case tests；`2840f10c` agent-log；`39149e85` fix teardown；`896774b1` perf: cursor pagination + select 精簡；`19ec7ce2` perf: dashboard TTL cache；`d8ef4e3d` fix: teardown by storeId；`a0d2c595` docs: agent-log 034 選配完成
 
 ---
 
