@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
+import { throwBadRequest } from '../../../shared/utils/throw-exceptions';
 import {
   CustomerService,
   type CustomerImportApplyDecision,
@@ -176,10 +177,7 @@ export class CustomerController {
         throw new Error('decisions must be array');
       }
     } catch {
-      throw new BadRequestException({
-        message: 'decisions must be JSON array',
-        code: 'CUSTOMER_IMPORT_DECISIONS_INVALID',
-      });
+      throwBadRequest('CUSTOMER_IMPORT_DECISIONS_INVALID', 'decisions must be JSON array');
     }
     return this.service.applyImport(merchantId, file.buffer, fileHash, decisions);
   }

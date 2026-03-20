@@ -1,17 +1,7 @@
-import {
-  Body,
-  Controller,
-  BadRequestException,
-  Get,
-  Param,
-  Post,
-  Query,
-  UseGuards,
-  Header,
-  Res,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards, Header, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { FinanceEventType } from '@prisma/client';
+import { throwBadRequest } from '../../../shared/utils/throw-exceptions';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { MerchantService } from '../../merchant/application/merchant.service';
 import { OpsService } from '../../ops/application/ops.service';
@@ -69,7 +59,7 @@ export class FinanceController {
         const current = await this.merchantService.getCurrentMerchant();
         resolved = current.id;
       } catch {
-        throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId required' });
+        throwBadRequest('VALIDATION_ERROR', 'merchantId required');
       }
     }
     const kind =
