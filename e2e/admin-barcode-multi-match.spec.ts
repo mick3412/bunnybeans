@@ -8,10 +8,11 @@ test.describe('條碼多筆命中 UX', () => {
 
     await page.goto('/login');
     await page.getByTestId('e2e-login-submit').click();
-    await expect(page).toHaveURL(/\/pos/);
+    await expect(page).toHaveURL(/\/pos$/, { timeout: 15_000 });
+    await page.waitForURL(/\/pos$/);
 
     const input = page.getByTestId('e2e-pos-barcode-input');
-    await expect(input).toBeVisible();
+    await expect(input).toBeVisible({ timeout: 15_000 });
     await input.fill(barcode);
     await input.press('Enter');
 

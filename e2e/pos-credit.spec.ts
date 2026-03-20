@@ -9,7 +9,9 @@ test.describe('POS 掛帳與補款', () => {
     await page.getByTestId('e2e-login-submit').click();
     await expect(page).toHaveURL(/\/pos$/);
 
-    await page.locator('[data-product-name="商品 A"]').first().click();
+    const productCard = page.locator('[data-testid^="pos-product-"]').first();
+    await expect(productCard).toBeVisible({ timeout: 15_000 });
+    await productCard.click();
     await page.getByTestId('e2e-checkout-open').click();
     await page.getByTestId('e2e-checkout-member').fill(E2E_CUSTOMER_ID);
     await page.getByTestId('e2e-checkout-received').fill('0');

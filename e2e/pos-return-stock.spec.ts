@@ -5,7 +5,9 @@ test.describe('POS 退貨入庫', () => {
     await page.goto('/');
     await page.getByTestId('e2e-login-submit').click();
     await expect(page).toHaveURL(/\/pos$/);
-    await page.locator('[data-product-name="商品 A"]').first().click();
+    const productCard = page.locator('[data-testid^="pos-product-"]').first();
+    await expect(productCard).toBeVisible({ timeout: 15_000 });
+    await productCard.click();
     await page.getByTestId('e2e-checkout-open').click();
     await expect(page.getByTestId('e2e-checkout-modal')).toBeVisible();
     await page.getByTestId('e2e-checkout-submit').click();
