@@ -15,6 +15,15 @@
 
 ---
 
+### INSTRUCTIONS-027（迴歸 + ci:backend-with-db 驗證 + api-design 對齊 + byStore）
+- 做了：依 `BACKEND-INSTRUCTIONS 027.md` §1 完成 #1～#4。
+  - **#1 迴歸**：`pnpm ci:backend-with-db` 全綠（140 passed）。註：`pnpm --filter pos-erp-backend test` 單獨執行時，e2e-seed 需 DB 已執行 db:seed，建議使用 `ci:backend-with-db`。
+  - **#2 ci:backend-with-db 驗證**：migrate deploy → db:seed → test 流程通過。
+  - **#3 api-design 對齊**：api-design-pos 補 merchantId query 說明（summary、top-items、daily）；契約與實作一致。
+  - **#4 報表進階（選配）**：`GET /pos/reports/summary` 擴充 `byStore`（storeId、storeCode、storeName、revenue、ordersCount，依營收降序）；pos-reports.integration-spec 補 byStore 多門市測試。
+- 測試/驗收：`pnpm ci:backend-with-db` 全綠。
+- commits：ff38741c feat(pos-reports): add byStore to summary；930b7c32 docs(agent-log): INSTRUCTIONS-027
+
 ### INSTRUCTIONS-026（迴歸 + 有效期限模組 + 即將到期天數 + 產品條碼確認）
 - 做了：依 `BACKEND-INSTRUCTIONS 026.md` §1 完成 #1～#5。
   - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（139 passed）。
@@ -23,7 +32,7 @@
   - **#4 即將到期天數**：`GET /inventory/expiring` 批次回傳新增 `daysUntilExpiry`（到期日期 − 當天）；`groupBy=product` 新增 `earliestDaysUntilExpiry` 與每 batch 之 `daysUntilExpiry`。
   - **#5 產品條碼確認**：Product schema 已有 `barcode`；`GET /products/search-barcode?q=`、scan-stocktake 已使用；api-design.md 已載明。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠。
-- commits：d73b624b feat(purchase,inventory): expiry - productionDate+shelfLifeMonths, daysUntilExpiry；368edbed docs: api-design expiry；b4f691b7 docs(agent-log): INSTRUCTIONS-026
+- commits：d73b624b feat(purchase,inventory): expiry；368edbed docs: api-design expiry；b4f691b7 docs(agent-log): INSTRUCTIONS-026
 
 ### INSTRUCTIONS-025（迴歸 + Product schema 擴充確認）
 - 做了：依 `BACKEND-INSTRUCTIONS 025.md` §1 完成 #1～#2。
