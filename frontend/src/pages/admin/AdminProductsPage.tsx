@@ -738,9 +738,9 @@ export const AdminProductsPage: React.FC = () => {
             </div>
           )}
           {jobError && (
-            <div className="mt-1.5 rounded border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-medium text-red-900" role="alert">
+            <Alert variant="error" className="mt-1.5 text-xs">
               非同步失敗：{jobError}
-            </div>
+            </Alert>
           )}
         </details>
       </div>

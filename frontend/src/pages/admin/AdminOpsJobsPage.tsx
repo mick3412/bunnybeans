@@ -229,9 +229,7 @@ export const AdminOpsJobsPage: React.FC = () => {
       {!err && (
       <div className="overflow-hidden rounded-xl border border-brand-surface">
         {loading ? (
-          <div className="flex min-h-[200px] items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand-primary border-t-transparent" />
-          </div>
+          <div className="flex min-h-[200px] items-center justify-center py-12 text-sm text-muted">載入中…</div>
         ) : items.length === 0 ? null : (
           <div className="table-sticky-head overflow-x-auto bg-white">
             <table className="min-w-full text-left text-sm">
@@ -334,7 +332,7 @@ export const AdminOpsJobsPage: React.FC = () => {
               <div>
                 <label className="mb-1 block text-xs font-semibold text-muted">種類</label>
                 <select
-                  className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                   value={runKind}
                   onChange={(e) => setRunKind(e.target.value as typeof runKind)}
                 >
@@ -348,7 +346,7 @@ export const AdminOpsJobsPage: React.FC = () => {
                     <label className="mb-1 block text-xs font-semibold text-muted">asOfDate（選填，YYYY-MM-DD）</label>
                     <input
                       type="date"
-                      className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                       value={asOfDate}
                       onChange={(e) => setAsOfDate(e.target.value)}
                     />
@@ -356,7 +354,7 @@ export const AdminOpsJobsPage: React.FC = () => {
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-muted">快照類型</label>
                     <select
-                      className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
+                      className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                       value={snapshotType}
                       onChange={(e) => setSnapshotType(e.target.value as 'daily' | 'monthly')}
                     >
