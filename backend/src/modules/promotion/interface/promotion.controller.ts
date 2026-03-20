@@ -1,17 +1,8 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
+import { CreatePromotionRuleDto } from '../dto/create-promotion-rule.dto';
+import { UpdatePromotionRuleDto } from '../dto/update-promotion-rule.dto';
+import { throwBadRequest } from '../../../shared/utils/throw-exceptions';
 import { PromotionService } from '../application/promotion.service';
 
 @Controller('promotion-rules')
@@ -38,10 +29,7 @@ export class PromotionController {
     @Query('preset') preset?: string,
   ) {
     if (!merchantId?.trim()) {
-      throw new BadRequestException({
-        message: 'merchantId is required',
-        code: 'PROMOTION_BODY_INVALID',
-      });
+      throwBadRequest('PROMOTION_BODY_INVALID', 'merchantId is required');
     }
     return this.service.getEffectiveness(merchantId.trim(), {
       from,
@@ -65,28 +53,7 @@ export class PromotionController {
 
   @Post()
   @UseGuards(AdminApiKeyGuard)
-  create(
-    @Body()
-    body: {
-      merchantId: string;
-      name: string;
-      priority?: number;
-      draft?: boolean;
-      startsAt?: string | null;
-      endsAt?: string | null;
-      exclusive?: boolean;
-      firstPurchaseOnly?: boolean;
-      memberLevels?: string[];
-      conditions?: unknown[];
-      actions?: unknown[];
-    },
-  ) {
-    if (!body.merchantId?.trim() || !body.name?.trim()) {
-      throw new BadRequestException({
-        message: 'merchantId and name required',
-        code: 'PROMOTION_BODY_INVALID',
-      });
-    }
+  create(@Body() body: CreatePromotionRuleDto) {
     return this.service.create(body.merchantId.trim(), {
       name: body.name,
       priority: body.priority,
@@ -103,29 +70,7 @@ export class PromotionController {
 
   @Patch(':id')
   @UseGuards(AdminApiKeyGuard)
-  update(
-    @Param('id') id: string,
-    @Body()
-    body: {
-      merchantId: string;
-      name?: string;
-      priority?: number;
-      draft?: boolean;
-      startsAt?: string | null;
-      endsAt?: string | null;
-      exclusive?: boolean;
-      firstPurchaseOnly?: boolean;
-      memberLevels?: string[];
-      conditions?: unknown[];
-      actions?: unknown[];
-    },
-  ) {
-    if (!body.merchantId?.trim()) {
-      throw new BadRequestException({
-        message: 'merchantId required',
-        code: 'PROMOTION_BODY_INVALID',
-      });
-    }
+  update(@Param('id') id: string, @Body() body: UpdatePromotionRuleDto) {
     return this.service.update(id, body.merchantId.trim(), {
       name: body.name,
       priority: body.priority,
@@ -148,10 +93,7 @@ export class PromotionController {
     @Query('merchantId') merchantId: string,
   ) {
     if (!merchantId?.trim()) {
-      throw new BadRequestException({
-        message: 'merchantId query required',
-        code: 'PROMOTION_BODY_INVALID',
-      });
+      throwBadRequest('PROMOTION_BODY_INVALID', 'merchantId query required');
     }
     await this.service.remove(id, merchantId.trim());
   }

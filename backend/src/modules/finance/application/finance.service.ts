@@ -323,10 +323,10 @@ export class FinanceService {
           ? ('supplier' as const)
           : undefined;
     const page = q.page ?? 1;
-    const pageSize = Math.min(200, Math.max(1, q.pageSize ?? 50));
+    const pageSize = Math.min(100, Math.max(1, q.pageSize ?? 50));
     if (page < 1 || pageSize < 1) {
       throw new BadRequestException({
-        message: 'page must be >= 1, pageSize between 1 and 200',
+        message: 'page must be >= 1, pageSize between 1 and 100',
         code: 'FINANCE_LIST_PAGE_INVALID',
       });
     }

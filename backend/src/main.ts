@@ -1,10 +1,12 @@
 import 'reflect-metadata';
+import { randomUUID } from 'crypto';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './shared/filters/http-exception.filter';
-import { randomUUID } from 'crypto';
 
 const TRACE_ID_HEADER = 'x-trace-id';
+const requestLog = new Logger('Request');
 
 function requestLogger(
   req: { headers: Record<string, string | string[] | undefined>; path: string; method: string; traceId?: string },
@@ -17,8 +19,7 @@ function requestLogger(
   const start = Date.now();
   res.on('finish', () => {
     const module = req.path.split('/').filter(Boolean)[0] || 'app';
-    // eslint-disable-next-line no-console
-    console.log(
+    requestLog.log(
       JSON.stringify({
         traceId,
         module,
@@ -37,11 +38,17 @@ async function bootstrap() {
   const port = process.env.PORT ? Number(process.env.PORT) : 3003;
   // Vercel／Tunnel 等任意來源；預覽見 docs/deploy-preview.md「CORS」
   app.enableCors({ origin: true, credentials: true });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: false,
+    }),
+  );
   app.use(requestLogger);
   app.useGlobalFilters(new HttpExceptionFilter());
   await app.listen(port);
-  // eslint-disable-next-line no-console
-  console.log(`Backend listening on http://localhost:${port}`);
+  new Logger('Bootstrap').log(`Backend listening on http://localhost:${port}`);
 }
 
 bootstrap();

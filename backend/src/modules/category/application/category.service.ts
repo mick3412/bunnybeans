@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { dedupeCode, isValidCode, resolveCode } from '../../../shared/utils/canonical-code';
+import { createMasterWithCode } from '../../../shared/utils/create-master-with-code';
 import { CategoryRepository } from '../infrastructure/category.repository';
 
 @Injectable()
@@ -57,38 +58,16 @@ export class CategoryService {
   }
 
   async createCategory(input: { code?: string; name: string }) {
-    const name = input.name?.trim();
-    if (!name) {
-      throw new BadRequestException({
-        message: 'name is required',
-        code: 'CATEGORY_NAME_REQUIRED',
-      });
-    }
-    let code: string;
-    try {
-      const existing = await this.repo.findCodes();
-      const resolved = resolveCode(input.code, name, existing);
-      code = resolved.code;
-    } catch (e) {
-      if ((e as Error).message === 'CODE_INVALID') {
-        throw new BadRequestException({
-          message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
-          code: 'CATEGORY_CODE_INVALID',
-        });
-      }
-      throw e;
-    }
-    try {
-      return await this.repo.create({ code, name });
-    } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({
-          message: 'Category code already exists',
-          code: 'CATEGORY_CODE_CONFLICT',
-        });
-      }
-      throw e;
-    }
+    return createMasterWithCode<Record<string, never>, Awaited<ReturnType<CategoryRepository['create']>>>({
+      name: input.name,
+      code: input.code,
+      findExistingCodes: () => this.repo.findCodes(),
+      create: (data) => this.repo.create(data),
+      conflictCode: 'CATEGORY_CODE_CONFLICT',
+      conflictMessage: 'Category code already exists',
+      nameRequiredCode: 'CATEGORY_NAME_REQUIRED',
+      codeInvalidCode: 'CATEGORY_CODE_INVALID',
+    });
   }
 
   async updateCategory(

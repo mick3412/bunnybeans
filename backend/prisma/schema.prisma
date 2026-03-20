@@ -434,6 +434,7 @@ model FinanceEvent {
   createdAt   DateTime        @default(now())
 
   @@index([partyId, occurredAt])
+  @@index([partyId, type])
 }
 
 model PosOrder {
@@ -454,6 +455,7 @@ model PosOrder {
   items    PosOrderItem[]
   payments PosOrderPayment[]
 
+  @@index([storeId, createdAt])
   @@index([customerId])
   @@index([customerId, createdAt])
   @@index([exchangeFromOrderId])

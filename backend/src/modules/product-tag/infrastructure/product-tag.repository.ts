@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 
 @Injectable()
@@ -45,13 +46,13 @@ export class ProductTagRepository {
   }
 
   async reorder(merchantId: string, ids: string[]) {
-    await this.prisma.$transaction(
-      ids.map((id, index) =>
-        this.prisma.productTag.updateMany({
-          where: { id, merchantId },
-          data: { sortOrder: index },
-        }),
-      ),
+    if (ids.length === 0) return;
+    const cases = Prisma.join(
+      ids.map((id, index) => Prisma.sql`WHEN ${id} THEN ${index}`),
+      ' ',
+    );
+    await this.prisma.$executeRaw(
+      Prisma.sql`UPDATE "ProductTag" SET "sortOrder" = CASE "id" ${cases} END WHERE "merchantId" = ${merchantId} AND "id" IN (${Prisma.join(ids.map((id) => Prisma.sql`${id}`), ', ')})`,
     );
   }
 }

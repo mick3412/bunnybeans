@@ -526,7 +526,7 @@ export class InventoryService {
     const page = filter.page && filter.page > 0 ? filter.page : 1;
     const pageSize =
       filter.pageSize && filter.pageSize > 0
-        ? Math.min(filter.pageSize, 200)
+        ? Math.min(filter.pageSize, 100)
         : 50;
 
     let from: Date | undefined;
@@ -588,7 +588,7 @@ export class InventoryService {
     const page = filter.page && filter.page > 0 ? filter.page : 1;
     const pageSize =
       filter.pageSize && filter.pageSize > 0
-        ? Math.min(filter.pageSize, 200)
+        ? Math.min(filter.pageSize, 100)
         : 50;
 
     let from: Date | undefined;
@@ -714,7 +714,7 @@ export class InventoryService {
 
     const page = filter.page && filter.page > 0 ? filter.page : 1;
     const pageSize =
-      filter.pageSize && filter.pageSize > 0 ? Math.min(filter.pageSize, 200) : 50;
+      filter.pageSize && filter.pageSize > 0 ? Math.min(filter.pageSize, 100) : 50;
 
     const warehouseId = filter.warehouseId?.trim() || undefined;
     if (warehouseId) {

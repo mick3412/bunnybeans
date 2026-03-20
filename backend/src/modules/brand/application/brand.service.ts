@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { dedupeCode, isValidCode, resolveCode } from '../../../shared/utils/canonical-code';
+import { createMasterWithCode } from '../../../shared/utils/create-master-with-code';
 import { BrandRepository } from '../infrastructure/brand.repository';
 
 @Injectable()
@@ -17,38 +18,16 @@ export class BrandService {
   }
 
   async createBrand(input: { code?: string; name: string }) {
-    const name = input.name?.trim();
-    if (!name) {
-      throw new BadRequestException({
-        message: 'name is required',
-        code: 'BRAND_NAME_REQUIRED',
-      });
-    }
-    let code: string;
-    try {
-      const existing = await this.repo.findCodes();
-      const resolved = resolveCode(input.code, name, existing);
-      code = resolved.code;
-    } catch (e) {
-      if ((e as Error).message === 'CODE_INVALID') {
-        throw new BadRequestException({
-          message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
-          code: 'BRAND_CODE_INVALID',
-        });
-      }
-      throw e;
-    }
-    try {
-      return await this.repo.create({ code, name });
-    } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({
-          message: 'Brand code already exists',
-          code: 'BRAND_CODE_CONFLICT',
-        });
-      }
-      throw e;
-    }
+    return createMasterWithCode<Record<string, never>, Awaited<ReturnType<BrandRepository['create']>>>({
+      name: input.name,
+      code: input.code,
+      findExistingCodes: () => this.repo.findCodes(),
+      create: (data) => this.repo.create(data),
+      conflictCode: 'BRAND_CODE_CONFLICT',
+      conflictMessage: 'Brand code already exists',
+      nameRequiredCode: 'BRAND_NAME_REQUIRED',
+      codeInvalidCode: 'BRAND_CODE_INVALID',
+    });
   }
 
   async updateBrand(id: string, input: { code?: string; name?: string }) {

@@ -181,7 +181,7 @@ export class FinanceRepository {
     };
   }
 
-  /** 應收／應付餘額：依 partyId 彙總全部事件，與事件表可重算一致。支援 kind 篩選與 displayName／kind 解析。 */
+  /** 應收／應付餘額：SQL 層分頁與排序，避免 groupBy 全量後記憶體分頁。allowedPartyIds 以子查詢取代 IN 清單。 */
   async balancesByPartyId(
     params: {
       merchantId: string;
@@ -204,21 +204,59 @@ export class FinanceRepository {
     totals: { receivable: number; payable: number };
   }> {
     const merchantId = params.merchantId?.trim();
-    const where: Prisma.FinanceEventWhereInput = {};
-    if (params.partyId?.trim()) where.partyId = params.partyId.trim();
+    const partyIdFilter = params.partyId?.trim();
+    const kindFilter = params.kind ?? null;
+    const offset = (params.page - 1) * params.pageSize;
 
-    // Multi-merchant isolation: restrict to parties owned by merchantId (via Party view).
-    if (merchantId) {
-      const partyRows = await this.prisma.$queryRaw<{ partyId: string }[]>(
+    try {
+      const rows = await this.prisma.$queryRaw<
+        Array<{
+          partyId: string;
+          receivable: number;
+          payable: number;
+          displayName: string | null;
+          kind: string | null;
+          total: number;
+          totReceivable: string | { toNumber?: () => number };
+          totPayable: string | { toNumber?: () => number };
+        }>
+      >(
         Prisma.sql`
-          SELECT "partyId"
-          FROM "Party"
-          WHERE "merchantId" = ${merchantId}
-          ${params.kind ? Prisma.sql`AND "kind" = ${params.kind}` : Prisma.empty}
+        WITH agg AS (
+          SELECT
+            e."partyId",
+            (SUM(CASE WHEN e."type" = 'SALE_RECEIVABLE' THEN e."amount" ELSE 0 END)
+             - SUM(CASE WHEN e."type" IN ('SALE_PAYMENT','SALE_REFUND') THEN e."amount" ELSE 0 END))::float AS receivable,
+            (SUM(CASE WHEN e."type" = 'PURCHASE_PAYABLE' THEN e."amount" ELSE 0 END)
+             - SUM(CASE WHEN e."type" = 'PURCHASE_RETURN' THEN e."amount" ELSE 0 END))::float AS payable
+          FROM "FinanceEvent" e
+          WHERE 1=1
+            ${partyIdFilter ? Prisma.sql`AND e."partyId" = ${partyIdFilter}` : Prisma.empty}
+            ${merchantId
+              ? Prisma.sql`AND e."partyId" IN (SELECT "partyId" FROM "Party" WHERE "merchantId" = ${merchantId} ${kindFilter ? Prisma.sql`AND "kind" = ${kindFilter}` : Prisma.empty})`
+              : Prisma.empty}
+          GROUP BY e."partyId"
+        ),
+        with_party AS (
+          SELECT a.*, p."displayName", p."kind"
+          FROM agg a
+          LEFT JOIN "Party" p ON p."partyId" = a."partyId"
+          WHERE ${kindFilter && !merchantId ? Prisma.sql`p."kind" = ${kindFilter}` : Prisma.sql`1=1`}
+        ),
+        paginated AS (
+          SELECT *,
+            COUNT(*) OVER()::int AS total,
+            SUM(receivable) OVER() AS "totReceivable",
+            SUM(payable) OVER() AS "totPayable"
+          FROM with_party
+          ORDER BY GREATEST(ABS(receivable), ABS(payable)) DESC NULLS LAST, "partyId"
+          LIMIT ${params.pageSize} OFFSET ${offset}
+        )
+        SELECT * FROM paginated
         `,
       );
-      const allowedPartyIds = partyRows.map((r) => r.partyId);
-      if (allowedPartyIds.length === 0) {
+
+      if (rows.length === 0) {
         return {
           items: [],
           page: params.page,
@@ -227,75 +265,44 @@ export class FinanceRepository {
           totals: { receivable: 0, payable: 0 },
         };
       }
-      if (typeof where.partyId === 'string') {
-        if (!allowedPartyIds.includes(where.partyId)) {
-          return {
-            items: [],
-            page: params.page,
-            pageSize: params.pageSize,
-            total: 0,
-            totals: { receivable: 0, payable: 0 },
-          };
-        }
-      } else {
-        where.partyId = { in: allowedPartyIds };
+
+      const first = rows[0];
+      const total = first.total ?? 0;
+      const totReceivable = typeof first.totReceivable === 'object' && first.totReceivable != null && 'toNumber' in first.totReceivable
+        ? (first.totReceivable as { toNumber: () => number }).toNumber()
+        : Number(first.totReceivable ?? 0);
+      const totPayable = typeof first.totPayable === 'object' && first.totPayable != null && 'toNumber' in first.totPayable
+        ? (first.totPayable as { toNumber: () => number }).toNumber()
+        : Number(first.totPayable ?? 0);
+
+      const items = rows.map((r) => ({
+        partyId: r.partyId,
+        receivable: Number(r.receivable),
+        payable: Number(r.payable),
+        displayName: r.displayName ?? undefined,
+        kind: r.kind ?? undefined,
+      }));
+
+      return {
+        items,
+        page: params.page,
+        pageSize: params.pageSize,
+        total,
+        totals: { receivable: totReceivable, payable: totPayable },
+      };
+    } catch (e) {
+      const msg = (e as { message?: string })?.message ?? '';
+      if (typeof msg === 'string' && msg.includes('Party') && msg.includes('does not exist')) {
+        return {
+          items: [],
+          page: params.page,
+          pageSize: params.pageSize,
+          total: 0,
+          totals: { receivable: 0, payable: 0 },
+        };
       }
+      throw e;
     }
-    const rows = await this.prisma.financeEvent.groupBy({
-      by: ['partyId', 'type'],
-      where,
-      _sum: { amount: true },
-    });
-    const byParty = new Map<string, { receivable: number; payable: number }>();
-    for (const r of rows) {
-      if (!r.partyId) continue;
-      let cur = byParty.get(r.partyId);
-      if (!cur) {
-        cur = { receivable: 0, payable: 0 };
-        byParty.set(r.partyId, cur);
-      }
-      const amt = Number(r._sum.amount ?? 0);
-      if (r.type === 'SALE_RECEIVABLE') cur.receivable += amt;
-      else if (r.type === 'SALE_PAYMENT' || r.type === 'SALE_REFUND') cur.receivable -= amt;
-      else if (r.type === 'PURCHASE_PAYABLE') cur.payable += amt;
-      else if (r.type === 'PURCHASE_RETURN') cur.payable -= amt;
-    }
-    const rawItems = Array.from(byParty.entries()).map(([partyId, v]) => ({
-      partyId,
-      receivable: v.receivable,
-      payable: v.payable,
-    }));
-
-    const partyIds = rawItems.map((i) => i.partyId);
-    const resolved = await this.resolvePartyDisplayAndKind(partyIds);
-    let items = rawItems.map((item) => ({
-      ...item,
-      displayName: resolved.get(item.partyId)?.displayName,
-      kind: resolved.get(item.partyId)?.kind,
-    }));
-    // kind filter already applied via Party view restriction above (when merchantId present),
-    // but keep it for backward compatibility / legacy partyIds.
-    if (params.kind) items = items.filter((i) => i.kind === params.kind);
-
-    items.sort((a, b) => {
-      const ab = Math.max(Math.abs(a.receivable), Math.abs(a.payable));
-      const bb = Math.max(Math.abs(b.receivable), Math.abs(b.payable));
-      if (bb !== ab) return bb - ab;
-      return a.partyId.localeCompare(b.partyId);
-    });
-
-    const total = items.length;
-    const totals = items.reduce(
-      (acc, r) => {
-        acc.receivable += r.receivable;
-        acc.payable += r.payable;
-        return acc;
-      },
-      { receivable: 0, payable: 0 },
-    );
-    const start = (params.page - 1) * params.pageSize;
-    const paged = items.slice(start, start + params.pageSize);
-    return { items: paged, page: params.page, pageSize: params.pageSize, total, totals };
   }
 
   /** 依 partyId 解析 displayName 與 kind（前綴或 Customer/Supplier 查詢） */

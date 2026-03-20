@@ -1,5 +1,7 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { MerchantService } from '../../merchant/application/merchant.service';
+import { PosReportsQueryDto } from '../dto/pos-reports-query.dto';
+import { throwBadRequest } from '../../../shared/utils/throw-exceptions';
 import { PosReportsService } from '../application/pos-reports.service';
 
 @Controller('pos/reports')
@@ -16,7 +18,7 @@ export class PosReportsController {
       const current = await this.merchantService.getCurrentMerchant();
       return current.id;
     } catch {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'merchantId required' });
+      throwBadRequest('VALIDATION_ERROR', 'merchantId required');
     }
   }
 
@@ -36,19 +38,18 @@ export class PosReportsController {
     return this.reports.summary({ merchantId: resolved, preset, from, to, storeId });
   }
 
-  /** 區間內銷售品項排行；query from、to、storeId?、limit（預設 20）、sortBy=quantity｜revenue */
+  /** 區間內銷售品項排行；query from、to、storeId?、limit（預設 20，上限 100）、sortBy=quantity｜revenue */
   @Get('top-items')
-  async topItems(
-    @Query('merchantId') merchantId?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-    @Query('storeId') storeId?: string,
-    @Query('limit') limit?: string,
-    @Query('sortBy') sortBy?: 'quantity' | 'revenue',
-  ) {
-    const resolved = await this.resolveMerchantId(merchantId);
-    const lim = limit ? parseInt(limit, 10) : undefined;
-    return this.reports.getTopItems({ merchantId: resolved, from, to, storeId, limit: lim, sortBy });
+  async topItems(@Query() query: PosReportsQueryDto) {
+    const resolved = await this.resolveMerchantId(query.merchantId);
+    return this.reports.getTopItems({
+      merchantId: resolved,
+      from: query.from,
+      to: query.to,
+      storeId: query.storeId,
+      limit: query.limit,
+      sortBy: query.sortBy,
+    });
   }
 
   /** 區間內按日／週／月／時段彙總；query from、to、storeId?、groupBy?（day｜week｜month｜hour） */

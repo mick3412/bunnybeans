@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { InventoryEventType } from '@prisma/client';
 
@@ -184,25 +185,13 @@ export class InventoryRepository {
   /**
    * 以 InventoryBalance onHandQty>0 與 InventoryEvent 的 batchCode/expiryDate 聚合取得即將到期批次。
    * 簡化實作：僅針對有 expiryDate 的事件做彙總。
+   * 單一 SQL 查詢含 rows + total（COUNT(*) OVER()），取代 $queryRawUnsafe 消除 SQL injection 風險。
    */
   async findExpiringBatches(filter: ExpiringBatchFilter) {
     const { warehouseId, productId, from, to, page, pageSize } = filter;
+    const offset = (page - 1) * pageSize;
     try {
-      const whClause = warehouseId ? `AND e."warehouseId" = $3` : '';
-      const prodClause = productId ? `AND e."productId" = $4` : '';
-      // 如果 warehouseId / productId 未提供（undefined），Prisma 仍會嘗試綁定對應參數 $3/$4，
-      // 可能導致「could not determine data type」並被 catch 回空結果。
-      // 用可辨識的型別（空字串）取代 undefined，可讓未帶 filter 的情境也能正常查詢。
-      const params: any[] = [
-        from,
-        to,
-        warehouseId ?? '',
-        productId ?? '',
-        pageSize,
-        (page - 1) * pageSize,
-      ];
-
-      const rows = await this.prisma.$queryRawUnsafe<
+      const rows = await this.prisma.$queryRaw<
         Array<{
           productId: string;
           warehouseId: string;
@@ -211,53 +200,39 @@ export class InventoryRepository {
           onHandQty: number;
           sku: string | null;
           productName: string | null;
+          total: number;
         }>
       >(
-        `
-        SELECT
-          e."productId" as "productId",
-          e."warehouseId" as "warehouseId",
-          e."batchCode" as "batchCode",
-          e."expiryDate" as "expiryDate",
-          CAST(SUM(e."quantity") AS INT) as "onHandQty",
-          p."sku" as "sku",
-          p."name" as "productName"
-        FROM "InventoryEvent" e
-        LEFT JOIN "Product" p ON p."id" = e."productId"
-        WHERE
-          e."expiryDate" IS NOT NULL
-          AND e."expiryDate" >= $1
-          AND e."expiryDate" <= $2
-          ${whClause}
-          ${prodClause}
-        GROUP BY e."productId", e."warehouseId", e."batchCode", e."expiryDate", p."sku", p."name"
-        HAVING SUM(e."quantity") > 0
-        ORDER BY e."expiryDate" ASC
-        LIMIT $5 OFFSET $6
-        `,
-        ...params,
-      );
-
-      const totalRows = await this.prisma.$queryRawUnsafe<Array<{ total: number }>>(
-        `
-        SELECT COUNT(*)::INT as total
-        FROM (
-          SELECT 1
+        Prisma.sql`
+        WITH grouped AS (
+          SELECT
+            e."productId" as "productId",
+            e."warehouseId" as "warehouseId",
+            e."batchCode" as "batchCode",
+            e."expiryDate" as "expiryDate",
+            CAST(SUM(e."quantity") AS INT) as "onHandQty",
+            p."sku" as "sku",
+            p."name" as "productName"
           FROM "InventoryEvent" e
+          LEFT JOIN "Product" p ON p."id" = e."productId"
           WHERE
             e."expiryDate" IS NOT NULL
-            AND e."expiryDate" >= $1
-            AND e."expiryDate" <= $2
-            ${whClause}
-            ${prodClause}
-          GROUP BY e."productId", e."warehouseId", e."batchCode", e."expiryDate"
+            AND e."expiryDate" >= ${from}
+            AND e."expiryDate" <= ${to}
+            ${warehouseId ? Prisma.sql`AND e."warehouseId" = ${warehouseId}` : Prisma.empty}
+            ${productId ? Prisma.sql`AND e."productId" = ${productId}` : Prisma.empty}
+          GROUP BY e."productId", e."warehouseId", e."batchCode", e."expiryDate", p."sku", p."name"
           HAVING SUM(e."quantity") > 0
-        ) t
+        ),
+        counted AS (
+          SELECT *, COUNT(*) OVER()::int AS total FROM grouped
+        )
+        SELECT * FROM counted
+        ORDER BY "expiryDate" ASC
+        LIMIT ${pageSize} OFFSET ${offset}
         `,
-        ...params.slice(0, 4),
       );
-      const total = totalRows[0]?.total ?? 0;
-
+      const total = rows[0]?.total ?? 0;
       return {
         items: rows.map((r) => ({
           productId: r.productId,
@@ -282,22 +257,13 @@ export class InventoryRepository {
   /**
    * 即期庫存 summary（按 product 彙總）：回傳每商品最早效期、即期總量與 batches 明細。
    * batches 仍以 batchCode+expiryDate 聚合；summary 以 SQL 一次組裝，避免 service 端 N+1。
+   * 使用 Prisma.sql 參數化查詢，消除 SQL injection 風險。
    */
   async findExpiringProductSummary(filter: ExpiringProductSummaryFilter) {
     const { warehouseId, productId, from, to, page, pageSize } = filter;
+    const offset = (page - 1) * pageSize;
     try {
-      const whClause = warehouseId ? `AND e."warehouseId" = $3` : '';
-      const prodClause = productId ? `AND e."productId" = $4` : '';
-      const params: any[] = [
-        from,
-        to,
-        warehouseId ?? '',
-        productId ?? '',
-        pageSize,
-        (page - 1) * pageSize,
-      ];
-
-      const rows = await this.prisma.$queryRawUnsafe<
+      const rows = await this.prisma.$queryRaw<
         Array<{
           productId: string;
           sku: string | null;
@@ -307,7 +273,7 @@ export class InventoryRepository {
           batches: unknown;
         }>
       >(
-        `
+        Prisma.sql`
         WITH batches AS (
           SELECT
             e."productId" as "productId",
@@ -318,10 +284,10 @@ export class InventoryRepository {
           FROM "InventoryEvent" e
           WHERE
             e."expiryDate" IS NOT NULL
-            AND e."expiryDate" >= $1
-            AND e."expiryDate" <= $2
-            ${whClause}
-            ${prodClause}
+            AND e."expiryDate" >= ${from}
+            AND e."expiryDate" <= ${to}
+            ${warehouseId ? Prisma.sql`AND e."warehouseId" = ${warehouseId}` : Prisma.empty}
+            ${productId ? Prisma.sql`AND e."productId" = ${productId}` : Prisma.empty}
           GROUP BY e."productId", e."warehouseId", e."batchCode", e."expiryDate"
           HAVING SUM(e."quantity") > 0
         )
@@ -344,13 +310,12 @@ export class InventoryRepository {
         LEFT JOIN "Product" p ON p."id" = b."productId"
         GROUP BY b."productId", p."sku", p."name"
         ORDER BY MIN(b."expiryDate") ASC
-        LIMIT $5 OFFSET $6
+        LIMIT ${pageSize} OFFSET ${offset}
         `,
-        ...params,
       );
 
-      const totalRows = await this.prisma.$queryRawUnsafe<Array<{ total: number }>>(
-        `
+      const totalRows = await this.prisma.$queryRaw<Array<{ total: number }>>(
+        Prisma.sql`
         WITH batches AS (
           SELECT
             e."productId" as "productId",
@@ -360,10 +325,10 @@ export class InventoryRepository {
           FROM "InventoryEvent" e
           WHERE
             e."expiryDate" IS NOT NULL
-            AND e."expiryDate" >= $1
-            AND e."expiryDate" <= $2
-            ${whClause}
-            ${prodClause}
+            AND e."expiryDate" >= ${from}
+            AND e."expiryDate" <= ${to}
+            ${warehouseId ? Prisma.sql`AND e."warehouseId" = ${warehouseId}` : Prisma.empty}
+            ${productId ? Prisma.sql`AND e."productId" = ${productId}` : Prisma.empty}
           GROUP BY e."productId", e."warehouseId", e."batchCode", e."expiryDate"
           HAVING SUM(e."quantity") > 0
         )
@@ -374,7 +339,6 @@ export class InventoryRepository {
           GROUP BY "productId"
         ) t
         `,
-        ...params.slice(0, 4),
       );
       const total = totalRows[0]?.total ?? 0;
 

@@ -638,19 +638,28 @@ export class PosService {
       const sourceOrderId = detail.exchangeFromOrderId;
       const sourceId = sourceOrderId || order.id;
 
-      const derived = await this.prisma.posOrder.findMany({
-        where: { exchangeFromOrderId: sourceId },
-        select: { id: true, totalAmount: true, payments: { select: { amount: true } } },
-      });
-
-      // Resolve source order totals (if this order is derived).
-      const source =
+      const [derived, source, refundedAgg, refundEvents] = await Promise.all([
+        this.prisma.posOrder.findMany({
+          where: { exchangeFromOrderId: sourceId },
+          select: { id: true, totalAmount: true, payments: { select: { amount: true } } },
+        }),
         sourceOrderId
-          ? await this.prisma.posOrder.findUnique({
+          ? this.prisma.posOrder.findUnique({
               where: { id: sourceId },
               select: { id: true, totalAmount: true },
             })
-          : { id: order.id, totalAmount: order.totalAmount };
+          : Promise.resolve({ id: order.id, totalAmount: order.totalAmount }),
+        this.prisma.financeEvent.aggregate({
+          where: { referenceId: sourceId, type: 'SALE_REFUND' },
+          _sum: { amount: true },
+        }),
+        this.prisma.financeEvent.findMany({
+          where: { referenceId: sourceId, type: 'SALE_REFUND' },
+          orderBy: { occurredAt: 'asc' },
+          select: { id: true, amount: true, occurredAt: true, note: true },
+          take: 50,
+        }),
+      ]);
 
       const sourceTotal =
         source && typeof source.totalAmount === 'object' && source.totalAmount != null && 'toNumber' in source.totalAmount
@@ -666,19 +675,8 @@ export class PosService {
       );
       const derivedRemaining = Math.round((derivedTotal - derivedPaid) * 100) / 100;
 
-      const refundedAgg = await this.prisma.financeEvent.aggregate({
-        where: { referenceId: sourceId, type: 'SALE_REFUND' },
-        _sum: { amount: true },
-      });
       const refunded = Number(refundedAgg._sum.amount ?? 0);
       const refundNeeded = deltaAmount < 0 ? Math.abs(deltaAmount) : 0;
-
-      const refundEvents = await this.prisma.financeEvent.findMany({
-        where: { referenceId: sourceId, type: 'SALE_REFUND' },
-        orderBy: { occurredAt: 'asc' },
-        select: { id: true, amount: true, occurredAt: true, note: true },
-        take: 50,
-      });
 
       detail.exchange = {
         sourceOrderId: sourceOrderId,

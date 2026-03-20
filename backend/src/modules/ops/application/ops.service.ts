@@ -236,7 +236,7 @@ export class OpsService {
   }> {
     const { from, to } = this.parseRange(q.from, q.to);
     const page = q.page && q.page > 0 ? q.page : 1;
-    const pageSize = q.pageSize && q.pageSize > 0 ? Math.min(q.pageSize, 200) : 50;
+    const pageSize = q.pageSize && q.pageSize > 0 ? Math.min(q.pageSize, 100) : 50;
     const where: Prisma.ReportClickAuditWhereInput = {};
     if (from || to) {
       where.createdAt = {

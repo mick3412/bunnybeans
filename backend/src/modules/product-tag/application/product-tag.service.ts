@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { dedupeCode, isValidCode, resolveCode } from '../../../shared/utils/canonical-code';
+import { createMasterWithCode } from '../../../shared/utils/create-master-with-code';
 import { ProductTagRepository } from '../infrastructure/product-tag.repository';
 
 @Injectable()
@@ -25,52 +26,31 @@ export class ProductTagService {
 
   async create(input: { merchantId: string; name: string; code?: string }) {
     const merchantId = input.merchantId?.trim();
-    const name = input.name?.trim();
     if (!merchantId) {
       throw new BadRequestException({
         message: 'merchantId is required',
         code: 'PRODUCT_TAG_MERCHANT_REQUIRED',
       });
     }
-    if (!name) {
-      throw new BadRequestException({
-        message: 'name is required',
-        code: 'PRODUCT_TAG_NAME_REQUIRED',
-      });
-    }
-    let code: string;
-    try {
-      const existing = await this.repo.findCodes(merchantId);
-      const resolved = resolveCode(input.code, name, existing);
-      code = resolved.code;
-    } catch (e) {
-      if ((e as Error).message === 'CODE_INVALID') {
-        throw new BadRequestException({
-          message: 'code must match a-z0-9- (lowercase, no leading/trailing dash)',
-          code: 'PRODUCT_TAG_CODE_INVALID',
-        });
-      }
-      throw e;
-    }
-    try {
-      const tag = await this.repo.create({ merchantId, name, code });
-      return {
-        id: tag.id,
-        merchantId: tag.merchantId,
-        name: tag.name,
-        code: tag.code,
-        createdAt: tag.createdAt.toISOString(),
-        updatedAt: tag.updatedAt.toISOString(),
-      };
-    } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException({
-          message: 'ProductTag code already exists for this merchant',
-          code: 'PRODUCT_TAG_CODE_CONFLICT',
-        });
-      }
-      throw e;
-    }
+    const tag = await createMasterWithCode<{ merchantId: string }, Awaited<ReturnType<ProductTagRepository['create']>>>({
+      name: input.name,
+      code: input.code,
+      findExistingCodes: () => this.repo.findCodes(merchantId),
+      create: (data) => this.repo.create(data),
+      extra: { merchantId },
+      conflictCode: 'PRODUCT_TAG_CODE_CONFLICT',
+      conflictMessage: 'ProductTag code already exists for this merchant',
+      nameRequiredCode: 'PRODUCT_TAG_NAME_REQUIRED',
+      codeInvalidCode: 'PRODUCT_TAG_CODE_INVALID',
+    });
+    return {
+      id: tag.id,
+      merchantId: tag.merchantId,
+      name: tag.name,
+      code: tag.code,
+      createdAt: tag.createdAt.toISOString(),
+      updatedAt: tag.updatedAt.toISOString(),
+    };
   }
 
   async update(id: string, input: { name?: string; code?: string }) {
