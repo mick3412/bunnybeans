@@ -20,7 +20,7 @@
   - **迴歸維護**：`pnpm --filter pos-erp-backend test` 152 passed；`pnpm ci:backend-with-db` 通過。
   - **#1 迴歸確認**：確認 035 變更無遺漏、測試全綠；後端無待提交變更。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
-- commits：`ac0e035a` docs(agent-log): INSTRUCTIONS 036
+- commits：`efe9bb96` docs(agent-log): INSTRUCTIONS 036
 
 ---
 
