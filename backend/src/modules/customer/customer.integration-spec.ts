@@ -252,6 +252,45 @@ describe('CustomerService member 2.0 + contacts (integration)', () => {
     }
   }, 10000);
 
+  it('merge: CUSTOMER_MERGE_INVALID when secondary not found or wrong merchant', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const m = await prisma.merchant.create({
+      data: { code: `MERG2-${Date.now()}`, name: 'Merge2' },
+    });
+    const primary = await prisma.customer.create({
+      data: { merchantId: m.id, name: 'Primary' },
+    });
+    try {
+      await expect(svc.merge(primary.id, ['non-existent-id'])).rejects.toMatchObject({
+        response: { code: 'CUSTOMER_MERGE_INVALID' },
+      });
+    } finally {
+      await prisma.customer.deleteMany({ where: { merchantId: m.id } });
+      await prisma.merchant.delete({ where: { id: m.id } });
+    }
+  }, 10000);
+
+  it('merge: CUSTOMER_MERGE_INVALID when mergeIds empty or same as primary', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const m = await prisma.merchant.create({
+      data: { code: `MERG3-${Date.now()}`, name: 'Merge3' },
+    });
+    const primary = await prisma.customer.create({
+      data: { merchantId: m.id, name: 'Primary' },
+    });
+    try {
+      await expect(svc.merge(primary.id, [])).rejects.toMatchObject({
+        response: { code: 'CUSTOMER_MERGE_INVALID' },
+      });
+      await expect(svc.merge(primary.id, [primary.id])).rejects.toMatchObject({
+        response: { code: 'CUSTOMER_MERGE_INVALID' },
+      });
+    } finally {
+      await prisma.customer.deleteMany({ where: { merchantId: m.id } });
+      await prisma.merchant.delete({ where: { id: m.id } });
+    }
+  }, 10000);
+
   it('getById includes consumption insights (integration)', async () => {
     if (!process.env.DATABASE_URL) return;
     const uniq = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

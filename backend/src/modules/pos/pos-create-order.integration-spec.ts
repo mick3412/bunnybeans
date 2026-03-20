@@ -1165,4 +1165,142 @@ describe('PosService (integration)', () => {
     await prisma.store.delete({ where: { id: store.id } });
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 30000);
+
+  it('createOrder: concurrent orders — at most one succeeds when stock=5 and each wants 4', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const ts = Date.now();
+    const merchant = await prisma.merchant.create({
+      data: { code: `RACE-${ts}`, name: 'Race' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SRACE-${ts}`, name: 'S', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: { code: `WRACE-${ts}`, name: 'W', merchantId: merchant.id, storeId: store.id },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKURACE-${ts}`, name: 'P' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 5 },
+      update: { onHandQty: 5 },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 5,
+        occurredAt: new Date(),
+        note: 'race test',
+      },
+    });
+
+    const createInput = {
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 4, unitPrice: 10 }],
+      payments: [{ method: 'CASH', amount: 40 }],
+    };
+
+    const [r1, r2] = await Promise.allSettled([
+      posService.createOrder(createInput),
+      posService.createOrder(createInput),
+    ]);
+
+    const fulfilled = [r1, r2].filter((r) => r.status === 'fulfilled');
+    const rejected = [r1, r2].filter((r) => r.status === 'rejected');
+
+    expect(fulfilled.length + rejected.length).toBe(2);
+    if (rejected.length > 0) {
+      const code = (rejected[0] as PromiseRejectedResult).reason as { response?: { code?: string } };
+      expect(code.response?.code).toBe('INVENTORY_INSUFFICIENT');
+    }
+
+    const createdIds = fulfilled.map((f) => (f as PromiseFulfilledResult<{ id: string }>).value.id);
+    const orders = await prisma.posOrder.findMany({ where: { id: { in: createdIds } } });
+    for (const o of orders) {
+      await prisma.inventoryEvent.deleteMany({ where: { referenceId: o.id } });
+      await prisma.posOrderItem.deleteMany({ where: { orderId: o.id } });
+      await prisma.posOrderPayment.deleteMany({ where: { orderId: o.id } });
+      await prisma.financeEvent.deleteMany({ where: { referenceId: o.id } });
+      await prisma.posOrder.delete({ where: { id: o.id } });
+    }
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 15000);
+
+  it('refundToOrder: sequential second refund exceeds → POS_REFUND_EXCEEDS_PAID', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const ts = Date.now();
+    const merchant = await prisma.merchant.create({
+      data: { code: `REFR-${ts}`, name: 'Refund Seq' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SREF-${ts}`, name: 'S', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: { code: `WREF-${ts}`, name: 'W', merchantId: merchant.id, storeId: store.id },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKUREF-${ts}`, name: 'P' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 10 },
+      update: { onHandQty: 10 },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 10,
+        occurredAt: new Date(),
+        note: 'refund seq',
+      },
+    });
+
+    const order = await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 100 }],
+      payments: [{ method: 'CASH', amount: 100 }],
+    });
+
+    await posService.refundToOrder(order.id, { amount: 60 });
+    await expect(posService.refundToOrder(order.id, { amount: 60 })).rejects.toMatchObject({
+      response: { code: 'POS_REFUND_EXCEEDS_PAID' },
+    });
+
+    const refunds = await prisma.financeEvent.findMany({
+      where: { referenceId: order.id, type: 'SALE_REFUND' },
+    });
+    expect(refunds).toHaveLength(1);
+    expect(Number(refunds[0].amount)).toBe(60);
+
+    await prisma.posOrderItem.deleteMany({ where: { orderId: order.id } });
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: order.id } });
+    await prisma.posOrder.delete({ where: { id: order.id } });
+    await prisma.financeEvent.deleteMany({ where: { referenceId: order.id } });
+    await prisma.inventoryEvent.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.inventoryBalance.deleteMany({
+      where: { productId: product.id, warehouseId: warehouse.id },
+    });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 15000);
 });
