@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 028 續（StandardListLayout、AdminInventoryPage、倉庫門市對齊）
+- 做了：① **AdminOpsJobsPage StandardListLayout**：filters 移入 filters prop、aboveContent 放補跑 banner；error 加重試按鈕；錯誤時不渲染表格。② **StandardListLayout**：error 型別擴充為 ReactNode 以支援重試按鈕。③ **AdminInventoryPage StandardListLayout**：整頁改用 StandardListLayout；filters 含倉庫/匯出/匯入；aboveContent 含匯入結果；retryBalances 重試。④ **AdminMerchantsPage**：error 區塊加重試按鈕。⑤ **倉庫/門市頁對齊**：AdminWarehousesStoresPage 加 mx-auto、items-stretch。⑥ 表格可讀性：既有表格已用 tabular-nums、table-sticky-head，維持現狀。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：尚未提交
+
+---
+
 ### INSTRUCTIONS 028（AD-HOC 提交、收銀白屏、進階圖表、會員管理 UX）
 - 做了：① **AD-HOC atomic commits**：收銀端白屏修復（ErrorBoundary + ProductDto spec）；促銷面板加寬 480→760px；預設 1 條件 1 行動；色值 token text-muted 全站。② **迴歸**：build ✅；E2E skip（Playwright chromium 未安裝於沙箱）。③ **收銀端白屏修復**：新增 ErrorBoundary 包覆 PosLayout；ProductDto 擴充 specSize/specCapacity/specStyle。④ **進階圖表方案 A**：AdminReportsPage byParty chips 與 MiniBarChart 使用 formatPartyDisplay、預取 listLoyaltyCustomers + listSuppliers 建立 partyNames。⑤ **會員管理 UX**：匯入／匯出移搜尋列右側置右；移除說明文字；操作欄「會員管理」→「會員編輯」；新增會員右側懸浮按鈕 + Drawer。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用 / Playwright chromium 沙箱缺檔）。
