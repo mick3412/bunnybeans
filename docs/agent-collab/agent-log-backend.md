@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS-030（迴歸 + ci:backend-with-db 驗證 + 類別／品牌／標籤排序）
+- 做了：依 `BACKEND-INSTRUCTIONS 030.md` §1 完成 #1～#3。
+  - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（145 passed）。
+  - **#2 ci:backend-with-db**：`migrate deploy` → `db:seed` → test 全綠。
+  - **#3 類別／品牌／標籤排序**：Category、Brand、ProductTag 新增 `sortOrder`（Int 預設 0）；migration `20260320092022`；seed 建立時帶入 sortOrder；GET 列表依 sortOrder 升序；新增 `PATCH /categories/reorder`、`PATCH /brands/reorder`、`PATCH /product-tags/reorder`（body: `ids[]`；product-tags 需 `merchantId`）；api-design 補契約；category/brand/product-tag integration-spec 補 reorder 測試。
+- 測試/驗收：`pnpm ci:backend-with-db` 全綠。
+- commits：dcd21302 feat(category,brand,product-tag): add sortOrder + PATCH reorder API (INSTRUCTIONS 030)
+
 ### INSTRUCTIONS-029（迴歸 + ci:backend-with-db 驗證 + api-design 對齊檢查）
 - 做了：依 `BACKEND-INSTRUCTIONS 029.md` §1 完成 #1～#3。
   - **#1 迴歸**：`pnpm --filter pos-erp-backend test` 全綠（142 passed）。
