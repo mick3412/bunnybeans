@@ -173,7 +173,7 @@ export const AdminCustomerImportPage: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-admin-customers-import">
-      <p className="mb-2 text-sm text-[#64748b]" aria-hidden="true" />
+      <p className="mb-2 text-sm text-muted" aria-hidden="true" />
       {err && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
           {err}
@@ -282,7 +282,7 @@ export const AdminCustomerImportPage: React.FC = () => {
           </div>
           <div className="table-sticky-head overflow-x-auto rounded-lg border border-brand-surface bg-white">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-brand-surface bg-table-head text-xs text-[#64748b]">
+              <thead className="border-b border-brand-surface bg-table-head text-xs text-muted">
                 <tr>
                   <th className="px-2 py-2">列</th>
                   <th className="px-2 py-2">name</th>
@@ -330,7 +330,7 @@ export const AdminCustomerImportPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-[11px] text-[#64748b]">
+          <p className="mt-2 text-[11px] text-muted">
             <span data-testid="e2e-admin-customers-import-filehash-preview">
               fileHash（預覽）: {fileHash?.slice(0, 16)}…
             </span>{' '}

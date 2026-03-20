@@ -153,7 +153,7 @@ export const AdminCustomersPage: React.FC = () => {
               className="w-48 !py-1.5"
             />
             <div>
-              <label className="mb-1 block text-xs text-[#64748b]">狀態</label>
+              <label className="mb-1 block text-xs text-muted">狀態</label>
               <select
                 className="rounded-lg border border-brand-surface px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                 value={statusFilter}
@@ -165,7 +165,7 @@ export const AdminCustomersPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-[#64748b]">標籤 (tag)</label>
+              <label className="mb-1 block text-xs text-muted">標籤 (tag)</label>
               <select
                 className="rounded-lg border border-brand-surface px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                 value={tagFilter}
@@ -180,7 +180,7 @@ export const AdminCustomersPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs text-[#64748b]">等級</label>
+              <label className="mb-1 block text-xs text-muted">等級</label>
               <select
                 className="rounded-lg border border-brand-surface px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                 value={levelFilter}
@@ -197,7 +197,7 @@ export const AdminCustomersPage: React.FC = () => {
           </div>
           {exportPanelOpen && (
             <div className="flex flex-wrap items-end gap-3 border-t border-brand-surface pt-3">
-              <span className="w-full text-xs font-semibold text-[#64748b]">分群名單匯出</span>
+              <span className="w-full text-xs font-semibold text-muted">分群名單匯出</span>
               <input
                 type="text"
                 className="w-56 rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm font-mono focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
@@ -250,7 +250,7 @@ export const AdminCustomersPage: React.FC = () => {
       {!loading && filtered.length > 0 && (
       <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-brand-surface bg-table-head text-xs text-[#64748b]">
+            <thead className="border-b border-brand-surface bg-table-head text-xs text-muted">
               <tr>
                 <th className="w-10 px-2 py-2">
                   <input
@@ -312,10 +312,10 @@ export const AdminCustomersPage: React.FC = () => {
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{r.pointBalance ?? 0}</td>
                     <td className="px-3 py-2 text-right tabular-nums">{r.expiringSoon ?? '—'}</td>
-                    <td className="px-3 py-2 text-xs text-[#64748b]">
+                    <td className="px-3 py-2 text-xs text-muted">
                       {r.expiringAt ? new Date(r.expiringAt).toLocaleDateString('zh-TW') : '—'}
                     </td>
-                    <td className="px-3 py-2 text-xs text-[#64748b]">
+                    <td className="px-3 py-2 text-xs text-muted">
                       {r.joinDate ? new Date(r.joinDate).toLocaleDateString('zh-TW') : '—'}
                     </td>
                     <td className="px-3 py-2">
@@ -368,7 +368,7 @@ export const AdminCustomersPage: React.FC = () => {
             <h3 className="mb-3 font-semibold text-content">合併會員</h3>
             <p className="mb-3 text-sm text-muted">選留存主檔，其餘會員資料將併入主檔（訂單／點數存摺歸戶）。</p>
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-[#64748b]">留存主檔</label>
+              <label className="mb-1 block text-xs text-muted">留存主檔</label>
               <select
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
                 value={mergePrimaryId}
@@ -420,7 +420,7 @@ export const AdminCustomersPage: React.FC = () => {
           <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-brand-surface bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <h3 className="font-semibold text-content">互動紀錄 — {contactsCustomer.name}</h3>
-              <button type="button" className="rounded px-2 py-1 text-[#64748b] hover:bg-table-head" onClick={() => setContactsCustomer(null)}>關閉</button>
+              <button type="button" className="rounded px-2 py-1 text-muted hover:bg-table-head" onClick={() => setContactsCustomer(null)}>關閉</button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4">
               {contactsLoading ? (
@@ -429,9 +429,9 @@ export const AdminCustomersPage: React.FC = () => {
                 <ul className="space-y-2">
                   {contactsItems.map((c) => (
                     <li key={c.id} className="rounded-lg border border-brand-surface bg-table-head p-2 text-xs">
-                      <span className="font-mono text-[#64748b]">{c.type}</span>
+                      <span className="font-mono text-muted">{c.type}</span>
                       {c.note && <p className="mt-1 text-muted">{c.note}</p>}
-                      <p className="mt-1 text-[#64748b]">{new Date(c.createdAt).toLocaleString('zh-TW')}</p>
+                      <p className="mt-1 text-muted">{new Date(c.createdAt).toLocaleString('zh-TW')}</p>
                     </li>
                   ))}
                 </ul>
@@ -440,7 +440,7 @@ export const AdminCustomersPage: React.FC = () => {
                 <div className="mb-2 text-sm font-medium text-muted">新增紀錄</div>
                 <TextInput label="類型" value={newContactType} onChange={(e) => setNewContactType(e.target.value)} placeholder="例：來電" className="!py-1.5" />
                 <div className="mt-2">
-                  <label className="mb-1 block text-xs text-[#64748b]">備註</label>
+                  <label className="mb-1 block text-xs text-muted">備註</label>
                   <textarea
                     className="w-full rounded-lg border border-neutral-300 px-2 py-1.5 text-sm"
                     rows={2}

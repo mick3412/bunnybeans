@@ -255,7 +255,7 @@ export const AdminExpiringInventoryPage: React.FC = () => {
                         看商品
                       </Link>
                     ) : (
-                      <span className="text-xs text-[#94a3b8]">—</span>
+                      <span className="text-xs text-muted">—</span>
                     )}
                   </td>
                 </tr>
@@ -268,20 +268,20 @@ export const AdminExpiringInventoryPage: React.FC = () => {
           <button
             type="button"
             className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
-              canPrev ? 'border-brand-surface bg-white hover:bg-table-head' : 'cursor-not-allowed border-brand-surface bg-table-head text-[#94a3b8]'
+              canPrev ? 'border-brand-surface bg-white hover:bg-table-head' : 'cursor-not-allowed border-brand-surface bg-table-head text-muted'
             }`}
             disabled={!canPrev}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
           >
             上一頁
           </button>
-          <div className="text-xs text-[#64748b] tabular-nums">
+          <div className="text-xs text-muted tabular-nums">
             第 {page} / {totalPages} 頁
           </div>
           <button
             type="button"
             className={`rounded-lg border px-3 py-2 text-xs font-semibold ${
-              canNext ? 'border-brand-surface bg-white hover:bg-table-head' : 'cursor-not-allowed border-brand-surface bg-table-head text-[#94a3b8]'
+              canNext ? 'border-brand-surface bg-white hover:bg-table-head' : 'cursor-not-allowed border-brand-surface bg-table-head text-muted'
             }`}
             disabled={!canNext}
             onClick={() => setPage((p) => p + 1)}

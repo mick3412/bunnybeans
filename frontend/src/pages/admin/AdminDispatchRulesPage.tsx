@@ -327,8 +327,8 @@ export const AdminDispatchRulesPage: React.FC = () => {
                 rules.map((row) => (
                   <tr key={row.id} className="border-t border-brand-surface hover:bg-table-head">
                     <td className="px-4 py-2 font-medium">{row.name}</td>
-                    <td className="px-4 py-2 text-[#475569]">{segmentName(row.segmentId)}</td>
-                    <td className="px-4 py-2 text-[#475569]">{couponLabel(row.couponId)}</td>
+                    <td className="px-4 py-2 text-muted">{segmentName(row.segmentId)}</td>
+                    <td className="px-4 py-2 text-muted">{couponLabel(row.couponId)}</td>
                     <td className="px-4 py-2">
                       <span className="rounded bg-brand-canvas px-2 py-0.5 text-xs">
                         {SCHEDULE_OPTIONS.find((o) => o.value === row.scheduleType)?.label ?? row.scheduleType}
@@ -468,7 +468,7 @@ export const AdminDispatchRulesPage: React.FC = () => {
                   onChange={(e) => setFormEnabled(e.target.checked)}
                   className="h-4 w-4 rounded border-brand-surface text-brand-primary"
                 />
-                <label htmlFor="form-enabled" className="text-sm text-[#475569]">
+                <label htmlFor="form-enabled" className="text-sm text-muted">
                   啟用
                 </label>
               </div>

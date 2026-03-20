@@ -356,7 +356,7 @@ export const LoyaltyMembersPage: React.FC = () => {
                       <div className="text-[11px] font-medium text-[#1d4ed8]">
                         最近一次自動升降級（預留）
                       </div>
-                      <p className="mt-0.5 text-[11px] text-[#475569]">預留資訊區塊。</p>
+                      <p className="mt-0.5 text-[11px] text-muted">預留資訊區塊。</p>
                     </div>
                     <TextInput
                       label="手動指定等級（覆寫目前等級）"

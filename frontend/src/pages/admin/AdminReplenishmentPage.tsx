@@ -340,7 +340,7 @@ export const AdminReplenishmentPage: React.FC = () => {
                     <td className="px-3 py-2 text-right font-mono text-xs text-emerald-700">
                       {r.suggestedQty}
                     </td>
-                    <td className="px-3 py-2 text-xs text-[#64748b]">{r.reason}</td>
+                    <td className="px-3 py-2 text-xs text-muted">{r.reason}</td>
                   </tr>
                 ))}
               </tbody>

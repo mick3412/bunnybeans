@@ -1403,7 +1403,7 @@ export const AdminProductsPage: React.FC = () => {
                     {editing && (
                       <div className="mt-3 rounded-lg border border-dashed border-[#cbd5f5] bg-white/70 p-2">
                         <div className="mb-1 flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-semibold text-[#475569]">
+                          <span className="text-[11px] font-semibold text-muted">
                             近 30 天即將到期批次
                           </span>
                           {expiringLoading && (
@@ -1425,7 +1425,7 @@ export const AdminProductsPage: React.FC = () => {
                         {!expiringError && expiringBatches && expiringBatches.length > 0 && (
                           <div className="mt-1 max-h-40 overflow-y-auto rounded-md border border-brand-surface bg-table-head">
                             <table className="w-full border-collapse text-[11px]">
-                              <thead className="bg-brand-surface text-[#475569]">
+                              <thead className="bg-brand-surface text-muted">
                                 <tr>
                                   <th className="px-2 py-1 text-left">批號</th>
                                   <th className="px-2 py-1 text-left">效期日</th>

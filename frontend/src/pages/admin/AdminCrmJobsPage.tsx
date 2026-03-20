@@ -278,7 +278,7 @@ export const AdminCrmJobsPage: React.FC = () => {
         ) : (
           <div className="table-sticky-head overflow-x-auto bg-white">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold text-[#64748b]">
+              <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold text-muted">
                 <tr>
                   <th className="w-[220px] px-3 py-2 text-right">時間</th>
                   <th className="px-3 py-2">種類</th>

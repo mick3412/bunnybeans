@@ -22,7 +22,7 @@ const EVENT_TYPES: { value: InventoryEventType; label: string }[] = [
 ];
 
 const titleCls = 'text-xl font-bold leading-tight text-content';
-const descCls = 'mt-2 text-sm leading-relaxed text-[#64748b]';
+const descCls = 'mt-2 text-sm leading-relaxed text-muted';
 const alertBox = 'rounded-lg border px-3 py-2 text-sm';
 const formCard = 'space-y-1 rounded-xl border border-brand-surface bg-white p-4 shadow-sm';
 
@@ -118,7 +118,7 @@ export const AdminInventoryAdjustPage: React.FC = () => {
 
   const row = 'flex flex-row items-center gap-3 py-1';
   const labelCls =
-    'w-36 shrink-0 text-right text-xs font-medium text-[#64748b] sm:text-left';
+    'w-36 shrink-0 text-right text-xs font-medium text-muted sm:text-left';
   const fieldCls =
     'min-w-0 flex-1 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm text-[#1e293b]';
 
@@ -210,7 +210,7 @@ export const AdminInventoryAdjustPage: React.FC = () => {
       <div className={`${row} items-start`}>
         <label className={`${labelCls} pt-2 leading-snug`}>
           數量
-          <span className="mt-0.5 block font-normal text-[#64748b]">（正數；出庫類由後端轉負）</span>
+          <span className="mt-0.5 block font-normal text-muted">（正數；出庫類由後端轉負）</span>
         </label>
         <input
           type="number"
