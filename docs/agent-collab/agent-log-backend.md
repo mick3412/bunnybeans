@@ -39,7 +39,7 @@
   - **迴歸維護**：`pnpm --filter pos-erp-backend test` 152 passed；`pnpm ci:backend-with-db` 通過。
   - **#1 迴歸確認**：確認 033 變更無遺漏、033 補齊未提交變更已補 atomic commits；修正 pos-create-order 並行測試 teardown FK 順序（PosOrderItem by productId）。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
-- commits：`16472261` DTOs；`8c522c46` POS $transaction；`ddf564ef` edge case tests；`2840f10c` agent-log；`e75a6bda` fix concurrent test teardown
+- commits：`16472261` DTOs；`8c522c46` POS $transaction；`ddf564ef` edge case tests；`2840f10c` agent-log；`39149e85` fix concurrent test teardown + agent-log update
 
 ---
 
