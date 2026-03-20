@@ -12,10 +12,12 @@ import {
   type CustomerContactItem,
 } from '../../modules/admin/adminApi';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
+import { useDebouncedValue } from '../../shared/hooks/useDebouncedValue';
 import { TextInput } from '../../shared/components/TextInput';
 import { Button } from '../../shared/components/Button';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useAdminToast } from './AdminToastContext';
+import { Modal } from '../../shared/components/Modal';
 import { getErrorMessage, showAdminApiErrorToast } from '../../shared/errors/errorMessages';
 
 export const AdminCustomersPage: React.FC = () => {
@@ -25,6 +27,7 @@ export const AdminCustomersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [searchQ, setSearchQ] = useState('');
+  const searchQDebounced = useDebouncedValue(searchQ, 300);
   const [levelFilter, setLevelFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [tagFilter, setTagFilter] = useState<string>('');
@@ -92,7 +95,7 @@ export const AdminCustomersPage: React.FC = () => {
 
   const filtered = useMemo(() => {
     let list = items;
-    const q = searchQ.trim().toLowerCase();
+    const q = searchQDebounced.trim().toLowerCase();
     if (q) {
       list = list.filter(
         (r) =>
@@ -106,7 +109,7 @@ export const AdminCustomersPage: React.FC = () => {
       list = list.filter((r) => (r.memberLevel ?? '') === levelFilter);
     }
     return list;
-  }, [items, searchQ, levelFilter]);
+  }, [items, searchQDebounced, levelFilter]);
 
   return (
     <>
@@ -486,15 +489,21 @@ export const AdminCustomersPage: React.FC = () => {
       )}
 
       {/* 合併會員 Modal */}
-      {mergeOpen && selectedIds.size >= 2 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setMergeOpen(false)}>
-          <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 font-semibold text-content">合併會員</h3>
+      <Modal
+        open={mergeOpen && selectedIds.size >= 2}
+        onClose={() => setMergeOpen(false)}
+        labelledBy="admin-customers-merge-title"
+        className="z-50"
+        panelClassName="w-full max-w-md rounded-xl bg-white p-4 shadow-xl"
+      >
+            <h2 id="admin-customers-merge-title" className="mb-3 text-base font-semibold text-content">
+              合併會員
+            </h2>
             <p className="mb-3 text-sm text-muted">選留存主檔，其餘會員資料將併入主檔（訂單／點數存摺歸戶）。</p>
             <div className="mb-3">
               <label className="mb-1 block text-xs text-muted">留存主檔</label>
               <select
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-brand-surface px-3 py-2 text-sm"
                 value={mergePrimaryId}
                 onChange={(e) => setMergePrimaryId(e.target.value)}
               >
@@ -533,9 +542,7 @@ export const AdminCustomersPage: React.FC = () => {
                 {mergeSubmitting ? '合併中…' : '確認合併'}
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* 互動紀錄 Drawer */}
       {contactsCustomer && (

@@ -11,6 +11,7 @@ import {
 } from '../modules/pos/posOrdersApi';
 import { Alert } from '../shared/components/Alert';
 import { EmptyState } from '../shared/components/EmptyState';
+import { Modal } from '../shared/components/Modal';
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import type { PosOrderDetail } from '../modules/pos/posOrdersMockService';
 
@@ -271,11 +272,15 @@ export const PosOrderDetailPage: React.FC = () => {
         </div>
       </div>
       <div className="min-h-0">
-        {exchangeOpen && (
-          <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
-            <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl">
+        <Modal
+          open={exchangeOpen}
+          onClose={() => setExchangeOpen(false)}
+          labelledBy="pos-order-exchange-title"
+          className="z-30"
+          panelClassName="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl"
+        >
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-content">換貨（MVP）</h2>
+                <h2 id="pos-order-exchange-title" className="text-sm font-semibold text-content">換貨（MVP）</h2>
                 <button
                   type="button"
                   className="rounded px-2 py-1 text-xs text-muted hover:bg-brand-canvas"
@@ -312,9 +317,7 @@ export const PosOrderDetailPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+        </Modal>
         <div className="w-full rounded-xl border border-brand-surface bg-white p-4">
           {error && (
             <Alert variant="error" className="mb-3">

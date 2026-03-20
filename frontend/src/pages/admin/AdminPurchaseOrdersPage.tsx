@@ -20,6 +20,7 @@ import {
 import { getProducts, getWarehouses } from '../../modules/admin/adminApi';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { useAdminToast } from './AdminToastContext';
+import { Modal } from '../../shared/components/Modal';
 
 const STATUS_TABS: { key: string; label: string }[] = [
   { key: 'ALL', label: '全部' },
@@ -129,7 +130,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
 
   /** 搜尋 debounce：務必呼叫 loadRef，避免 timer 閉包仍為 MOCK_MERCHANT 而把列表洗空 */
   useEffect(() => {
-    const t = setTimeout(() => loadRef.current(), 280);
+    const t = setTimeout(() => loadRef.current(), 300);
     return () => clearTimeout(t);
   }, [q]);
 
@@ -322,12 +323,19 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
       )}
     </StandardListLayout>
 
-      {detail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setDetail(null)}>
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <Modal
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        labelledBy="admin-po-detail-title"
+        className="z-50"
+        panelClassName="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl"
+      >
+        {detail ? (
           <div className="max-h-[90vh] overflow-y-auto p-6">
             <div className="flex justify-between">
-              <h2 className="text-lg font-semibold">{detail.orderNumber}</h2>
+              <h2 id="admin-po-detail-title" className="text-lg font-semibold">
+                {detail.orderNumber}
+              </h2>
               <button type="button" className="text-muted hover:text-muted" onClick={() => setDetail(null)}>
                 ✕
               </button>
@@ -477,14 +485,17 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 </Button>
               )}
             </div>
-            </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </Modal>
 
-      {createOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" aria-modal="true" role="dialog" aria-labelledby="create-po-title">
-          <div className="max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl">
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        labelledBy="create-po-title"
+        className="z-50"
+        panelClassName="max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-xl"
+      >
             <div className="max-h-[92vh] overflow-y-auto">
               {/* Header */}
               <div className="flex items-start justify-between border-b border-brand-surface px-6 py-5">
@@ -647,9 +658,7 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </>
   );
 };

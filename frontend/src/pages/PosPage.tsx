@@ -16,6 +16,7 @@ import {
   type PromotionPreviewResult,
 } from '../modules/pos/posOrdersApi';
 import { searchCustomers, type CustomerSearchItem } from '../modules/admin/loyaltyApi';
+import { useDebouncedValue } from '../shared/hooks/useDebouncedValue';
 
 const ALL_ID = '';
 const POS_FAVORITES_KEY = 'pos-favorites';
@@ -72,6 +73,7 @@ export const PosPage: React.FC = () => {
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
   const [selectedDiscountTag, setSelectedDiscountTag] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const searchQueryDebounced = useDebouncedValue(searchQuery, 300);
   const [gridCols, setGridCols] = useState<3 | 4 | 5>(5);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [brands, setBrands] = useState<BrandDto[]>([]);
@@ -243,7 +245,7 @@ export const PosPage: React.FC = () => {
     }
     const t = setTimeout(() => {
       searchPreviewMembers(previewMemberRaw);
-    }, 280);
+    }, 300);
     return () => clearTimeout(t);
   }, [apiMerchantId, previewMemberRaw, previewSelectedCustomer, searchPreviewMembers]);
 
@@ -286,15 +288,15 @@ export const PosPage: React.FC = () => {
     if (apiProducts === null && selectedDiscountTag) {
       list = list.filter((p) => p.tags?.includes(selectedDiscountTag));
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
+    if (searchQueryDebounced.trim()) {
+      const q = searchQueryDebounced.trim().toLowerCase();
       list = list.filter(
         (p) =>
           p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q)),
       );
     }
     return list;
-  }, [productsForGrid, selectedCategoryIds, selectedBrandIds, selectedDiscountTag, searchQuery, apiProducts]);
+  }, [productsForGrid, selectedCategoryIds, selectedBrandIds, selectedDiscountTag, searchQueryDebounced, apiProducts]);
 
   const clearFilters = () => {
     setSelectedCategoryIds([]);

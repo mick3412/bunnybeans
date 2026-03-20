@@ -23,6 +23,7 @@ import {
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
+import { useDebouncedValue } from '../../shared/hooks/useDebouncedValue';
 import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -182,6 +183,7 @@ export const AdminProductsPage: React.FC = () => {
     tags: [] as string[],
   });
   const [searchQ, setSearchQ] = useState('');
+  const searchQDebounced = useDebouncedValue(searchQ, 300);
   const [filterCategoryId, setFilterCategoryId] = useState('');
   const [filterBrandId, setFilterBrandId] = useState('');
   const [filterTags, setFilterTags] = useState<string[]>([]);
@@ -203,7 +205,7 @@ export const AdminProductsPage: React.FC = () => {
           })();
     const [p, c, b, bal, wh] = await Promise.all([
       getProducts({
-        search: searchQ.trim() || undefined,
+        search: searchQDebounced.trim() || undefined,
         categoryId: filterCategoryId || undefined,
         brandId: filterBrandId || undefined,
         tag: filterTags.length === 1 ? filterTags[0] : undefined,
@@ -246,7 +248,7 @@ export const AdminProductsPage: React.FC = () => {
       setStockByProductWarehouse({});
     }
   }, [
-    searchQ,
+    searchQDebounced,
     filterCategoryId,
     filterBrandId,
     filterTags,
@@ -309,7 +311,7 @@ export const AdminProductsPage: React.FC = () => {
       });
     }
     return list;
-  }, [products, searchQ, filterCategoryId, filterBrandId, filterTags, filterMinDaysLeft]);
+  }, [products, filterTags]);
 
   const categoryName = (id: string | null | undefined) =>
     id ? categories.find((c) => c.id === id)?.name ?? '—' : '—';

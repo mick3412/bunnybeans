@@ -8,6 +8,7 @@ import type { CreateOrderResult } from '../modules/pos/posOrdersApi';
 import { createOrder } from '../modules/pos/posOrdersApi';
 import { searchCustomers, type CustomerSearchItem } from '../modules/admin/loyaltyApi';
 import { getCustomer } from '../modules/admin/adminApi';
+import { Modal } from '../shared/components/Modal';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -148,8 +149,6 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
             ? '手機號碼'
             : '手機（將傳給後端辨識）';
 
-  if (!open) return null;
-
   const changeReceived = (value: string) => {
     const n = Number(value.replace(/[^\d]/g, ''));
     if (Number.isNaN(n)) return;
@@ -243,14 +242,15 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="checkout-modal-title"
-      data-testid="e2e-checkout-modal"
+    <Modal
+      open={open}
+      onClose={onClose}
+      labelledBy="checkout-modal-title"
+      className="z-30"
+      panelClassName="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 shadow-xl"
+      dataTestId="e2e-checkout-modal"
     >
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 shadow-xl">
+      <>
         <div className="mb-3 flex items-center justify-between">
           <h2 id="checkout-modal-title" className="text-sm font-semibold text-content">結帳</h2>
           <button
@@ -417,7 +417,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
         >
           {submitting ? '送出中…' : '確認送出'}
         </Button>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 };

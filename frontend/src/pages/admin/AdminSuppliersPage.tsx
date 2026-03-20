@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { TextInput } from '../../shared/components/TextInput';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
+import { Modal } from '../../shared/components/Modal';
 import {
   listSuppliers,
   createSupplier,
@@ -13,6 +14,7 @@ import {
   type ApiError,
 } from '../../modules/admin/purchaseApi';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
+import { useDebouncedValue } from '../../shared/hooks/useDebouncedValue';
 import { useAdminToast } from './AdminToastContext';
 
 const PAYMENT_OPTIONS = ['現金', '月結15天', '月結30天', '月結60天', '預付全額'];
@@ -26,6 +28,8 @@ export const AdminSuppliersPage: React.FC = () => {
   const [listError, setListError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SupplierDto | null>(null);
+  const debouncedQ = useDebouncedValue(q, 300);
+
   const [form, setForm] = useState({
     code: '',
     name: '',
@@ -48,7 +52,7 @@ export const AdminSuppliersPage: React.FC = () => {
       setRows([]);
       return;
     }
-    const r = await listSuppliers(merchantId, q || undefined);
+    const r = await listSuppliers(merchantId, debouncedQ.trim() || undefined);
     setListLoading(false);
     if (r.error) {
       setListError(r.error.message);
@@ -57,19 +61,11 @@ export const AdminSuppliersPage: React.FC = () => {
       return;
     }
     setRows(r.data);
-  }, [merchantId, q, showToast]);
-
-  const loadRef = useRef(load);
-  loadRef.current = load;
+  }, [merchantId, debouncedQ, showToast]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
-
-  useEffect(() => {
-    const t = setTimeout(() => loadRef.current(), 280);
-    return () => clearTimeout(t);
-  }, [q, merchantId]);
 
   const openCreate = () => {
     setEditing(null);
@@ -268,10 +264,16 @@ export const AdminSuppliersPage: React.FC = () => {
         )}
       </div>
 
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-semibold">{editing ? '編輯供應商' : '新增供應商'}</h2>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        labelledBy="admin-suppliers-form-title"
+        className="z-50"
+        panelClassName="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+      >
+            <h2 id="admin-suppliers-form-title" className="text-lg font-semibold">
+              {editing ? '編輯供應商' : '新增供應商'}
+            </h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <TextInput label="供應商編號 *" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
               <TextInput label="名稱 *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -315,9 +317,7 @@ export const AdminSuppliersPage: React.FC = () => {
                 儲存
               </Button>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </StandardListLayout>
   );
 };
