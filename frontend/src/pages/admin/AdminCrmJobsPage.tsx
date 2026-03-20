@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
+import { Drawer } from '../../shared/components/Drawer';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
@@ -356,77 +357,76 @@ export const AdminCrmJobsPage: React.FC = () => {
         )}
       </div>
 
-      {drawerOpen && drawerJobId && (
-        <div className="fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/40" onClick={closeDrawer} aria-hidden />
-          <div className="absolute right-0 top-0 h-full w-[min(520px,100vw)] border-l border-brand-surface bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-brand-surface bg-table-head px-4 py-3">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold text-content">Job 結果</div>
-                <div className="mt-0.5 font-mono text-[11px] text-muted">{drawerJobId}</div>
-              </div>
-              <div className="flex gap-2">
-                <Button type="button" size="sm" variant="secondary" onClick={() => void loadDrawer(drawerJobId)} disabled={drawerLoading}>
-                  重新整理
-                </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={closeDrawer}>
-                  關閉
-                </Button>
-              </div>
+      <Drawer
+        open={!!(drawerOpen && drawerJobId)}
+        onClose={closeDrawer}
+        header={
+          <div className="flex w-full items-center justify-between">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-content">Job 結果</div>
+              <div className="mt-0.5 font-mono text-[11px] text-muted">{drawerJobId}</div>
             </div>
-
-            <div className="h-[calc(100%-52px)] overflow-y-auto p-4">
-              {drawerErr && (
-                <Alert variant="error" className="mb-3">
-                  {drawerErr}
-                </Alert>
-              )}
-              {drawerLoading ? (
-                <div className="py-10 text-center text-sm text-muted">載入中…</div>
-              ) : drawerJob ? (
-                <>
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-semibold text-muted">狀態</span>
-                    {(() => {
-                      const st = statusLabel(drawerJob.status);
-                      return <span className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${st.cls}`}>{st.text}</span>;
-                    })()}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-brand-surface bg-white p-3">
-                      <div className="text-xs font-semibold text-muted">sent</div>
-                      <div className="mt-1 text-2xl font-bold tabular-nums text-content">{drawerJob.result?.sent ?? 0}</div>
-                    </div>
-                    <div className="rounded-xl border border-brand-surface bg-white p-3">
-                      <div className="text-xs font-semibold text-muted">skipped</div>
-                      <div className="mt-1 text-2xl font-bold tabular-nums text-content">{drawerJob.result?.skipped ?? 0}</div>
-                    </div>
-                  </div>
-                  {drawerJob.error && (
-                    <Alert variant="error" className="mt-3">
-                      {drawerJob.error}
-                    </Alert>
-                  )}
-                  {(drawerJob.result?.errors?.length ?? 0) > 0 && (
-                    <details className="mt-3 rounded-xl border border-brand-surface bg-table-head p-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-content">
-                        錯誤列表（最多 50）
-                      </summary>
-                      <ul className="mt-2 max-h-72 list-inside list-disc overflow-y-auto text-sm text-muted">
-                        {(drawerJob.result?.errors ?? []).map((e) => (
-                          <li key={e} className="break-words">{e}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
-                </>
-              ) : (
-                <div className="py-10 text-center text-sm text-muted">尚無資料</div>
-              )}
+            <div className="flex gap-2">
+              <Button type="button" size="sm" variant="secondary" onClick={() => void loadDrawer(drawerJobId!)} disabled={drawerLoading}>
+                重新整理
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={closeDrawer}>
+                關閉
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        }
+        ariaLabel="Job 結果"
+        widthClassName="w-[min(520px,100vw)]"
+      >
+        {drawerErr && (
+          <Alert variant="error" className="mb-3">
+            {drawerErr}
+          </Alert>
+        )}
+        {drawerLoading ? (
+          <div className="py-10 text-center text-sm text-muted">載入中…</div>
+        ) : drawerJob ? (
+          <>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-muted">狀態</span>
+              {(() => {
+                const st = statusLabel(drawerJob.status);
+                return <span className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${st.cls}`}>{st.text}</span>;
+              })()}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-brand-surface bg-white p-3">
+                <div className="text-xs font-semibold text-muted">sent</div>
+                <div className="mt-1 text-2xl font-bold tabular-nums text-content">{drawerJob.result?.sent ?? 0}</div>
+              </div>
+              <div className="rounded-xl border border-brand-surface bg-white p-3">
+                <div className="text-xs font-semibold text-muted">skipped</div>
+                <div className="mt-1 text-2xl font-bold tabular-nums text-content">{drawerJob.result?.skipped ?? 0}</div>
+              </div>
+            </div>
+            {drawerJob.error && (
+              <Alert variant="error" className="mt-3">
+                {drawerJob.error}
+              </Alert>
+            )}
+            {(drawerJob.result?.errors?.length ?? 0) > 0 && (
+              <details className="mt-3 rounded-xl border border-brand-surface bg-table-head p-3">
+                <summary className="cursor-pointer text-sm font-semibold text-content">
+                  錯誤列表（最多 50）
+                </summary>
+                <ul className="mt-2 max-h-72 list-inside list-disc overflow-y-auto text-sm text-muted">
+                  {(drawerJob.result?.errors ?? []).map((e) => (
+                    <li key={e} className="break-words">{e}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </>
+        ) : (
+          <div className="py-10 text-center text-sm text-muted">尚無資料</div>
+        )}
+      </Drawer>
     </StandardListLayout>
   );
 };

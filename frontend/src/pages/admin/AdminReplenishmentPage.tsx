@@ -11,6 +11,7 @@ import {
 import { listSuppliers } from '../../modules/admin/purchaseApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Button } from '../../shared/components/Button';
+import { Drawer } from '../../shared/components/Drawer';
 import { EmptyState } from '../../shared/components/EmptyState';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 
@@ -346,73 +347,61 @@ export const AdminReplenishmentPage: React.FC = () => {
           </div>
           </div>
         ) : null}
-      {showPoDraft && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/30"
-            aria-hidden
-            onClick={() => setShowPoDraft(false)}
-          />
-          <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-brand-surface bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-brand-surface px-4 py-3">
-              <div>
-                <h2 className="text-sm font-semibold text-content">補貨採購草稿（預覽）</h2>
-                <p className="mt-0.5 text-xs text-muted">
-                  僅整理目前選取的建議作為採購參考，不會直接建立採購單或寫入後端。
-                </p>
+      <Drawer
+        open={showPoDraft}
+        onClose={() => setShowPoDraft(false)}
+        title={
+          <>
+            <div className="text-sm font-semibold text-content">補貨採購草稿（預覽）</div>
+            <p className="mt-0.5 text-xs text-muted">
+              僅整理目前選取的建議作為採購參考，不會直接建立採購單或寫入後端。
+            </p>
+          </>
+        }
+        ariaLabel="補貨採購草稿預覽"
+      >
+        <div className="space-y-3 text-sm">
+          {selectedRows.length === 0 ? (
+            <p className="text-xs text-muted">尚未選擇任何建議，可在列表勾選後再回到此視窗。</p>
+          ) : (
+            <>
+              <div className="rounded-lg bg-table-head p-3 text-xs text-muted">
+                將下列品項整理成同一倉庫的採購草稿，實際建立採購單時可在「採購單」頁面依供應商與商品再做調整。
               </div>
-              <button
-                type="button"
-                className="rounded px-2 py-1 text-sm text-muted hover:bg-brand-canvas"
-                onClick={() => setShowPoDraft(false)}
-              >
-                關閉
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3 text-sm">
-              {selectedRows.length === 0 ? (
-                <p className="text-xs text-muted">尚未選擇任何建議，可在列表勾選後再回到此視窗。</p>
-              ) : (
-                <>
-                  <div className="rounded-lg bg-table-head p-3 text-xs text-muted">
-                    將下列品項整理成同一倉庫的採購草稿，實際建立採購單時可在「採購單」頁面依供應商與商品再做調整。
-                  </div>
-                  <div className="rounded-xl border border-brand-surface bg-white">
-                    <table className="w-full text-left text-xs">
-                      <thead className="border-b border-brand-surface bg-table-head text-[11px] uppercase text-muted">
-                        <tr>
-                          <th className="px-3 py-2">商品</th>
-                          <th className="px-3 py-2">SKU</th>
-                          <th className="px-3 py-2 text-right">現有</th>
-                          <th className="px-3 py-2 text-right">建議補貨</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedRows.map((r) => (
-                          <tr key={`${r.productId}-${r.warehouseId}`} className="border-t border-brand-surface">
-                            <td className="px-3 py-1.5 text-content">
-                              {r.productName ?? '—'}
-                            </td>
-                            <td className="px-3 py-1.5 font-mono text-[11px] text-muted">
-                              {r.sku ?? '—'}
-                            </td>
-                            <td className="px-3 py-1.5 text-right font-mono text-[11px]">
-                              {r.onHandQty}
-                            </td>
-                            <td className="px-3 py-1.5 text-right font-mono text-[11px] text-emerald-700">
-                              {r.suggestedQty}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-            </div>
-          </aside>
-        </>
-      )}
+              <div className="rounded-xl border border-brand-surface bg-white">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-brand-surface bg-table-head text-[11px] uppercase text-muted">
+                    <tr>
+                      <th className="px-3 py-2">商品</th>
+                      <th className="px-3 py-2">SKU</th>
+                      <th className="px-3 py-2 text-right">現有</th>
+                      <th className="px-3 py-2 text-right">建議補貨</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedRows.map((r) => (
+                      <tr key={`${r.productId}-${r.warehouseId}`} className="border-t border-brand-surface">
+                        <td className="px-3 py-1.5 text-content">
+                          {r.productName ?? '—'}
+                        </td>
+                        <td className="px-3 py-1.5 font-mono text-[11px] text-muted">
+                          {r.sku ?? '—'}
+                        </td>
+                        <td className="px-3 py-1.5 text-right font-mono text-[11px]">
+                          {r.onHandQty}
+                        </td>
+                        <td className="px-3 py-1.5 text-right font-mono text-[11px] text-emerald-700">
+                          {r.suggestedQty}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      </Drawer>
       </>
     </StandardListLayout>
   );
