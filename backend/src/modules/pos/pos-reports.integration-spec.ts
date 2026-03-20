@@ -433,6 +433,78 @@ describe('PosReportsService (integration)', () => {
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 25000);
 
+  it('summary returns byStore with multi-store revenue breakdown', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `MR-BS-${Date.now()}`, name: 'ByStore Merchant' },
+    });
+    const store1 = await prisma.store.create({
+      data: { code: `SR-BS1-${Date.now()}`, name: 'Store A', merchantId: merchant.id },
+    });
+    const store2 = await prisma.store.create({
+      data: { code: `SR-BS2-${Date.now()}`, name: 'Store B', merchantId: merchant.id },
+    });
+    const wh1 = await prisma.warehouse.create({
+      data: { code: `WR-BS1-${Date.now()}`, name: 'WH A', merchantId: merchant.id, storeId: store1.id },
+    });
+    const wh2 = await prisma.warehouse.create({
+      data: { code: `WR-BS2-${Date.now()}`, name: 'WH B', merchantId: merchant.id, storeId: store2.id },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `SKU-BS-${Date.now()}`, name: 'BS Product' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: wh1.id } },
+      create: { productId: product.id, warehouseId: wh1.id, onHandQty: 10 },
+      update: { onHandQty: 10 },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: wh2.id } },
+      create: { productId: product.id, warehouseId: wh2.id, onHandQty: 10 },
+      update: { onHandQty: 10 },
+    });
+    await prisma.inventoryEvent.createMany({
+      data: [
+        { productId: product.id, warehouseId: wh1.id, type: 'PURCHASE_IN', quantity: 10, occurredAt: new Date(), note: 'bs' },
+        { productId: product.id, warehouseId: wh2.id, type: 'PURCHASE_IN', quantity: 10, occurredAt: new Date(), note: 'bs' },
+      ],
+    });
+
+    const o1 = await posService.createOrder({
+      storeId: store1.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 200 }],
+      payments: [{ method: 'CASH', amount: 200 }],
+    });
+    const o2 = await posService.createOrder({
+      storeId: store2.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 300 }],
+      payments: [{ method: 'CASH', amount: 300 }],
+    });
+
+    const out = await reports.summary({ merchantId: merchant.id, preset: 'today' });
+    expect(out.byStore).toBeDefined();
+    expect(out.byStore!.length).toBe(2);
+    const byStoreMap = new Map(out.byStore!.map((s) => [s.storeId, s]));
+    expect(byStoreMap.get(store1.id)?.revenue).toBe(200);
+    expect(byStoreMap.get(store1.id)?.ordersCount).toBe(1);
+    expect(byStoreMap.get(store1.id)?.storeCode).toBe(store1.code);
+    expect(byStoreMap.get(store2.id)?.revenue).toBe(300);
+    expect(byStoreMap.get(store2.id)?.ordersCount).toBe(1);
+    expect(out.byStore![0].revenue).toBeGreaterThanOrEqual(out.byStore![1].revenue);
+
+    await prisma.posOrderItem.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
+    await prisma.posOrder.deleteMany({ where: { id: { in: [o1.id, o2.id] } } });
+    await prisma.financeEvent.deleteMany({ where: { referenceId: { in: [o1.id, o2.id] } } });
+    await prisma.inventoryEvent.deleteMany({ where: { productId: product.id } });
+    await prisma.inventoryBalance.deleteMany({ where: { productId: product.id } });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.deleteMany({ where: { id: { in: [wh1.id, wh2.id] } } });
+    await prisma.store.deleteMany({ where: { id: { in: [store1.id, store2.id] } } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 25000);
+
   it('daily with groupBy=week returns items with periodStart', async () => {
     if (!process.env.DATABASE_URL) return;
 

@@ -65,6 +65,14 @@ export interface MemberContributionDto {
   guestOrdersCount: number;
 }
 
+export interface ByStoreItemDto {
+  storeId: string;
+  storeCode?: string;
+  storeName?: string;
+  revenue: number;
+  ordersCount: number;
+}
+
 export interface PosReportsSummaryDto {
   totalRevenue: string;
   ordersCount: number;
@@ -74,6 +82,7 @@ export interface PosReportsSummaryDto {
   period?: { preset?: string; from: string; to: string };
   byPaymentMethod?: Record<string, number>;
   byCategory?: { categoryId: string | null; categoryCode?: string; revenue: number }[];
+  byStore?: ByStoreItemDto[];
   totalCost?: string;
   grossMargin?: string;
   grossMarginRate?: number | null;
@@ -140,7 +149,7 @@ export class PosReportsService {
       orderWhere.storeId = storeId;
     }
 
-    const [ordersCount, aggOrders, refundAgg, memberAgg, guestAgg, paymentRows, categoryRows] = await Promise.all([
+    const [ordersCount, aggOrders, refundAgg, memberAgg, guestAgg, paymentRows, categoryRows, byStoreRows] = await Promise.all([
       this.prisma.posOrder.count({ where: orderWhere }),
       this.prisma.posOrder.aggregate({
         where: orderWhere,
@@ -180,6 +189,12 @@ export class PosReportsService {
             },
           },
         },
+      }),
+      this.prisma.posOrder.groupBy({
+        by: ['storeId'],
+        where: orderWhere,
+        _sum: { totalAmount: true },
+        _count: true,
       }),
     ]);
 
@@ -231,6 +246,32 @@ export class PosReportsService {
       guestOrdersCount: guestAgg._count,
     };
 
+    let byStore: ByStoreItemDto[] | undefined;
+    if (byStoreRows.length > 0) {
+      const storeIds = byStoreRows.map((r) => r.storeId).filter(Boolean);
+      const stores =
+        storeIds.length > 0
+          ? await this.prisma.store.findMany({
+              where: { id: { in: storeIds } },
+              select: { id: true, code: true, name: true },
+            })
+          : [];
+      const storeMap = new Map(stores.map((s) => [s.id, s]));
+      byStore = byStoreRows
+        .filter((r) => r.storeId)
+        .map((r) => {
+          const s = storeMap.get(r.storeId!);
+          return {
+            storeId: r.storeId!,
+            storeCode: s?.code,
+            storeName: s?.name,
+            revenue: r._sum.totalAmount != null ? Number(r._sum.totalAmount) : 0,
+            ordersCount: r._count,
+          };
+        })
+        .sort((a, b) => b.revenue - a.revenue);
+    }
+
     return {
       totalRevenue: totalNum.toFixed(2),
       ordersCount,
@@ -240,6 +281,7 @@ export class PosReportsService {
       period,
       byPaymentMethod: Object.keys(byPaymentMethod).length > 0 ? byPaymentMethod : undefined,
       byCategory: byCategory.length > 0 ? byCategory : undefined,
+      byStore: byStore && byStore.length > 0 ? byStore : undefined,
       totalCost: totalCost.toFixed(2),
       grossMargin: grossMargin.toFixed(2),
       ...(grossMarginRate !== null && { grossMarginRate }),

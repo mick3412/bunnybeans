@@ -408,17 +408,17 @@ interface PosOrderListResponse {
 
 **GET /pos/reports/summary**
 
-- **Query**（皆選填）：`preset`（today｜last7d｜last30d｜currentMonth｜last60d｜lastHalfYear，預設 today）、`from`、`to`（ISO 日期，與 preset 二擇一）、`storeId`。
-- **Response**：`period: { preset?, from, to }`、`totalRevenue`、`ordersCount`、`avgOrder`、`refundsCount`、`refundsTotal`、`byPaymentMethod?: Record<string, number>`、`byCategory?: { categoryId, categoryCode?, revenue }[]`、**`totalCost?`**（區間內銷貨成本：Σ quantity × Product.costPrice，costPrice 為 null 視為 0）、**`grossMargin?`**（totalRevenue − totalCost）、**`grossMarginRate?`**（毛利率 %，totalRevenue > 0 時 (grossMargin / totalRevenue) × 100）、**`memberContribution?`**（會員 vs 匿名客：`{ memberRevenue, memberOrdersCount, guestRevenue, guestOrdersCount }`；依 PosOrder.customerId 有無分組彙總）。
+- **Query**（皆選填）：`merchantId?`（多商家時必填；單一商家可省略，後端自動解析）、`preset`（today｜last7d｜last30d｜currentMonth｜last60d｜lastHalfYear，預設 today）、`from`、`to`（ISO 日期，與 preset 二擇一）、`storeId`。
+- **Response**：`period: { preset?, from, to }`、`totalRevenue`、`ordersCount`、`avgOrder`、`refundsCount`、`refundsTotal`、`byPaymentMethod?: Record<string, number>`、`byCategory?: { categoryId, categoryCode?, revenue }[]`、**`byStore?`**（多門市營收對比：`{ storeId, storeCode?, storeName?, revenue, ordersCount }[]`，依營收降序）、**`totalCost?`**（區間內銷貨成本：Σ quantity × Product.costPrice，costPrice 為 null 視為 0）、**`grossMargin?`**（totalRevenue − totalCost）、**`grossMarginRate?`**（毛利率 %，totalRevenue > 0 時 (grossMargin / totalRevenue) × 100）、**`memberContribution?`**（會員 vs 匿名客：`{ memberRevenue, memberOrdersCount, guestRevenue, guestOrdersCount }`；依 PosOrder.customerId 有無分組彙總）。
 
 **GET /pos/reports/top-items**
 
-- **Query**：`from`、`to`（未帶則預設 last30d）、`storeId?`、`limit?`（預設 20，上限 100）、`sortBy?`（quantity｜revenue）。
+- **Query**：`merchantId?`（多商家時必填；單一商家可省略）、`from`、`to`（未帶則預設 last30d）、`storeId?`、`limit?`（預設 20，上限 100）、`sortBy?`（quantity｜revenue）。
 - **Response**：`items: { productId, productName, sku, quantity, revenue }[]`、`from`、`to`。
 
 **GET /pos/reports/daily**
 
-- **Query**：`from`、`to`（未帶則預設 last30d）、`storeId?`、**`groupBy?`**（day｜week｜month，預設 day）。
+- **Query**：`merchantId?`（多商家時必填；單一商家可省略）、`from`、`to`（未帶則預設 last30d）、`storeId?`、**`groupBy?`**（day｜week｜month，預設 day）。
 - **Response**：`groupBy=day` 時 `byDay: { date, revenue, ordersCount }[]`；`groupBy=week|month` 時 `items: { periodStart, revenue, ordersCount }[]`。`from`、`to`。week 以週一為起點；month 以月為單位。
 
 **GET /pos/reports/order-value-distribution**
