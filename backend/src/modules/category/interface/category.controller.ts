@@ -32,6 +32,12 @@ export class CategoryController {
     return this.service.createCategory(body);
   }
 
+  @Patch('reorder')
+  @UseGuards(AdminApiKeyGuard)
+  reorder(@Body() body: { ids: string[] }) {
+    return this.service.reorderCategories(body.ids ?? []);
+  }
+
   @Patch(':id')
   @UseGuards(AdminApiKeyGuard)
   update(

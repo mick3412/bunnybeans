@@ -8,7 +8,7 @@ export class ProductTagRepository {
   findMany(merchantId: string) {
     return this.prisma.productTag.findMany({
       where: { merchantId },
-      orderBy: { code: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
     });
   }
 
@@ -22,6 +22,16 @@ export class ProductTagRepository {
     return this.prisma.productTag.findUnique({ where: { id } });
   }
 
+  countByMerchant(merchantId: string) {
+    return this.prisma.productTag.count({ where: { merchantId } });
+  }
+
+  countByIdsAndMerchant(merchantId: string, ids: string[]) {
+    return this.prisma.productTag.count({
+      where: { merchantId, id: { in: ids } },
+    });
+  }
+
   create(data: { merchantId: string; name: string; code: string }) {
     return this.prisma.productTag.create({ data });
   }
@@ -32,5 +42,16 @@ export class ProductTagRepository {
 
   delete(id: string) {
     return this.prisma.productTag.delete({ where: { id } });
+  }
+
+  async reorder(merchantId: string, ids: string[]) {
+    await this.prisma.$transaction(
+      ids.map((id, index) =>
+        this.prisma.productTag.updateMany({
+          where: { id, merchantId },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
   }
 }

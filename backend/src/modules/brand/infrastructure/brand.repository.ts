@@ -6,7 +6,9 @@ export class BrandRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   findAll() {
-    return this.prisma.brand.findMany({ orderBy: { code: 'asc' } });
+    return this.prisma.brand.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
+    });
   }
 
   findCodes(): Promise<string[]> {
@@ -29,7 +31,26 @@ export class BrandRepository {
     return this.prisma.product.count({ where: { brandId } });
   }
 
+  countAll() {
+    return this.prisma.brand.count();
+  }
+
+  countByIds(ids: string[]) {
+    return this.prisma.brand.count({ where: { id: { in: ids } } });
+  }
+
   deleteById(id: string) {
     return this.prisma.brand.delete({ where: { id } });
+  }
+
+  async reorder(ids: string[]) {
+    await this.prisma.$transaction(
+      ids.map((id, index) =>
+        this.prisma.brand.updateMany({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
   }
 }

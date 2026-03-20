@@ -144,6 +144,45 @@ export class ProductTagService {
     }
   }
 
+  async reorder(merchantId: string, ids: string[]) {
+    const m = merchantId?.trim();
+    if (!m) {
+      throw new BadRequestException({
+        message: 'merchantId is required',
+        code: 'PRODUCT_TAG_MERCHANT_REQUIRED',
+      });
+    }
+    const cleaned = ids.map((x) => String(x ?? '').trim()).filter(Boolean);
+    if (!cleaned.length) {
+      throw new BadRequestException({
+        message: 'ids required',
+        code: 'PRODUCT_TAG_REORDER_EMPTY',
+      });
+    }
+    const uniq = [...new Set(cleaned)];
+    if (uniq.length !== cleaned.length) {
+      throw new BadRequestException({
+        message: 'duplicate ids',
+        code: 'PRODUCT_TAG_REORDER_DUPLICATE_IDS',
+      });
+    }
+    const total = await this.repo.countByMerchant(m);
+    const count = await this.repo.countByIdsAndMerchant(m, uniq);
+    if (count !== uniq.length) {
+      throw new BadRequestException({
+        message: 'some ids not found for merchant',
+        code: 'PRODUCT_TAG_NOT_FOUND',
+      });
+    }
+    if (uniq.length !== total) {
+      throw new BadRequestException({
+        message: 'ids must include all product tags for merchant',
+        code: 'PRODUCT_TAG_REORDER_INVALID',
+      });
+    }
+    await this.repo.reorder(m, uniq);
+  }
+
   async delete(id: string) {
     const existing = await this.repo.findById(id);
     if (!existing) {

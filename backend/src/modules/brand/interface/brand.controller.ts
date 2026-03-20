@@ -27,6 +27,12 @@ export class BrandController {
     return this.service.createBrand(body);
   }
 
+  @Patch('reorder')
+  @UseGuards(AdminApiKeyGuard)
+  reorder(@Body() body: { ids: string[] }) {
+    return this.service.reorderBrands(body.ids ?? []);
+  }
+
   @Patch(':id')
   @UseGuards(AdminApiKeyGuard)
   update(

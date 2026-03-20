@@ -105,6 +105,38 @@ export class BrandService {
     }
   }
 
+  async reorderBrands(ids: string[]) {
+    const cleaned = ids.map((x) => String(x ?? '').trim()).filter(Boolean);
+    if (!cleaned.length) {
+      throw new BadRequestException({
+        message: 'ids required',
+        code: 'BRAND_REORDER_EMPTY',
+      });
+    }
+    const uniq = [...new Set(cleaned)];
+    if (uniq.length !== cleaned.length) {
+      throw new BadRequestException({
+        message: 'duplicate ids',
+        code: 'BRAND_REORDER_DUPLICATE_IDS',
+      });
+    }
+    const total = await this.repo.countAll();
+    const count = await this.repo.countByIds(uniq);
+    if (count !== uniq.length) {
+      throw new BadRequestException({
+        message: 'some ids not found',
+        code: 'BRAND_NOT_FOUND',
+      });
+    }
+    if (uniq.length !== total) {
+      throw new BadRequestException({
+        message: 'ids must include all brands',
+        code: 'BRAND_REORDER_INVALID',
+      });
+    }
+    await this.repo.reorder(uniq);
+  }
+
   async deleteBrand(id: string) {
     const existing = await this.repo.findById(id);
     if (!existing) {

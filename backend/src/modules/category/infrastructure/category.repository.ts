@@ -7,7 +7,7 @@ export class CategoryRepository {
 
   findAll() {
     return this.prisma.category.findMany({
-      orderBy: { code: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
     });
   }
 
@@ -31,8 +31,27 @@ export class CategoryRepository {
     return this.prisma.product.count({ where: { categoryId } });
   }
 
+  countAll() {
+    return this.prisma.category.count();
+  }
+
+  countByIds(ids: string[]) {
+    return this.prisma.category.count({ where: { id: { in: ids } } });
+  }
+
   deleteById(id: string) {
     return this.prisma.category.delete({ where: { id } });
+  }
+
+  async reorder(ids: string[]) {
+    await this.prisma.$transaction(
+      ids.map((id, index) =>
+        this.prisma.category.updateMany({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
   }
 
   productsForEnriched() {

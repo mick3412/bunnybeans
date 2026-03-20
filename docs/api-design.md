@@ -108,12 +108,18 @@
 
 ### 6.0 `GET /categories`（stable）
 
-- **Response**：`{ id, code, name, createdAt, updatedAt }[]`
+- **Response**：`{ id, code, name, sortOrder, createdAt, updatedAt }[]`；依 **`sortOrder`** 升序，同序依 `code` 升序。
 
 ### 6.0a `GET /categories/enriched`（stable）
 
-- **用途**：後台報表／篩選；每筆含 **`productCount`**、**`brandCodes[]`**（該分類下商品品牌 code 去重）、**`tags[]`**（該分類下商品 tags 併集去重）。
+- **用途**：後台報表／篩選；每筆含 **`sortOrder`**、**`productCount`**、**`brandCodes[]`**（該分類下商品品牌 code 去重）、**`tags[]`**（該分類下商品 tags 併集去重）。列表依 **`sortOrder`** 升序。
 - **公開 GET**（與 `/categories` 相同，不強制 Admin Key）。
+
+### 6.0c `PATCH /categories/reorder`（stable）
+
+- **用途**：拖曳排序後更新分類順序。需 **X-Admin-Key**。
+- **Body**：`{ "ids": string[] }`（依新順序排列的 id 清單，須包含**全部**分類 id）
+- **錯誤**：`400 CATEGORY_REORDER_EMPTY`／`CATEGORY_REORDER_DUPLICATE_IDS`／`CATEGORY_REORDER_INVALID`；`404 CATEGORY_NOT_FOUND`
 
 ### 6.0b `POST`／`PATCH`／`DELETE /categories`（stable）
 
@@ -126,7 +132,13 @@
 
 ### 6.1 `GET /brands`（stable）
 
-- **Response**：`{ id, code, name, createdAt, updatedAt }[]`
+- **Response**：`{ id, code, name, sortOrder, createdAt, updatedAt }[]`；依 **`sortOrder`** 升序，同序依 `code` 升序。
+
+### 6.1c `PATCH /brands/reorder`（stable）
+
+- **用途**：拖曳排序後更新品牌順序。需 **X-Admin-Key**。
+- **Body**：`{ "ids": string[] }`（依新順序排列的 id 清單，須包含**全部**品牌 id）
+- **錯誤**：`400 BRAND_REORDER_EMPTY`／`BRAND_REORDER_DUPLICATE_IDS`／`BRAND_REORDER_INVALID`；`404 BRAND_NOT_FOUND`
 
 ### 6.1b `POST`／`PATCH`／`DELETE /brands`（stable）
 
@@ -138,7 +150,13 @@
 ### 6.1a `GET/POST/PATCH/DELETE /product-tags`（stable）
 
 - **用途**：商品標籤 master CRUD；供類別管理頁與商品表單標籤 multi-select 使用。
-- **GET** `/product-tags` Query：**`merchantId`**（必填）。Response：`{ id, merchantId, name, code, createdAt, updatedAt }[]`
+- **GET** `/product-tags` Query：**`merchantId`**（必填）。Response：`{ id, merchantId, name, code, sortOrder, createdAt, updatedAt }[]`；依 **`sortOrder`** 升序，同序依 `code` 升序。
+
+### 6.1a-1 `PATCH /product-tags/reorder`（stable）
+
+- **用途**：拖曳排序後更新該商家標籤順序。需 **X-Admin-Key**。
+- **Body**：`{ "merchantId": "uuid", "ids": string[] }`（`merchantId` 必填；`ids` 依新順序排列，須包含該商家**全部**標籤 id）
+- **錯誤**：`400 PRODUCT_TAG_MERCHANT_REQUIRED`／`PRODUCT_TAG_REORDER_EMPTY`／`PRODUCT_TAG_REORDER_DUPLICATE_IDS`／`PRODUCT_TAG_REORDER_INVALID`；`404 PRODUCT_TAG_NOT_FOUND`
 - **POST** `/product-tags` Body：`{ "merchantId": "uuid", "name": "熱銷", "code?": "hot" }`（`code` 選填，未送時由 `name` 自動衍生）；需 **X-Admin-Key**。
 - **PATCH** `/product-tags/:id` Body：`{ "name?": "…", "code?": "…" }`；需 **X-Admin-Key**。
 - **DELETE** `/product-tags/:id`：204 無 body；需 **X-Admin-Key**。

@@ -143,6 +143,33 @@ describe('ProductTagService (integration)', () => {
     }
   }, 10000);
 
+  it('reorder updates sortOrder; validates ids', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const merchant = await prisma.merchant.create({
+      data: { code: `PT-RO-${Date.now()}`, name: 'ProductTag Reorder Test' },
+    });
+    const t1 = await productTagService.create({ merchantId: merchant.id, name: 'T1', code: 't1' });
+    const t2 = await productTagService.create({ merchantId: merchant.id, name: 'T2', code: 't2' });
+    const t3 = await productTagService.create({ merchantId: merchant.id, name: 'T3', code: 't3' });
+    try {
+      await expect(productTagService.reorder(merchant.id, [])).rejects.toMatchObject({
+        response: { code: 'PRODUCT_TAG_REORDER_EMPTY' },
+      });
+      await expect(productTagService.reorder(merchant.id, [t1.id, t1.id, t2.id, t3.id])).rejects.toMatchObject({
+        response: { code: 'PRODUCT_TAG_REORDER_DUPLICATE_IDS' },
+      });
+      await expect(productTagService.reorder(merchant.id, [t1.id, t2.id])).rejects.toMatchObject({
+        response: { code: 'PRODUCT_TAG_REORDER_INVALID' },
+      });
+      await productTagService.reorder(merchant.id, [t3.id, t1.id, t2.id]);
+      const list = await productTagService.list(merchant.id);
+      expect(list.map((x) => x.code)).toEqual(['t3', 't1', 't2']);
+    } finally {
+      await prisma.productTag.deleteMany({ where: { merchantId: merchant.id } });
+      await prisma.merchant.delete({ where: { id: merchant.id } });
+    }
+  }, 15000);
+
   it('update and delete', async () => {
     if (!process.env.DATABASE_URL) return;
 

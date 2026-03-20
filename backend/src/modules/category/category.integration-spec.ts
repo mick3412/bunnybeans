@@ -102,6 +102,33 @@ describe('CategoryService (integration)', () => {
     await prisma.category.delete({ where: { id: created.id } });
   }, 10000);
 
+  it('reorder updates sortOrder; validates ids', async () => {
+    if (!process.env.DATABASE_URL) return;
+    const c1 = await categoryService.createCategory({ code: `r1-${Date.now()}`, name: 'A' });
+    const c2 = await categoryService.createCategory({ code: `r2-${Date.now()}`, name: 'B' });
+    const c3 = await categoryService.createCategory({ code: `r3-${Date.now()}`, name: 'C' });
+    try {
+      await expect(categoryService.reorderCategories([])).rejects.toMatchObject({
+        response: { code: 'CATEGORY_REORDER_EMPTY' },
+      });
+      await expect(categoryService.reorderCategories([c1.id, c1.id, c2.id, c3.id])).rejects.toMatchObject({
+        response: { code: 'CATEGORY_REORDER_DUPLICATE_IDS' },
+      });
+      const all = await categoryService.listCategories();
+      await expect(categoryService.reorderCategories([c1.id, c2.id])).rejects.toMatchObject({
+        response: { code: 'CATEGORY_REORDER_INVALID' },
+      });
+      const others = all.filter((x) => ![c1.id, c2.id, c3.id].includes(x.id));
+      const reorderIds = [...others.map((x) => x.id), c3.id, c1.id, c2.id];
+      await categoryService.reorderCategories(reorderIds);
+      const list = await categoryService.listCategories();
+      const ourInList = list.filter((x) => [c1.id, c2.id, c3.id].includes(x.id));
+      expect(ourInList.map((x) => x.id)).toEqual([c3.id, c1.id, c2.id]);
+    } finally {
+      await prisma.category.deleteMany({ where: { id: { in: [c1.id, c2.id, c3.id] } } });
+    }
+  }, 15000);
+
   it('deleteCategory removes empty category; CATEGORY_IN_USE when products reference', async () => {
     if (!process.env.DATABASE_URL) return;
 

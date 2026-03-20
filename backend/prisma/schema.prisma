@@ -313,6 +313,7 @@ model Category {
   id        String    @id @default(uuid())
   code      String    @unique
   name      String
+  sortOrder Int       @default(0)
   products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -324,6 +325,7 @@ model ProductTag {
   merchantId String
   name       String
   code       String
+  sortOrder  Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -335,6 +337,7 @@ model Brand {
   id        String    @id @default(uuid())
   code      String    @unique
   name      String
+  sortOrder Int       @default(0)
   products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -357,6 +360,12 @@ model Product {
   specWeight       String?
   /// 有效期限描述（如「常溫 1 年」）
   expiryDescription String?
+  /// 生產日期（與 shelfLifeMonths 搭配計算到期日）
+  productionDate    DateTime?
+  /// 有效期限月數（與 productionDate 搭配）
+  shelfLifeMonths   Int?
+  /// 到期日期（與 productionDate+shelfLifeMonths 二擇一）
+  expiryDate        DateTime?
   listPrice   Decimal   @default(0) @db.Decimal(12, 2)
   salePrice   Decimal   @default(0) @db.Decimal(12, 2)
   costPrice   Decimal?  @db.Decimal(12, 2)

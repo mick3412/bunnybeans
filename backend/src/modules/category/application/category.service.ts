@@ -152,6 +152,38 @@ export class CategoryService {
     }
   }
 
+  async reorderCategories(ids: string[]) {
+    const cleaned = ids.map((x) => String(x ?? '').trim()).filter(Boolean);
+    if (!cleaned.length) {
+      throw new BadRequestException({
+        message: 'ids required',
+        code: 'CATEGORY_REORDER_EMPTY',
+      });
+    }
+    const uniq = [...new Set(cleaned)];
+    if (uniq.length !== cleaned.length) {
+      throw new BadRequestException({
+        message: 'duplicate ids',
+        code: 'CATEGORY_REORDER_DUPLICATE_IDS',
+      });
+    }
+    const total = await this.repo.countAll();
+    const count = await this.repo.countByIds(uniq);
+    if (count !== uniq.length) {
+      throw new BadRequestException({
+        message: 'some ids not found',
+        code: 'CATEGORY_NOT_FOUND',
+      });
+    }
+    if (uniq.length !== total) {
+      throw new BadRequestException({
+        message: 'ids must include all categories',
+        code: 'CATEGORY_REORDER_INVALID',
+      });
+    }
+    await this.repo.reorder(uniq);
+  }
+
   async deleteCategory(id: string) {
     const existing = await this.repo.findById(id);
     if (!existing) {

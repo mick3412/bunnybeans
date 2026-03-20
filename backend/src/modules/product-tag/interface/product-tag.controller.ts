@@ -30,6 +30,12 @@ export class ProductTagController {
     return this.service.create(body);
   }
 
+  @Patch('reorder')
+  @UseGuards(AdminApiKeyGuard)
+  reorder(@Body() body: { merchantId: string; ids: string[] }) {
+    return this.service.reorder(body.merchantId ?? '', body.ids ?? []);
+  }
+
   @Patch(':id')
   @UseGuards(AdminApiKeyGuard)
   update(
