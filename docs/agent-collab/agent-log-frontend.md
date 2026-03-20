@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 038（037 剩餘 + 驗收 + POS 產品塊重構）
+- 做了：① **E2E 完整驗證**：e2e-prepare-db + restart-dev + pnpm e2e → 24 passed、10 skipped、2 failed（admin-smoke 金流報表、pos-exchange-settlement-journey；關鍵 pos-checkout/credit/refund/return-stock 皆 pass）。② **Design Token AdminReceivingNotesPage**：037 已完成（brand-warning）。③ **Design Token 其餘殘留**：PosPage、PosOrderDetailPage、AdminPurchaseOrdersPage、AdminInventoryPage、AdminCustomersPage 之 red-/emerald-/sky- 改為 brand-danger/brand-success/brand-primary。④ **loading/error 一致性**：AdminReceivingNotesPage、AdminPurchaseOrdersPage 已用 Alert。⑤ **POS 收銀區產品塊重構**：① 取消 SKU 展示；② 新增 getPosProducts(storeId)、串接 GET /pos/products 含 onHandQty；③ 產品塊：品名優先、規格次之、價格 formatMoney 醒目、庫存 badge（低庫存≤3 視覺提示）、選取狀態、卡牌佈局。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；pos-checkout E2E pass
+- commits：`9fb1d012` Design Token；`0804b7c8` POS product refactor；`99a4c86d` agent-log 038
+- 檔案：posOrdersApi（getPosProducts）、PosPage、types（onHandQty）、Design Token 5 檔、agent-log-frontend.md
+
+---
+
 ### INSTRUCTIONS 037（036 收尾 + 驗收 + 優化審查剩餘）
 - 做了：① **formatMoney 全面替換**：PosOrderDetailPage、PosCheckoutModal、PosPage、PosOrdersListPage、AdminPurchaseOrdersPage、AdminQuickReceivingPage、AdminFinanceBalancesPage、AdminPromotionsPage、AdminReportsPage（含 formatValue）、AdminProcurementHubPage、LoyaltyReportActivityPage 等將 `toLocaleString` 金額改為 `formatMoney`。② **大列表虛擬化評估**：多數 admin 列表已有 server-side 分頁（pageSize 20–200）；PosPage 商品網格、AdminProductsPage、AdminCustomersPage 若無分頁且資料量破千可考慮 react-window；暫不實作，待實測後決策。③ **前端單元測試**：新增 vitest 4、@testing-library/react、jsdom；`formatMoney.test.ts`、`EmptyState.test.tsx` 共 9 支通過。④ **Design Token**：PosCheckoutModal 掛帳提示 amber→brand-warning。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm --filter pos-erp-frontend test` 9 passed
