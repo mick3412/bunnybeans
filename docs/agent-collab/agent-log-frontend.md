@@ -15,10 +15,18 @@
 
 ---
 
+### INSTRUCTIONS 033
+- 做了：① **前置**：工作區另有 backend／e2e／多份 docs 變更，本輪僅提交前端 033 相關檔案；032 狀態請以實際 `git log` 為準。② **Code splitting**：`App.tsx` Admin／POS 路由 `React.lazy`；`adminLazy.tsx`／`posLazy.tsx`；`AdminLayout`／`PosLayout` 內 `Suspense` 包 `Outlet`；`vite.config.ts` `manualChunks`（vendor-react、vendor-router、vendor）。③ **404**：`NotFoundPage.tsx`，`*` 路由不再導向 login。④ **Admin ErrorBoundary**：`/admin` 外層包 `ErrorBoundary` + 載入後台 Suspense。⑤ **共用 Modal**：`Modal` 支援 `dataTestId`；`PosCheckoutModal`、`AdminSuppliersPage`、`AdminCustomersPage`（合併會員）、`PosOrderDetailPage`（換貨）、`AdminPurchaseOrdersPage`（詳情／新增）改用 Modal + `aria-labelledby`；合併表單 `border-neutral-300`→`border-brand-surface`。⑥ **搜尋 debounce（300ms）**：`useDebouncedValue`；`AdminProductsPage` API 搜尋、`AdminCustomersPage` 客端篩選、`PosPage` 商品格篩選；`AdminSuppliersPage` 改為 debouncedQ 單一路徑（移除重複立即 load + timer）；採購單列表 q debounce 280→300。⑦ **其餘（延續前段／本工作區）**：`formatMoney`／`debounce` 工具、`useDefaultMerchantId` module cache、`needsAdminKey` 簡化、Dashboard／Reports／PromotionEdit 等若已於工作區修改一併納入提交範圍。⑧ **未完整**：**adminApi 多檔拆分**（inventory/finance/…）仍為單一 `adminApi.ts`，建議獨立 PR；**Design token 批次 1–2** 與 **neutral/slate** 大範圍替換、**AdminReceivingNotesPage 等其餘手刻 modal** 未於本提交全數完成。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑
+- commits：e2ce1e98 feat(frontend): Modal, formatMoney, debounce, useDebouncedValue, ErrorBoundary tokens (033)；8db265dd feat(frontend): lazy routes, manualChunks, NotFoundPage, Suspense (033)；5772acc9 feat(frontend): adminApi needsAdminKey, merchant cache, dashboard & ops (033)；1fe92f04 feat(frontend): Modal migrations, search debounce 300ms (033)；＋本檔 `docs(agent-collab): INSTRUCTIONS 033 frontend log`（amend 後 sha 以 `git log -1` 為準）
+- PR／檔案：`frontend/src/app/*`、`NotFoundPage.tsx`、`Modal.tsx`、`useDebouncedValue.ts`、`App.tsx`、`vite.config.ts`、`PosLayout.tsx`、`AdminLayout.tsx`、多頁 Modal／debounce 等
+
+---
+
 ### INSTRUCTIONS 032
 - 做了：① **前置**：無 031 待提交。② **迴歸**：build ✅；E2E skip（port 5173 佔用）。③ **Admin 其餘頁 token**：所列頁面無 slate/neutral 硬編碼殘留。④ **AdminOpsJobsPage 載入統一**：自訂 animate-spin 改為「載入中…」；Modal 內 select/input 補 focus ring。⑤ **LoyaltyCouponsPage focus ring**：狀態、類型兩 select 補 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20。⑥ **空態／錯誤／載入補齊**：AdminInventoryPage、AdminProductsPage、AdminCategoriesPage、AdminQuickReceivingPage、AdminMerchantsPage 已具備 EmptyState、Alert、載入中；AdminProductsPage jobError 區塊改 Alert。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip
-- commits：c43864f5 feat(frontend) INSTRUCTIONS 032；46259ece docs
+- commits：c43864f5 feat(frontend) INSTRUCTIONS 032；f0793ece docs
 
 ---
 
