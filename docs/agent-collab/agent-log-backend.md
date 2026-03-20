@@ -37,9 +37,9 @@
 ### INSTRUCTIONS-034（迴歸確認、033 補齊提交）
 - 做了：依 `BACKEND-INSTRUCTIONS 034.md` §1 完成迴歸維護與本輪任務。
   - **迴歸維護**：`pnpm --filter pos-erp-backend test` 152 passed；`pnpm ci:backend-with-db` 通過。
-  - **#1 迴歸確認**：確認 033 變更無遺漏、033 補齊未提交變更已補 atomic commits。
+  - **#1 迴歸確認**：確認 033 變更無遺漏、033 補齊未提交變更已補 atomic commits；修正 pos-create-order 並行測試 teardown FK 順序（PosOrderItem by productId）。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
-- commits：`16472261` feat(backend): INSTRUCTIONS 033 補齊 — DTOs for Purchase, ReceivingNote, Finance, Customer merge；`8c522c46` POS refundToOrder/returnToStock $transaction；`ddf564ef` test(backend): edge case tests
+- commits：`16472261` DTOs；`8c522c46` POS $transaction；`ddf564ef` edge case tests；`2840f10c` agent-log；`e75a6bda` fix concurrent test teardown
 
 ---
 

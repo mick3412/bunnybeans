@@ -1233,6 +1233,7 @@ describe('PosService (integration)', () => {
     await prisma.inventoryBalance.deleteMany({
       where: { productId: product.id, warehouseId: warehouse.id },
     });
+    await prisma.posOrderItem.deleteMany({ where: { productId: product.id } });
     await prisma.product.delete({ where: { id: product.id } });
     await prisma.warehouse.delete({ where: { id: warehouse.id } });
     await prisma.store.delete({ where: { id: store.id } });
