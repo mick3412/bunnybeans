@@ -35,6 +35,11 @@ export interface CreatePosOrderInput {
   pointsToRedeem?: number;
 }
 
+function toNum(v: unknown): number {
+  if (typeof v === 'object' && v != null && 'toNumber' in v) return (v as { toNumber: () => number }).toNumber();
+  return Number(v ?? 0);
+}
+
 @Injectable()
 export class PosService {
   private readonly logger = new Logger(PosService.name);
@@ -514,10 +519,7 @@ export class PosService {
         }),
       ]);
 
-      const sourceTotal =
-        source && typeof source.totalAmount === 'object' && source.totalAmount != null && 'toNumber' in source.totalAmount
-          ? (source.totalAmount as { toNumber: () => number }).toNumber()
-          : Number((source as any)?.totalAmount ?? 0);
+      const sourceTotal = source ? toNum(source.totalAmount) : 0;
 
       const derivedTotal = derived.reduce((s, d) => s + Number(d.totalAmount), 0);
       const deltaAmount = Math.round((derivedTotal - sourceTotal) * 100) / 100;
