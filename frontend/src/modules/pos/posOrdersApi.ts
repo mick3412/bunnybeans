@@ -56,9 +56,10 @@ export interface ProductDto {
   specStyle?: string | null;
 }
 
-/** GET /pos/products 回傳：產品基本欄位 + 門市倉庫彙總 onHandQty */
+/** GET /pos/products 回傳：產品基本欄位 + 門市倉庫彙總 onHandQty + brandName */
 export interface PosProductWithStockDto extends ProductDto {
   onHandQty: number;
+  brandName?: string | null;
 }
 
 export function productDtoSalePriceNumber(p: ProductDto): number {

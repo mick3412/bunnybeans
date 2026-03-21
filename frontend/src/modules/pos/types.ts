@@ -11,6 +11,8 @@ export interface PosProductDisplay extends PosProduct {
   onHandQty?: number;
   categoryId?: string;
   brandId?: string;
+  /** 品牌名稱（GET /pos/products 提供），用於排序 */
+  brandName?: string | null;
   tags?: string[];
   specSize?: string | null;
   specCapacity?: string | null;

@@ -92,6 +92,7 @@ export const PosPage: React.FC = () => {
   const [barcodeHint, setBarcodeHint] = useState<string | null>(null);
   const [barcodeChoices, setBarcodeChoices] = useState<PosProduct[]>([]);
   const [barcodeLoading, setBarcodeLoading] = useState(false);
+  const [stockOverflowHint, setStockOverflowHint] = useState<string | null>(null);
 
   const handleBarcodeScan = async () => {
     const q = searchQuery.trim();
@@ -180,6 +181,7 @@ export const PosPage: React.FC = () => {
             onHandQty: 'onHandQty' in p ? (p as { onHandQty?: number }).onHandQty : undefined,
             categoryId: p.categoryId,
             brandId: p.brandId,
+            brandName: 'brandName' in p ? (p as { brandName?: string | null }).brandName : undefined,
             tags: p.tags ?? [],
             specSize: p.specSize ?? null,
             specCapacity: p.specCapacity ?? null,
@@ -199,6 +201,20 @@ export const PosPage: React.FC = () => {
 
   const storeId = apiStoreId ?? '';
   const [promoPreview, setPromoPreview] = useState<PromotionPreviewResult | null>(null);
+
+  const handleAddProduct = useCallback(
+    (product: PosProductDisplay) => {
+      const qty = typeof product.onHandQty === 'number' ? product.onHandQty : null;
+      const cartQty = items.filter((i) => i.productId === product.id).reduce((s, i) => s + i.quantity, 0);
+      const wouldExceed = qty !== null && cartQty + 1 > qty;
+      addProduct(product as PosProduct);
+      if (wouldExceed) {
+        setStockOverflowHint(`${product.name} 庫存不足（庫存 ${qty}，已加入 ${cartQty + 1}）`);
+        setTimeout(() => setStockOverflowHint(null), 4000);
+      }
+    },
+    [items, addProduct],
+  );
   /** 與結帳 Modal 相同：UUID → 促銷試算帶 customerId */
   const [previewMemberRaw, setPreviewMemberRaw] = useState('');
   const productsForGrid = apiProducts ?? mockProducts;
@@ -291,6 +307,13 @@ export const PosPage: React.FC = () => {
           p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q)),
       );
     }
+    /* 排序：品牌(brandName) → SKU */
+    list = [...list].sort((a, b) => {
+      const brandA = (a.brandName ?? a.brandId ?? '').toLowerCase();
+      const brandB = (b.brandName ?? b.brandId ?? '').toLowerCase();
+      if (brandA !== brandB) return brandA.localeCompare(brandB);
+      return (a.sku ?? '').localeCompare(b.sku ?? '');
+    });
     return list;
   }, [productsForGrid, selectedCategoryIds, selectedBrandIds, selectedDiscountTag, searchQueryDebounced, apiProducts]);
 
@@ -495,6 +518,11 @@ export const PosPage: React.FC = () => {
               {apiLoadError}，結帳將使用 mock 資料。
             </div>
           )}
+          {stockOverflowHint && (
+            <div className="mb-2 rounded-lg border border-brand-warning/40 bg-brand-warning/10 px-2 py-1.5 text-xs text-brand-warning">
+              {stockOverflowHint}
+            </div>
+          )}
           {activeFavoriteIds.length > 0 && (
             <div className="mb-2 rounded-xl border border-brand-surface bg-white p-2">
               <div className="mb-1.5 flex items-center justify-between">
@@ -527,7 +555,7 @@ export const PosPage: React.FC = () => {
                       <button
                         type="button"
                         data-testid={`pos-favorite-${p.id}`}
-                        onClick={() => addProduct(p as PosProduct)}
+                        onClick={() => handleAddProduct(p)}
                         className="flex-1 text-left"
                       >
                         <span className="font-medium text-content">{p.name}</span>
@@ -564,7 +592,7 @@ export const PosPage: React.FC = () => {
               return (
                 <div
                   key={product.id}
-                  className={`relative flex h-[118px] w-full min-w-0 shrink-0 flex-col items-stretch gap-0.5 rounded-lg bg-white px-2 py-1.5 shadow-sm shadow-black/5 transition hover:-translate-y-0.5 hover:bg-brand-primary/5 sm:h-[120px] ${
+                  className={`relative flex h-[118px] w-full min-w-0 shrink-0 flex-col justify-between rounded-lg bg-white px-2 py-1.5 shadow-sm shadow-black/5 transition hover:-translate-y-0.5 hover:bg-brand-primary/5 sm:h-[120px] ${
                     isOutOfStock ? 'opacity-75' : ''
                   }`}
                 >
@@ -572,20 +600,24 @@ export const PosPage: React.FC = () => {
                     type="button"
                     data-testid={`pos-product-${product.id}`}
                     data-product-name={product.name}
-                    onClick={() => addProduct(product as PosProduct)}
+                    onClick={() => handleAddProduct(product)}
                     className="absolute inset-0 z-0 rounded-lg text-left"
                   />
-                  <div className="relative z-10 flex flex-row items-start justify-between gap-1">
-                    {qty !== null && (
-                      <span
-                        className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium tabular-nums ${
-                          isLowStock ? 'bg-brand-warning/20 text-brand-warning' : 'bg-table-head text-muted'
-                        }`}
-                        title="庫存"
-                      >
-                        {qty}
-                      </span>
-                    )}
+                  <div className="relative z-10 flex items-start justify-between gap-1">
+                    <div className="min-w-0 flex-1 text-left">
+                      <span className="line-clamp-2 font-medium leading-snug text-content">{product.name}</span>
+                      {(() => {
+                        const specs = [product.specStyle, product.specSize, product.specCapacity]
+                          .map((x) => (x ?? '').trim())
+                          .filter(Boolean)
+                          .join(' / ');
+                        return specs ? (
+                          <span className="mt-0.5 line-clamp-1 block w-full truncate text-[11px] text-muted" title={specs}>
+                            {specs}
+                          </span>
+                        ) : null;
+                      })()}
+                    </div>
                     {favoriteEditMode ? (
                       <button
                         type="button"
@@ -605,21 +637,19 @@ export const PosPage: React.FC = () => {
                       </button>
                     ) : null}
                   </div>
-                  <div className="pointer-events-none relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center text-center">
-                    <span className="line-clamp-2 font-medium leading-snug text-content">{product.name}</span>
-                    {(() => {
-                      const specs = [product.specStyle, product.specSize, product.specCapacity]
-                        .map((x) => (x ?? '').trim())
-                        .filter(Boolean)
-                        .join(' / ');
-                      return specs ? (
-                        <span className="mt-0.5 line-clamp-1 w-full truncate text-[11px] text-muted" title={specs}>
-                          {specs}
-                        </span>
-                      ) : null;
-                    })()}
-                  </div>
-                  <div className="pointer-events-none relative z-10 flex items-center justify-end">
+                  <div className="pointer-events-none relative z-10 flex items-center justify-between gap-1">
+                    {qty !== null ? (
+                      <span
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium tabular-nums ${
+                          isLowStock ? 'bg-brand-warning/20 text-brand-warning' : 'bg-table-head text-muted'
+                        }`}
+                        title="庫存"
+                      >
+                        {qty}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
                     <span className="shrink-0 text-right text-sm font-semibold tabular-nums text-brand-primary">
                       {formatMoney(product.price)}
                     </span>
