@@ -836,8 +836,28 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
           </StandardFloatBar>
 
           <section className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white shadow-sm">
-            <div className="border-b border-brand-surface px-4 py-3 text-sm font-semibold text-content">
-              異動明細
+            <div className="flex items-center justify-between border-b border-brand-surface px-4 py-3">
+              <span className="text-sm font-semibold text-content">異動明細</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={!warehouseId || exporting}
+                onClick={async () => {
+                  if (!warehouseId) return;
+                  setExporting(true);
+                  const q = `inventory/events/export?warehouseId=${encodeURIComponent(warehouseId)}`;
+                  const out = await fetchCsvExport(q, `inventory-events-${warehouseId.slice(0, 8)}.csv`);
+                  setExporting(false);
+                  if (out !== true) {
+                    const msg = getErrorMessage(out as ApiError);
+                    setErr(msg);
+                    showAdminApiErrorToast(showToast, out as ApiError);
+                  }
+                }}
+              >
+                匯出 CSV
+              </Button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
