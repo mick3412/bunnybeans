@@ -21,7 +21,7 @@
   - **#2 折扣標籤驗收**：`api-design.md` §6.1a 補 `GET /product-tags/for-pos-discount`（Query merchantId；Response `{ id, name, code }[]`）、`showInPosDiscount`、`autoCondition` 契約；POST/PATCH body 說明；`product-tag.integration-spec` 補 `listForPosDiscount returns only showInPosDiscount tags` 測試。Seed 已含 showInPosDiscount / autoCondition 示範（前輪完成）。
   - **#3 關帳驗收**：`api-design-pos.md` 新增 §5 關帳／收銀時段（Sessions），含 open/current/close/list/get 契約；pos-sessions 實作（service、controller、migration）與 `pos-sessions.integration-spec`（含 listSessions 測試）一併提交。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；21 suites、158 tests 全綠。
-- commits：`da85d838` feat(backend): INSTRUCTIONS 041 - product-tag for-pos-discount, pos-sessions, api contracts
+- commits：`fbdf176e` feat(backend): INSTRUCTIONS 041 - product-tag for-pos-discount, pos-sessions, api contracts
 
 ---
 
