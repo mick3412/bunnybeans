@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 040（search debounce + 應收應付補強 + 規格/標籤/倉庫門市/點數存摺）
+- 做了：① **迴歸**：build 全綠。② **search debounce**：商品、客戶、供應商、POS 收銀已皆有 useDebouncedValue 300ms。③ **應收應付餘額頁**：getFinanceBalances 對齊契約；錯誤時 showAdminApiErrorToast；error 區塊改用 StandardListLayout error prop + 重試按鈕。④ **商品規格**：移除 weightGrams→g 轉換，specWeight 純文字。⑤ **標籤**：getProductTags 失敗時 fallback DEFAULT_TAGS；類別管理頁已接 listProductTags。⑥ **倉庫/門市頁**：標題「倉庫/門市」、 Alert 取代 red 錯誤區、間距統一。⑦ **點數存摺**：tab 已顯示中文（全部／贈點／扣點／鎖定／已過期），查詢 enum 保留。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：`fd972dd8` finance balances；`a5f90fbb` product spec + tag stub；`8c1753f3` warehouses/stores；`f281996b` agent-log
+- 檔案：AdminFinanceBalancesPage、AdminProductsPage、AdminStoresPage、AdminWarehousesPage、AdminWarehousesStoresPage
+
+---
+
 ### INSTRUCTIONS 039（Design Token + E2E + POS 收銀 + 商品編輯 + 庫存即期整合 + 金流圖表）
 - 做了：① **E2E 2 failed**：摘要註記已由前輪處理（admin-smoke 金流、pos-exchange-settlement-journey）。② **Design Token**：neutral/slate、ErrorBoundary、SKU/條碼 tooltip 已對齊或已存在。③ **POS 庫存超量提醒**：加入購物車時若累加數量超過 onHandQty 顯示 inline 警示 4 秒。④ **收銀商品塊設計**：品牌(brandName)→SKU 排序；品名/規格上緣置左；庫存與價格同列（左庫存、右價格）；brandName 由 GET /pos/products 提供。⑤ **商品編輯**：庫存餘額移至名稱右側；效期模式 radio 統一樣式；條碼移除 placeholder。⑥ **庫存即期整合**：AdminInventoryPage 移除即期區塊；AdminExpiringInventoryPage 新增依商品彙總/依批次明細 tab、重新整理按鈕、daysAhead。⑦ **金流圖表**：金流趨勢橫軸 yyyy-mm-dd/第 N 週；應收實收 xAxisTicks=5；本期 vs 上期合併單圖、改名；賒帳圖表改 GET /finance/balances 待收餘款、長條圖左方會員名可點選。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
