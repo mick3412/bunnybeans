@@ -402,39 +402,46 @@ export const PosReportsPage: React.FC = () => {
       {topItems.length > 0 && !topItemsLoading && (
         <div className="mt-8 rounded-2xl border border-brand-surface bg-white p-4">
           <h3 className="mb-3 text-sm font-semibold text-content">熱銷排行</h3>
-          <div className="mb-4">
-            <MiniBarChart
-              items={topItems.map((row) => ({
-                label: row.name ?? row.sku ?? row.productId.slice(0, 8),
-                value: row.revenue,
-              }))}
-              formatValue={(n) => money(String(n))}
-            />
-          </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[360px] text-left text-sm">
               <thead className="border-b border-brand-surface text-muted">
                 <tr>
                   <th className="px-3 py-1.5">品項</th>
                   <th className="px-3 py-1.5">數量</th>
-                  <th className="px-3 py-1.5">金額</th>
+                  <th className="px-3 py-1.5 w-40">金額</th>
                 </tr>
               </thead>
               <tbody>
-                {topItems.map((row) => (
-                  <tr key={row.productId} className="border-t border-brand-surface">
-                    <td className="px-3 py-1.5 text-content">
-                      <Link
-                        to={`/admin/products?q=${encodeURIComponent(row.sku ?? row.name ?? '')}`}
-                        className="text-brand-primary hover:underline"
-                      >
-                        {row.name ?? row.sku ?? row.productId}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-1.5 tabular-nums">{row.quantity}</td>
-                    <td className="px-3 py-1.5 tabular-nums">{money(String(row.revenue))}</td>
-                  </tr>
-                ))}
+                {topItems.map((row) => {
+                  const maxRev = Math.max(...topItems.map((r) => r.revenue), 1);
+                  const pct = maxRev > 0 ? Math.max(4, Math.round((row.revenue / maxRev) * 100)) : 0;
+                  return (
+                    <tr key={row.productId} className="border-t border-brand-surface">
+                      <td className="px-3 py-1.5 text-content">
+                        <Link
+                          to={`/admin/products?q=${encodeURIComponent(row.sku ?? row.name ?? '')}`}
+                          className="text-brand-primary hover:underline"
+                        >
+                          {row.name ?? row.sku ?? row.productId}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-1.5 tabular-nums">{row.quantity}</td>
+                      <td className="px-3 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="h-1.5 rounded-full bg-brand-surface">
+                              <div
+                                className="h-1.5 rounded-full bg-brand-primary"
+                                style={{ width: `${Math.min(100, pct)}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="w-20 shrink-0 text-right tabular-nums">{money(String(row.revenue))}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
