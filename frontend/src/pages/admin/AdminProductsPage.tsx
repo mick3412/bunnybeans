@@ -8,9 +8,11 @@ import {
   deleteProduct,
   getProductTags,
   batchUpdateProductPrice,
+  batchUpdateProductTags,
   importProductsCsv,
   createImportJob,
   getImportJob,
+  fetchCsvExport,
   getCategories,
   getBrands,
   getInventoryBalances,
@@ -41,6 +43,7 @@ const PRODUCTS_TABLE_COL_DEFAULTS = {
   name: 180,
   category: 100,
   brand: 100,
+  tags: 120,
   listPrice: 80,
   salePrice: 80,
   costPrice: 80,
@@ -154,6 +157,9 @@ export const AdminProductsPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSalePrice, setBulkSalePrice] = useState('');
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [bulkTags, setBulkTags] = useState<Set<string>>(new Set());
+  const [bulkTagsSubmitting, setBulkTagsSubmitting] = useState(false);
+  const [exporting, setExporting] = useState(false);
   /** 右側商品表單抽屜：預設收起，點右緣或編輯時展開 */
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -524,6 +530,7 @@ export const AdminProductsPage: React.FC = () => {
     colW.name +
     colW.category +
     colW.brand +
+    colW.tags +
     colW.listPrice +
     colW.salePrice +
     colW.costPrice +
@@ -554,83 +561,135 @@ export const AdminProductsPage: React.FC = () => {
     );
   };
 
+  const hasActiveFilters = filterCategoryId || filterBrandId || filterTags.length > 0 || filterMinDaysLeft.trim() !== '' || searchQ.trim() !== '';
+  const clearFilters = () => {
+    setFilterCategoryId('');
+    setFilterBrandId('');
+    setFilterTags([]);
+    setFilterMinDaysLeft('');
+    setSearchQ('');
+  };
+
   return (
     <div className="mx-auto min-w-0 max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm">
       <p className="mb-4 max-w-xl text-sm text-muted">
         與 POS 共用主檔 API；庫存唯讀。
       </p>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">剩餘天數 &gt;</label>
-            <input
-              type="number"
-              min={0}
-              placeholder="留空"
-              value={filterMinDaysLeft}
-              onChange={(e) => setFilterMinDaysLeft(e.target.value)}
-              className="h-9 w-20 rounded-lg border border-brand-surface bg-white px-2 text-sm"
-            />
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="rounded-2xl border border-brand-surface bg-table-head px-3 py-3 min-w-0 flex-1">
+          <div className="mb-1 text-xs font-semibold text-muted">篩選</div>
+          <div className="mb-1.5 flex flex-wrap items-center gap-1">
+            <span className="mr-1 text-xs font-medium text-muted">品項／分類</span>
+            {[{ id: '', name: '全部' }, ...categories].map((c) => {
+              const selected = filterCategoryId === c.id;
+              return (
+                <button
+                  key={c.id || 'all'}
+                  type="button"
+                  onClick={() => setFilterCategoryId(c.id)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    selected ? 'bg-brand-primary text-white' : 'bg-white text-content hover:bg-brand-surface border border-brand-surface'
+                  }`}
+                >
+                  {c.name}
+                </button>
+              );
+            })}
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">分類</label>
-            <select
-              className="h-9 min-w-[120px] rounded-lg border border-brand-surface bg-white px-2 text-sm"
-              value={filterCategoryId}
-              onChange={(e) => setFilterCategoryId(e.target.value)}
-            >
-              <option value="">全部</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted">品牌</label>
-            <select
-              className="h-9 min-w-[100px] rounded-lg border border-brand-surface bg-white px-2 text-sm"
-              value={filterBrandId}
-              onChange={(e) => setFilterBrandId(e.target.value)}
-            >
-              <option value="">全部</option>
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
+          <div className="mb-1.5 flex flex-wrap items-center gap-1">
+            <span className="mr-1 text-xs font-medium text-muted">品牌</span>
+            {[{ id: '', name: '全部' }, ...brands].map((b) => {
+              const selected = filterBrandId === b.id;
+              return (
+                <button
+                  key={b.id || 'all'}
+                  type="button"
+                  onClick={() => setFilterBrandId(b.id)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    selected ? 'bg-brand-primary text-white' : 'bg-white text-content hover:bg-brand-surface border border-brand-surface'
+                  }`}
+                >
+                  {b.name}
+                </button>
+              );
+            })}
           </div>
           {tagOptions.length > 0 && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">標籤</label>
-              <div className="flex flex-wrap gap-1">
-                {tagOptions.map((tag) => {
-                  const selected = filterTags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => toggleFilterTag(tag)}
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        selected
-                          ? 'bg-brand-primary text-white'
-                          : 'bg-table-head text-muted hover:bg-brand-surface'
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="mb-1.5 flex flex-wrap items-center gap-1">
+              <span className="mr-1 text-xs font-medium text-muted">折扣／標籤</span>
+              {tagOptions.map((tag) => {
+                const selected = filterTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleFilterTag(tag)}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      selected ? 'bg-brand-primary text-white' : 'bg-white text-content hover:bg-brand-surface border border-brand-surface'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
             </div>
           )}
-          <div className="ml-auto">
-            <TextInput
-              label="搜尋"
-              placeholder="SKU、條碼或名稱"
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              className="w-56 !py-1.5"
-            />
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs text-muted">共 {filteredProducts.length} 件</span>
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1">
+                <span className="text-xs text-muted">剩餘天數 &gt;</span>
+                <input
+                  type="number"
+                  min={0}
+                  placeholder="留空"
+                  value={filterMinDaysLeft}
+                  onChange={(e) => setFilterMinDaysLeft(e.target.value)}
+                  className="h-7 w-16 rounded-lg border border-brand-surface bg-white px-2 text-xs"
+                />
+              </span>
+              <input
+                type="search"
+                placeholder="SKU、條碼或名稱"
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                className="h-7 w-40 rounded-lg border border-brand-surface bg-white px-2 text-xs placeholder:text-muted"
+              />
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-xs font-medium text-muted underline hover:text-content"
+                >
+                  清除篩選
+                </button>
+              )}
+            </div>
           </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={exporting || !canWrite}
+            onClick={async () => {
+              setExporting(true);
+              const minDays = filterMinDaysLeft.trim() ? parseInt(filterMinDaysLeft, 10) : undefined;
+              const q = new URLSearchParams();
+              if (searchQDebounced.trim()) q.set('search', searchQDebounced.trim());
+              if (filterCategoryId) q.set('categoryId', filterCategoryId);
+              if (filterBrandId) q.set('brandId', filterBrandId);
+              if (filterTags.length === 1) q.set('tag', filterTags[0]);
+              if (minDays != null && !Number.isNaN(minDays) && minDays >= 0) q.set('minDaysUntilExpiry', String(minDays));
+              const path = q.toString() ? `products/export?${q.toString()}` : 'products/export';
+              const out = await fetchCsvExport(path, 'products.csv');
+              setExporting(false);
+              if (out !== true) showToast(getErrorMessage(out as ApiError), 'err');
+            }}
+          >
+            {exporting ? '匯出中…' : '匯出 CSV'}
+          </Button>
         </div>
         <details className="rounded-lg border border-brand-surface bg-table-head px-3 py-1.5 shrink-0" data-testid="e2e-admin-products-import">
           <summary className="cursor-pointer text-xs font-medium text-muted hover:text-content">CSV 匯入</summary>
@@ -792,6 +851,7 @@ export const AdminProductsPage: React.FC = () => {
                 <col style={{ width: colW.name }} />
                 <col style={{ width: colW.category }} />
                 <col style={{ width: colW.brand }} />
+                <col style={{ width: colW.tags }} />
                 <col style={{ width: colW.listPrice }} />
                 <col style={{ width: colW.salePrice }} />
                 <col style={{ width: colW.costPrice }} />
@@ -828,6 +888,7 @@ export const AdminProductsPage: React.FC = () => {
                       ['name', '名稱'],
                       ['category', '類別'],
                       ['brand', '品牌'],
+                      ['tags', '標籤'],
                       ['listPrice', '定價'],
                       ['salePrice', '售價'],
                       ['costPrice', '成本'],
@@ -843,7 +904,7 @@ export const AdminProductsPage: React.FC = () => {
                         key === 'listPrice' || key === 'salePrice' || key === 'costPrice' ? 'text-right' : '',
                       ].join(' ')}
                       style={{
-                        width: colW[key],
+                        width: colW[key as keyof typeof colW],
                         left:
                           key === 'sku'
                             ? 44
@@ -854,38 +915,44 @@ export const AdminProductsPage: React.FC = () => {
                                 : undefined,
                       }}
                     >
-                      <button
-                        type="button"
-                        className="flex max-w-full items-center gap-1 truncate pr-2 text-left"
-                        onClick={() => {
-                          const next = key as
-                            | 'sku'
-                            | 'barcode'
-                            | 'name'
-                            | 'category'
-                            | 'brand'
-                            | 'listPrice'
-                            | 'salePrice'
-                            | 'costPrice';
-                          if (sortBy === next) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-                          else {
-                            setSortBy(next);
-                            setSortDir('asc');
-                          }
-                        }}
-                      >
+                      {key === 'tags' ? (
                         <span className="truncate">{label}</span>
-                        <span className="text-[10px] text-muted">
-                          {sortBy === key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        aria-label={`調整「${label}」欄寬（拖曳後會記住）`}
-                        className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-brand-primary/15 active:bg-brand-primary/25"
-                        onMouseDown={(e) => onResizeStart(key, e)}
-                      />
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="flex max-w-full items-center gap-1 truncate pr-2 text-left"
+                            onClick={() => {
+                              const next = key as
+                                | 'sku'
+                                | 'barcode'
+                                | 'name'
+                                | 'category'
+                                | 'brand'
+                                | 'listPrice'
+                                | 'salePrice'
+                                | 'costPrice';
+                              if (sortBy === next) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                              else {
+                                setSortBy(next);
+                                setSortDir('asc');
+                              }
+                            }}
+                          >
+                            <span className="truncate">{label}</span>
+                            <span className="text-[10px] text-muted">
+                              {sortBy === key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            tabIndex={-1}
+                            aria-label={`調整「${label}」欄寬（拖曳後會記住）`}
+                            className="absolute right-0 top-0 z-10 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-brand-primary/15 active:bg-brand-primary/25"
+                            onMouseDown={(e) => onResizeStart(key as Parameters<typeof onResizeStart>[0], e)}
+                          />
+                        </>
+                      )}
                     </th>
                   ))}
                   <th
@@ -1082,6 +1149,22 @@ export const AdminProductsPage: React.FC = () => {
                     <td className="px-3 py-2 truncate text-xs text-muted" title={brandName(p.brandId)}>
                       {brandName(p.brandId)}
                     </td>
+                    <td className="px-3 py-2">
+                      {(p.tags ?? []).length > 0 ? (
+                        <span className="flex flex-wrap gap-0.5">
+                          {(p.tags ?? []).slice(0, 3).map((t) => (
+                            <span key={t} className="rounded bg-brand-primary/10 px-1.5 py-0.5 text-xs text-brand-primary">
+                              {t}
+                            </span>
+                          ))}
+                          {(p.tags ?? []).length > 3 && (
+                            <span className="text-xs text-muted">+{(p.tags ?? []).length - 3}</span>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">{p.listPrice ?? '0'}</td>
                     <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">{p.salePrice ?? '0'}</td>
                     <td className="px-3 py-2 text-right font-mono text-xs tabular-nums">{p.costPrice ?? '—'}</td>
@@ -1213,6 +1296,55 @@ export const AdminProductsPage: React.FC = () => {
               </Button>
               {/* 權限提示已隱藏，改由 .env VITE_ADMIN_API_KEY 配置 */}
             </div>
+            <div className="flex items-end gap-2">
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="mr-1 shrink-0 text-xs text-muted">批次改標籤：</span>
+                {tagOptions.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      bulkTags.has(t) ? 'bg-brand-primary text-white' : 'bg-table-head text-muted hover:bg-brand-surface'
+                    }`}
+                    onClick={() => {
+                      setBulkTags((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(t)) next.delete(t);
+                        else next.add(t);
+                        return next;
+                      });
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                disabled={bulkTagsSubmitting || bulkTags.size === 0 || !canWrite}
+                onClick={async () => {
+                  setBulkTagsSubmitting(true);
+                  const out = await batchUpdateProductTags({
+                    productIds: Array.from(selectedIds),
+                    tags: Array.from(bulkTags),
+                    operation: 'add',
+                  });
+                  setBulkTagsSubmitting(false);
+                  if ('statusCode' in out) {
+                    showToast(getErrorMessage(out), 'err');
+                    return;
+                  }
+                  showToast(`已批次新增標籤 ${out.updated} 筆`, 'ok');
+                  setSelectedIds(new Set());
+                  setBulkTags(new Set());
+                  await load();
+                }}
+              >
+                {bulkTagsSubmitting ? '送出中…' : '批次改標籤'}
+              </Button>
+            </div>
             <div className="ml-auto flex items-center gap-2">
               <Button
                 type="button"
@@ -1221,6 +1353,7 @@ export const AdminProductsPage: React.FC = () => {
                 onClick={() => {
                   setSelectedIds(new Set());
                   setBulkSalePrice('');
+                  setBulkTags(new Set());
                 }}
               >
                 清除選取
