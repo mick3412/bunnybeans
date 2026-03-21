@@ -3,7 +3,7 @@ import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams'
 import { getFinanceBalances, type ApiError, type FinanceBalanceItem } from '../../modules/admin/adminApi';
 import { listLoyaltyCustomers } from '../../modules/admin/loyaltyApi';
 import { listSuppliers } from '../../modules/admin/purchaseApi';
-import { getErrorMessage } from '../../shared/errors/errorMessages';
+import { getErrorMessage, showAdminApiErrorToast } from '../../shared/errors/errorMessages';
 import { formatPartyDisplay, getPartyKindFromId } from '../../shared/utils/partyDisplay';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { Button } from '../../shared/components/Button';
@@ -11,9 +11,11 @@ import { PartyViewSegmented, type PartyView } from '../../shared/components/Part
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { Alert } from '../../shared/components/Alert';
 import { formatMoney } from '../../shared/utils/formatMoney';
+import { useAdminToast } from './AdminToastContext';
 
 export const AdminFinanceBalancesPage: React.FC = () => {
   const merchantId = useDefaultMerchantId();
+  const { showToast } = useAdminToast();
   const [searchParams, setSearchParams] = useScopedSearchParams('finance.balances');
   const [items, setItems] = useState<FinanceBalanceItem[]>([]);
   const viewFromUrl = (searchParams.get('view') as PartyView | null) ?? 'all';
@@ -70,12 +72,15 @@ export const AdminFinanceBalancesPage: React.FC = () => {
     });
     if (out && typeof out === 'object' && 'items' in out) {
       setItems(out.items);
+      setErr(null);
     } else {
-      setErr(getErrorMessage(out as ApiError));
+      const msg = getErrorMessage(out as ApiError);
+      setErr(msg);
       setItems([]);
+      showAdminApiErrorToast(showToast, out as ApiError);
     }
     setLoading(false);
-  }, [merchantId, partyIdFilter, view]);
+  }, [merchantId, partyIdFilter, view, showToast]);
 
   const filteredItems = useMemo(() => {
     if (view === 'all') return items;
@@ -131,17 +136,20 @@ export const AdminFinanceBalancesPage: React.FC = () => {
         </>
       }
       filters={filters}
-      aboveContent={err ? (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Alert variant="error">{err}</Alert>
-          <Button size="sm" variant="secondary" onClick={() => void load()}>重試</Button>
-        </div>
-      ) : undefined}
       loading={loading}
-      error={null}
+      error={
+        err ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>{err}</span>
+            <Button size="sm" variant="secondary" onClick={() => void load()}>
+              重試
+            </Button>
+          </div>
+        ) : undefined
+      }
       empty={!loading && !err && filteredItems.length === 0}
       emptyMessage="尚無應收應付餘額紀錄"
-      emptyDescription="可至金流報表確認是否有交易事件；有新交易後會依事件自動重算餘額"
+      emptyDescription="若為首次使用，請先執行 pnpm db:seed 建立示範資料；seed 含賒帳訂單以展示應收餘額"
       testId="e2e-admin-finance-balances"
     >
       {!loading && !err && filteredItems.length > 0 && (
