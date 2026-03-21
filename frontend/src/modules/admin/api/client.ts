@@ -20,8 +20,10 @@ function needsAdminKey(path: string, method: string): boolean {
     return true;
   }
   if (pathOnly === 'inventory/balances/export') return true;
-  if (pathOnly === 'finance/events/export') return true;
   if (pathOnly === 'inventory/events/export') return true;
+  if (pathOnly === 'finance/events/export') return true;
+  if (pathOnly === 'products/export') return true;
+  if (pathOnly === 'customers/export') return true;
   if (pathOnly === 'pos/orders/export') return true;
   if (/^imports\/jobs\/.+/.test(pathOnly)) return true;
   if (pathOnly === 'merchant/current') return true;

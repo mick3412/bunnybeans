@@ -95,6 +95,24 @@ export async function createProduct(body: {
   return out.data;
 }
 
+/** PATCH /products/batch-tags — 批次改標籤（append，不覆蓋既有；Admin Key） */
+export async function batchUpdateProductTags(body: {
+  productIds: string[];
+  tags: string[];
+  operation?: 'add' | 'set';
+}): Promise<{ updated: number } | ApiError> {
+  const out = await request<{ updated: number }>('products/batch-tags', {
+    method: 'PATCH',
+    body: JSON.stringify({
+      productIds: body.productIds,
+      tags: body.tags,
+      operation: body.operation ?? 'add',
+    }),
+  });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
 /** PATCH /products/batch-price — 批次改價（Admin Key；後端未上線時可能 404/501） */
 export async function batchUpdateProductPrice(body: {
   productIds: string[];
@@ -155,9 +173,20 @@ export interface ProductTagDto {
   id: string;
   name: string;
   code?: string | null;
+  showInPosDiscount?: boolean;
+  autoCondition?: { type: string; lookbackDays?: number; minQty?: number; minPercent?: number; maxQty?: number; withinDays?: number } | null;
 }
 export async function listProductTags(merchantId: string): Promise<ProductTagDto[] | ApiError> {
   const out = await request<ProductTagDto[]>(`product-tags?merchantId=${encodeURIComponent(merchantId)}`);
+  if (!out.ok) return out.error;
+  return Array.isArray(out.data) ? out.data : [];
+}
+
+/** GET /product-tags/for-pos-discount — POS 折扣篩選選項 */
+export async function listProductTagsForPosDiscount(merchantId: string): Promise<{ id: string; name: string; code: string }[] | ApiError> {
+  const out = await request<{ id: string; name: string; code: string }[]>(
+    `product-tags/for-pos-discount?merchantId=${encodeURIComponent(merchantId)}`,
+  );
   if (!out.ok) return out.error;
   return Array.isArray(out.data) ? out.data : [];
 }
@@ -169,7 +198,7 @@ export async function getProductTags(merchantId: string): Promise<string[] | Api
 }
 export async function createProductTag(
   merchantId: string,
-  body: { name: string; code: string },
+  body: { name: string; code?: string | null; showInPosDiscount?: boolean; autoCondition?: unknown },
 ): Promise<ProductTagDto | ApiError> {
   const out = await request<ProductTagDto>('product-tags', {
     method: 'POST',
@@ -180,7 +209,7 @@ export async function createProductTag(
 }
 export async function updateProductTag(
   id: string,
-  body: { name?: string; code?: string },
+  body: { name?: string; code?: string; showInPosDiscount?: boolean; autoCondition?: unknown },
 ): Promise<ProductTagDto | ApiError> {
   const out = await request<ProductTagDto>(`product-tags/${encodeURIComponent(id)}`, {
     method: 'PATCH',
