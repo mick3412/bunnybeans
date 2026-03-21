@@ -3,14 +3,17 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Patch,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { throwBadRequest } from '../../../shared/utils/throw-exceptions';
@@ -49,6 +52,28 @@ export class CustomerController {
   @UseGuards(AdminApiKeyGuard)
   merge(@Body() body: MergeCustomersDto) {
     return this.service.merge(body.primaryId.trim(), body.mergeIds);
+  }
+
+  /** CSV 匯出：與 list 同篩選；UTF-8 BOM；Admin Key；上限 1 萬列 */
+  @Get('export')
+  @UseGuards(AdminApiKeyGuard)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="customers.csv"')
+  async export(
+    @Query('merchantId') merchantId: string,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('tag') tag?: string,
+    @Query('memberLevel') memberLevel?: string,
+    @Res({ passthrough: false }) res?: Response,
+  ) {
+    const csv = await this.service.exportCustomersCsv(merchantId, {
+      search: search?.trim() || undefined,
+      status: status?.trim() || undefined,
+      tag: tag?.trim() || undefined,
+      memberLevel: memberLevel?.trim() || undefined,
+    });
+    res!.send('\uFEFF' + csv);
   }
 
   /** GET 模糊搜尋 phone／name／memberCode，供 POS 快速選客 */

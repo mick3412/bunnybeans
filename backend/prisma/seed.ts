@@ -692,6 +692,7 @@ async function main() {
       status: 'COMPLETED',
       inspectionDate: new Date(y, 1, 20),
       remark: '全數合格',
+      createdAt: daysAgo(5),
       lines: {
         create: [
           {
@@ -759,6 +760,7 @@ async function main() {
       inspectorName: '倉管-李小華',
       status: 'COMPLETED',
       inspectionDate: new Date(y, 2, 15),
+      createdAt: daysAgo(5),
       lines: {
         create: [
           {
@@ -919,6 +921,7 @@ async function main() {
       status: 'COMPLETED',
       inspectionDate: daysAgo(1),
       remark: '即期批次示範',
+      createdAt: daysAgo(5),
       lines: {
         create: [
           {

@@ -215,6 +215,22 @@
 - **錯誤**：**400** **`PRODUCT_BATCH_EMPTY`**（productIds 空）；**400** **`PRODUCT_BATCH_INVALID`**（salePrice 非法或負數）
 - **保護**：需 **X-Admin-Key**（同 PATCH /products/:id）
 
+### 6.3b `PATCH /products/batch-tags`（stable）
+
+- **用途**：批次改標籤；商品列表多選後對多筆商品統一追加或覆寫 tags。
+- **Body**：`{ productIds: string[], tags: string[], operation?: 'add' | 'set' }`；`add`（預設）= 將 tags 附加至各商品既有 tags（去重）；`set` = 覆寫為 tags。
+- **Response** `200`：`{ updated: number }`（實際更新筆數）
+- **錯誤**：**400** **`PRODUCT_BATCH_TAGS_EMPTY_PRODUCTS`**（productIds 空）；**400** **`PRODUCT_BATCH_TAGS_EMPTY_TAGS`**（tags 空）
+- **保護**：需 **X-Admin-Key**
+
+### 6.3c `GET /products/export`（stable）
+
+- **用途**：匯出商品 CSV；篩選參數與 `GET /products` 一致。
+- **Query**（皆選填）：`search`、`sku`、`categoryId`、`brandId`、`tag`、`minDaysUntilExpiry`
+- **Response**：`200` `text/csv; charset=utf-8`；**UTF-8 BOM**；`Content-Disposition: attachment; filename="products.csv"`；最多 **1 萬列**
+- **保護**：需 **X-Admin-Key**
+- **表頭**：`sku,name,description,specSize,specCapacity,specStyle,specWeight,expiryDescription,listPrice,salePrice,costPrice,categoryCode,brandCode,tags`（tags 以 `|` 分隔，對齊 import 格式）
+
 ### 6.4 `POST /products/import`（stable）
 
 - **Content-Type**：`multipart/form-data`；欄位名 **`file`**（`.csv`，UTF-8，可含 BOM）。
@@ -240,6 +256,13 @@
 - **表頭**：**`name`**；選填 **`phone`**, **`memberLevel`**, **`code`**。
 - **重複 phone**：同一 merchant 下 **phone 已存在 → 該列 failed**（見 [API-DECISIONS-bulk.md](API-DECISIONS-bulk.md)）。
 - **回應**：`{ ok, failed[] }`；列上限 1 萬；**X-Admin-Key** 若已設。
+
+#### 6.5-0 `GET /customers/export`（stable）
+
+- **用途**：匯出客戶 CSV；篩選參數與 `GET /customers` 一致。
+- **Query**：**`merchantId`**（必填）；`search`（name/phone/memberCode 模糊）、`status`、`tag`、`memberLevel`（選填）
+- **Response**：`200` `text/csv; charset=utf-8`；**UTF-8 BOM**；最多 **1 萬列**；**X-Admin-Key**
+- **表頭**：`name,phone,memberLevel,code`（對齊 import 格式）
 
 ### 6.5a `POST /customers/import/preview`（stable）
 

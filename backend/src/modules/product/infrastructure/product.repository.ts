@@ -11,18 +11,14 @@ function toDec(v: string | number | null | undefined, fallback = '0'): Prisma.De
 export class ProductRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(
-    filter?: {
-      search?: string;
-      sku?: string;
-      categoryId?: string;
-      brandId?: string;
-      tag?: string;
-      /** 僅回傳 expiryDate 之「日曆剩餘天數」嚴格大於 N 之商品（UTC 日界；需有 expiryDate） */
-      minDaysUntilExpiry?: number;
-    },
-    opts?: { includeBrand?: boolean },
-  ) {
+  private buildProductWhere(filter?: {
+    search?: string;
+    sku?: string;
+    categoryId?: string;
+    brandId?: string;
+    tag?: string;
+    minDaysUntilExpiry?: number;
+  }) {
     type Where = Prisma.ProductWhereInput;
     const and: Where[] = [];
     if (filter?.sku?.trim()) {
@@ -58,7 +54,22 @@ export class ProductRepository {
         and.push({ expiryDate: { not: null, gte: boundary } });
       }
     }
-    const where: Where = and.length ? { AND: and } : {};
+    return and.length ? { AND: and } : {};
+  }
+
+  findAll(
+    filter?: {
+      search?: string;
+      sku?: string;
+      categoryId?: string;
+      brandId?: string;
+      tag?: string;
+      /** 僅回傳 expiryDate 之「日曆剩餘天數」嚴格大於 N 之商品（UTC 日界；需有 expiryDate） */
+      minDaysUntilExpiry?: number;
+    },
+    opts?: { includeBrand?: boolean },
+  ) {
+    const where = this.buildProductWhere(filter) as Prisma.ProductWhereInput;
     const select: Prisma.ProductSelect = {
       id: true,
       sku: true,
@@ -87,6 +98,40 @@ export class ProductRepository {
       orderBy: { sku: 'asc' },
       take: 5000,
       select,
+    });
+  }
+
+  /** 匯出用：與 list 同篩選，最多 1 萬列；含 categoryCode、brandCode 以對齊 import 格式 */
+  findManyForExport(filter?: {
+    search?: string;
+    sku?: string;
+    categoryId?: string;
+    brandId?: string;
+    tag?: string;
+    minDaysUntilExpiry?: number;
+  }) {
+    const where = this.buildProductWhere(filter) as Prisma.ProductWhereInput;
+    return this.prisma.product.findMany({
+      where: Object.keys(where).length ? where : undefined,
+      orderBy: { sku: 'asc' },
+      take: 10_000,
+      select: {
+        sku: true,
+        name: true,
+        barcode: true,
+        description: true,
+        specSize: true,
+        specCapacity: true,
+        specStyle: true,
+        specWeight: true,
+        expiryDescription: true,
+        listPrice: true,
+        salePrice: true,
+        costPrice: true,
+        tags: true,
+        category: { select: { code: true } },
+        brand: { select: { code: true } },
+      },
     });
   }
 

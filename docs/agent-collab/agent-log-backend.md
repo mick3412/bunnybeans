@@ -15,6 +15,17 @@
 
 ---
 
+### INSTRUCTIONS-042（匯出 API、批次改標籤、供應商排行 seed）
+- 做了：依 `BACKEND-INSTRUCTIONS 042.md` §1 完成本輪任務。
+  - **#1 迴歸確認**：041 變更無遺漏、測試全綠。
+  - **#2 匯入／匯出對應**：新增 **GET /products/export**（search、sku、categoryId、brandId、tag、minDaysUntilExpiry；CSV UTF-8 BOM、Admin Key、1 萬列）；**GET /customers/export**（merchantId、search、status、tag、memberLevel；同上）。
+  - **#3 批次改標籤**：新增 **PATCH /products/batch-tags**；Body `{ productIds, tags, operation?: 'add' | 'set' }`；`add` 附加去重、`set` 覆寫；Response `{ updated }`；api-design §6.3b。
+  - **#4 供應商採購排行有資料**：seed 為 rnFull、rnPartial、rnExpiring 設定 `createdAt: daysAgo(5)`，確保「近 30 日」報表有示範資料；db-seed-coverage 補「供應商採購排行」涵蓋說明。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；21 suites、158 tests 全綠。
+- commits：（見下方）
+
+---
+
 ### INSTRUCTIONS-041（折扣標籤驗收、關帳驗收）
 - 做了：依 `BACKEND-INSTRUCTIONS 041.md` §1 完成本輪任務。
   - **#1 迴歸確認**：040 變更無遺漏、測試全綠。

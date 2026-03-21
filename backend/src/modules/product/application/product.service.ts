@@ -345,4 +345,106 @@ export class ProductService {
     }
     return { ok, failed };
   }
+
+  /** CSV 匯出：與 list 同篩選，最多 1 萬列；UTF-8 BOM；欄位對齊 import 格式 */
+  async exportProductsCsv(filter?: {
+    search?: string;
+    sku?: string;
+    categoryId?: string;
+    brandId?: string;
+    tag?: string;
+    minDaysUntilExpiry?: number;
+  }): Promise<string> {
+    const rows = await this.repo.findManyForExport(filter);
+    const csvCell = (v: string | number | null | undefined): string => {
+      const s = v == null ? '' : String(v);
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const decToStr = (v: Decimal | null | undefined): string =>
+      v == null ? '' : v.toFixed(2);
+    const header = [
+      'sku',
+      'name',
+      'description',
+      'specSize',
+      'specCapacity',
+      'specStyle',
+      'specWeight',
+      'expiryDescription',
+      'listPrice',
+      'salePrice',
+      'costPrice',
+      'categoryCode',
+      'brandCode',
+      'tags',
+    ].join(',');
+    const lines = rows.map((r) =>
+      [
+        csvCell(r.sku),
+        csvCell(r.name),
+        csvCell(r.description),
+        csvCell(r.specSize),
+        csvCell(r.specCapacity),
+        csvCell(r.specStyle),
+        csvCell(r.specWeight),
+        csvCell(r.expiryDescription),
+        csvCell(decToStr(r.listPrice)),
+        csvCell(decToStr(r.salePrice)),
+        csvCell(r.costPrice != null ? decToStr(r.costPrice) : ''),
+        csvCell(r.category?.code ?? ''),
+        csvCell(r.brand?.code ?? ''),
+        csvCell(
+          Array.isArray(r.tags)
+            ? (r.tags as string[]).filter((x) => typeof x === 'string').join('|')
+            : '',
+        ),
+      ].join(','),
+    );
+    return [header, ...lines].join('\n');
+  }
+
+  /** 批次改標籤：add = 附加去重；set = 覆寫 */
+  async batchUpdateTags(
+    productIds: string[],
+    tags: string[],
+    operation: 'add' | 'set' = 'add',
+  ): Promise<{ updated: number }> {
+    const ids = Array.isArray(productIds)
+      ? productIds.filter((id) => typeof id === 'string' && id.trim())
+      : [];
+    if (ids.length === 0) {
+      throwBadRequest('PRODUCT_BATCH_TAGS_EMPTY_PRODUCTS', 'productIds required and must be non-empty');
+    }
+    const tagList = Array.isArray(tags) ? tags.filter((t) => typeof t === 'string') : [];
+    if (tagList.length === 0) {
+      throwBadRequest('PRODUCT_BATCH_TAGS_EMPTY_TAGS', 'tags required and must be non-empty');
+    }
+
+    let updated = 0;
+    if (operation === 'set') {
+      const result = await this.prisma.product.updateMany({
+        where: { id: { in: ids } },
+        data: { tags: tagList },
+      });
+      updated = result.count;
+    } else {
+      const products = await this.prisma.product.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, tags: true },
+      });
+      for (const p of products) {
+        const existing = Array.isArray(p.tags) ? (p.tags as string[]) : [];
+        const merged = [...new Set([...existing, ...tagList])];
+        if (merged.length !== existing.length || tagList.some((t) => !existing.includes(t))) {
+          await this.prisma.product.update({
+            where: { id: p.id },
+            data: { tags: merged },
+          });
+          updated++;
+        }
+      }
+    }
+    return { updated };
+  }
 }

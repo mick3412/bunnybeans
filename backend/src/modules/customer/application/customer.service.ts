@@ -910,4 +910,53 @@ export class CustomerService {
     }
     return { created, updated, skipped, failed };
   }
+
+  /** CSV 匯出：與 list 同篩選（search=name/phone）；UTF-8；上限 1 萬列；欄位對齊 import（name, phone, memberLevel, code） */
+  async exportCustomersCsv(
+    merchantId: string,
+    filters?: { search?: string; status?: string; tag?: string; memberLevel?: string },
+  ): Promise<string> {
+    const m = merchantId?.trim();
+    if (!m) {
+      throwBadRequest('CUSTOMER_LIST_MERCHANT_REQUIRED', 'merchantId is required');
+    }
+    const where: Prisma.CustomerWhereInput = { merchantId: m };
+    if (filters?.status?.trim()) {
+      where.status = filters.status.trim();
+    }
+    if (filters?.memberLevel?.trim()) {
+      where.memberLevel = filters.memberLevel.trim();
+    }
+    if (filters?.search?.trim()) {
+      const term = filters.search.trim();
+      where.OR = [
+        { name: { contains: term, mode: 'insensitive' } },
+        { phone: { contains: term, mode: 'insensitive' } },
+        { memberCode: { contains: term, mode: 'insensitive' } },
+      ];
+    }
+    let rows = await this.prisma.customer.findMany({
+      where,
+      select: { name: true, phone: true, memberLevel: true, code: true, tags: true },
+      orderBy: [{ code: 'asc' }, { name: 'asc' }],
+      take: MAX_ROWS,
+    });
+    if (filters?.tag?.trim()) {
+      const tag = filters.tag.trim();
+      rows = rows.filter((r) => {
+        const arr = Array.isArray(r.tags) ? r.tags : (r.tags as unknown as string[]);
+        return Array.isArray(arr) && arr.includes(tag);
+      });
+    }
+    const csvCell = (v: string | null | undefined): string => {
+      const s = v == null ? '' : String(v);
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const header = 'name,phone,memberLevel,code';
+    const lines = rows.map((r) =>
+      [csvCell(r.name), csvCell(r.phone), csvCell(r.memberLevel), csvCell(r.code)].join(','),
+    );
+    return [header, ...lines].join('\n');
+  }
 }

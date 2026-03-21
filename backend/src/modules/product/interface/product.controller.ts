@@ -4,14 +4,17 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { ProductService } from '../application/product.service';
@@ -54,6 +57,42 @@ export class ProductController {
           }
         : undefined,
     );
+  }
+
+  /** CSV 匯出：與 list 同篩選；UTF-8 BOM；Admin Key；上限 1 萬列 */
+  @Get('export')
+  @UseGuards(AdminApiKeyGuard)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="products.csv"')
+  async export(
+    @Query('search') search?: string,
+    @Query('sku') sku?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('brandId') brandId?: string,
+    @Query('tag') tag?: string,
+    @Query('minDaysUntilExpiry') minDaysUntilExpiry?: string,
+    @Res({ passthrough: false }) res?: Response,
+  ) {
+    let minDays: number | undefined;
+    if (minDaysUntilExpiry?.trim()) {
+      const n = parseInt(minDaysUntilExpiry.trim(), 10);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new BadRequestException({
+          message: 'minDaysUntilExpiry must be a non-negative integer',
+          code: 'PRODUCT_FILTER_INVALID',
+        });
+      }
+      minDays = n;
+    }
+    const csv = await this.service.exportProductsCsv({
+      search: search?.trim() || undefined,
+      sku: sku?.trim() || undefined,
+      categoryId: categoryId?.trim() || undefined,
+      brandId: brandId?.trim() || undefined,
+      tag: tag?.trim() || undefined,
+      minDaysUntilExpiry: minDays,
+    });
+    res!.send('\uFEFF' + csv);
   }
 
   /** 條碼專用查詢（精確比對）；需放在 :id 之前避免路由衝突 */
@@ -124,6 +163,23 @@ export class ProductController {
     return this.service.batchUpdatePrice(
       body.productIds ?? [],
       body.salePrice ?? 0,
+    );
+  }
+
+  @Patch('batch-tags')
+  @UseGuards(AdminApiKeyGuard)
+  batchTags(
+    @Body()
+    body: {
+      productIds: string[];
+      tags: string[];
+      operation?: 'add' | 'set';
+    },
+  ) {
+    return this.service.batchUpdateTags(
+      body.productIds ?? [],
+      body.tags ?? [],
+      body.operation ?? 'add',
     );
   }
 
