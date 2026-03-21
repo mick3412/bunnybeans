@@ -13,6 +13,14 @@ export class ProductTagRepository {
     });
   }
 
+  findManyForPosDiscount(merchantId: string) {
+    return this.prisma.productTag.findMany({
+      where: { merchantId, showInPosDiscount: true },
+      orderBy: [{ sortOrder: 'asc' }, { code: 'asc' }],
+      select: { id: true, name: true, code: true },
+    });
+  }
+
   findCodes(merchantId: string): Promise<string[]> {
     return this.prisma.productTag
       .findMany({ where: { merchantId }, select: { code: true } })
@@ -33,11 +41,20 @@ export class ProductTagRepository {
     });
   }
 
-  create(data: { merchantId: string; name: string; code: string }) {
+  create(data: {
+    merchantId: string;
+    name: string;
+    code: string;
+    showInPosDiscount?: boolean;
+    autoCondition?: Prisma.InputJsonValue;
+  }) {
     return this.prisma.productTag.create({ data });
   }
 
-  update(id: string, data: { name?: string; code?: string }) {
+  update(
+    id: string,
+    data: { name?: string; code?: string; showInPosDiscount?: boolean; autoCondition?: Prisma.InputJsonValue },
+  ) {
     return this.prisma.productTag.update({ where: { id }, data });
   }
 

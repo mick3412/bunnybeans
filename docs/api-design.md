@@ -150,17 +150,27 @@
 ### 6.1a `GET/POST/PATCH/DELETE /product-tags`（stable）
 
 - **用途**：商品標籤 master CRUD；供類別管理頁與商品表單標籤 multi-select 使用。
-- **GET** `/product-tags` Query：**`merchantId`**（必填）。Response：`{ id, merchantId, name, code, sortOrder, createdAt, updatedAt }[]`；依 **`sortOrder`** 升序，同序依 `code` 升序。
+- **GET** `/product-tags` Query：**`merchantId`**（必填）。Response：`{ id, merchantId, name, code, sortOrder, showInPosDiscount?, autoCondition?, createdAt, updatedAt }[]`；依 **`sortOrder`** 升序，同序依 `code` 升序。
+- **showInPosDiscount**（選填，預設 true）：是否顯示於 POS 折扣篩選列。
+- **autoCondition**（選填）：自動貼標條件；JSON 格式，`null` 表示僅手動貼標。範例：`{ type: 'SALES_QTY', lookbackDays: 30, minQty: 5 }`、`{ type: 'NEW_ARRIVAL', withinDays: 30 }`、`{ type: 'LOW_STOCK', maxQty: 3 }`。
+
+#### 6.1a-0 `GET /product-tags/for-pos-discount`（stable）
+
+- **用途**：POS 收銀區折扣列篩選選項；僅回傳 `showInPosDiscount: true` 之標籤。
+- **Query**：**`merchantId`**（必填）。
+- **Response**：`{ id, name, code }[]`；依 sortOrder 升序。
+- **錯誤**：`400 PRODUCT_TAG_MERCHANT_REQUIRED`。
+
+- **POST** `/product-tags` Body：`{ "merchantId": "uuid", "name": "熱銷", "code?": "hot", "showInPosDiscount?": true, "autoCondition?": { type, ... } }`（`code` 選填，未送時由 `name` 自動衍生）；需 **X-Admin-Key**。
+- **PATCH** `/product-tags/:id` Body：`{ "name?": "…", "code?": "…", "showInPosDiscount?": boolean, "autoCondition?": object | null }`；需 **X-Admin-Key**。
+- **DELETE** `/product-tags/:id`：204 無 body；需 **X-Admin-Key**。
+- **錯誤**：`400 PRODUCT_TAG_MERCHANT_REQUIRED`／`PRODUCT_TAG_NAME_REQUIRED`／`PRODUCT_TAG_CODE_INVALID`；`409 PRODUCT_TAG_CODE_CONFLICT`；`404 PRODUCT_TAG_NOT_FOUND`。
 
 ### 6.1a-1 `PATCH /product-tags/reorder`（stable）
 
 - **用途**：拖曳排序後更新該商家標籤順序。需 **X-Admin-Key**。
 - **Body**：`{ "merchantId": "uuid", "ids": string[] }`（`merchantId` 必填；`ids` 依新順序排列，須包含該商家**全部**標籤 id）
-- **錯誤**：`400 PRODUCT_TAG_MERCHANT_REQUIRED`／`PRODUCT_TAG_REORDER_EMPTY`／`PRODUCT_TAG_REORDER_DUPLICATE_IDS`／`PRODUCT_TAG_REORDER_INVALID`；`404 PRODUCT_TAG_NOT_FOUND`
-- **POST** `/product-tags` Body：`{ "merchantId": "uuid", "name": "熱銷", "code?": "hot" }`（`code` 選填，未送時由 `name` 自動衍生）；需 **X-Admin-Key**。
-- **PATCH** `/product-tags/:id` Body：`{ "name?": "…", "code?": "…" }`；需 **X-Admin-Key**。
-- **DELETE** `/product-tags/:id`：204 無 body；需 **X-Admin-Key**。
-- **錯誤**：`400 PRODUCT_TAG_MERCHANT_REQUIRED`／`PRODUCT_TAG_NAME_REQUIRED`／`PRODUCT_TAG_CODE_INVALID`；`409 PRODUCT_TAG_CODE_CONFLICT`；`404 PRODUCT_TAG_NOT_FOUND`。
+- **錯誤**：`400 PRODUCT_TAG_MERCHANT_REQUIRED`／`PRODUCT_TAG_REORDER_EMPTY`／`PRODUCT_TAG_REORDER_DUPLICATE_IDS`／`PRODUCT_TAG_REORDER_INVALID`；`404 PRODUCT_TAG_NOT_FOUND`。
 
 ### 6.2 `GET /products`（stable）
 

@@ -10,6 +10,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 import { ProductTagService } from '../application/product-tag.service';
 
@@ -22,10 +23,22 @@ export class ProductTagController {
     return this.service.list(merchantId);
   }
 
+  @Get('for-pos-discount')
+  listForPosDiscount(@Query('merchantId') merchantId: string) {
+    return this.service.listForPosDiscount(merchantId);
+  }
+
   @Post()
   @UseGuards(AdminApiKeyGuard)
   create(
-    @Body() body: { merchantId: string; name: string; code?: string },
+    @Body()
+    body: {
+      merchantId: string;
+      name: string;
+      code?: string;
+      showInPosDiscount?: boolean;
+      autoCondition?: Prisma.InputJsonValue;
+    },
   ) {
     return this.service.create(body);
   }
@@ -40,7 +53,13 @@ export class ProductTagController {
   @UseGuards(AdminApiKeyGuard)
   update(
     @Param('id') id: string,
-    @Body() body: { name?: string; code?: string },
+    @Body()
+    body: {
+      name?: string;
+      code?: string;
+      showInPosDiscount?: boolean;
+      autoCondition?: Prisma.InputJsonValue;
+    },
   ) {
     return this.service.update(id, body);
   }

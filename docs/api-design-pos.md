@@ -441,7 +441,47 @@ interface PosOrderListResponse {
 
 ---
 
-### 5. 測試說明（Testing guidance）
+### 5. 關帳／收銀時段（Sessions，stable）
+
+關帳／收銀時段 API 提供開班、查詢當班、關班與歷史列表。
+
+| Path | Method | 說明 |
+|------|--------|------|
+| `/pos/sessions/open` | POST | 開班（需 X-Admin-Key） |
+| `/pos/sessions/current` | GET | 取得門市當前開放中的 session |
+| `/pos/sessions/:id` | GET | 取得單筆 session |
+| `/pos/sessions/:id/close` | POST | 關班（需 X-Admin-Key） |
+| `/pos/sessions` | GET | 列表（分頁） |
+
+#### 5.1 `POST /pos/sessions/open`（stable）
+
+- **Body**：`{ storeId: string, openingCashAmount: number, openedBy?: string }`
+- **Response**：`{ id, storeId, merchantId, openedAt, openingCashAmount, status: "OPEN", ... }`
+- **錯誤**：`400 POS_SESSION_INVALID_AMOUNT`（amount < 0）；`404 POS_STORE_NOT_FOUND`；`409 POS_SESSION_ALREADY_OPEN`（該門市已有 OPEN session）
+
+#### 5.2 `GET /pos/sessions/current`（stable）
+
+- **Query**：`storeId`（必填）
+- **Response**：若有 OPEN session，回傳該 session（含 `report: { period, openingCash, cashSales, cashRefunds, expectedCash, byPaymentMethod?, ordersCount, refundsCount }`）；無則回傳 `null`
+
+#### 5.3 `POST /pos/sessions/:id/close`（stable）
+
+- **Body**：`{ actualCashAmount: number, closedBy?: string, note?: string }`
+- **Response**：關班後的 session（含 `report.difference` = actualCashAmount − expectedCash）
+- **錯誤**：`404 POS_SESSION_NOT_FOUND`；`400 POS_SESSION_ALREADY_CLOSED`、`POS_SESSION_INVALID_AMOUNT`
+
+#### 5.4 `GET /pos/sessions`（stable）
+
+- **Query**（皆選填）：`storeId`、`merchantId`、`status`（OPEN｜CLOSED）、`from`、`to`（ISO）、`page`、`pageSize`
+- **Response**：`{ items: CashRegisterSessionDto[], total: number }`
+
+#### 5.5 `GET /pos/sessions/:id`（stable）
+
+- **Response**：單筆 session（含 `report` 若為 OPEN 或已關班）
+
+---
+
+### 6. 測試說明（Testing guidance）
 
 **資料前置條件**
 
@@ -514,7 +554,7 @@ curl -X POST http://localhost:3003/pos/orders \
 
 ---
 
-### 6. 與現有實作的關係（2026-03 現況）
+### 7. 與現有實作的關係（2026-03 現況）
 
 - DB schema：
   - `PosOrder` / `PosOrderItem` / **`PosOrderPayment`**（`method`、`amount`，與訂單一併建立）已在 `backend/prisma/schema.prisma` 中定義。

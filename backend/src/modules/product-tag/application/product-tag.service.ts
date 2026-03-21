@@ -14,46 +14,86 @@ import { ProductTagRepository } from '../infrastructure/product-tag.repository';
 export class ProductTagService {
   constructor(private readonly repo: ProductTagRepository) {}
 
-  list(merchantId: string) {
+  async list(merchantId: string) {
     const m = merchantId?.trim();
     if (!m) {
       throwBadRequest('PRODUCT_TAG_MERCHANT_REQUIRED', 'merchantId is required');
     }
-    return this.repo.findMany(m);
+    const rows = await this.repo.findMany(m);
+    return rows.map((r) => this.toDto(r));
   }
 
-  async create(input: { merchantId: string; name: string; code?: string }) {
+  async listForPosDiscount(merchantId: string) {
+    const m = merchantId?.trim();
+    if (!m) {
+      throwBadRequest('PRODUCT_TAG_MERCHANT_REQUIRED', 'merchantId is required');
+    }
+    return this.repo.findManyForPosDiscount(m);
+  }
+
+  async create(input: {
+    merchantId: string;
+    name: string;
+    code?: string;
+    showInPosDiscount?: boolean;
+    autoCondition?: Prisma.InputJsonValue;
+  }) {
     const merchantId = input.merchantId?.trim();
     if (!merchantId) {
       throwBadRequest('PRODUCT_TAG_MERCHANT_REQUIRED', 'merchantId is required');
     }
-    const tag = await createMasterWithCode<{ merchantId: string }, Awaited<ReturnType<ProductTagRepository['create']>>>({
+    const tag = await createMasterWithCode<
+      { merchantId: string; showInPosDiscount?: boolean; autoCondition?: Prisma.InputJsonValue },
+      Awaited<ReturnType<ProductTagRepository['create']>>
+    >({
       name: input.name,
       code: input.code,
       findExistingCodes: () => this.repo.findCodes(merchantId),
       create: (data) => this.repo.create(data),
-      extra: { merchantId },
+      extra: {
+        merchantId,
+        showInPosDiscount: input.showInPosDiscount ?? true,
+        autoCondition: input.autoCondition ?? undefined,
+      },
       conflictCode: 'PRODUCT_TAG_CODE_CONFLICT',
       conflictMessage: 'ProductTag code already exists for this merchant',
       nameRequiredCode: 'PRODUCT_TAG_NAME_REQUIRED',
       codeInvalidCode: 'PRODUCT_TAG_CODE_INVALID',
     });
+    return this.toDto(tag);
+  }
+
+  private toDto(tag: {
+    id: string;
+    merchantId: string;
+    name: string;
+    code: string;
+    showInPosDiscount?: boolean;
+    autoCondition?: unknown;
+    createdAt: Date;
+    updatedAt: Date;
+  }) {
     return {
       id: tag.id,
       merchantId: tag.merchantId,
       name: tag.name,
       code: tag.code,
+      showInPosDiscount: tag.showInPosDiscount ?? true,
+      autoCondition: tag.autoCondition ?? undefined,
       createdAt: tag.createdAt.toISOString(),
       updatedAt: tag.updatedAt.toISOString(),
     };
   }
 
-  async update(id: string, input: { name?: string; code?: string }) {
+  async update(
+    id: string,
+    input: { name?: string; code?: string; showInPosDiscount?: boolean; autoCondition?: Prisma.InputJsonValue },
+  ) {
     const existing = await this.repo.findById(id);
     if (!existing) {
       throwNotFound('PRODUCT_TAG_NOT_FOUND', 'ProductTag not found');
     }
-    const data: { name?: string; code?: string } = {};
+    const data: { name?: string; code?: string; showInPosDiscount?: boolean; autoCondition?: Prisma.InputJsonValue } = {};
     if (input.name !== undefined) {
       const n = input.name.trim();
       if (!n) {
@@ -76,26 +116,18 @@ export class ProductTagService {
         data.code = dedupeCode(lower, others);
       }
     }
+    if (input.showInPosDiscount !== undefined) {
+      data.showInPosDiscount = input.showInPosDiscount;
+    }
+    if (input.autoCondition !== undefined) {
+      data.autoCondition = input.autoCondition;
+    }
     if (!Object.keys(data).length) {
-      return {
-        id: existing.id,
-        merchantId: existing.merchantId,
-        name: existing.name,
-        code: existing.code,
-        createdAt: existing.createdAt.toISOString(),
-        updatedAt: existing.updatedAt.toISOString(),
-      };
+      return this.toDto(existing);
     }
     try {
       const tag = await this.repo.update(id, data);
-      return {
-        id: tag.id,
-        merchantId: tag.merchantId,
-        name: tag.name,
-        code: tag.code,
-        createdAt: tag.createdAt.toISOString(),
-        updatedAt: tag.updatedAt.toISOString(),
-      };
+      return this.toDto(tag);
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
         throwConflict('PRODUCT_TAG_CODE_CONFLICT', 'ProductTag code already exists for this merchant');

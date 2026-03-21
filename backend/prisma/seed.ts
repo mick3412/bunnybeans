@@ -3,12 +3,23 @@
  * 含：商品（含重量／規格／款式／效期）、會員／供應商／採購／驗收／庫存／POS／促銷／分群／發券。
  * 數據量較大，符合商品、會員、促銷、銷售、報表各層級測試需求。
  *
- * 警告：會刪除資料庫內既有業務資料。本機還原：migrate reset 或僅執行本 seed。
+ * 警告：會刪除資料庫內既有業務資料（含 E2E／測試用）。
+ * 推薦完整清除：pnpm db:reset（migrate reset 後自動跑本 seed）
  */
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+/** 產生台灣格式 EAN-13 條碼（前綴 471）。base 為 9 位數字字串，會自動計算校驗碼 */
+function ean13Taiwan(base: string): string {
+  const digits = ('471' + base.padStart(9, '0').slice(-9)).split('').map(Number);
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += digits[i]! * (i % 2 === 0 ? 1 : 3);
+  const check = (10 - (sum % 10)) % 10;
+  return digits.join('') + check;
+}
+
+/** 清除所有業務表（含 E2E 測試資料），依 FK 從子表到父表順序 */
 async function wipeAll() {
   await prisma.loyaltyCouponIssue.deleteMany();
   await prisma.crmCouponDispatchRule.deleteMany();
@@ -45,6 +56,7 @@ async function wipeAll() {
   await prisma.merchant.deleteMany();
   await prisma.category.deleteMany();
   await prisma.brand.deleteMany();
+  console.log('wipeAll: 已清除所有業務表（含測試資料）');
 }
 
 async function main() {
@@ -79,37 +91,44 @@ async function main() {
   const brandFeed = await prisma.brand.create({ data: { code: 'brand-feed', name: '品牌C', sortOrder: 2 } });
   const brandImport = await prisma.brand.create({ data: { code: 'brand-import', name: '品牌D', sortOrder: 3 } });
 
+  /** 效期模式：productionDate+shelfLifeMonths（推算）或 expiryDate（直接） */
+  const prodDate = (monthsAgo: number) => { const d = new Date(now); d.setMonth(d.getMonth() - monthsAgo); return d; };
+  const expDate = (monthsAhead: number) => { const d = new Date(now); d.setMonth(d.getMonth() + monthsAhead); return d; };
   const productData = [
-    { sku: 'DEMO-TEE-BLK-M', name: '經典黑 T M', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: ['熱銷'], specSize: 'M', specStyle: '圓領', specWeight: '180g', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-TEE-BLK-L', name: '經典黑 T L', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: ['熱銷'], specSize: 'L', specStyle: '圓領', specWeight: '200g', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-TEE-WHT-M', name: '經典白 T M', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: ['熱銷'], specSize: 'M', specStyle: '圓領', specWeight: '175g', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-TEE-WHT-L', name: '經典白 T L', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: [], specSize: 'L', specStyle: '圓領', specWeight: '195g', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-TEE-GRY-S', name: '經典灰 T S', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: ['新品'], specSize: 'S', specStyle: '圓領', specWeight: '160g', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-FEED-ADULT', name: '成兔飼料 2kg', cat: catFeed, brand: brandFeed, list: 320, sale: 280, cost: 180, tags: ['熱銷'], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '常溫 12 個月' },
-    { sku: 'DEMO-FEED-JR', name: '幼兔飼料 1kg', cat: catFeed, brand: brandFeed, list: 200, sale: 179, cost: 100, tags: [], specSize: null, specStyle: null, specWeight: '1kg', specCapacity: null, expiryDescription: '常溫 12 個月' },
-    { sku: 'DEMO-FEED-SENIOR', name: '高齡兔飼料 2kg', cat: catFeed, brand: brandFeed, list: 380, sale: 340, cost: 200, tags: [], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '常溫 10 個月' },
-    { sku: 'DEMO-HAY-TIMOTHY', name: '提摩西牧草 1kg', cat: catHay, brand: brandHouse, list: 180, sale: 150, cost: 90, tags: ['熱銷'], specSize: null, specStyle: null, specWeight: '1kg', specCapacity: null, expiryDescription: '乾燥保存 6 個月' },
-    { sku: 'DEMO-HAY-ALFALFA', name: '苜蓿牧草 500g', cat: catHay, brand: brandHouse, list: 120, sale: 99, cost: 50, tags: [], specSize: null, specStyle: null, specWeight: '500g', specCapacity: null, expiryDescription: '乾燥保存 6 個月' },
-    { sku: 'DEMO-HAY-MIX', name: '綜合牧草 2kg', cat: catHay, brand: brandPremium, list: 350, sale: 299, cost: 160, tags: [], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '乾燥保存 6 個月' },
-    { sku: 'DEMO-BOWL-S', name: '食盆 小', cat: catSupplies, brand: brandHouse, list: 120, sale: 99, cost: 45, tags: [], specSize: 'S', specStyle: '圓形', specWeight: '80g', specCapacity: '200ml', expiryDescription: null },
-    { sku: 'DEMO-BOWL-M', name: '食盆 中', cat: catSupplies, brand: brandHouse, list: 180, sale: 149, cost: 65, tags: [], specSize: 'M', specStyle: '圓形', specWeight: '150g', specCapacity: '400ml', expiryDescription: null },
-    { sku: 'DEMO-BOWL-L', name: '食盆 大', cat: catSupplies, brand: brandHouse, list: 250, sale: 199, cost: 90, tags: [], specSize: 'L', specStyle: '圓形', specWeight: '280g', specCapacity: '800ml', expiryDescription: null },
-    { sku: 'DEMO-BOTTLE-350', name: '滾珠水壺 350ml', cat: catSupplies, brand: brandHouse, list: 150, sale: 129, cost: 55, tags: [], specSize: null, specStyle: '滾珠', specWeight: '120g', specCapacity: '350ml', expiryDescription: null },
-    { sku: 'DEMO-BOTTLE-600', name: '滾珠水壺 600ml', cat: catSupplies, brand: brandPremium, list: 220, sale: 189, cost: 85, tags: [], specSize: null, specStyle: '滾珠', specWeight: '180g', specCapacity: '600ml', expiryDescription: null },
-    { sku: 'DEMO-LOW-STOCK', name: '低庫存測試品', cat: catSupplies, brand: brandHouse, list: 50, sale: 50, cost: 20, tags: ['清倉'], specSize: 'S', specStyle: '標準', specWeight: '50g', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-ZERO-STOCK', name: '零庫存測試品', cat: catClothes, brand: brandPremium, list: 399, sale: 399, cost: 150, tags: ['清倉'], specSize: 'M', specStyle: '限量款', specWeight: '200g', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-SNACK-CARROT', name: '胡蘿蔔乾 50g', cat: catSnacks, brand: brandHouse, list: 80, sale: 65, cost: 25, tags: [], specSize: null, specStyle: null, specWeight: '50g', specCapacity: null, expiryDescription: '常溫 3 個月' },
-    { sku: 'DEMO-SNACK-APPLE', name: '蘋果片 30g', cat: catSnacks, brand: brandPremium, list: 60, sale: 49, cost: 18, tags: ['新品'], specSize: null, specStyle: null, specWeight: '30g', specCapacity: null, expiryDescription: '常溫 2 個月' },
-    { sku: 'DEMO-TOY-BALL', name: '草球玩具', cat: catToys, brand: brandHouse, list: 89, sale: 75, cost: 30, tags: [], specSize: '直徑 8cm', specStyle: '圓球', specWeight: '40g', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-TOY-TUNNEL', name: '隧道玩具', cat: catToys, brand: brandPremium, list: 299, sale: 249, cost: 100, tags: [], specSize: '長 60cm', specStyle: '可折疊', specWeight: '200g', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-CAGE-S', name: '兔籠 S 號', cat: catSupplies, brand: brandImport, list: 1299, sale: 1099, cost: 500, tags: [], specSize: 'S', specStyle: '單層', specWeight: '3kg', specCapacity: null, expiryDescription: null },
-    { sku: 'DEMO-CAGE-L', name: '兔籠 L 號', cat: catSupplies, brand: brandImport, list: 1999, sale: 1699, cost: 750, tags: ['熱銷'], specSize: 'L', specStyle: '雙層', specWeight: '5kg', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-TEE-BLK-M', barcode: ean13Taiwan('100000001'), name: '經典黑 T M', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: ['熱銷'], specSize: 'M', specStyle: '圓領', specWeight: '180g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-TEE-BLK-L', barcode: ean13Taiwan('100000002'), name: '經典黑 T L', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: ['熱銷'], specSize: 'L', specStyle: '圓領', specWeight: '200g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-TEE-WHT-M', barcode: ean13Taiwan('100000003'), name: '經典白 T M', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: ['熱銷'], specSize: 'M', specStyle: '圓領', specWeight: '175g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-TEE-WHT-L', barcode: ean13Taiwan('100000004'), name: '經典白 T L', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: [], specSize: 'L', specStyle: '圓領', specWeight: '195g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-TEE-GRY-S', barcode: ean13Taiwan('100000005'), name: '經典灰 T S', cat: catClothes, brand: brandHouse, list: 199, sale: 150, cost: 80, tags: ['新品'], specSize: 'S', specStyle: '圓領', specWeight: '160g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-FEED-ADULT', barcode: ean13Taiwan('200000001'), name: '成兔飼料 2kg', cat: catFeed, brand: brandFeed, list: 320, sale: 280, cost: 180, tags: ['熱銷'], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '常溫 12 個月', productionDate: prodDate(3), shelfLifeMonths: 12 },
+    { sku: 'DEMO-FEED-JR', barcode: ean13Taiwan('200000002'), name: '幼兔飼料 1kg', cat: catFeed, brand: brandFeed, list: 200, sale: 179, cost: 100, tags: [], specSize: null, specStyle: null, specWeight: '1kg', specCapacity: null, expiryDescription: '常溫 12 個月', expiryDate: expDate(6) },
+    { sku: 'DEMO-FEED-SENIOR', barcode: ean13Taiwan('200000003'), name: '高齡兔飼料 2kg', cat: catFeed, brand: brandFeed, list: 380, sale: 340, cost: 200, tags: [], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '常溫 10 個月', productionDate: prodDate(2), shelfLifeMonths: 10 },
+    { sku: 'DEMO-HAY-TIMOTHY', barcode: ean13Taiwan('300000001'), name: '提摩西牧草 1kg', cat: catHay, brand: brandHouse, list: 180, sale: 150, cost: 90, tags: ['熱銷'], specSize: null, specStyle: null, specWeight: '1kg', specCapacity: null, expiryDescription: '乾燥保存 6 個月' },
+    { sku: 'DEMO-HAY-ALFALFA', barcode: ean13Taiwan('300000002'), name: '苜蓿牧草 500g', cat: catHay, brand: brandHouse, list: 120, sale: 99, cost: 50, tags: [], specSize: null, specStyle: null, specWeight: '500g', specCapacity: null, expiryDescription: '乾燥保存 6 個月' },
+    { sku: 'DEMO-HAY-MIX', barcode: ean13Taiwan('300000003'), name: '綜合牧草 2kg', cat: catHay, brand: brandPremium, list: 350, sale: 299, cost: 160, tags: [], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '乾燥保存 6 個月' },
+    { sku: 'DEMO-BOWL-S', barcode: ean13Taiwan('400000001'), name: '食盆 小', cat: catSupplies, brand: brandHouse, list: 120, sale: 99, cost: 45, tags: [], specSize: 'S', specStyle: '圓形', specWeight: '80g', specCapacity: '200ml', expiryDescription: null },
+    { sku: 'DEMO-BOWL-M', barcode: ean13Taiwan('400000002'), name: '食盆 中', cat: catSupplies, brand: brandHouse, list: 180, sale: 149, cost: 65, tags: [], specSize: 'M', specStyle: '圓形', specWeight: '150g', specCapacity: '400ml', expiryDescription: null },
+    { sku: 'DEMO-BOWL-L', barcode: ean13Taiwan('400000003'), name: '食盆 大', cat: catSupplies, brand: brandHouse, list: 250, sale: 199, cost: 90, tags: [], specSize: 'L', specStyle: '圓形', specWeight: '280g', specCapacity: '800ml', expiryDescription: null },
+    { sku: 'DEMO-BOTTLE-350', barcode: ean13Taiwan('400000004'), name: '滾珠水壺 350ml', cat: catSupplies, brand: brandHouse, list: 150, sale: 129, cost: 55, tags: [], specSize: null, specStyle: '滾珠', specWeight: '120g', specCapacity: '350ml', expiryDescription: null },
+    { sku: 'DEMO-BOTTLE-600', barcode: ean13Taiwan('400000005'), name: '滾珠水壺 600ml', cat: catSupplies, brand: brandPremium, list: 220, sale: 189, cost: 85, tags: [], specSize: null, specStyle: '滾珠', specWeight: '180g', specCapacity: '600ml', expiryDescription: null },
+    { sku: 'DEMO-LOW-STOCK', barcode: ean13Taiwan('400000006'), name: '低庫存測試品', cat: catSupplies, brand: brandHouse, list: 50, sale: 50, cost: 20, tags: ['清倉'], specSize: 'S', specStyle: '標準', specWeight: '50g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-SUPPLIES-ZERO', barcode: ean13Taiwan('400000007'), name: '用品零庫存測試', cat: catSupplies, brand: brandHouse, list: 80, sale: 80, cost: 35, tags: ['清倉'], specSize: 'S', specStyle: '標準', specWeight: '60g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-ZERO-STOCK', barcode: ean13Taiwan('100000006'), name: '零庫存測試品', cat: catClothes, brand: brandPremium, list: 399, sale: 399, cost: 150, tags: ['清倉'], specSize: 'M', specStyle: '限量款', specWeight: '200g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-SNACK-CARROT', barcode: ean13Taiwan('500000001'), name: '胡蘿蔔乾 50g', cat: catSnacks, brand: brandHouse, list: 80, sale: 65, cost: 25, tags: [], specSize: null, specStyle: null, specWeight: '50g', specCapacity: null, expiryDescription: '常溫 3 個月', productionDate: prodDate(1), shelfLifeMonths: 3 },
+    { sku: 'DEMO-SNACK-APPLE', barcode: ean13Taiwan('500000002'), name: '蘋果片 30g', cat: catSnacks, brand: brandPremium, list: 60, sale: 49, cost: 18, tags: ['新品'], specSize: null, specStyle: null, specWeight: '30g', specCapacity: null, expiryDescription: '常溫 2 個月', expiryDate: expDate(2) },
+    { sku: 'DEMO-SNACK-ZERO', barcode: ean13Taiwan('500000003'), name: '零食零庫存測試', cat: catSnacks, brand: brandHouse, list: 45, sale: 45, cost: 15, tags: [], specSize: null, specStyle: null, specWeight: '25g', specCapacity: null, expiryDescription: '常溫 2 個月', expiryDate: expDate(1) },
+    { sku: 'DEMO-TOY-BALL', barcode: ean13Taiwan('600000001'), name: '草球玩具', cat: catToys, brand: brandHouse, list: 89, sale: 75, cost: 30, tags: [], specSize: '直徑 8cm', specStyle: '圓球', specWeight: '40g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-TOY-TUNNEL', barcode: ean13Taiwan('600000002'), name: '隧道玩具', cat: catToys, brand: brandPremium, list: 299, sale: 249, cost: 100, tags: [], specSize: '長 60cm', specStyle: '可折疊', specWeight: '200g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-TOY-ZERO', barcode: ean13Taiwan('600000003'), name: '玩具零庫存測試', cat: catToys, brand: brandHouse, list: 59, sale: 59, cost: 25, tags: [], specSize: '小', specStyle: '標準', specWeight: '30g', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-CAGE-S', barcode: ean13Taiwan('400000008'), name: '兔籠 S 號', cat: catSupplies, brand: brandImport, list: 1299, sale: 1099, cost: 500, tags: [], specSize: 'S', specStyle: '單層', specWeight: '3kg', specCapacity: null, expiryDescription: null },
+    { sku: 'DEMO-CAGE-L', barcode: ean13Taiwan('400000009'), name: '兔籠 L 號', cat: catSupplies, brand: brandImport, list: 1999, sale: 1699, cost: 750, tags: ['熱銷'], specSize: 'L', specStyle: '雙層', specWeight: '5kg', specCapacity: null, expiryDescription: null },
   ];
   const products: Record<string, Awaited<ReturnType<typeof prisma.product.create>>> = {} as any;
   for (const p of productData) {
     const created = await prisma.product.create({
       data: {
         sku: p.sku,
+        barcode: p.barcode,
         name: p.name,
         categoryId: p.cat.id,
         brandId: p.brand.id,
@@ -122,6 +141,9 @@ async function main() {
         specWeight: p.specWeight ?? undefined,
         specCapacity: p.specCapacity ?? undefined,
         expiryDescription: p.expiryDescription ?? undefined,
+        productionDate: 'productionDate' in p ? p.productionDate : undefined,
+        shelfLifeMonths: 'shelfLifeMonths' in p ? p.shelfLifeMonths : undefined,
+        expiryDate: 'expiryDate' in p ? p.expiryDate : undefined,
       },
     });
     products[p.sku] = created;
@@ -134,15 +156,36 @@ async function main() {
   const pLowStock = products['DEMO-LOW-STOCK'];
   const pZeroStock = products['DEMO-ZERO-STOCK'];
 
-  /** ProductTag：商品標籤示範，供前端類別管理／商品頁選用 */
+  /** ProductTag：商品標籤示範，供前端類別管理／商品頁選用；含 POS 折扣自動條件示範 */
   await prisma.productTag.create({
-    data: { merchantId: merchant.id, code: 'SEED-TAG-HOT', name: '熱銷', sortOrder: 0 },
+    data: {
+      merchantId: merchant.id,
+      code: 'SEED-TAG-HOT',
+      name: '熱銷',
+      sortOrder: 0,
+      showInPosDiscount: true,
+      autoCondition: { type: 'SALES_QTY', lookbackDays: 30, minQty: 5 },
+    },
   });
   await prisma.productTag.create({
-    data: { merchantId: merchant.id, code: 'SEED-TAG-NEW', name: '新品', sortOrder: 1 },
+    data: {
+      merchantId: merchant.id,
+      code: 'SEED-TAG-NEW',
+      name: '新品',
+      sortOrder: 1,
+      showInPosDiscount: true,
+      autoCondition: { type: 'NEW_ARRIVAL', withinDays: 30 },
+    },
   });
   await prisma.productTag.create({
-    data: { merchantId: merchant.id, code: 'SEED-TAG-CLEARANCE', name: '清倉', sortOrder: 2 },
+    data: {
+      merchantId: merchant.id,
+      code: 'SEED-TAG-CLEARANCE',
+      name: '清倉',
+      sortOrder: 2,
+      showInPosDiscount: true,
+      autoCondition: { type: 'LOW_STOCK', maxQty: 3 },
+    },
   });
 
   /** 會員／客戶：多樣等級／入會日／有無訂單／點數情境（見 db-seed.md）；E2E 客戶由 e2e-seed 建立 */
@@ -378,6 +421,12 @@ async function main() {
   await prisma.segment.create({
     data: { merchantId: merchant.id, name: 'GOLD 會員', conditions: { memberLevel: 'GOLD' } },
   });
+  await prisma.segment.create({
+    data: { merchantId: merchant.id, name: 'NORMAL 會員', conditions: { memberLevel: 'NORMAL' } },
+  });
+  await prisma.segment.create({
+    data: { merchantId: merchant.id, name: '多筆消費會員', conditions: { minOrderCount: 2 } },
+  });
   /** 分級規則（TierRule） */
   await prisma.tierRule.create({
     data: { merchantId: merchant.id, name: '消費滿 5000 升 VIP', ruleType: 'SPEND_SUM', threshold: 5000, targetLevel: 'VIP', lookbackDays: 365 },
@@ -385,16 +434,17 @@ async function main() {
   await prisma.tierRule.create({
     data: { merchantId: merchant.id, name: '消費滿 2000 升 GOLD', ruleType: 'SPEND_SUM', threshold: 2000, targetLevel: 'GOLD', lookbackDays: 365 },
   });
-  /** 互動紀錄（階段 F）示範一筆 */
-  const custForLog = await prisma.customer.findFirst({
-    where: { merchantId: merchant.id, code: 'VIP001' },
+  /** 互動紀錄（階段 F）：5 筆，不同客戶與類型 */
+  const custsForLog = await prisma.customer.findMany({
+    where: { merchantId: merchant.id, code: { in: ['VIP001', 'VIP002', 'MEM001', 'MEM005', 'MEM010'] } },
   });
-  if (custForLog) {
+  const logTypes = ['CALL', 'VISIT', 'NOTE', 'CALL', 'VISIT'] as const;
+  for (let i = 0; i < Math.min(5, custsForLog.length); i++) {
     await prisma.customerContactLog.create({
       data: {
-        customerId: custForLog.id,
-        type: 'CALL',
-        note: 'SEED 示範聯絡紀錄',
+        customerId: custsForLog[i].id,
+        type: logTypes[i],
+        note: `SEED 示範聯絡紀錄 ${i + 1}`,
         createdBy: 'seed',
       },
     });
@@ -462,6 +512,23 @@ async function main() {
       data: { productId, warehouseId: warehouse.id, onHandQty: qty },
     });
   }
+  async function addBalanceIncrement(productId: string, qty: number, ref: string, note: string, at: Date) {
+    await prisma.inventoryEvent.create({
+      data: {
+        productId,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: qty,
+        occurredAt: at,
+        referenceId: ref,
+        note,
+      },
+    });
+    await prisma.inventoryBalance.update({
+      where: { productId_warehouseId: { productId, warehouseId: warehouse.id } },
+      data: { onHandQty: { increment: qty } },
+    });
+  }
 
   /** 1) PO DRAFT */
   await prisma.purchaseOrder.create({
@@ -481,17 +548,21 @@ async function main() {
     },
   });
 
-  /** 2) PO CANCELLED（曾草稿後取消） */
-  await prisma.purchaseOrder.create({
-    data: {
-      merchantId: merchant.id,
-      supplierId: supInactive.id,
-      warehouseId: warehouse.id,
-      orderNumber: `DEMO-PO-${y}-CANCEL`,
-      status: 'CANCELLED',
-      lines: { create: [{ productId: pBowl.id, qtyOrdered: 20, unitCost: 45 }] },
-    },
-  });
+  /** 2) PO CANCELLED（供應商不足／取消）：5 筆 */
+  for (let i = 0; i < 5; i++) {
+    const pid = [pBowl, pHay, pFeed, pTee, pTeeW][i].id;
+    await prisma.purchaseOrder.create({
+      data: {
+        merchantId: merchant.id,
+        supplierId: i === 0 ? supInactive.id : supActive1.id,
+        warehouseId: warehouse.id,
+        orderNumber: `DEMO-PO-${y}-CANCEL${i + 1}`,
+        status: 'CANCELLED',
+        orderDate: new Date(now.getTime() - (45 + i * 3) * 86400000),
+        lines: { create: [{ productId: pid, qtyOrdered: 10 + i * 5, unitCost: 50 }] },
+      },
+    });
+  }
 
   /** 3) PO ORDERED — 未驗收，供「新增驗收單」 */
   const poOrderedOnly = await prisma.purchaseOrder.create({
@@ -709,46 +780,101 @@ async function main() {
   });
   await addBalance(pFeed.id, 15, rnPartial.lines[0].id, '部分驗收合格入庫', new Date(y, 2, 15));
 
-  /** 8) RN RETURNED（整單退回，不入庫） */
-  const poReturn = await prisma.purchaseOrder.create({
-    data: {
-      merchantId: merchant.id,
-      supplierId: supActive3.id,
-      warehouseId: warehouse.id,
-      orderNumber: `DEMO-PO-${y}-RETURN`,
-      status: 'ORDERED',
-      orderDate: new Date(y, 0, 1),
-      lines: { create: [{ productId: pZeroStock.id, qtyOrdered: 10, unitCost: 100 }] },
-    },
-    include: { lines: true },
-  });
-  await prisma.receivingNote.create({
-    data: {
-      merchantId: merchant.id,
-      receiptNumber: `DEMO-RN-${y}-RETURNED`,
-      purchaseOrderId: poReturn.id,
-      inspectorName: '倉管-王大明',
-      status: 'RETURNED',
-      remark: '整批退貨',
-      lines: {
-        create: [
-          {
-            purchaseOrderLineId: poReturn.lines[0].id,
-            orderedQty: 10,
-            receivedQty: 0,
-            qualifiedQty: 0,
-            returnedQty: 0,
-          },
-        ],
+  /** 8a) 部分退貨給供應商：5 筆 RETURN_TO_SUPPLIER + PURCHASE_RETURN，分散時間供報表篩選 */
+  const returnToSupItems: { lineId: string; productId: string; qty: number; cost: number; rnId: string; rnReceipt: string; at: Date; supId: string }[] = [
+    { lineId: rnPartial.lines[0].id, productId: pFeed.id, qty: 5, cost: 180, rnId: rnPartial.id, rnReceipt: rnPartial.receiptNumber, at: new Date(y, 2, 20, 14, 0), supId: supActive2.id },
+    { lineId: rnPartial.lines[0].id, productId: pFeed.id, qty: 1, cost: 180, rnId: rnPartial.id, rnReceipt: rnPartial.receiptNumber, at: new Date(y, 2, 21, 10, 0), supId: supActive2.id },
+    { lineId: rnFull.lines[0].id, productId: pTee.id, qty: 2, cost: 80, rnId: rnFull.id, rnReceipt: rnFull.receiptNumber, at: new Date(y, 2, 22, 11, 0), supId: supActive1.id },
+    { lineId: rnFull.lines[1].id, productId: pTeeW.id, qty: 2, cost: 80, rnId: rnFull.id, rnReceipt: rnFull.receiptNumber, at: new Date(y, 2, 23, 9, 0), supId: supActive1.id },
+  ];
+  for (const r of returnToSupItems) {
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: r.productId,
+        warehouseId: warehouse.id,
+        type: 'RETURN_TO_SUPPLIER',
+        quantity: -r.qty,
+        occurredAt: r.at,
+        referenceId: r.lineId,
+        note: `部分退貨給供應商 RN ${r.rnReceipt}`,
       },
-    },
-  });
+    });
+    await prisma.inventoryBalance.update({
+      where: { productId_warehouseId: { productId: r.productId, warehouseId: warehouse.id } },
+      data: { onHandQty: { decrement: r.qty } },
+    });
+    await prisma.financeEvent.create({
+      data: {
+        type: 'PURCHASE_RETURN',
+        partyId: `supplier:${r.supId}`,
+        currency: 'TWD',
+        amount: r.qty * r.cost,
+        taxAmount: 0,
+        occurredAt: r.at,
+        referenceId: r.rnId,
+        note: `PURCHASE_RETURN RN ${r.rnReceipt} 部分退貨`,
+      },
+    });
+  }
 
-  /** 其餘商品初始庫存（無採購鏈的補滿） */
+  /** 8b) RN RETURNED（整單退回，不入庫）：5 筆供報表篩選 */
+  for (let i = 0; i < 5; i++) {
+    const poR = await prisma.purchaseOrder.create({
+      data: {
+        merchantId: merchant.id,
+        supplierId: i === 0 ? supInactive.id : supActive3.id,
+        warehouseId: warehouse.id,
+        orderNumber: `DEMO-PO-${y}-RET${i + 1}`,
+        status: 'ORDERED',
+        orderDate: new Date(now.getTime() - (30 + i * 5) * 86400000),
+        lines: { create: [{ productId: [pZeroStock, pLowStock, pHay, pBowl, products['DEMO-SNACK-CARROT']][i].id, qtyOrdered: 5 + i, unitCost: 50 }] },
+      },
+      include: { lines: true },
+    });
+    await prisma.receivingNote.create({
+      data: {
+        merchantId: merchant.id,
+        receiptNumber: `DEMO-RN-${y}-RET${i + 1}`,
+        purchaseOrderId: poR.id,
+        inspectorName: '倉管-王大明',
+        status: 'RETURNED',
+        remark: '整批退貨',
+        inspectionDate: new Date(now.getTime() - (28 + i * 5) * 86400000),
+        lines: {
+          create: [{ purchaseOrderLineId: poR.lines[0].id, orderedQty: 5 + i, receivedQty: 0, qualifiedQty: 0, returnedQty: 0 }],
+        },
+      },
+    });
+  }
+
+  /** 其餘商品初始庫存。每分類：多庫存、少庫存、0庫存各至少一商品 */
   const t0 = new Date(y, 0, 1);
-  await addBalance(pHay.id, 200, 'SEED-BULK', '初始補貨（含多筆 POS 扣庫）', t0);
-  await addBalance(pBowl.id, 200, 'SEED-BULK', '初始補貨（含多筆 POS 扣庫）', t0);
-  await addBalance(pLowStock.id, 1, 'SEED-EDGE', '低庫存', t0);
+  const pTeeGry = products['DEMO-TEE-GRY-S'];
+  const pHayAlfalfa = products['DEMO-HAY-ALFALFA'];
+  const pHayMix = products['DEMO-HAY-MIX'];
+  const pFeedJr = products['DEMO-FEED-JR'];
+  const pFeedSenior = products['DEMO-FEED-SENIOR'];
+  const pSnackApple = products['DEMO-SNACK-APPLE'];
+  const pSnackZero = products['DEMO-SNACK-ZERO'];
+  const pSuppliesZero = products['DEMO-SUPPLIES-ZERO'];
+  const pToyTunnel = products['DEMO-TOY-TUNNEL'];
+  const pToyZero = products['DEMO-TOY-ZERO'];
+  await addBalance(pTeeGry.id, 2, 'SEED-EDGE', '衣服少庫存', t0);
+  await addBalance(pHay.id, 200, 'SEED-BULK', '牧草多庫存（提摩西）', t0);
+  await addBalance(pHayAlfalfa.id, 3, 'SEED-EDGE', '牧草少庫存（苜蓿）', t0);
+  await prisma.inventoryBalance.create({
+    data: { productId: pHayMix.id, warehouseId: warehouse.id, onHandQty: 0 },
+  });
+  await addBalanceIncrement(pFeed.id, 41, 'SEED-BULK', '飼料補足至多庫存（成兔 50）', t0);
+  await addBalance(pFeedJr.id, 2, 'SEED-EDGE', '飼料少庫存（幼兔）', t0);
+  await prisma.inventoryBalance.create({
+    data: { productId: pFeedSenior.id, warehouseId: warehouse.id, onHandQty: 0 },
+  });
+  await addBalance(pBowl.id, 200, 'SEED-BULK', '用品多庫存', t0);
+  await addBalance(pLowStock.id, 1, 'SEED-EDGE', '用品少庫存', t0);
+  await prisma.inventoryBalance.create({
+    data: { productId: pSuppliesZero.id, warehouseId: warehouse.id, onHandQty: 0 },
+  });
   await prisma.inventoryBalance.create({
     data: { productId: pZeroStock.id, warehouseId: warehouse.id, onHandQty: 0 },
   });
@@ -757,10 +883,123 @@ async function main() {
   const pCageLForInv = products['DEMO-CAGE-L'];
   const pToyBallForInv = products['DEMO-TOY-BALL'];
   const pBottleForInv = products['DEMO-BOTTLE-350'];
-  await addBalance(pSnackForInv.id, 100, 'SEED-BULK', '零食類初始', t0);
+  await addBalance(pSnackForInv.id, 100, 'SEED-BULK', '零食多庫存', t0);
+  await addBalance(pSnackApple.id, 2, 'SEED-EDGE', '零食少庫存', t0);
+  await prisma.inventoryBalance.create({
+    data: { productId: pSnackZero.id, warehouseId: warehouse.id, onHandQty: 0 },
+  });
+  await addBalance(pToyBallForInv.id, 50, 'SEED-BULK', '玩具多庫存', t0);
+  await addBalance(pToyTunnel.id, 2, 'SEED-EDGE', '玩具少庫存', t0);
+  await prisma.inventoryBalance.create({
+    data: { productId: pToyZero.id, warehouseId: warehouse.id, onHandQty: 0 },
+  });
+  /** 即期批次：採購→驗收→入庫鏈，與 PO/RN/InventoryEvent 一致 */
+  const expiringDate = new Date(now);
+  expiringDate.setDate(expiringDate.getDate() + 14);
+  expiringDate.setHours(12, 0, 0, 0);
+  const poExpiring = await prisma.purchaseOrder.create({
+    data: {
+      merchantId: merchant.id,
+      supplierId: supActive1.id,
+      warehouseId: warehouse.id,
+      orderNumber: `DEMO-PO-${y}-EXPIRING`,
+      status: 'ORDERED',
+      orderDate: daysAgo(2),
+      expectedDate: daysAgo(1),
+      lines: { create: [{ productId: pSnackForInv.id, qtyOrdered: 5, qtyReceived: 5, unitCost: 25 }] },
+    },
+    include: { lines: true },
+  });
+  const rnExpiring = await prisma.receivingNote.create({
+    data: {
+      merchantId: merchant.id,
+      receiptNumber: `DEMO-RN-${y}-EXPIRING`,
+      purchaseOrderId: poExpiring.id,
+      inspectorName: '倉管-李小華',
+      status: 'COMPLETED',
+      inspectionDate: daysAgo(1),
+      remark: '即期批次示範',
+      lines: {
+        create: [
+          {
+            purchaseOrderLineId: poExpiring.lines[0].id,
+            orderedQty: 5,
+            receivedQty: 5,
+            qualifiedQty: 5,
+            returnedQty: 0,
+            batchCode: 'SEED-EXP-001',
+            expiryDate: expiringDate,
+          },
+        ],
+      },
+    },
+    include: { lines: true },
+  });
+  await prisma.purchaseOrder.update({
+    where: { id: poExpiring.id },
+    data: { status: 'RECEIVED' },
+  });
+  await prisma.financeEvent.create({
+    data: {
+      type: 'PURCHASE_PAYABLE',
+      partyId: `supplier:${supActive1.id}`,
+      currency: 'TWD',
+      amount: 125,
+      taxAmount: 0,
+      occurredAt: daysAgo(1),
+      referenceId: rnExpiring.id,
+      note: `PURCHASE_PAYABLE RN ${rnExpiring.receiptNumber} (即期批次)`,
+    },
+  });
+  await prisma.inventoryEvent.create({
+    data: {
+      productId: pSnackForInv.id,
+      warehouseId: warehouse.id,
+      type: 'PURCHASE_IN',
+      quantity: 5,
+      batchCode: 'SEED-EXP-001',
+      expiryDate: expiringDate,
+      occurredAt: daysAgo(1),
+      referenceId: rnExpiring.lines[0].id,
+      note: '驗收 DEMO-RN-EXPIRING 合格入庫（即期批次）',
+    },
+  });
+  await prisma.inventoryBalance.update({
+    where: {
+      productId_warehouseId: { productId: pSnackForInv.id, warehouseId: warehouse.id },
+    },
+    data: { onHandQty: { increment: 5 } },
+  });
+  /** 8a 第5筆：即期批次部分退供應商 */
+  await prisma.inventoryEvent.create({
+    data: {
+      productId: pSnackForInv.id,
+      warehouseId: warehouse.id,
+      type: 'RETURN_TO_SUPPLIER',
+      quantity: -1,
+      occurredAt: daysAgo(3),
+      referenceId: rnExpiring.lines[0].id,
+      note: `部分退貨給供應商 RN ${rnExpiring.receiptNumber}`,
+    },
+  });
+  await prisma.inventoryBalance.update({
+    where: { productId_warehouseId: { productId: pSnackForInv.id, warehouseId: warehouse.id } },
+    data: { onHandQty: { decrement: 1 } },
+  });
+  await prisma.financeEvent.create({
+    data: {
+      type: 'PURCHASE_RETURN',
+      partyId: `supplier:${supActive1.id}`,
+      currency: 'TWD',
+      amount: 25,
+      taxAmount: 0,
+      occurredAt: daysAgo(3),
+      referenceId: rnExpiring.id,
+      note: `PURCHASE_RETURN RN ${rnExpiring.receiptNumber} 部分退貨`,
+    },
+  });
   await addBalance(pCageSForInv.id, 20, 'SEED-BULK', '兔籠初始', t0);
   await addBalance(pCageLForInv.id, 15, 'SEED-BULK', '兔籠初始', t0);
-  await addBalance(pToyBallForInv.id, 50, 'SEED-BULK', '玩具初始', t0);
   await addBalance(pBottleForInv.id, 80, 'SEED-BULK', '水壺初始', t0);
 
   /** POS 訂單 + SALE_OUT（日期分散近 60 天，供報表篩選） */
@@ -880,6 +1119,37 @@ async function main() {
       },
     });
   }
+  const segGold = await prisma.segment.findFirst({ where: { merchantId: merchant.id, name: 'GOLD 會員' } });
+  const segNormal = await prisma.segment.findFirst({ where: { merchantId: merchant.id, name: 'NORMAL 會員' } });
+  const segMulti = await prisma.segment.findFirst({ where: { merchantId: merchant.id, name: '多筆消費會員' } });
+  if (segGold && coupWelcome) {
+    await prisma.crmCouponDispatchRule.create({
+      data: { merchantId: merchant.id, name: 'GOLD 會員發歡迎券', segmentId: segGold.id, couponId: coupWelcome.id, enabled: true, scheduleType: 'weekly', nextRunAt: new Date(now.getTime() + 7 * 86400000) },
+    });
+  }
+  if (segNormal && coupWelcome) {
+    await prisma.crmCouponDispatchRule.create({
+      data: { merchantId: merchant.id, name: 'NORMAL 會員發歡迎券', segmentId: segNormal.id, couponId: coupWelcome.id, enabled: true, scheduleType: 'daily', nextRunAt: new Date(now.getTime() + 86400000) },
+    });
+  }
+  if (segMulti && coup50) {
+    await prisma.crmCouponDispatchRule.create({
+      data: { merchantId: merchant.id, name: '多筆消費發折 50 券', segmentId: segMulti.id, couponId: coup50.id, enabled: true, scheduleType: 'weekly', nextRunAt: new Date(now.getTime() + 14 * 86400000) },
+    });
+  }
+  /** 發券紀錄：5 筆 Customer ↔ LoyaltyCoupon 關聯（與 Segment/CrmCouponDispatchRule 一致） */
+  const custForCoupon = await prisma.customer.findMany({
+    where: { merchantId: merchant.id, code: { in: ['VIP001', 'VIP002', 'MEM005', 'MEM010'] } },
+  });
+  if (coupWelcome) {
+    const v = custForCoupon.find((x) => x.code === 'VIP001');
+    if (v) await prisma.loyaltyCouponIssue.create({ data: { customerId: v.id, couponId: coupWelcome.id } });
+  }
+  if (coup50) {
+    for (const c of custForCoupon) {
+      await prisma.loyaltyCouponIssue.create({ data: { customerId: c.id, couponId: coup50.id } }).catch(() => {});
+    }
+  }
 
   const c = async (code: string) =>
     prisma.customer.findFirstOrThrow({ where: { merchantId: merchant.id, code } });
@@ -893,6 +1163,8 @@ async function main() {
     occurredAt: Date;
     lines: { productId: string; qty: number; unitPrice: number }[];
     note: string;
+    /** 賒帳時僅建 SALE_RECEIVABLE，不建 SALE_PAYMENT，供應收餘額展示 */
+    creditOnly?: boolean;
   }) {
     const order = await prisma.posOrder.create({
       data: {
@@ -946,18 +1218,20 @@ async function main() {
         note: `POS ${args.orderNumber} 應收`,
       },
     });
-    await prisma.financeEvent.create({
-      data: {
-        type: 'SALE_PAYMENT',
-        partyId: `customer:${args.customerId}`,
-        currency: 'TWD',
-        amount: args.total,
-        taxAmount: 0,
-        occurredAt: args.occurredAt,
-        referenceId: order.id,
-        note: `POS ${args.orderNumber} 實收`,
-      },
-    });
+    if (!args.creditOnly) {
+      await prisma.financeEvent.create({
+        data: {
+          type: 'SALE_PAYMENT',
+          partyId: `customer:${args.customerId}`,
+          currency: 'TWD',
+          amount: args.total,
+          taxAmount: 0,
+          occurredAt: args.occurredAt,
+          referenceId: order.id,
+          note: `POS ${args.orderNumber} 實收`,
+        },
+      });
+    }
     return order;
   }
   async function posSaleGuest(args: {
@@ -1169,6 +1443,7 @@ async function main() {
     occurredAt: daysAgo(25),
     lines: [{ productId: pFeed.id, qty: 1, unitPrice: 280 }],
     note: 'POS DEMO-POS-002 賒帳示範',
+    creditOnly: true,
   });
   /** 更多 POS 訂單：營收趨勢、客單價分布、會員 vs 匿名客 */
   const pSnack = products['DEMO-SNACK-CARROT'];
@@ -1181,11 +1456,11 @@ async function main() {
   const custMem9 = await c('MEM009');
   const custMem10 = await c('MEM010');
   await posSale({ orderNumber: `DEMO-POS-${y}-013`, customerId: custMem7.id, subtotal: 99, discount: 0, total: 99, method: 'CASH', occurredAt: daysAgo(20), lines: [{ productId: pBowl.id, qty: 1, unitPrice: 99 }], note: '低單' });
-  await posSale({ orderNumber: `DEMO-POS-${y}-014`, customerId: custMem8.id, subtotal: 350, discount: 0, total: 350, method: 'CASH', occurredAt: daysAgo(22), lines: [{ productId: pHay.id, qty: 2, unitPrice: 150 }, { productId: pSnack.id, qty: 2, unitPrice: 25 }], note: '中單' });
+  const order014 = await posSale({ orderNumber: `DEMO-POS-${y}-014`, customerId: custMem8.id, subtotal: 350, discount: 0, total: 350, method: 'CASH', occurredAt: daysAgo(22), lines: [{ productId: pHay.id, qty: 2, unitPrice: 150 }, { productId: pSnack.id, qty: 2, unitPrice: 25 }], note: '中單' });
   await posSaleGuest({ orderNumber: `DEMO-POS-${y}-015`, subtotal: 150, discount: 0, total: 150, method: 'CASH', occurredAt: daysAgo(24), lines: [{ productId: pTee.id, qty: 1, unitPrice: 150 }], note: '匿名客' });
-  await posSale({ orderNumber: `DEMO-POS-${y}-016`, customerId: custMem9.id, subtotal: 750, discount: 50, total: 700, method: 'CASH', occurredAt: daysAgo(26), lines: [{ productId: pFeed.id, qty: 2, unitPrice: 280 }, { productId: pBowl.id, qty: 2, unitPrice: 95 }], note: '高單' });
+  const order016 = await posSale({ orderNumber: `DEMO-POS-${y}-016`, customerId: custMem9.id, subtotal: 750, discount: 50, total: 700, method: 'CASH', occurredAt: daysAgo(26), lines: [{ productId: pFeed.id, qty: 2, unitPrice: 280 }, { productId: pBowl.id, qty: 2, unitPrice: 95 }], note: '高單' });
   await posSaleGuest({ orderNumber: `DEMO-POS-${y}-017`, subtotal: 199, discount: 0, total: 199, method: 'CASH', occurredAt: daysAgo(28), lines: [{ productId: pTeeW.id, qty: 1, unitPrice: 150 }, { productId: pSnack.id, qty: 1, unitPrice: 49 }], note: '匿名' });
-  await posSale({ orderNumber: `DEMO-POS-${y}-018`, customerId: custMem10.id, subtotal: 1099, discount: 0, total: 1099, method: 'CASH', occurredAt: daysAgo(30), lines: [{ productId: pCageS.id, qty: 1, unitPrice: 1099 }], note: '高單兔籠' });
+  const order018 = await posSale({ orderNumber: `DEMO-POS-${y}-018`, customerId: custMem10.id, subtotal: 1099, discount: 0, total: 1099, method: 'CASH', occurredAt: daysAgo(30), lines: [{ productId: pCageS.id, qty: 1, unitPrice: 1099 }], note: '高單兔籠' });
   await posSaleGuest({ orderNumber: `DEMO-POS-${y}-019`, subtotal: 1699, discount: 0, total: 1699, method: 'CARD', occurredAt: daysAgo(32), lines: [{ productId: pCageL.id, qty: 1, unitPrice: 1699 }], note: '匿名高單' });
   await posSale({ orderNumber: `DEMO-POS-${y}-020`, customerId: custVip!.id, subtotal: 450, discount: 0, total: 450, method: 'CASH', occurredAt: daysAgo(36), lines: [{ productId: pFeed.id, qty: 1, unitPrice: 280 }, { productId: pHay.id, qty: 1, unitPrice: 150 }, { productId: pToyBall.id, qty: 1, unitPrice: 20 }], note: '上月' });
   await posSale({ orderNumber: `DEMO-POS-${y}-021`, customerId: custGold.id, subtotal: 298, discount: 0, total: 298, method: 'CASH', occurredAt: daysAgo(40), lines: [{ productId: pHay.id, qty: 2, unitPrice: 149 }], note: '上月' });
@@ -1198,6 +1473,12 @@ async function main() {
   await posSale({ orderNumber: `DEMO-POS-${y}-028`, customerId: custMem2.id, subtotal: 650, discount: 0, total: 650, method: 'CASH', occurredAt: daysAgo(54), lines: [{ productId: pFeed.id, qty: 2, unitPrice: 280 }, { productId: pBowl.id, qty: 1, unitPrice: 90 }], note: '' });
   await posSaleGuest({ orderNumber: `DEMO-POS-${y}-029`, subtotal: 278, discount: 0, total: 278, method: 'CASH', occurredAt: daysAgo(56), lines: [{ productId: pFeed.id, qty: 1, unitPrice: 278 }], note: '匿名' });
   await posSale({ orderNumber: `DEMO-POS-${y}-030`, customerId: custMem6.id, subtotal: 115, discount: 0, total: 115, method: 'CASH', occurredAt: daysAgo(58), lines: [{ productId: pBowl.id, qty: 1, unitPrice: 99 }, { productId: pSnack.id, qty: 1, unitPrice: 16 }], note: '' });
+  /** 報表時間區段：today/last7d/last30d 至少 5 筆，供 preset 篩選有內容 */
+  const orderT1 = await posSale({ orderNumber: `DEMO-POS-${y}-T1`, customerId: custVip!.id, subtotal: 150, discount: 0, total: 150, method: 'CASH', occurredAt: daysAgo(0), lines: [{ productId: pTee.id, qty: 1, unitPrice: 150 }], note: '今日' });
+  const orderT2 = await posSale({ orderNumber: `DEMO-POS-${y}-T2`, customerId: custGold.id, subtotal: 298, discount: 0, total: 298, method: 'CASH', occurredAt: daysAgo(1), lines: [{ productId: pHay.id, qty: 2, unitPrice: 149 }], note: '近7日' });
+  const orderT3 = await posSaleGuest({ orderNumber: `DEMO-POS-${y}-T3`, subtotal: 99, discount: 0, total: 99, method: 'CASH', occurredAt: daysAgo(2), lines: [{ productId: pBowl.id, qty: 1, unitPrice: 99 }], note: '近7日' });
+  const orderT4 = await posSale({ orderNumber: `DEMO-POS-${y}-T4`, customerId: custMem1.id, subtotal: 198, discount: 0, total: 198, method: 'CASH', occurredAt: daysAgo(3), lines: [{ productId: pBowl.id, qty: 2, unitPrice: 99 }], note: '近7日' });
+  const orderT5 = await posSale({ orderNumber: `DEMO-POS-${y}-T5`, customerId: custMem2.id, subtotal: 150, discount: 0, total: 150, method: 'CASH', occurredAt: daysAgo(5), lines: [{ productId: pTee.id, qty: 1, unitPrice: 150 }], note: '近7日' });
   const ts = (d: number, offsetMin = 1) => new Date(daysAgo(d).getTime() + offsetMin * 60000);
   const ledgerRows: {
     customerId: string;
@@ -1213,6 +1494,9 @@ async function main() {
     { customerId: custVip!.id, type: 'EARNED', amount: 4, balanceAfter: 8, referenceId: order1b.id, note: `贈點 ${order1b.orderNumber}`, createdAt: ts(0) },
     { customerId: custGold.id, type: 'EARNED', amount: 3, balanceAfter: 3, referenceId: orderGold.id, note: `贈點 ${orderGold.orderNumber}`, createdAt: ts(2) },
     { customerId: custGold.id, type: 'BURNED', amount: 2, balanceAfter: 1, referenceId: null, note: '結帳折抵 2 點（seed）', createdAt: ts(4, 0) },
+    { customerId: custMem1.id, type: 'BURNED', amount: 1, balanceAfter: 1, referenceId: null, note: '兌換折 1 點（seed）', createdAt: ts(7, 0) },
+    { customerId: custMem2.id, type: 'BURNED', amount: 1, balanceAfter: 2, referenceId: null, note: '結帳折抵 1 點（seed）', createdAt: ts(9, 0) },
+    { customerId: custMem5.id, type: 'BURNED', amount: 1, balanceAfter: 4, referenceId: null, note: '兌換折 1 點（seed）', createdAt: ts(17, 0) },
     { customerId: custMem1.id, type: 'EARNED', amount: 1, balanceAfter: 1, referenceId: orderMem1a.id, note: `贈點 ${orderMem1a.orderNumber}`, createdAt: ts(4) },
     { customerId: custMem1.id, type: 'EARNED', amount: 1, balanceAfter: 2, referenceId: orderMem1b.id, note: `贈點 ${orderMem1b.orderNumber}`, createdAt: ts(6) },
     { customerId: custMem2.id, type: 'EARNED', amount: 3, balanceAfter: 3, referenceId: orderMem2.id, note: `贈點 ${orderMem2.orderNumber}`, createdAt: ts(8) },
@@ -1220,9 +1504,12 @@ async function main() {
     { customerId: custMem5.id, type: 'EARNED', amount: 1, balanceAfter: 1, referenceId: orderMem5a.id, note: `贈點 ${orderMem5a.orderNumber}`, createdAt: ts(12) },
     { customerId: custMem5.id, type: 'EARNED', amount: 1, balanceAfter: 2, referenceId: orderMem5b.id, note: `贈點 ${orderMem5b.orderNumber}`, createdAt: ts(14) },
     { customerId: custMem5.id, type: 'EARNED', amount: 3, balanceAfter: 5, referenceId: orderMem5c.id, note: `贈點 ${orderMem5c.orderNumber}`, createdAt: ts(16) },
-    { customerId: custMem5.id, type: 'EXPIRED', amount: 1, balanceAfter: 4, referenceId: null, note: '效期到期沖銷 1 點（seed 示範）', createdAt: ts(18, 0) },
+    { customerId: custMem5.id, type: 'EXPIRED', amount: 1, balanceAfter: 3, referenceId: null, note: '效期到期沖銷 1 點（seed 示範）', createdAt: ts(18, 0) },
     { customerId: custMem6.id, type: 'EARNED', amount: 4, balanceAfter: 4, referenceId: orderMem6.id, note: `贈點 ${orderMem6.orderNumber}`, createdAt: ts(18) },
     { customerId: custMem6.id, type: 'BURNED', amount: 3, balanceAfter: 1, referenceId: null, note: '兌換折 3 點（seed）', createdAt: ts(18, 60) },
+    { customerId: custMem8.id, type: 'EARNED', amount: 3, balanceAfter: 3, referenceId: order014.id, note: `贈點 ${order014.orderNumber}`, createdAt: ts(22) },
+    { customerId: custMem9.id, type: 'EARNED', amount: 7, balanceAfter: 7, referenceId: order016.id, note: `贈點 ${order016.orderNumber}`, createdAt: ts(26) },
+    { customerId: custMem10.id, type: 'EARNED', amount: 10, balanceAfter: 10, referenceId: order018.id, note: `贈點 ${order018.orderNumber}`, createdAt: ts(30) },
   ];
   for (const row of ledgerRows) {
     await prisma.pointLedger.create({
@@ -1237,6 +1524,219 @@ async function main() {
         note: row.note,
         createdAt: row.createdAt,
       },
+    });
+  }
+
+  /** 銷售退貨：5 筆 RETURN_FROM_CUSTOMER + SALE_REFUND，分散 today/last7d/last30d */
+  const salesReturns: { orderId: string; orderNum: string; productId: string; qty: number; amount: number; custId: string; at: Date }[] = [
+    { orderId: orderMem2.id, orderNum: orderMem2.orderNumber, productId: pTeeW.id, qty: 1, amount: 150, custId: custMem2.id, at: daysAgo(7) },
+    { orderId: orderMem1a.id, orderNum: orderMem1a.orderNumber, productId: pBowl.id, qty: 1, amount: 99, custId: custMem1.id, at: daysAgo(12) },
+    { orderId: orderGold.id, orderNum: orderGold.orderNumber, productId: pTee.id, qty: 1, amount: 150, custId: custGold.id, at: daysAgo(15) },
+    { orderId: orderMem5a.id, orderNum: orderMem5a.orderNumber, productId: pTee.id, qty: 1, amount: 150, custId: custMem5.id, at: daysAgo(20) },
+    { orderId: orderT2.id, orderNum: orderT2.orderNumber, productId: pHay.id, qty: 1, amount: 149, custId: custGold.id, at: daysAgo(2) },
+  ];
+  for (const r of salesReturns) {
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: r.productId,
+        warehouseId: warehouse.id,
+        type: 'RETURN_FROM_CUSTOMER',
+        quantity: r.qty,
+        occurredAt: r.at,
+        referenceId: r.orderId,
+        note: `銷售退貨 ${r.orderNum} 退 ${r.qty} 件`,
+      },
+    });
+    await prisma.inventoryBalance.update({
+      where: { productId_warehouseId: { productId: r.productId, warehouseId: warehouse.id } },
+      data: { onHandQty: { increment: r.qty } },
+    });
+    await prisma.financeEvent.create({
+      data: {
+        type: 'SALE_REFUND',
+        partyId: `customer:${r.custId}`,
+        currency: 'TWD',
+        amount: r.amount,
+        taxAmount: 0,
+        occurredAt: r.at,
+        referenceId: r.orderId,
+        note: `SALE_REFUND ${r.orderNum} 退 ${r.qty} 件`,
+      },
+    });
+  }
+
+  /** 換貨：orderMem3（飼料 280）→ 新單（牧草 150），exchangeFromOrderId + SALE_REFUND 差額 */
+  const exchangeAt = daysAgo(9);
+  const orderExchange = await prisma.posOrder.create({
+    data: {
+      orderNumber: `DEMO-POS-${y}-EXCHANGE`,
+      storeId: store.id,
+      customerId: custMem3.id,
+      exchangeFromOrderId: orderMem3.id,
+      subtotalAmount: 150,
+      discountAmount: 0,
+      totalAmount: 150,
+      createdAt: exchangeAt,
+      items: { create: [{ productId: pHay.id, quantity: 1, unitPrice: 150 }] },
+    },
+  });
+  await prisma.posOrderPayment.create({
+    data: { orderId: orderExchange.id, method: 'CASH', amount: 150 },
+  });
+  await prisma.inventoryEvent.create({
+    data: {
+      productId: pHay.id,
+      warehouseId: warehouse.id,
+      type: 'SALE_OUT',
+      quantity: -1,
+      occurredAt: exchangeAt,
+      referenceId: orderExchange.id,
+      note: `換貨新單 ${orderExchange.orderNumber}`,
+    },
+  });
+  await prisma.inventoryBalance.update({
+    where: { productId_warehouseId: { productId: pHay.id, warehouseId: warehouse.id } },
+    data: { onHandQty: { decrement: 1 } },
+  });
+  await prisma.inventoryEvent.create({
+    data: {
+      productId: pFeed.id,
+      warehouseId: warehouse.id,
+      type: 'RETURN_FROM_CUSTOMER',
+      quantity: 1,
+      occurredAt: exchangeAt,
+      referenceId: orderMem3.id,
+      note: `換貨退原品 ${orderMem3.orderNumber}`,
+    },
+  });
+  await prisma.inventoryBalance.update({
+    where: { productId_warehouseId: { productId: pFeed.id, warehouseId: warehouse.id } },
+    data: { onHandQty: { increment: 1 } },
+  });
+  await prisma.financeEvent.create({
+    data: {
+      type: 'SALE_REFUND',
+      partyId: `customer:${custMem3.id}`,
+      currency: 'TWD',
+      amount: 130,
+      taxAmount: 0,
+      occurredAt: exchangeAt,
+      referenceId: orderMem3.id,
+      note: `SALE_REFUND 換貨差額 ${orderMem3.orderNumber} → ${orderExchange.orderNumber}`,
+    },
+  });
+  await prisma.financeEvent.create({
+    data: {
+      type: 'SALE_RECEIVABLE',
+      partyId: `customer:${custMem3.id}`,
+      currency: 'TWD',
+      amount: 150,
+      taxAmount: 0,
+      occurredAt: exchangeAt,
+      referenceId: orderExchange.id,
+      note: `POS ${orderExchange.orderNumber} 應收`,
+    },
+  });
+  await prisma.financeEvent.create({
+    data: {
+      type: 'SALE_PAYMENT',
+      partyId: `customer:${custMem3.id}`,
+      currency: 'TWD',
+      amount: 150,
+      taxAmount: 0,
+      occurredAt: exchangeAt,
+      referenceId: orderExchange.id,
+      note: `POS ${orderExchange.orderNumber} 實收`,
+    },
+  });
+  await prisma.pointLedger.create({
+    data: {
+      merchantId: merchant.id,
+      customerId: custMem3.id,
+      type: 'EARNED',
+      amount: 1,
+      balanceAfter: 3,
+      txnCode: 'SALE',
+      referenceId: orderExchange.id,
+      note: `贈點 ${orderExchange.orderNumber}（換貨新單）`,
+      createdAt: exchangeAt,
+    },
+  });
+
+  /** 換貨：再加 4 筆，共 5 筆，分散時間 */
+  const exchanges: {
+    srcOrder: typeof orderMem1b;
+    newProductId: string;
+    newQty: number;
+    newPrice: number;
+    returnProductId: string;
+    returnQty: number;
+    refundDelta: number;
+    custId: string;
+    at: Date;
+  }[] = [
+    { srcOrder: orderMem1b, newProductId: pBowl.id, newQty: 1, newPrice: 99, returnProductId: pTee.id, returnQty: 1, refundDelta: 51, custId: custMem1.id, at: daysAgo(11) },
+    { srcOrder: orderMem2, newProductId: pSnack.id, newQty: 1, newPrice: 65, returnProductId: pTeeW.id, returnQty: 1, refundDelta: 85, custId: custMem2.id, at: daysAgo(13) },
+    { srcOrder: orderMem5a, newProductId: pBottle.id, newQty: 1, newPrice: 129, returnProductId: pTee.id, returnQty: 1, refundDelta: 21, custId: custMem5.id, at: daysAgo(18) },
+    { srcOrder: order014, newProductId: pBowl.id, newQty: 1, newPrice: 99, returnProductId: pHay.id, returnQty: 1, refundDelta: 51, custId: custMem8.id, at: daysAgo(24) },
+  ];
+  for (let i = 0; i < exchanges.length; i++) {
+    const ex = exchanges[i];
+    const ordEx = await prisma.posOrder.create({
+      data: {
+        orderNumber: `DEMO-POS-${y}-EX${i + 2}`,
+        storeId: store.id,
+        customerId: ex.custId,
+        exchangeFromOrderId: ex.srcOrder.id,
+        subtotalAmount: ex.newPrice * ex.newQty,
+        discountAmount: 0,
+        totalAmount: ex.newPrice * ex.newQty,
+        createdAt: ex.at,
+        items: { create: [{ productId: ex.newProductId, quantity: ex.newQty, unitPrice: ex.newPrice }] },
+      },
+    });
+    await prisma.posOrderPayment.create({ data: { orderId: ordEx.id, method: 'CASH', amount: ex.newPrice * ex.newQty } });
+    await prisma.inventoryEvent.create({
+      data: { productId: ex.newProductId, warehouseId: warehouse.id, type: 'SALE_OUT', quantity: -ex.newQty, occurredAt: ex.at, referenceId: ordEx.id, note: `換貨新單 ${ordEx.orderNumber}` },
+    });
+    await prisma.inventoryBalance.update({
+      where: { productId_warehouseId: { productId: ex.newProductId, warehouseId: warehouse.id } },
+      data: { onHandQty: { decrement: ex.newQty } },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: ex.returnProductId,
+        warehouseId: warehouse.id,
+        type: 'RETURN_FROM_CUSTOMER',
+        quantity: ex.returnQty,
+        occurredAt: ex.at,
+        referenceId: ex.srcOrder.id,
+        note: `換貨退原品 ${ex.srcOrder.orderNumber}`,
+      },
+    });
+    await prisma.inventoryBalance.update({
+      where: { productId_warehouseId: { productId: ex.returnProductId, warehouseId: warehouse.id } },
+      data: { onHandQty: { increment: ex.returnQty } },
+    });
+    if (ex.refundDelta > 0) {
+      await prisma.financeEvent.create({
+        data: {
+          type: 'SALE_REFUND',
+          partyId: `customer:${ex.custId}`,
+          currency: 'TWD',
+          amount: ex.refundDelta,
+          taxAmount: 0,
+          occurredAt: ex.at,
+          referenceId: ex.srcOrder.id,
+          note: `SALE_REFUND 換貨差額 ${ex.srcOrder.orderNumber} → ${ordEx.orderNumber}`,
+        },
+      });
+    }
+    await prisma.financeEvent.createMany({
+      data: [
+        { type: 'SALE_RECEIVABLE', partyId: `customer:${ex.custId}`, currency: 'TWD', amount: ex.newPrice * ex.newQty, taxAmount: 0, occurredAt: ex.at, referenceId: ordEx.id, note: `POS ${ordEx.orderNumber} 應收` },
+        { type: 'SALE_PAYMENT', partyId: `customer:${ex.custId}`, currency: 'TWD', amount: ex.newPrice * ex.newQty, taxAmount: 0, occurredAt: ex.at, referenceId: ordEx.id, note: `POS ${ordEx.orderNumber} 實收` },
+      ],
     });
   }
 
@@ -1279,6 +1779,50 @@ async function main() {
     },
   });
 
+  /** 促銷／折價券關聯：訂單 promotionApplied、PromotionRule.usageCount、LoyaltyCoupon.usedCount */
+  const promoRule1 = await prisma.promotionRule.findFirst({
+    where: { merchantId: merchant.id, name: '滿百折十（小計100→折10）' },
+  });
+  const promoRule2 = await prisma.promotionRule.findFirst({
+    where: { merchantId: merchant.id, name: '全館滿千折百' },
+  });
+  if (promoRule1) {
+    await prisma.posOrder.updateMany({
+      where: { orderNumber: { in: [`DEMO-POS-${y}-001`, `DEMO-POS-${y}-011`, `DEMO-POS-${y}-023`] } },
+      data: {
+        promotionApplied: {
+          ruleId: promoRule1.id,
+          ruleName: '滿百折十',
+          applied: [{ type: 'WHOLE_FIXED', off: 10 }],
+        },
+      },
+    });
+    await prisma.promotionRule.update({
+      where: { id: promoRule1.id },
+      data: { usageCount: { increment: 3 } },
+    });
+  }
+  if (promoRule2) {
+    await prisma.posOrder.updateMany({
+      where: { orderNumber: { in: [`DEMO-POS-${y}-016`, `DEMO-POS-${y}-025`] } },
+      data: {
+        promotionApplied: {
+          ruleId: promoRule2.id,
+          ruleName: '全館滿千折百',
+          applied: [{ type: 'WHOLE_FIXED', off: 100 }],
+        },
+      },
+    });
+    await prisma.promotionRule.update({
+      where: { id: promoRule2.id },
+      data: { usageCount: { increment: 2 } },
+    });
+  }
+  await prisma.loyaltyCoupon.update({
+    where: { merchantId_code: { merchantId: merchant.id, code: 'VIP50' } },
+    data: { usedCount: 1 },
+  });
+
   await prisma.bulkImportJob.create({
     data: {
       kind: 'products_csv',
@@ -1292,6 +1836,137 @@ async function main() {
       status: 'failed',
       error: 'CSV 欄位 sku 缺漏',
       resultJson: null,
+    },
+  });
+
+  /** 金流快照：5 筆，由實際 FinanceEvent 彙總，供 /admin/finance/snapshots 與金流報表數據一致 */
+  const snapshotDates = [order1Occurred, daysAgo(7), daysAgo(14), daysAgo(21), daysAgo(28)];
+  for (const d of snapshotDates) {
+    const sd = new Date(d);
+    sd.setUTCHours(0, 0, 0, 0);
+    const snapFrom = new Date(sd);
+    const snapTo = new Date(sd);
+    snapTo.setUTCDate(snapTo.getUTCDate() + 1);
+    snapTo.setMilliseconds(-1);
+    const [byTypeRows, byPartyRows] = await Promise.all([
+      prisma.financeEvent.groupBy({ by: ['type'], where: { occurredAt: { gte: snapFrom, lte: snapTo } }, _sum: { amount: true } }),
+      prisma.financeEvent.groupBy({ by: ['partyId', 'type'], where: { occurredAt: { gte: snapFrom, lte: snapTo } }, _sum: { amount: true } }),
+    ]);
+    const byType: Record<string, number> = {};
+    for (const r of byTypeRows) byType[r.type] = Number(r._sum.amount ?? 0);
+    const byPartyMap = new Map<string, Record<string, number>>();
+    for (const r of byPartyRows) {
+      if (!r.partyId) continue;
+      const cur = byPartyMap.get(r.partyId) ?? {};
+      cur[r.type] = Number(r._sum.amount ?? 0);
+      byPartyMap.set(r.partyId, cur);
+    }
+    const byParty = Array.from(byPartyMap.entries()).map(([partyId, amountsByType]) => ({ partyId, amountsByType }));
+    await prisma.financeSnapshot.create({
+      data: {
+        asOfDate: sd,
+        type: 'daily',
+        path: `finance/${sd.toISOString().slice(0, 10)}-daily.json`,
+        summaryJson: { asOfDate: sd.toISOString().slice(0, 10), type: 'daily', generatedAt: new Date().toISOString(), byType, byParty } as object,
+      },
+    });
+  }
+
+  /** 關帳區間：2 筆 demo，供 /admin/finance/periods 展示 */
+  const period1Start = new Date(y, 0, 1);
+  const period1End = new Date(y, 0, 15, 23, 59, 59);
+  const period2Start = new Date(y, 0, 16);
+  const period2End = new Date(y, 0, 31, 23, 59, 59);
+  await prisma.financePeriodClose.create({
+    data: {
+      merchantId: merchant.id,
+      startDate: period1Start,
+      endDate: period1End,
+      closedBy: 'seed',
+      status: 'CLOSED',
+    },
+  });
+  await prisma.financePeriodClose.create({
+    data: {
+      merchantId: merchant.id,
+      startDate: period2Start,
+      endDate: period2End,
+      closedBy: 'seed',
+      status: 'CLOSED',
+    },
+  });
+
+  /** 稽核紀錄：對應部分 FinanceEvent，供 /admin/finance/audit-log 展示 */
+  const sampleEvents = await prisma.financeEvent.findMany({
+    take: 15,
+    orderBy: { occurredAt: 'desc' },
+  });
+  for (const ev of sampleEvents) {
+    await prisma.financeAuditLog.create({
+      data: {
+        eventId: ev.id,
+        actor: 'seed',
+        source: 'seed',
+        amount: ev.amount,
+        eventType: ev.type,
+      },
+    });
+  }
+
+  /** 報表穿透審計：referenceId 對應實際可穿透實體，source 與報表來源一致 */
+  await prisma.reportClickAudit.create({
+    data: {
+      merchantId: merchant.id,
+      source: 'finance-events',
+      field: 'referenceId',
+      referenceId: order1.id,
+      resolvedKind: 'posOrder',
+      success: true,
+      resultCode: 'ok',
+    },
+  });
+  await prisma.reportClickAudit.create({
+    data: {
+      merchantId: merchant.id,
+      source: 'finance-events',
+      field: 'referenceId',
+      referenceId: rnFull.id,
+      resolvedKind: 'receivingNote',
+      success: true,
+      resultCode: 'ok',
+    },
+  });
+  await prisma.reportClickAudit.create({
+    data: {
+      merchantId: merchant.id,
+      source: 'loyalty-ledger',
+      field: 'referenceId',
+      referenceId: order018.id,
+      resolvedKind: 'posOrder',
+      success: true,
+      resultCode: 'ok',
+    },
+  });
+  await prisma.reportClickAudit.create({
+    data: {
+      merchantId: merchant.id,
+      source: 'pos-reports',
+      field: 'referenceId',
+      referenceId: orderExchange.id,
+      resolvedKind: 'posOrder',
+      success: true,
+      resultCode: 'ok',
+    },
+  });
+  await prisma.reportClickAudit.create({
+    data: {
+      merchantId: merchant.id,
+      source: 'finance-events',
+      field: 'referenceId',
+      referenceId: rnPartial.id,
+      resolvedKind: 'receivingNote',
+      success: true,
+      resultCode: 'ok',
     },
   });
 

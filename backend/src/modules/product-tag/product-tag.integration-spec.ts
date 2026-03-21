@@ -143,6 +143,37 @@ describe('ProductTagService (integration)', () => {
     }
   }, 10000);
 
+  it('listForPosDiscount returns only showInPosDiscount tags', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `PT-POS-${Date.now()}`, name: 'ProductTag POS Test' },
+    });
+    try {
+      const show = await productTagService.create({
+        merchantId: merchant.id,
+        name: '熱銷',
+        code: 'hot',
+        showInPosDiscount: true,
+      });
+      const hide = await productTagService.create({
+        merchantId: merchant.id,
+        name: '隱藏',
+        code: 'hidden',
+        showInPosDiscount: false,
+      });
+
+      const forPos = await productTagService.listForPosDiscount(merchant.id);
+      const ids = forPos.map((t) => t.id);
+      expect(ids).toContain(show.id);
+      expect(ids).not.toContain(hide.id);
+      expect(forPos.every((t) => 'id' in t && 'name' in t && 'code' in t)).toBe(true);
+    } finally {
+      await prisma.productTag.deleteMany({ where: { merchantId: merchant.id } });
+      await prisma.merchant.delete({ where: { id: merchant.id } });
+    }
+  }, 10000);
+
   it('reorder updates sortOrder; validates ids', async () => {
     if (!process.env.DATABASE_URL) return;
     const merchant = await prisma.merchant.create({
