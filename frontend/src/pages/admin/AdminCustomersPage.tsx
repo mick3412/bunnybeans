@@ -8,6 +8,7 @@ import {
   getCustomerContacts,
   addCustomerContact,
   exportSegmentCsv,
+  fetchCsvExport,
   type ApiError,
   type CustomerContactItem,
 } from '../../modules/admin/adminApi';
@@ -50,6 +51,7 @@ export const AdminCustomersPage: React.FC = () => {
   const [editCustomer, setEditCustomer] = useState<LoyaltyCustomerRow | null>(null);
   const [createForm, setCreateForm] = useState({ name: '', phone: '', email: '', memberLevel: '', memberCode: '' });
   const [createSaving, setCreateSaving] = useState(false);
+  const [listExporting, setListExporting] = useState(false);
 
   const load = useCallback(async () => {
     if (!merchantId) {
@@ -111,65 +113,123 @@ export const AdminCustomersPage: React.FC = () => {
     return list;
   }, [items, searchQDebounced, levelFilter]);
 
+  const hasActiveFilters = !!searchQ.trim() || !!statusFilter || !!tagFilter || !!levelFilter;
+  const clearFilters = () => {
+    setSearchQ('');
+    setStatusFilter('');
+    setTagFilter('');
+    setLevelFilter('');
+  };
+
   return (
     <>
     <StandardListLayout
       title="會員管理"
       filters={
         <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="flex flex-wrap items-end gap-3">
-            <TextInput
-              label="搜尋"
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-              placeholder="姓名、電話、會員碼"
-              className="w-48 !py-1.5"
-            />
-            <div>
-              <label className="mb-1 block text-xs text-muted">狀態</label>
-              <select
-                className="rounded-lg border border-brand-surface px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">全部</option>
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="BLOCKED">BLOCKED</option>
-              </select>
+          <div className="rounded-2xl border border-brand-surface bg-table-head px-3 py-3">
+            <div className="mb-1 text-xs font-semibold text-muted">篩選</div>
+            <div className="mb-1.5 flex flex-wrap items-center gap-1">
+              <span className="mr-1 text-xs font-medium text-muted">搜尋</span>
+              <input
+                type="search"
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                placeholder="姓名、電話、會員碼"
+                className="h-7 w-48 rounded-lg border border-brand-surface bg-white px-2 text-xs placeholder:text-muted"
+              />
             </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted">標籤 (tag)</label>
-              <select
-                className="rounded-lg border border-brand-surface px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                value={tagFilter}
-                onChange={(e) => setTagFilter(e.target.value)}
-              >
-                <option value="">全部</option>
-                {tagsFromItems.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+            <div className="mb-1.5 flex flex-wrap items-center gap-1">
+              <span className="mr-1 text-xs font-medium text-muted">狀態</span>
+              {['', 'ACTIVE', 'BLOCKED'].map((v) => {
+                const selected = statusFilter === v;
+                return (
+                  <button
+                    key={v || 'all'}
+                    type="button"
+                    onClick={() => setStatusFilter(v)}
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      selected ? 'bg-brand-primary text-white' : 'bg-white text-content hover:bg-brand-surface border border-brand-surface'
+                    }`}
+                  >
+                    {v || '全部'}
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted">等級</label>
-              <select
-                className="rounded-lg border border-brand-surface px-3 py-1.5 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                value={levelFilter}
-                onChange={(e) => setLevelFilter(e.target.value)}
-              >
-                <option value="">全部</option>
-                {levels.map((l) => (
-                  <option key={l} value={l}>
-                    {l}
-                  </option>
-                ))}
-              </select>
+            {levels.length > 0 && (
+              <div className="mb-1.5 flex flex-wrap items-center gap-1">
+                <span className="mr-1 text-xs font-medium text-muted">等級</span>
+                {['', ...levels].map((l) => {
+                  const selected = levelFilter === l;
+                  return (
+                    <button
+                      key={l || 'all'}
+                      type="button"
+                      onClick={() => setLevelFilter(l)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        selected ? 'bg-brand-primary text-white' : 'bg-white text-content hover:bg-brand-surface border border-brand-surface'
+                      }`}
+                    >
+                      {l || '全部'}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {tagsFromItems.length > 0 && (
+              <div className="mb-1.5 flex flex-wrap items-center gap-1">
+                <span className="mr-1 text-xs font-medium text-muted">標籤</span>
+                {['', ...tagsFromItems].map((t) => {
+                  const selected = tagFilter === t;
+                  return (
+                    <button
+                      key={t || 'all'}
+                      type="button"
+                      onClick={() => setTagFilter(t)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        selected ? 'bg-brand-primary text-white' : 'bg-white text-content hover:bg-brand-surface border border-brand-surface'
+                      }`}
+                    >
+                      {t || '全部'}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="mt-2 flex items-center justify-between text-xs text-muted">
+              <span>共 {filtered.length} 件</span>
+              {hasActiveFilters && (
+                <button type="button" onClick={clearFilters} className="underline hover:text-content">
+                  清除篩選
+                </button>
+              )}
             </div>
-            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex shrink-0 items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={listExporting || !merchantId}
+                onClick={async () => {
+                  if (!merchantId) return;
+                  setListExporting(true);
+                  const q = new URLSearchParams();
+                  q.set('merchantId', merchantId);
+                  if (searchQDebounced.trim()) q.set('search', searchQDebounced.trim());
+                  if (statusFilter) q.set('status', statusFilter);
+                  if (tagFilter) q.set('tag', tagFilter);
+                  if (levelFilter) q.set('memberLevel', levelFilter);
+                  const path = `customers/export?${q.toString()}`;
+                  const out = await fetchCsvExport(path, 'customers.csv');
+                  setListExporting(false);
+                  if (out !== true) showToast(getErrorMessage(out as ApiError), 'err');
+                }}
+              >
+                {listExporting ? '匯出中…' : '匯出列表'}
+              </Button>
               <Link to="/admin/customers/import">
                 <Button type="button" size="sm" variant="primary" className="shadow-sm">
                   匯入
