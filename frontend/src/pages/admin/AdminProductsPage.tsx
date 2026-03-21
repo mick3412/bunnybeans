@@ -32,6 +32,7 @@ import { TextInput } from '../../shared/components/TextInput';
 import { useAdminToast } from './AdminToastContext';
 import { pollImportJob } from '../../shared/utils/pollImportJob';
 import { hasAdminApiKey } from '../../shared/rbac/adminKey';
+import { DEFAULT_TAGS } from '../../shared/utils/adminTagMaster';
 
 const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v3';
 const PRODUCTS_TABLE_COL_DEFAULTS = {
@@ -263,7 +264,7 @@ export const AdminProductsPage: React.FC = () => {
     if (!merchantId) return;
     void (async () => {
       const out = await getProductTags(merchantId);
-      setTagOptions(Array.isArray(out) ? out : []);
+      setTagOptions(Array.isArray(out) ? out : DEFAULT_TAGS);
     })();
   }, [merchantId]);
 
@@ -438,7 +439,7 @@ export const AdminProductsPage: React.FC = () => {
           ? monthsToShelfLifeDisplay(row.shelfLifeMonths)
           : '',
       expiryDate: row.expiryDate ?? '',
-      specWeight: row.specWeight ?? (row.weightGrams != null ? `${row.weightGrams}g` : ''),
+      specWeight: row.specWeight ?? '',
       listPrice: row.listPrice ?? '0',
       salePrice: row.salePrice ?? '0',
       costPrice: row.costPrice ?? '',
