@@ -103,6 +103,29 @@ export const AdminFinancePeriodsPage: React.FC = () => {
     >
       <div className="mb-6 overflow-hidden rounded-xl border border-brand-surface bg-table-head p-4">
         <h3 className="mb-3 text-sm font-semibold text-content">關帳</h3>
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {[
+            { label: '今日', get: () => { const t = new Date().toISOString().slice(0, 10); return { s: t, e: t }; } },
+            { label: '昨日', get: () => { const d = new Date(); d.setDate(d.getDate() - 1); const t = d.toISOString().slice(0, 10); return { s: t, e: t }; } },
+            { label: '近 7 日', get: () => { const d = new Date(); const t = d.toISOString().slice(0, 10); d.setDate(d.getDate() - 7); return { s: d.toISOString().slice(0, 10), e: t }; } },
+            { label: '近 30 日', get: () => { const d = new Date(); const t = d.toISOString().slice(0, 10); d.setDate(d.getDate() - 30); return { s: d.toISOString().slice(0, 10), e: t }; } },
+            { label: '本月', get: () => { const d = new Date(); const t = d.toISOString().slice(0, 10); d.setDate(1); return { s: d.toISOString().slice(0, 10), e: t }; } },
+            { label: '上月', get: () => { const d = new Date(); d.setDate(0); const e = d.toISOString().slice(0, 10); d.setDate(1); return { s: d.toISOString().slice(0, 10), e }; } },
+          ].map((opt) => (
+            <button
+              key={opt.label}
+              type="button"
+              className="rounded-full px-2.5 py-1 text-xs font-medium bg-table-head text-content hover:bg-brand-surface"
+              onClick={() => {
+                const { s, e } = opt.get();
+                setCloseStart(s);
+                setCloseEnd(e);
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="mb-1 block text-xs text-muted">起日</label>
@@ -141,7 +164,12 @@ export const AdminFinancePeriodsPage: React.FC = () => {
         {loading ? (
           <div className="px-4 py-8 text-center text-sm text-muted">載入中…</div>
         ) : items.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted">尚無關帳區間</div>
+          <div className="px-4 py-8 text-center text-sm text-muted">
+            尚無關帳區間
+            <span className="mt-1 block text-xs">
+              若為首次使用，請先執行 <code className="rounded bg-brand-surface px-1 py-0.5">pnpm db:seed</code> 建立示範資料
+            </span>
+          </div>
         ) : (
           <div className="table-sticky-head overflow-x-auto">
             <table className="w-full text-left text-sm">
