@@ -485,15 +485,42 @@ interface PagedResult<T> {
 #### 5.0d 應收應付餘額 `GET /finance/balances`（stable）
 
 - **Query**：
-  - `merchantId`（必填）：商家 UUID（用於多商家資料隔離）
-  - `partyId`（可選，精確比對）
-  - **`kind`**（可選）：`customer`｜`supplier`，依 partyId 前綴或 Customer/Supplier 表解析後篩選
+  - `merchantId`（必填）：商家 UUID（多商家資料隔離；單一商家時可未傳，後端自動解析）
+  - `partyId`（可選）：精確比對，例 `customer:{uuid}`、`supplier:{uuid}`
+  - `kind`（可選）：`customer`｜`supplier`，篩選 party 類型
   - `page`（預設 `1`）、`pageSize`（預設 `50`，上限 `200`）
 - **回應**：`{ items, page, pageSize, total, totals }`
   - `items`: `[{ partyId, receivable, payable, displayName?, kind? }]`
   - `totals`: `{ receivable, payable }`（為**篩選後**全集合的加總）
-  - `displayName`：依 partyId 對照 Customer.name 或 Supplier.name，無則省略。
-  - `kind`：依 partyId 前綴（`customer:`、`supplier:`）解析；無前綴時查 Customer／Supplier 推論，無法推論則省略。
+  - `displayName`：依 partyId 對照 Customer.name 或 Supplier.name，無則省略
+  - `kind`：`customer` 或 `supplier`，依 partyId 前綴／Party 視圖解析
+
+**Response 範例** `200`：
+
+```json
+{
+  "items": [
+    {
+      "partyId": "customer:uuid-xxx",
+      "receivable": 1200.5,
+      "payable": 0,
+      "displayName": "王小明",
+      "kind": "customer"
+    },
+    {
+      "partyId": "supplier:uuid-yyy",
+      "receivable": 0,
+      "payable": 850,
+      "displayName": "供應商A",
+      "kind": "supplier"
+    }
+  ],
+  "page": 1,
+  "pageSize": 50,
+  "total": 2,
+  "totals": { "receivable": 1200.5, "payable": 850 }
+}
+```
 
 **Party 的概念（設計草案）**
 

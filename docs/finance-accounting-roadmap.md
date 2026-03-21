@@ -259,7 +259,7 @@
 
 | 項目 | 狀態 | 說明 |
 |------|------|------|
-| api-design-inventory-finance.md | **已有** | §5 為 Finance API 詳細規格；GET 已含 type 查詢。可保留，本 roadmap 不重複細部欄位。 |
+| api-design-inventory-finance.md | **已有** | §5 為 Finance API 詳細規格；§5.0d GET /finance/balances 含回傳格式、Query（partyId、kind）、Response 範例；integration-spec 涵蓋 balances 測試。 |
 | inventory-finance-immutability.md | **已有** | 原則與雙軌、關帳、Audit、備份；本 roadmap §二、§六、§七 引用即可。 |
 | api-design.md §4 金流 | **draft** | 簡短；可改為「詳見 api-design-inventory-finance 與 finance-accounting-roadmap」。 |
 

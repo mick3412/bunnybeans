@@ -15,6 +15,16 @@
 
 ---
 
+### INSTRUCTIONS-040（Finance balances 契約、Product 驗證）
+- 做了：依 `BACKEND-INSTRUCTIONS 040.md` §1 完成本輪任務。
+  - **#1 迴歸確認**：039 變更無遺漏、測試全綠。
+  - **#2 Finance balances 契約**：`api-design-inventory-finance.md` §5.0d 補 Response 範例 JSON、Query 參數說明；`finance-accounting-roadmap.md` §9.3 更新契約狀態；integration-spec 已有 5 則 getBalances 測試。
+  - **#3 Product schema + ProductTag**：已實作（schema 含 specCapacity/specStyle/specWeight/expiryDescription；ProductTag CRUD + api-design §6.1a；product-tag.integration-spec 7 則），本輪驗證無缺。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 153 passed；`pnpm ci:backend-with-db` 通過。
+- commits：`bee6d773` docs(finance): GET /finance/balances contract + roadmap §9
+
+---
+
 ### INSTRUCTIONS-039（catch 修正、POS 產品 brandName）
 - 做了：依 `BACKEND-INSTRUCTIONS 039.md` §1 完成本輪任務。
   - **#1 迴歸確認**：038 變更無遺漏、測試全綠。
