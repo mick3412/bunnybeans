@@ -622,7 +622,7 @@ export class PosService {
       throwNotFound('POS_STORE_NOT_FOUND', 'Store not found');
     }
     const warehouseIds = store.warehouses.map((w) => w.id);
-    const products = await this.productService.listProducts();
+    const products = await this.productService.listProducts(undefined, { includeBrand: true });
     if (warehouseIds.length === 0) {
       return products.map((p) => ({ ...p, onHandQty: 0 }));
     }

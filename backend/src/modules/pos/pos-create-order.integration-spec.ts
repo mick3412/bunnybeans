@@ -81,7 +81,21 @@ describe('PosService (integration)', () => {
     expect(found).toBeDefined();
     expect(found!.onHandQty).toBe(42);
     expect(found!.name).toBe('Product LPI');
+    expect('brandName' in found!).toBe(true);
 
+    const brand = await prisma.brand.create({
+      data: { code: `BR-LPI-${Date.now()}`, name: 'Brand LPI' },
+    });
+    const productWithBrand = await prisma.product.create({
+      data: { sku: `SKU-LPI-B-${Date.now()}`, name: 'Product With Brand', brandId: brand.id },
+    });
+    const foundWithBrand = (await posService.listProductsWithInventory(store.id)).find(
+      (p) => p.id === productWithBrand.id,
+    );
+    expect((foundWithBrand as { brandName?: string | null })?.brandName).toBe('Brand LPI');
+
+    await prisma.product.delete({ where: { id: productWithBrand.id } });
+    await prisma.brand.delete({ where: { id: brand.id } });
     await prisma.inventoryBalance.deleteMany({
       where: { productId: product.id, warehouseId: warehouse.id },
     });

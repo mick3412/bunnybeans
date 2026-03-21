@@ -148,7 +148,7 @@ interface PosOrderListResponse {
 
 - **Query**（必填）：`storeId` — 門市 id，用以解析該門市所屬倉庫並彙總庫存。
 - **用途**：供 POS 收銀區產品塊顯示；回傳產品基本欄位（id、sku、barcode、name、salePrice 等）及該門市對應倉庫之 **`onHandQty`**（InventoryBalance 彙總）。
-- **回應**：`200`，`items: Array<{ id, sku, barcode, name, salePrice, ... , onHandQty: number }>`。
+- **回應**：`200`，`items: Array<{ id, sku, barcode, name, salePrice, ..., brandName?: string | null, onHandQty: number }>`。`brandName` 來自 Brand 表 join（選填，供收銀區依品牌→SKU 排序）。
 - **錯誤**：`400` **`POS_PRODUCTS_STORE_REQUIRED`**（未帶 storeId）；`404` **`POS_STORE_NOT_FOUND`**（門市不存在）。
 - **說明**：門市無關聯倉庫時，各產品 `onHandQty` 為 0。
 

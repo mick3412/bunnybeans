@@ -105,16 +105,26 @@ export class ProductService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async listProducts(filter?: {
-    search?: string;
-    sku?: string;
-    categoryId?: string;
-    brandId?: string;
-    tag?: string;
-    minDaysUntilExpiry?: number;
-  }) {
-    const rows = await this.repo.findAll(filter);
-    return rows.map(toProductResponse);
+  async listProducts(
+    filter?: {
+      search?: string;
+      sku?: string;
+      categoryId?: string;
+      brandId?: string;
+      tag?: string;
+      minDaysUntilExpiry?: number;
+    },
+    opts?: { includeBrand?: boolean },
+  ) {
+    const rows = await this.repo.findAll(filter, opts);
+    return rows.map((p) => {
+      const base = toProductResponse(p);
+      if (opts?.includeBrand && p && typeof p === 'object' && 'brand' in p) {
+        const b = (p as { brand?: { name: string } | null }).brand;
+        return { ...base, brandName: b?.name ?? null };
+      }
+      return base;
+    });
   }
 
   /**

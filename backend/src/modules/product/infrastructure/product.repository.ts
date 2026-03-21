@@ -11,15 +11,18 @@ function toDec(v: string | number | null | undefined, fallback = '0'): Prisma.De
 export class ProductRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findAll(filter?: {
-    search?: string;
-    sku?: string;
-    categoryId?: string;
-    brandId?: string;
-    tag?: string;
-    /** 僅回傳 expiryDate 之「日曆剩餘天數」嚴格大於 N 之商品（UTC 日界；需有 expiryDate） */
-    minDaysUntilExpiry?: number;
-  }) {
+  findAll(
+    filter?: {
+      search?: string;
+      sku?: string;
+      categoryId?: string;
+      brandId?: string;
+      tag?: string;
+      /** 僅回傳 expiryDate 之「日曆剩餘天數」嚴格大於 N 之商品（UTC 日界；需有 expiryDate） */
+      minDaysUntilExpiry?: number;
+    },
+    opts?: { includeBrand?: boolean },
+  ) {
     type Where = Prisma.ProductWhereInput;
     const and: Where[] = [];
     if (filter?.sku?.trim()) {
@@ -56,30 +59,34 @@ export class ProductRepository {
       }
     }
     const where: Where = and.length ? { AND: and } : {};
+    const select: Prisma.ProductSelect = {
+      id: true,
+      sku: true,
+      barcode: true,
+      name: true,
+      description: true,
+      specSize: true,
+      specCapacity: true,
+      specStyle: true,
+      specWeight: true,
+      expiryDescription: true,
+      listPrice: true,
+      salePrice: true,
+      costPrice: true,
+      categoryId: true,
+      brandId: true,
+      tags: true,
+      createdAt: true,
+      updatedAt: true,
+    };
+    if (opts?.includeBrand) {
+      select.brand = { select: { name: true } };
+    }
     return this.prisma.product.findMany({
       where: Object.keys(where).length ? where : undefined,
       orderBy: { sku: 'asc' },
       take: 5000,
-      select: {
-        id: true,
-        sku: true,
-        barcode: true,
-        name: true,
-        description: true,
-        specSize: true,
-        specCapacity: true,
-        specStyle: true,
-        specWeight: true,
-        expiryDescription: true,
-        listPrice: true,
-        salePrice: true,
-        costPrice: true,
-        categoryId: true,
-        brandId: true,
-        tags: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select,
     });
   }
 
