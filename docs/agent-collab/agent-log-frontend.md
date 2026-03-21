@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 042（折扣標籤／關帳驗收 + 熱銷整合 + 商品標籤 + 篩選 POS 風格 + 匯出 + 關帳快捷）
+- 做了：① **迴歸**：build 全綠。② **折扣標籤／關帳驗收**：041 延續，E2E 已於前輪補齊（admin-discount-tags、admin-pos-sessions）。③ **熱銷排行**：PosReportsPage 長條圖與表格整合為單一視圖，金額欄內嵌橫條圖。④ **商品總覽標籤欄**：品牌與定價間新增「標籤」欄（badge 顯示，最多 3 個 +N）。⑤ **商品篩選 POS 風格**：品項／分類、品牌、折扣／標籤 各一列 pill 按鈕，底部「共 N 件」+ 清除篩選。⑥ **匯入匯出對應**：商品 CSV 匯出（依篩選）；會員列表 CSV 匯出（依篩選）；庫存異動明細匯出按鈕；needsAdminKey 補 products/export、customers/export。⑦ **批次改標籤**：StandardFloatBar 新增批次改標籤（PATCH /products/batch-tags，operation add）。⑧ **折扣標籤數字加單位**：銷量→天/件、有折扣→%、低庫存→件、新上架→天。⑨ **關帳區間快捷**：今日、昨日、近 7/30 日、本月、上月 pill 一鍵填入。⑩ **會員管理篩選 POS 風格**：搜尋一列；狀態、等級、標籤 pill 按鈕；共 N 件 + 清除。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：（待 atomic commits）
+- 檔案：PosReportsPage、AdminDiscountTagsPage、AdminFinancePeriodsPage、AdminProductsPage、AdminCustomersPage、AdminInventoryPage、productApi、client.ts
+
+---
+
 ### INSTRUCTIONS 040（search debounce + 應收應付補強 + 規格/標籤/倉庫門市/點數存摺）
 - 做了：① **迴歸**：build 全綠。② **search debounce**：商品、客戶、供應商、POS 收銀已皆有 useDebouncedValue 300ms。③ **應收應付餘額頁**：getFinanceBalances 對齊契約；錯誤時 showAdminApiErrorToast；error 區塊改用 StandardListLayout error prop + 重試按鈕。④ **商品規格**：移除 weightGrams→g 轉換，specWeight 純文字。⑤ **標籤**：getProductTags 失敗時 fallback DEFAULT_TAGS；類別管理頁已接 listProductTags。⑥ **倉庫/門市頁**：標題「倉庫/門市」、 Alert 取代 red 錯誤區、間距統一。⑦ **點數存摺**：tab 已顯示中文（全部／贈點／扣點／鎖定／已過期），查詢 enum 保留。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
