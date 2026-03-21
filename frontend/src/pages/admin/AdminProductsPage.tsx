@@ -1277,14 +1277,41 @@ export const AdminProductsPage: React.FC = () => {
                       label="條碼"
                       value={form.barcode}
                       onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
-                      placeholder="選填"
                     />
-                    <TextInput
-                      label="名稱"
-                      value={form.name}
-                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                      required
-                    />
+                    <div className="flex flex-wrap items-start gap-3 xl:col-span-2">
+                      <div className="min-w-0 flex-1">
+                        <TextInput
+                          label="名稱"
+                          value={form.name}
+                          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                          required
+                        />
+                      </div>
+                      {editing && (
+                        <div className="shrink-0 rounded-lg border border-brand-surface bg-table-head px-3 py-2">
+                          <div className="mb-1 text-[11px] font-semibold text-muted">庫存餘額（快捷）</div>
+                          <div className="flex flex-wrap gap-2 text-[11px]">
+                            <span className="rounded bg-white px-2 py-1 shadow-sm">
+                              <span className="text-muted">全倉</span>
+                              <span className="ml-2 font-mono font-semibold tabular-nums text-content">
+                                {stockByProduct[editing.id] ?? 0}
+                              </span>
+                            </span>
+                            {warehousesOrdered.slice(0, 6).map((w) => (
+                              <span key={w.id} className="rounded bg-white px-2 py-1 shadow-sm" title={w.name}>
+                                <span className="text-muted">{w.name}</span>
+                                <span className="ml-2 font-mono tabular-nums text-content">
+                                  {stockByProductWarehouse[editing.id]?.[w.id] ?? 0}
+                                </span>
+                              </span>
+                            ))}
+                            {warehousesOrdered.length > 6 && (
+                              <span className="text-muted">…其餘 {warehousesOrdered.length - 6} 倉</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -1328,30 +1355,6 @@ export const AdminProductsPage: React.FC = () => {
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
                     規格與效期
                   </p>
-                  {editing && (
-                    <div className="mb-3 rounded-lg border border-brand-surface bg-table-head p-2">
-                      <div className="mb-1 text-[11px] font-semibold text-muted">庫存餘額（快捷）</div>
-                      <div className="flex flex-wrap gap-3 text-[11px]">
-                        <span className="rounded bg-white px-2 py-1 shadow-sm">
-                          <span className="text-muted">全倉</span>
-                          <span className="ml-2 font-mono font-semibold tabular-nums text-content">
-                            {stockByProduct[editing.id] ?? 0}
-                          </span>
-                        </span>
-                        {warehousesOrdered.slice(0, 6).map((w) => (
-                          <span key={w.id} className="rounded bg-white px-2 py-1 shadow-sm" title={w.name}>
-                            <span className="text-muted">{w.name}</span>
-                            <span className="ml-2 font-mono tabular-nums text-content">
-                              {stockByProductWarehouse[editing.id]?.[w.id] ?? 0}
-                            </span>
-                          </span>
-                        ))}
-                        {warehousesOrdered.length > 6 && (
-                          <span className="text-muted">…其餘 {warehousesOrdered.length - 6} 倉</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <TextInput
                       label="尺寸 (specSize)"
@@ -1379,8 +1382,8 @@ export const AdminProductsPage: React.FC = () => {
                     />
                     <div className="sm:col-span-2">
                       <div className="mb-2 text-xs font-medium text-muted">效期模式</div>
-                      <div className="flex flex-wrap gap-4">
-                        <label className="flex items-center gap-2">
+                      <div className="flex flex-wrap gap-3 rounded-lg border border-brand-surface bg-white p-2">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-brand-canvas">
                           <input
                             type="radio"
                             name="expiryMode"
@@ -1388,10 +1391,11 @@ export const AdminProductsPage: React.FC = () => {
                             onChange={() =>
                               setForm((f) => ({ ...f, expiryMode: 'production', expiryDate: '' }))
                             }
+                            className="h-4 w-4 rounded-full border-2 border-brand-surface text-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                           />
                           <span className="text-sm">(a) 生產日期 + 效期（年/月）</span>
                         </label>
-                        <label className="flex items-center gap-2">
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-brand-canvas">
                           <input
                             type="radio"
                             name="expiryMode"
@@ -1404,6 +1408,7 @@ export const AdminProductsPage: React.FC = () => {
                                 shelfLifeMonths: '',
                               }))
                             }
+                            className="h-4 w-4 rounded-full border-2 border-brand-surface text-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                           />
                           <span className="text-sm">(b) 到期日期</span>
                         </label>
