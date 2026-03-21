@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { CrmJobService } from './crm-job.service';
 
 @Injectable()
 export class DispatchRuleRunnerService {
+  private readonly logger = new Logger(DispatchRuleRunnerService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly crmJobService: CrmJobService,
@@ -136,7 +138,8 @@ export class DispatchRuleRunnerService {
     if (e instanceof Error && e.message.trim()) return e.message;
     try {
       return JSON.stringify(res ?? err);
-    } catch {
+    } catch (inner) {
+      this.logger.warn(`formatError JSON.stringify failed: ${inner instanceof Error ? inner.message : String(inner)}`);
       return 'unknown error';
     }
   }

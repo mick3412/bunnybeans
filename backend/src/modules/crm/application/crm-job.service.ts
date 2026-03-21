@@ -107,7 +107,8 @@ export class CrmJobService {
     if (job.resultJson) {
       try {
         out.result = JSON.parse(job.resultJson) as JobResultOk;
-      } catch {
+      } catch (e) {
+        this.logger.warn(`getJob ${id}: resultJson parse failed: ${e instanceof Error ? e.message : String(e)}`);
         out.result = { sent: 0, skipped: 0 };
       }
     }

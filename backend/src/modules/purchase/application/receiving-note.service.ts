@@ -225,6 +225,7 @@ export class ReceivingNoteService {
             `;
           }
         } catch (e) {
+          // Raw update may fail if DB schema/migration differs; fallback preserves patchLines flow.
           new Logger(ReceivingNoteService.name).warn(`patchLines raw update failed: ${(e as Error).message}`);
         }
       }

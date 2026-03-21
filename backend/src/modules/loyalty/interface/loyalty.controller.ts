@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpException,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, Get, HttpException, NotFoundException, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { LoyaltyService } from '../application/loyalty.service';
 import { AdminApiKeyGuard } from '../../../shared/guards/admin-api-key.guard';
 
@@ -174,7 +164,7 @@ export class LoyaltyController {
       };
     } catch (e) {
       if (e instanceof HttpException) throw e;
-      return { error: { code: 'LOYALTY_COUPON_DUPLICATE', message: 'code exists' } };
+      throw new ConflictException({ code: 'LOYALTY_COUPON_DUPLICATE', message: 'code exists' });
     }
   }
 
@@ -201,7 +191,7 @@ export class LoyaltyController {
       return { id: c.id, code: c.code, name: c.name, active: c.active };
     } catch (e) {
       if (e instanceof HttpException) throw e;
-      return { error: { code: 'NOT_FOUND', message: 'coupon' } };
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'coupon' });
     }
   }
 
