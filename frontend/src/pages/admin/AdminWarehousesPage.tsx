@@ -11,6 +11,7 @@ import {
   type ApiError,
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
+import { Alert } from '../../shared/components/Alert';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 
 export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
@@ -115,8 +116,8 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
         CRUD；商家自動使用預設；門市可選（對應後端 storeId）。
       </p>
       {err && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {err}
+        <div className="mb-4">
+          <Alert variant="error">{err}</Alert>
         </div>
       )}
       <div className="mb-4 flex flex-wrap items-end gap-3">

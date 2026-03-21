@@ -9,6 +9,7 @@ import {
   type ApiError,
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
+import { Alert } from '../../shared/components/Alert';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 
 export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
@@ -93,8 +94,8 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
         CRUD；所屬商家自動使用系統預設（單一商家情境，不顯示商家選單）。
       </p>
       {err && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {err}
+        <div className="mb-4">
+          <Alert variant="error">{err}</Alert>
         </div>
       )}
       <div className="mb-4 flex flex-wrap items-end gap-3">
