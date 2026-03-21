@@ -22,7 +22,7 @@
   - **#3 批次改標籤**：新增 **PATCH /products/batch-tags**；Body `{ productIds, tags, operation?: 'add' | 'set' }`；`add` 附加去重、`set` 覆寫；Response `{ updated }`；api-design §6.3b。
   - **#4 供應商採購排行有資料**：seed 為 rnFull、rnPartial、rnExpiring 設定 `createdAt: daysAgo(5)`，確保「近 30 日」報表有示範資料；db-seed-coverage 補「供應商採購排行」涵蓋說明。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；21 suites、158 tests 全綠。
-- commits：（見下方）
+- commits：`b9fb9a9c` feat(backend): INSTRUCTIONS 042 - products/customers export, batch-tags, supplier rankings seed
 
 ---
 
