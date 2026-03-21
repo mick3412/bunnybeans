@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 039（Design Token + E2E + POS 收銀 + 商品編輯 + 庫存即期整合 + 金流圖表）
+- 做了：① **E2E 2 failed**：摘要註記已由前輪處理（admin-smoke 金流、pos-exchange-settlement-journey）。② **Design Token**：neutral/slate、ErrorBoundary、SKU/條碼 tooltip 已對齊或已存在。③ **POS 庫存超量提醒**：加入購物車時若累加數量超過 onHandQty 顯示 inline 警示 4 秒。④ **收銀商品塊設計**：品牌(brandName)→SKU 排序；品名/規格上緣置左；庫存與價格同列（左庫存、右價格）；brandName 由 GET /pos/products 提供。⑤ **商品編輯**：庫存餘額移至名稱右側；效期模式 radio 統一樣式；條碼移除 placeholder。⑥ **庫存即期整合**：AdminInventoryPage 移除即期區塊；AdminExpiringInventoryPage 新增依商品彙總/依批次明細 tab、重新整理按鈕、daysAhead。⑦ **金流圖表**：金流趨勢橫軸 yyyy-mm-dd/第 N 週；應收實收 xAxisTicks=5；本期 vs 上期合併單圖、改名；賒帳圖表改 GET /finance/balances 待收餘款、長條圖左方會員名可點選。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：`95d6e882` feat(pos) stock overflow + product block + brandName；`7408cb6b` feat(admin) product edit；`fbe15d40` feat(admin) expiring integration；`f9da51da` feat(admin) reports charts
+- 檔案：PosPage、posOrdersApi、types、AdminProductsPage、AdminInventoryPage、AdminExpiringInventoryPage、AdminReportsPage、MiniLineChart、MiniBarChart
+
+---
+
 ### INSTRUCTIONS 038（037 剩餘 + 驗收 + POS 產品塊重構）
 - 做了：① **E2E 完整驗證**：e2e-prepare-db + restart-dev + pnpm e2e → 24 passed、10 skipped、2 failed（admin-smoke 金流報表、pos-exchange-settlement-journey；關鍵 pos-checkout/credit/refund/return-stock 皆 pass）。② **Design Token AdminReceivingNotesPage**：037 已完成（brand-warning）。③ **Design Token 其餘殘留**：PosPage、PosOrderDetailPage、AdminPurchaseOrdersPage、AdminInventoryPage、AdminCustomersPage 之 red-/emerald-/sky- 改為 brand-danger/brand-success/brand-primary。④ **loading/error 一致性**：AdminReceivingNotesPage、AdminPurchaseOrdersPage 已用 Alert。⑤ **POS 收銀區產品塊重構**：① 取消 SKU 展示；② 新增 getPosProducts(storeId)、串接 GET /pos/products 含 onHandQty；③ 產品塊：品名優先、規格次之、價格 formatMoney 醒目、庫存 badge（低庫存≤3 視覺提示）、選取狀態、卡牌佈局。⑥ **產品塊微調**：價格置右（justify-end）；庫存 badge 不顯示「件」。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；pos-checkout E2E pass
