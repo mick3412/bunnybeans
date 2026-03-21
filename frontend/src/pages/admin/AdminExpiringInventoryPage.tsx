@@ -2,14 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   getExpiringInventory,
+  getExpiringInventorySummaryByProduct,
   getWarehouses,
   type ApiError,
   type ExpiringInventoryResult,
+  type ExpiringProductSummaryRow,
   type WarehouseDto,
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useAdminToast } from './AdminToastContext';
 import { Alert } from '../../shared/components/Alert';
+import { Button } from '../../shared/components/Button';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 
 const fieldClass =
@@ -30,6 +33,9 @@ export const AdminExpiringInventoryPage: React.FC = () => {
     const v = Number(searchParams.get('daysAhead') ?? 30);
     return Number.isFinite(v) && v > 0 ? Math.min(365, Math.max(1, Math.floor(v))) : 30;
   });
+  const [viewTab, setViewTab] = useState<'product' | 'batch'>(() =>
+    searchParams.get('tab') === 'product' ? 'product' : 'batch',
+  );
   const [q, setQ] = useState(searchParams.get('q') ?? '');
   const [page, setPage] = useState<number>(() => {
     const v = Number(searchParams.get('page') ?? 1);
@@ -40,6 +46,8 @@ export const AdminExpiringInventoryPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [data, setData] = useState<ExpiringInventoryResult | null>(null);
+  const [productSummaryRows, setProductSummaryRows] = useState<ExpiringProductSummaryRow[]>([]);
+  const [productTotal, setProductTotal] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,26 +77,45 @@ export const AdminExpiringInventoryPage: React.FC = () => {
     if (warehouseId) next.set('warehouseId', warehouseId);
     else next.delete('warehouseId');
     next.set('daysAhead', String(daysAhead));
+    if (viewTab === 'product') next.set('tab', 'product');
+    else next.delete('tab');
     if (q.trim()) next.set('q', q.trim());
     else next.delete('q');
     next.set('page', String(page));
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [warehouseId, daysAhead, q, page]);
+  }, [warehouseId, daysAhead, viewTab, q, page]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setLoading(true);
-      setErr(null);
+  const loadData = React.useCallback(async () => {
+    setLoading(true);
+    setErr(null);
+    if (viewTab === 'product') {
+      const out = await getExpiringInventorySummaryByProduct({
+        warehouseId: warehouseId || undefined,
+        daysAhead,
+        page,
+        pageSize,
+      });
+      const maybeErr = out as unknown as ApiError;
+      if (maybeErr && typeof maybeErr === 'object' && 'statusCode' in maybeErr) {
+        const msg = getErrorMessage(maybeErr);
+        setErr(msg);
+        setData(null);
+        setProductSummaryRows([]);
+        showToast(msg, 'err');
+      } else {
+        const r = out as { items: ExpiringProductSummaryRow[]; total?: number };
+        setProductSummaryRows(Array.isArray(r.items) ? r.items : []);
+        setProductTotal(typeof r.total === 'number' ? r.total : 0);
+        setData(null);
+      }
+    } else {
       const out = await getExpiringInventory({
         warehouseId: warehouseId || undefined,
         daysAhead,
         page,
         pageSize,
       });
-      if (cancelled) return;
-      setLoading(false);
       const maybeErr = out as unknown as ApiError;
       if (maybeErr && typeof maybeErr === 'object' && 'statusCode' in maybeErr) {
         const msg = getErrorMessage(maybeErr);
@@ -104,11 +131,13 @@ export const AdminExpiringInventoryPage: React.FC = () => {
         pageSize: typeof r.pageSize === 'number' ? r.pageSize : pageSize,
         total: typeof r.total === 'number' ? r.total : (Array.isArray(r.items) ? r.items.length : 0),
       });
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [daysAhead, page, showToast, warehouseId]);
+    }
+    setLoading(false);
+  }, [daysAhead, page, showToast, viewTab, warehouseId]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const filteredItems = useMemo(() => {
     const items = data?.items ?? [];
@@ -122,18 +151,35 @@ export const AdminExpiringInventoryPage: React.FC = () => {
     });
   }, [data?.items, q]);
 
-  const total = data?.total ?? 0;
+  const filteredProductRows = useMemo(() => {
+    const rows = productSummaryRows;
+    const term = q.trim().toLowerCase();
+    if (!term) return rows;
+    return rows.filter((r) => {
+      const sku = (r.sku ?? '').toLowerCase();
+      const name = (r.productName ?? '').toLowerCase();
+      return sku.includes(term) || name.includes(term);
+    });
+  }, [productSummaryRows, q]);
+
+  const total = viewTab === 'product' ? productTotal : (data?.total ?? 0);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const canPrev = page > 1;
   const canNext = page < totalPages;
 
   const kpi = useMemo(() => {
+    if (viewTab === 'product') {
+      const rows = productSummaryRows;
+      const qtySum = rows.reduce((acc, x) => acc + (Number(x.expiringQty) || 0), 0);
+      const earliest = rows.map((x) => x.earliestExpiryDate).filter(Boolean).sort()[0];
+      return { uniqueProducts: rows.length, qtySum, earliest: earliest || '—' };
+    }
     const items = data?.items ?? [];
     const uniqueProducts = new Set(items.map((x) => x.productId)).size;
     const qtySum = items.reduce((acc, x) => acc + (Number(x.onHandQty) || 0), 0);
     const earliest = items.map((x) => yyyyMmDd(x.expiryDate)).filter(Boolean).sort()[0];
     return { uniqueProducts, qtySum, earliest: earliest || '—' };
-  }, [data?.items]);
+  }, [data?.items, productSummaryRows, viewTab]);
 
   return (
     <StandardListLayout
@@ -142,6 +188,39 @@ export const AdminExpiringInventoryPage: React.FC = () => {
       testId="e2e-admin-expiring-inventory"
       filters={
         <div className="flex flex-wrap items-end gap-3">
+          <div className="flex items-center gap-2 rounded-full bg-table-head px-2 py-1">
+            <button
+              type="button"
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                viewTab === 'product'
+                  ? 'bg-forge-sidebar text-white shadow-sm'
+                  : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head'
+              }`}
+              onClick={() => {
+                setPage(1);
+                setViewTab('product');
+              }}
+            >
+              依商品彙總
+            </button>
+            <button
+              type="button"
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                viewTab === 'batch'
+                  ? 'bg-forge-sidebar text-white shadow-sm'
+                  : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head'
+              }`}
+              onClick={() => {
+                setPage(1);
+                setViewTab('batch');
+              }}
+            >
+              依批次明細
+            </button>
+          </div>
+          <Button type="button" size="sm" variant="secondary" onClick={() => void loadData()} disabled={loading}>
+            {loading ? '載入中…' : '重新整理'}
+          </Button>
           <div className="min-w-[220px]">
             <label className="mb-1 block text-xs font-semibold text-muted">倉庫</label>
             <select
@@ -214,11 +293,45 @@ export const AdminExpiringInventoryPage: React.FC = () => {
       }
       loading={loading}
       error={err}
-      empty={!loading && !err && filteredItems.length === 0}
+      empty={
+        !loading &&
+        !err &&
+        (viewTab === 'product' ? filteredProductRows.length === 0 : filteredItems.length === 0)
+      }
       emptyMessage="目前沒有即將到期的批次"
     >
-      {!loading && !err && filteredItems.length > 0 && (
+      {!loading && !err &&
+        (viewTab === 'product' ? filteredProductRows.length > 0 : filteredItems.length > 0) && (
         <>
+        {viewTab === 'product' ? (
+          <div className="overflow-x-auto rounded-xl border border-brand-surface">
+            <table className="w-full border-collapse text-sm">
+              <thead className="bg-table-head text-xs text-muted">
+                <tr>
+                  <th className="px-3 py-2 text-left">SKU</th>
+                  <th className="px-3 py-2 text-left">商品</th>
+                  <th className="px-3 py-2 text-left">最早到期</th>
+                  <th className="px-3 py-2 text-right">即期總量</th>
+                  <th className="px-3 py-2 text-right">倉庫數</th>
+                </tr>
+              </thead>
+              <tbody className="text-content">
+                {filteredProductRows.map((r) => (
+                  <tr
+                    key={r.productId}
+                    className="border-t border-brand-surface hover:bg-brand-canvas"
+                  >
+                    <td className="px-3 py-2 font-mono text-xs">{r.sku ?? '—'}</td>
+                    <td className="px-3 py-2">{r.productName ?? '—'}</td>
+                    <td className="px-3 py-2 tabular-nums text-muted">{r.earliestExpiryDate}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.expiringQty}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.warehousesCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
         <div className="overflow-x-auto rounded-xl border border-brand-surface">
           <table className="w-full border-collapse text-sm">
             <thead className="bg-table-head text-xs text-muted">
@@ -263,6 +376,7 @@ export const AdminExpiringInventoryPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+        )}
 
         <div className="mt-4 flex items-center justify-between gap-3 text-sm">
           <button
