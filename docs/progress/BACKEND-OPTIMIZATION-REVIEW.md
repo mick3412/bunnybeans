@@ -149,16 +149,11 @@
 
 ### 狀態
 
-**已由 INSTRUCTIONS 033 完成**：loyalty rethrow、crm-job Logger、receiving-note Logger。
+**已由 INSTRUCTIONS 033 完成**：loyalty rethrow、crm-job Logger、receiving-note Logger。**INSTRUCTIONS 039 補齊**：receiving-note 加註解；dispatch-rule-runner formatError 內層 catch 加 Logger.warn；crm-job getJob resultJson parse 加 Logger.warn；loyalty.controller createCoupon/updateCoupon 改為 throw ConflictException/NotFoundException。
 
 ### 缺口
 
-| 檔案 | 行號 | 情形 |
-|------|------|------|
-| receiving-note.service.ts | L251-252 | `catch { // ignore }` 吞錯 |
-| dispatch-rule-runner.service.ts | L139-140 | `catch { return 'unknown error' }` 不 rethrow |
-| crm-job.service.ts | L125-126 | catch 覆蓋 result |
-| loyalty.controller.ts | L174-175, 200-201 | catch 返回錯誤物件但非 HTTP exception |
+已修復。
 
 ### 修改方式
 

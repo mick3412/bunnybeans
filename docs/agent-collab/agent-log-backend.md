@@ -15,6 +15,16 @@
 
 ---
 
+### INSTRUCTIONS-039（catch 修正、POS 產品 brandName）
+- 做了：依 `BACKEND-INSTRUCTIONS 039.md` §1 完成本輪任務。
+  - **#1 迴歸確認**：038 變更無遺漏、測試全綠。
+  - **#2 catch 區塊吞錯修正**：receiving-note 加註解；dispatch-rule-runner formatError 內層 catch 加 Logger.warn；crm-job getJob resultJson parse 加 Logger.warn；loyalty.controller createCoupon/updateCoupon 改為 throw ConflictException/NotFoundException。
+  - **#3 POS 產品含 brandName**：ProductRepository/ProductService 支援 `includeBrand`；`GET /pos/products` 回傳 `brandName`；api-design-pos §4.0a 補契約；integration test。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 153 passed；`pnpm ci:backend-with-db` 通過。
+- commits：`8b0d47d3` refactor: catch block fixes；`6ebc35b1` feat(pos): GET /pos/products add brandName
+
+---
+
 ### INSTRUCTIONS-038（POS 產品列表含庫存）
 - 做了：依 `BACKEND-INSTRUCTIONS 038.md` §1 完成本輪任務。
   - **#1 迴歸確認**：037 變更無遺漏、測試全綠。
