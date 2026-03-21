@@ -12,8 +12,10 @@ export function MiniLineChart(props: {
   formatValue?: (n: number) => string;
   /** 雙線模式：兩組資料共軸 */
   series?: { name: string; items: MiniLineChartItem[]; stroke?: string }[];
+  /** 橫軸顯示的 tick 數量（預設 2 為首尾）；設為 5 可顯示 5 個區間 */
+  xAxisTicks?: number;
 }) {
-  const { items, height = 120, formatValue, series } = props;
+  const { items, height = 120, formatValue, series, xAxisTicks = 2 } = props;
   const useSeries = series && series.length > 0;
   const flatItems = useSeries ? series.flatMap((s) => s.items) : items;
   if ((useSeries && !series!.some((s) => s.items.length)) || (!useSeries && !items.length)) return null;
@@ -40,6 +42,16 @@ export function MiniLineChart(props: {
       .join(' ');
 
   const labels = useSeries ? series![0].items.map((i) => i.label) : items.map((i) => i.label);
+
+  const tickIndices =
+    xAxisTicks > 2 && labels.length > 1
+      ? Array.from({ length: xAxisTicks }, (_, i) =>
+          Math.round((i / (xAxisTicks - 1)) * (labels.length - 1)),
+        )
+      : labels.length > 0
+        ? [0, labels.length - 1].filter((a, i, arr) => arr.indexOf(a) === i)
+        : [];
+  const tickLabels = tickIndices.map((i) => labels[i] ?? '');
 
   return (
     <div className="flex flex-col gap-2">
@@ -69,8 +81,9 @@ export function MiniLineChart(props: {
           )}
       </svg>
       <div className="flex justify-between text-xs text-muted">
-        <span>{labels[0] ?? ''}</span>
-        <span>{labels.length > 1 ? labels[labels.length - 1] ?? '' : ''}</span>
+        {tickLabels.map((t, i) => (
+          <span key={i}>{t}</span>
+        ))}
       </div>
       {formatValue && maxV > 0 && (
         <div className="text-right text-xs font-medium tabular-nums text-content">

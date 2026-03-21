@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
+  getFinanceBalances,
   getFinanceEvents,
   getFinanceSummary,
   fetchCsvExport,
@@ -31,6 +32,18 @@ function toYmd(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function formatTrendLabel(periodStart: string, bucket: 'day' | 'week'): string {
+  const datePart = (periodStart ?? '').slice(0, 10);
+  if (bucket === 'week') {
+    const d = new Date(datePart + 'T12:00:00Z');
+    if (isNaN(d.getTime())) return datePart || periodStart;
+    const jan1 = new Date(d.getFullYear(), 0, 1);
+    const weekNum = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+    return `第 ${weekNum} 週`;
+  }
+  return datePart || periodStart;
 }
 
 const FINANCE_TYPE_OPTIONS: { value: string; label: string }[] = [
@@ -77,6 +90,9 @@ export const AdminReportsPage: React.FC = () => {
   const [prevDailyTrend, setPrevDailyTrend] = useState<{ date: string; receivable: number; payment: number }[]>([]);
   const [financeTrend, setFinanceTrend] = useState<FinanceSummaryTrend | null>(null);
   const [financeTrendGroupBy, setFinanceTrendGroupBy] = useState<'day' | 'week'>('day');
+  const [balanceItems, setBalanceItems] = useState<
+    { partyId: string; receivable: number; payable: number; displayName?: string; kind?: string }[]
+  >([]);
 
   useEffect(() => {
     if (!merchantId) return;
@@ -316,6 +332,26 @@ export const AdminReportsPage: React.FC = () => {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!merchantId) return;
+    let cancelled = false;
+    (async () => {
+      const out = await getFinanceBalances({ merchantId });
+      if (cancelled) return;
+      if (out && 'items' in out && Array.isArray(out.items)) {
+        const sorted = [...out.items]
+          .filter((x) => (x.receivable ?? 0) > 0)
+          .sort((a, b) => (b.receivable ?? 0) - (a.receivable ?? 0));
+        setBalanceItems(sorted);
+      } else {
+        setBalanceItems([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [merchantId]);
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
@@ -500,7 +536,7 @@ export const AdminReportsPage: React.FC = () => {
                   {
                     name: getFinanceEventTypeLabel('SALE_RECEIVABLE'),
                     items: financeTrend.items.map((i) => ({
-                      label: i.periodStart,
+                      label: formatTrendLabel(i.periodStart, financeTrend.bucket),
                       value: i.amountsByType?.SALE_RECEIVABLE ?? 0,
                     })),
                     stroke: 'var(--color-brand-primary)',
@@ -508,7 +544,7 @@ export const AdminReportsPage: React.FC = () => {
                   {
                     name: getFinanceEventTypeLabel('SALE_PAYMENT'),
                     items: financeTrend.items.map((i) => ({
-                      label: i.periodStart,
+                      label: formatTrendLabel(i.periodStart, financeTrend.bucket),
                       value: i.amountsByType?.SALE_PAYMENT ?? 0,
                     })),
                     stroke: 'var(--color-brand-success)',
@@ -516,13 +552,14 @@ export const AdminReportsPage: React.FC = () => {
                   {
                     name: getFinanceEventTypeLabel('PURCHASE_PAYABLE'),
                     items: financeTrend.items.map((i) => ({
-                      label: i.periodStart,
+                      label: formatTrendLabel(i.periodStart, financeTrend.bucket),
                       value: i.amountsByType?.PURCHASE_PAYABLE ?? 0,
                     })),
                     stroke: '#f59e0b',
                   },
                 ]}
                 formatValue={(n) => formatMoney(n)}
+                xAxisTicks={5}
               />
             </div>
           )}
@@ -543,85 +580,64 @@ export const AdminReportsPage: React.FC = () => {
                   },
                 ]}
                 formatValue={(n) => formatMoney(n)}
+                xAxisTicks={5}
               />
             </div>
           )}
-          {(dailyTrend.length > 0 || prevDailyTrend.length > 0) && (
-            <div className="mb-4 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
-              <div className="mb-2 text-sm font-semibold text-muted">本期 vs 上期（近 30 日對比）</div>
-              <p className="mb-3 text-xs text-muted">
-                本期：近 30 日；上期：再往前 30 日（同長度區間）。折線呈現「實收（銷售實收）」。
-              </p>
-              <div className="grid gap-3 lg:grid-cols-2">
-                <div className="rounded-lg border border-brand-surface bg-table-head p-3">
-                  <div className="mb-2 text-xs font-semibold text-content">本期</div>
-                  {dailyTrend.length ? (
-                    <MiniLineChart
-                      series={[
-                        {
-                          name: '實收',
-                          items: dailyTrend.map((d) => ({ label: d.date, value: d.payment })),
-                          stroke: 'var(--color-brand-success)',
-                        },
-                      ]}
-                      formatValue={(n) => formatMoney(n)}
-                    />
-                  ) : (
-                    <div className="py-6 text-center text-xs text-muted">無資料</div>
-                  )}
-                </div>
-                <div className="rounded-lg border border-brand-surface bg-table-head p-3">
-                  <div className="mb-2 text-xs font-semibold text-content">上期</div>
-                  {prevDailyTrend.length ? (
-                    <MiniLineChart
-                      series={[
-                        {
-                          name: '實收',
-                          items: prevDailyTrend.map((d) => ({ label: d.date, value: d.payment })),
-                          stroke: 'var(--color-brand-success)',
-                        },
-                      ]}
-                      formatValue={(n) => formatMoney(n)}
-                    />
-                  ) : (
-                    <div className="py-6 text-center text-xs text-muted">無資料</div>
-                  )}
-                </div>
+          {(dailyTrend.length > 0 || prevDailyTrend.length > 0) && (() => {
+            const n = Math.max(dailyTrend.length, prevDailyTrend.length);
+            const labels = Array.from({ length: n }, (_, i) => `第 ${i + 1} 日`);
+            return (
+              <div className="mb-4 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
+                <div className="mb-3 text-sm font-semibold text-muted">本期 vs 上期（近 30 日對比）</div>
+                <MiniLineChart
+                  series={[
+                    {
+                      name: '本期實收（近 30 日）',
+                      items: labels.map((label, i) => ({
+                        label,
+                        value: dailyTrend[i]?.payment ?? 0,
+                      })),
+                      stroke: 'var(--color-brand-success)',
+                    },
+                    {
+                      name: '上期實收（前 30 日）',
+                      items: labels.map((label, i) => ({
+                        label,
+                        value: prevDailyTrend[i]?.payment ?? 0,
+                      })),
+                      stroke: 'var(--color-brand-primary)',
+                    },
+                  ]}
+                  formatValue={(n) => formatMoney(n)}
+                  xAxisTicks={5}
+                />
               </div>
-            </div>
-          )}
-          {summaryByParty?.byParty && summaryByParty.byParty.length > 0 && (
+            );
+          })()}
+          {balanceItems.length > 0 && (
             <div className="mb-4 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-muted">進階圖表（依對象彙總）</div>
+                <div className="text-sm font-semibold text-muted">賒帳圖表</div>
                 <div className="text-xs text-muted">
-                  點對象可前往 <Link className="text-sky-700 hover:underline" to="/admin/balances">應收應付餘額</Link>
+                  點會員名稱可前往{' '}
+                  <Link className="text-brand-primary hover:underline" to="/admin/balances">
+                    應收應付餘額
+                  </Link>
                 </div>
               </div>
-              <div className="mb-3 flex flex-wrap gap-2">
-                {summaryByParty.byParty.slice(0, 10).map((p) => {
-                  const kind = getPartyKindFromId(p.partyId);
-                  const view = kind === 'customer' ? 'customer' : kind === 'supplier' ? 'supplier' : 'other';
-                  const display = formatPartyDisplay(p.displayName, kind || undefined, p.partyId, partyNames);
-                  return (
-                    <Link
-                      key={p.partyId}
-                      to={`/admin/balances?view=${encodeURIComponent(view)}&partyId=${encodeURIComponent(p.partyId)}`}
-                      className="rounded-full bg-table-head px-3 py-1 text-xs font-medium text-sky-800 ring-1 ring-brand-surface hover:bg-white"
-                      title={p.partyId}
-                      data-testid="e2e-reports-party-drilldown"
-                    >
-                      {display}
-                    </Link>
-                  );
-                })}
-              </div>
               <MiniBarChart
-                items={summaryByParty.byParty.map((p) => {
-                  const total = Object.values(p.amountsByType ?? {}).reduce((s, v) => s + v, 0);
+                items={balanceItems.map((p, idx) => {
                   const kind = getPartyKindFromId(p.partyId);
                   const label = formatPartyDisplay(p.displayName, kind || undefined, p.partyId, partyNames);
-                  return { label, value: total };
+                  const view = kind === 'customer' ? 'customer' : kind === 'supplier' ? 'supplier' : 'other';
+                  return {
+                    id: p.partyId,
+                    label,
+                    value: p.receivable ?? 0,
+                    href: `/admin/balances?view=${encodeURIComponent(view)}&partyId=${encodeURIComponent(p.partyId)}`,
+                    dataTestId: idx === 0 ? 'e2e-reports-party-drilldown' : undefined,
+                  };
                 })}
                 formatValue={(n) => formatMoney(n)}
               />

@@ -1,8 +1,15 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
-interface MiniBarChartItem {
+export interface MiniBarChartItem {
   label: string;
   value: number;
+  /** 若有 href，label 可點選跳轉 */
+  href?: string;
+  /** 可選：用於 React key，避免同 label 時衝突 */
+  id?: string;
+  /** 可選：用於 E2E 辨識，如 data-testid */
+  dataTestId?: string;
 }
 
 export function MiniBarChart(props: {
@@ -21,11 +28,24 @@ export function MiniBarChart(props: {
         const display = formatValue ? formatValue(item.value) : item.value.toLocaleString();
         return (
           <div
-            key={item.label}
+            key={item.id ?? item.label}
             className="flex items-center gap-3"
             title={`${item.label}：${display}`}
           >
-            <span className="w-28 shrink-0 truncate text-xs text-muted">{item.label}</span>
+            <span className="w-28 shrink-0 truncate text-xs text-muted">
+              {item.href ? (
+                <Link
+                  to={item.href}
+                  className="text-brand-primary hover:underline"
+                  title={item.label}
+                  data-testid={item.dataTestId}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                item.label
+              )}
+            </span>
             <div className="min-w-0 flex-1">
               <div className="h-2 rounded-full bg-brand-surface">
                 <div
