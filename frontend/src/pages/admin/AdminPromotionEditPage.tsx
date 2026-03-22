@@ -321,111 +321,115 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
           </Alert>
         )}
 
-        {/* 左右兩欄：左＝規則預覽＋優先級＋基本資訊；右＝條件 IF＋行動 THEN */}
+        {/* 上方：規則預覽＋優先級＋基本資訊 */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* 左欄 */}
-          <div className="space-y-5">
+        <div className="mb-6 space-y-5">
           <div className={`${card} border-brand-surface bg-gradient-to-b from-white to-table-head`}>
-            <div className="flex items-center gap-2 text-brand-primary">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              <h2 className="text-sm font-semibold">規則預覽</h2>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-brand-primary">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <h2 className="text-sm font-semibold">規則預覽</h2>
+                </div>
+                <p className="mt-3 leading-relaxed text-content">{preview}</p>
+                <p className="mt-2 text-xs leading-relaxed text-muted">
+                  啟用後於 POS 依優先級試算；排他規則套用後不再疊加其他活動。
+                </p>
+              </div>
+              <div className="shrink-0">
+                <div className={label}>優先級</div>
+                <input
+                  type="number"
+                  min={1}
+                  className={`${input} mt-2 w-20 text-lg font-semibold tabular-nums`}
+                  value={priority}
+                  onChange={(e) => setPriority(Number(e.target.value) || 1)}
+                />
+                <p className="mt-1 text-xs text-muted">數字愈小愈先套用</p>
+              </div>
             </div>
-            <p className="mt-4 leading-relaxed text-content">{preview}</p>
-            <p className="mt-4 text-xs leading-relaxed text-muted">
-              啟用後於 POS 依優先級試算；排他規則套用後不再疊加其他活動。
-            </p>
           </div>
-          <div className={card}>
-            <div className={label}>優先級</div>
-            <input
-              type="number"
-              min={1}
-              className={`${input} mt-2 text-lg font-semibold tabular-nums`}
-              value={priority}
-              onChange={(e) => setPriority(Number(e.target.value) || 1)}
-            />
-            <p className="mt-2 text-xs text-muted">數字愈小愈先套用</p>
-          </div>
-            <section className={card}>
-              <h2 className={sectionTitle}>基本資訊與適用對象</h2>
-              <div className="mt-4 space-y-4">
+          <section className={card}>
+            <h2 className={sectionTitle}>基本資訊與適用對象</h2>
+            <div className="mt-4 space-y-4">
+              <div>
+                <div className={label}>促銷名稱</div>
+                <input
+                  className={input}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="例：全館滿千折百"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <div className={label}>促銷名稱</div>
+                  <div className={label}>開始日期</div>
                   <input
+                    type="date"
                     className={input}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="例：全館滿千折百"
+                    value={startsAt}
+                    onChange={(e) => setStartsAt(e.target.value)}
                   />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <div className={label}>開始日期</div>
-                    <input
-                      type="date"
-                      className={input}
-                      value={startsAt}
-                      onChange={(e) => setStartsAt(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <div className={label}>結束日期</div>
-                    <input
-                      type="date"
-                      className={input}
-                      value={endsAt}
-                      onChange={(e) => setEndsAt(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <ToggleRow
-                  title="排他性"
-                  hint="不可與其他優惠並用"
-                  checked={exclusive}
-                  onChange={setExclusive}
-                />
-                <ToggleRow
-                  title="首購限定"
-                  hint="僅限歷史訂單數 = 0 的用戶"
-                  checked={firstPurchaseOnly}
-                  onChange={setFirstPurchaseOnly}
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <div className={label}>會員等級（逗號分隔）</div>
-                    <input
-                      className={input}
-                      value={memberLevelsStr}
-                      onChange={(e) => setMemberLevelsStr(e.target.value)}
-                      placeholder="例：VIP, GOLD；留空＝不限等級"
-                    />
-                  </div>
-                  <div>
-                    <div className={label}>點數倍率（選填）</div>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min={0}
-                      className={input}
-                      value={pointsMultiplier}
-                      onChange={(e) => setPointsMultiplier(e.target.value)}
-                      placeholder="1 = 不變，2 = 點數加倍"
-                    />
-                    <p className="mt-1 text-[11px] text-muted">
-                      僅在有設定時才會影響點數計算與 Loyalty 活動報表中的「點數成本估計」；未填或填 1 則視為不加倍。
-                    </p>
-                  </div>
+                <div>
+                  <div className={label}>結束日期</div>
+                  <input
+                    type="date"
+                    className={input}
+                    value={endsAt}
+                    onChange={(e) => setEndsAt(e.target.value)}
+                  />
                 </div>
               </div>
-            </section>
-          </div>
+              <ToggleRow
+                title="排他性"
+                hint="不可與其他優惠並用"
+                checked={exclusive}
+                onChange={setExclusive}
+              />
+              <ToggleRow
+                title="首購限定"
+                hint="僅限歷史訂單數 = 0 的用戶"
+                checked={firstPurchaseOnly}
+                onChange={setFirstPurchaseOnly}
+              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <div className={label}>會員等級（逗號分隔）</div>
+                  <input
+                    className={input}
+                    value={memberLevelsStr}
+                    onChange={(e) => setMemberLevelsStr(e.target.value)}
+                    placeholder="例：VIP, GOLD；留空＝不限等級"
+                  />
+                </div>
+                <div>
+                  <div className={label}>點數倍率（選填）</div>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min={0}
+                    className={input}
+                    value={pointsMultiplier}
+                    onChange={(e) => setPointsMultiplier(e.target.value)}
+                    placeholder="1 = 不變，2 = 點數加倍"
+                  />
+                  <p className="mt-1 text-[11px] text-muted">
+                    僅在有設定時才會影響點數計算與 Loyalty 活動報表中的「點數成本估計」；未填或填 1 則視為不加倍。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
 
-          {/* 右欄 */}
-          <div className="space-y-5">
+        {/* 主編輯區：左右兩欄 條件｜行動 */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* 左欄：條件 */}
+          <div>
             <section className={card}>
               <div className="flex items-center justify-between gap-2">
                 <h2 className={sectionTitle}>條件 (IF)</h2>
@@ -552,7 +556,10 @@ export const AdminPromotionEditPage: React.FC<AdminPromotionEditPageProps> = ({
                 ))}
               </div>
             </section>
+          </div>
 
+          {/* 右欄：行動 */}
+          <div>
             <section className={card}>
               <div className="flex items-center justify-between gap-2">
                 <h2 className={sectionTitle}>行動 (THEN)</h2>
