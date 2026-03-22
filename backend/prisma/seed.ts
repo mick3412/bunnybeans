@@ -50,6 +50,7 @@ async function wipeAll() {
   await prisma.customer.deleteMany();
   await prisma.product.deleteMany();
   await prisma.warehouse.deleteMany();
+  await prisma.cashRegisterSession.deleteMany();
   await prisma.store.deleteMany();
   await prisma.segment.deleteMany();
   await prisma.productTag.deleteMany();

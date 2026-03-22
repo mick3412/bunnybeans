@@ -52,7 +52,7 @@ describe('PosSessionsService (integration)', () => {
     expect(current!.report).toBeDefined();
     expect(current!.report!.openingCash).toBe(5000);
 
-    await prisma.cashRegisterSession.delete({ where: { id: created.id } });
+    await prisma.cashRegisterSession.deleteMany({ where: { id: created.id } });
   });
 
   it('closeSession computes expected and difference', async () => {
@@ -75,7 +75,7 @@ describe('PosSessionsService (integration)', () => {
     expect(closed.report).toBeDefined();
     expect(closed.report!.difference).toBe(50);
 
-    await prisma.cashRegisterSession.delete({ where: { id: created.id } });
+    await prisma.cashRegisterSession.deleteMany({ where: { id: created.id } });
   });
 
   it('openSession throws when store already has open session', async () => {
@@ -92,7 +92,7 @@ describe('PosSessionsService (integration)', () => {
     const session = await prisma.cashRegisterSession.findFirst({
       where: { storeId: store.id, status: 'OPEN' },
     });
-    if (session) await prisma.cashRegisterSession.delete({ where: { id: session.id } });
+    if (session) await prisma.cashRegisterSession.deleteMany({ where: { id: session.id } });
   });
 
   it('listSessions returns sessions by storeId and status', async () => {
@@ -117,7 +117,7 @@ describe('PosSessionsService (integration)', () => {
       expect(items.some((s) => s.id === created.id)).toBe(true);
       expect(items.every((s) => s.status === 'OPEN')).toBe(true);
     } finally {
-      await prisma.cashRegisterSession.delete({ where: { id: created.id } });
+      await prisma.cashRegisterSession.deleteMany({ where: { id: created.id } });
     }
   });
 });
