@@ -15,10 +15,18 @@
 
 ---
 
+### INSTRUCTIONS 043（庫存 header 重排 + 促銷規則左右兩欄 + 集點設定 UI 對齊）
+- 做了：① **迴歸**：build 全綠。② **庫存餘額 header 重排**：AdminInventoryPage 將 CSV 匯入／匯出區塊縮小，收進 `<details>` 置右上角與倉庫選單同列；餘額 CSV、一般匯入、大檔匯入皆在 details 內。③ **促銷規則面板 layout**：AdminPromotionEditPage 主編輯區改為左右兩欄（條件｜行動）；規則預覽、優先級、基本資訊移至上方單一區塊；預設 1 條件＋1 行動已符合。④ **集點設定 UI 對齊**：LoyaltySettingsPage 大卡樣式改為 `rounded-xl border bg-table-head p-4`、標題底線、儲存按鈕加 rounded-xl，與 AdminFinancePeriodsPage 等設定頁一致。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：`1bf70dbc` inventory header；`532d7b41` promotion layout；`ea9e2130` loyalty settings；`a9a23665` agent-log
+- 檔案：AdminInventoryPage、AdminPromotionEditPage、LoyaltySettingsPage
+
+---
+
 ### INSTRUCTIONS 042（折扣標籤／關帳驗收 + 熱銷整合 + 商品標籤 + 篩選 POS 風格 + 匯出 + 關帳快捷）
 - 做了：① **迴歸**：build 全綠。② **折扣標籤／關帳驗收**：041 延續，E2E 已於前輪補齊（admin-discount-tags、admin-pos-sessions）。③ **熱銷排行**：PosReportsPage 長條圖與表格整合為單一視圖，金額欄內嵌橫條圖。④ **商品總覽標籤欄**：品牌與定價間新增「標籤」欄（badge 顯示，最多 3 個 +N）。⑤ **商品篩選 POS 風格**：品項／分類、品牌、折扣／標籤 各一列 pill 按鈕，底部「共 N 件」+ 清除篩選。⑥ **匯入匯出對應**：商品 CSV 匯出（依篩選）；會員列表 CSV 匯出（依篩選）；庫存異動明細匯出按鈕；needsAdminKey 補 products/export、customers/export。⑦ **批次改標籤**：StandardFloatBar 新增批次改標籤（PATCH /products/batch-tags，operation add）。⑧ **折扣標籤數字加單位**：銷量→天/件、有折扣→%、低庫存→件、新上架→天。⑨ **關帳區間快捷**：今日、昨日、近 7/30 日、本月、上月 pill 一鍵填入。⑩ **會員管理篩選 POS 風格**：搜尋一列；狀態、等級、標籤 pill 按鈕；共 N 件 + 清除。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
-- commits：（待 atomic commits）
+- commits：`e8c14347` PosReportsPage；`465897a6` AdminDiscountTagsPage 單位；`31dcb4b7` finance periods 快捷；`5d1c54e4` productApi+client；`3d43cffb` products；`38086af5` customers；`e2ad3923` inventory；`a1c5af59` agent-log
 - 檔案：PosReportsPage、AdminDiscountTagsPage、AdminFinancePeriodsPage、AdminProductsPage、AdminCustomersPage、AdminInventoryPage、productApi、client.ts
 
 ---
