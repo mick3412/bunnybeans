@@ -302,10 +302,10 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
       testId="e2e-admin-inventory"
       filters={
       <div
-        className="flex flex-wrap items-center justify-between gap-3 sm:gap-4"
+        className="flex flex-wrap items-center justify-between gap-3"
         data-testid="e2e-admin-inventory-header"
       >
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
           <label className="shrink-0 text-sm font-medium text-muted">倉庫</label>
           <select
             className="h-9 min-w-[140px] shrink-0 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
@@ -321,37 +321,40 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
               </option>
             ))}
           </select>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            disabled={!warehouseId || exporting}
-            data-testid="e2e-admin-inventory-export"
-            className="shrink-0"
-            onClick={async () => {
-            if (!warehouseId) return;
-            setExporting(true);
-            setErr(null);
-            const q = `inventory/balances/export?warehouseId=${encodeURIComponent(warehouseId)}`;
-            const out = await fetchCsvExport(q, `inventory-balances-${warehouseId.slice(0, 8)}.csv`);
-            setExporting(false);
-            if (out !== true) {
-              const msg = getErrorMessage(out as ApiError);
-              setErr(msg);
-              showAdminApiErrorToast(showToast, out as ApiError);
-            }
-          }}
-        >
-          {exporting ? '匯出中…' : '匯出 CSV'}
-        </Button>
         </div>
-        <div
-          className="flex shrink-0 flex-wrap items-center gap-2"
+        <details
+          className="shrink-0 rounded-lg border border-brand-surface bg-table-head px-2 py-1.5"
           data-testid="e2e-admin-inventory-import"
           title={`表頭：sku、warehouseCode、quantity；${adminKeyRequiredMsg}。一般同步、大檔非同步。`}
         >
-          <span className="text-[11px] font-medium text-muted">匯入</span>
-          <span className="flex items-center gap-2">
+          <summary className="cursor-pointer text-xs font-medium text-muted hover:text-content">
+            匯入／匯出
+          </summary>
+          <div className="mt-2 flex flex-wrap items-center gap-2 pb-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={!warehouseId || exporting}
+              data-testid="e2e-admin-inventory-export"
+              className="shrink-0 text-xs"
+              onClick={async () => {
+                if (!warehouseId) return;
+                setExporting(true);
+                setErr(null);
+                const q = `inventory/balances/export?warehouseId=${encodeURIComponent(warehouseId)}`;
+                const out = await fetchCsvExport(q, `inventory-balances-${warehouseId.slice(0, 8)}.csv`);
+                setExporting(false);
+                if (out !== true) {
+                  const msg = getErrorMessage(out as ApiError);
+                  setErr(msg);
+                  showAdminApiErrorToast(showToast, out as ApiError);
+                }
+              }}
+            >
+              {exporting ? '匯出中…' : '餘額 CSV'}
+            </Button>
+            <span className="flex items-center gap-2">
               <span className="text-[11px] text-muted">一般</span>
               <input
                 type="file"
@@ -464,7 +467,8 @@ export const AdminInventoryPage: React.FC<{ embeddedInHub?: boolean }> = ({ embe
               />
               {jobSubmitting && <span className="text-[11px] text-muted">建立 job…</span>}
             </span>
-        </div>
+          </div>
+        </details>
       </div>
       }
       aboveContent={(importResult || jobId || jobError) ? (
