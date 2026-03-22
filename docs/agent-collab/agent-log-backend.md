@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS-043（042 收斂）
+- 做了：依 `BACKEND-INSTRUCTIONS 043.md` §1 完成本輪任務。
+  - **#1 迴歸確認**：042 變更無遺漏、測試全綠。修正 pos-sessions.integration-spec 清理邏輯（deleteMany 取代 delete、seed wipeAll 含 CashRegisterSession）。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；21 suites、158 tests 全綠。
+- commits：`45644be7` fix(backend): pos-sessions test cleanup + seed wipeAll CashRegisterSession
+
+---
+
 ### INSTRUCTIONS-042（匯出 API、批次改標籤、供應商排行 seed）
 - 做了：依 `BACKEND-INSTRUCTIONS 042.md` §1 完成本輪任務。
   - **#1 迴歸確認**：041 變更無遺漏、測試全綠。
