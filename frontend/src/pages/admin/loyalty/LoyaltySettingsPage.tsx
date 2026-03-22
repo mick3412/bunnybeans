@@ -11,7 +11,7 @@ import { TextInput } from '../../../shared/components/TextInput';
 import { useAdminToast } from '../AdminToastContext';
 import { StandardListLayout } from '../../../shared/components/StandardListLayout';
 
-const cardClass = 'rounded-2xl border border-brand-surface bg-white p-5 shadow-sm';
+const cardClass = 'overflow-hidden rounded-xl border border-brand-surface bg-table-head p-4';
 
 export const LoyaltySettingsPage: React.FC = () => {
   const merchantId = useDefaultMerchantId();
@@ -70,7 +70,7 @@ export const LoyaltySettingsPage: React.FC = () => {
       testId="e2e-loyalty-settings"
     >
       {!loading && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className={cardClass}>
             <h3 className="mb-3 border-b border-brand-surface pb-2 text-sm font-semibold text-content">集點規則</h3>
             <p className="mb-3 text-xs text-muted">
@@ -116,11 +116,11 @@ export const LoyaltySettingsPage: React.FC = () => {
             </div>
           </div>
           <div className={cardClass}>
-            <div className="text-sm font-medium text-content">系統整合</div>
+            <h3 className="mb-3 border-b border-brand-surface pb-2 text-sm font-semibold text-content">系統整合</h3>
             <p className="mt-1 text-xs text-muted">POS 整合：<span className="text-emerald-700">已連線（同網域 API）</span></p>
             <p className="text-xs text-muted">ERP 整合：<span className="text-amber-700">依部署環境</span></p>
           </div>
-          <Button type="button" variant="primary" size="sm" onClick={() => void save()} disabled={saving}>
+          <Button type="button" variant="primary" size="sm" onClick={() => void save()} disabled={saving} className="rounded-xl">
             {saving ? '儲存中…' : '儲存'}
           </Button>
         </div>
