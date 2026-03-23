@@ -15,6 +15,15 @@
 
 ---
 
+### INSTRUCTIONS-053（052 收斂）
+- 做了：依 `BACKEND-INSTRUCTIONS 053.md` §1 完成本輪任務。
+  - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
+  - **#1 迴歸確認**：052 變更無遺漏、測試全綠；無待提交變更。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、163 tests 全綠。
+- commits：無（本輪無後端變更）
+
+---
+
 ### INSTRUCTIONS-052（051 收斂）
 - 做了：依 `BACKEND-INSTRUCTIONS 052.md` §1 完成本輪任務。
   - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
