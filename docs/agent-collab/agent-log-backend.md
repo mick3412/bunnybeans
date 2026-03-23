@@ -15,6 +15,18 @@
 
 ---
 
+### INSTRUCTIONS-055（後端優化 #2～#5 採購／庫存分頁）
+- 做了：依 `BACKEND-INSTRUCTIONS 055.md` §1 完成本輪任務。
+  - **#2 Supplier 分頁**：`GET /suppliers` 新增 `page`、`pageSize`，回傳 `{ items, total, page, pageSize }`；預設 50，上限 200；保留 q 搜尋。
+  - **#3 PurchaseOrder 分頁**：`GET /purchase-orders` 新增 `page`、`pageSize`，回傳 `{ items, total, page, pageSize }`；預設 20，上限 100；保留 lines include。
+  - **#4 ReceivingNote 分頁**：`GET /receiving-notes` 新增 `page`、`pageSize`，回傳 `{ items, total, page, pageSize }`；預設 20，上限 100。
+  - **#5 滯銷品分頁**：`GET /inventory/slow-moving` 新增 `page`、`pageSize`，回傳 `{ items, total, page, pageSize, from, to }`；預設 50，上限 200。
+  - **前端**：purchaseApi listSuppliers、listPurchaseOrders、listReceivingNotes 使用 `response.items`。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 22 suites、162 passed（ops runJob flaky 1 failed）。
+- commits：`dea77734` feat(backend-055): supplier, purchase-order, receiving-note, slow-moving pagination
+
+---
+
 ### INSTRUCTIONS-054（後端優化 #2～#6）
 - 做了：依 `BACKEND-INSTRUCTIONS 054.md` §1 完成本輪任務。
   - **#2 Finance 對象名稱搜尋**：`GET /finance/balances`、`GET /finance/events` 新增 `?q=`，依 Party.displayName ILIKE 搜尋；balances 的 with_party CTE 加條件；listEvents 依 q 查 partyIds 篩選。
