@@ -34,6 +34,10 @@ export const ERROR_CODE_MAP: Record<string, string> = {
   POS_RETURN_ITEMS_EMPTY: '退貨入庫至少需要一項商品與數量',
   POS_RETURN_PRODUCT_NOT_ON_ORDER: '該商品不在此訂單明細內',
   POS_RETURN_EXCEEDS_SOLD: '退貨入庫數量不可超過原銷售數量',
+  /** 掛單／取單 */
+  POS_HELD_CART_STORE_REQUIRED: '請先選擇門市',
+  POS_HELD_CART_ITEMS_EMPTY: '購物車為空，無法掛單',
+  POS_HELD_CART_NOT_FOUND: '找不到此掛單，可能已被取回或過期',
 };
 
 export interface AdminApiErrorLike {
