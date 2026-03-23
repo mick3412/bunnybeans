@@ -42,6 +42,11 @@ export class PosHeldCartsService {
       throwBadRequest('POS_HELD_CART_ITEMS_EMPTY', 'items must not be empty');
     }
 
+    const store = await this.prisma.store.findUnique({ where: { id: storeId.trim() } });
+    if (!store) {
+      throwNotFound('POS_STORE_NOT_FOUND', 'Store not found');
+    }
+
     const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
     const total = subtotal; // 掛單不套促銷，以原始小計為 total
 

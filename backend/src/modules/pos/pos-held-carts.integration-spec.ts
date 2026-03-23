@@ -58,6 +58,22 @@ describe('PosHeldCartsService (integration)', () => {
     expect(afterList.some((c) => c.id === held.id)).toBe(false);
   });
 
+  it('hold 門市不存在拋 POS_STORE_NOT_FOUND', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const product = await prisma.product.findFirst();
+    if (!product) return;
+
+    await expect(
+      service.holdCart({
+        storeId: '00000000-0000-0000-0000-000000000000',
+        items: [{ productId: product.id, name: 'x', unitPrice: 1, quantity: 1 }],
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'POS_STORE_NOT_FOUND' },
+    });
+  });
+
   it('hold 缺 storeId 或 items 空拋錯', async () => {
     if (!process.env.DATABASE_URL) return;
 
