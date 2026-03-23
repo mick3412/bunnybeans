@@ -20,7 +20,7 @@
   - **#1 迴歸確認**：050 變更無遺漏；`pnpm ci:backend-with-db` 通過。
   - **ops 測試穩定性**：`runJob records OpsJobRunLog` 因 shared DB 產生多筆 log 導致 flaky；改為 `expect(after).toBeGreaterThanOrEqual(before + 1)`。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、163 tests 全綠。
-- commits：待補
+- commits：`bc1ce472` fix(ops) runJob test resilience (INSTRUCTIONS 051)
 
 ---
 
