@@ -254,6 +254,8 @@ export interface PosReportsSummaryDto {
   grossMarginRate?: number | null;
   /** 會員 vs 匿名客營收與訂單數 */
   memberContribution?: MemberContributionDto;
+  /** 門市營收對比（全部門市時才有） */
+  byStore?: { storeId: string; storeCode?: string; storeName?: string; revenue: number; ordersCount: number; avgOrder?: number }[];
 }
 
 export type PosReportsPreset =

@@ -77,7 +77,7 @@ export const PosPage: React.FC = () => {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [brands, setBrands] = useState<BrandDto[]>([]);
   const [apiStoreId, setApiStoreId] = useState<string | null>(null);
-  const [apiStores, setApiStores] = useState<Array<{ id: string; name: string }>>([]);
+  const [apiStores, setApiStores] = useState<Array<{ id: string; name: string; merchantId?: string }>>([]);
   const [apiMerchantId, setApiMerchantId] = useState<string | null>(null);
   const [apiProducts, setApiProducts] = useState<PosProductDisplay[] | null>(null);
   const [apiLoadError, setApiLoadError] = useState<string | null>(null);
@@ -138,7 +138,7 @@ export const PosPage: React.FC = () => {
       ]);
       if (!mounted) return;
       if (Array.isArray(storesRes) && storesRes.length > 0) {
-        setApiStores(storesRes.map((s) => ({ id: s.id, name: s.name })));
+        setApiStores(storesRes.map((s) => ({ id: s.id, name: s.name, merchantId: s.merchantId })));
         let chosen: string | null = null;
         const withWh = storesRes.find((s) => (s.warehouseIds?.length ?? 0) > 0);
         if (withWh) chosen = withWh.id;
@@ -386,10 +386,42 @@ export const PosPage: React.FC = () => {
 
   return (
     <div className="flex min-h-full flex-col">
-      {apiLoadError && !apiStoreId && (
-        <div className="mb-3 rounded-lg border border-brand-warning/40 bg-brand-warning/10 px-3 py-2 text-sm text-brand-warning">
-          {apiLoadError}
+      {/* 門市選擇器：有門市資料時顯示 */}
+      {apiStores.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-brand-surface bg-table-head px-3 py-2">
+          <label htmlFor="pos-store-select" className="text-xs font-medium text-muted">
+            門市
+          </label>
+          <select
+            id="pos-store-select"
+            value={apiStoreId ?? ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              setApiStoreId(v || null);
+              const found = apiStores.find((s) => s.id === v);
+              setApiMerchantId(found?.merchantId ?? null);
+              setHoldError(null);
+            }}
+            className="min-w-[10rem] rounded-lg border border-brand-surface bg-white px-2 py-1.5 text-xs text-content focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+            data-testid="e2e-pos-store-select"
+          >
+            <option value="">— 請選擇門市 —</option>
+            {apiStores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          {!apiStoreId && (
+            <span className="text-xs text-brand-danger">請先選擇門市（掛單／取單／結帳皆需門市）</span>
+          )}
         </div>
+      ) : (
+        apiLoadError && (
+          <div className="mb-3 rounded-lg border border-brand-warning/40 bg-brand-warning/10 px-3 py-2 text-sm text-brand-warning">
+            {apiLoadError}
+          </div>
+        )
       )}
       {storeId && (
         <PosSessionBar storeId={storeId} storeName={storeName} />

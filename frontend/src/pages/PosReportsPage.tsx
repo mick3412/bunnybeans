@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   getPosReportsSummary,
   getPosTopItems,
@@ -7,6 +7,7 @@ import {
   getPosOrderValueDistribution,
   listOrders,
   getCategories,
+  getStores,
   type ApiError,
   type PosReportsSummaryDto,
   type PosReportsPreset,
@@ -26,10 +27,12 @@ import { formatMoneyFromString as money } from '../shared/utils/formatMoney';
 const cardBase = 'rounded-xl border border-brand-surface bg-white p-4 shadow-sm';
 
 export const PosReportsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const presetFromQuery = searchParams.get('preset') as PosReportsPreset | null;
+  const storeIdFromQuery = searchParams.get('storeId') ?? '';
   const merchantId = useDefaultMerchantId();
+  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
+  const storeId = storeIdFromQuery;
   const [data, setData] = useState<PosReportsSummaryDto | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState<boolean>(false);
@@ -64,6 +67,15 @@ export const PosReportsPage: React.FC = () => {
     return () => { c = true; };
   }, []);
 
+  useEffect(() => {
+    getStores().then((r) => {
+      if (Array.isArray(r)) {
+        setStores(r.map((s) => ({ id: s.id, name: s.name })));
+      }
+    });
+  }, []);
+
+
   const periodLabel = useMemo(() => {
     if (!data?.period) return '今日';
     const p = data.period;
@@ -94,7 +106,7 @@ export const PosReportsPage: React.FC = () => {
     (async () => {
       if (!merchantId) return;
       setSummaryLoading(true);
-      const r = await getPosReportsSummary({ preset, merchantId });
+      const r = await getPosReportsSummary({ preset, merchantId, storeId: storeId || undefined });
       if (c) return;
       if ('statusCode' in r) {
         setErr(getErrorMessage(r as ApiError));
@@ -108,7 +120,7 @@ export const PosReportsPage: React.FC = () => {
     return () => {
       c = true;
     };
-  }, [preset, merchantId]);
+  }, [preset, merchantId, storeId]);
 
   useEffect(() => {
     if (!data?.period) return;
@@ -119,7 +131,7 @@ export const PosReportsPage: React.FC = () => {
       setDailyLoading(true);
       setTopItemsErr(null);
       setDailyErr(null);
-      const ordersRes = await listOrders({ from, to, page: 1, pageSize: 20 });
+      const ordersRes = await listOrders({ from, to, page: 1, pageSize: 20, storeId: storeId || undefined });
       if (cancelled) return;
       if ('statusCode' in ordersRes) {
         setOrdersErr(getErrorMessage(ordersRes as ApiError));
@@ -135,8 +147,8 @@ export const PosReportsPage: React.FC = () => {
         setDaily([]);
       } else {
         const [top, d] = await Promise.all([
-          getPosTopItems({ from, to, limit: 10, sortBy: 'revenue', merchantId }),
-          getPosDaily({ from, to, merchantId, groupBy: dailyGroupBy }),
+          getPosTopItems({ from, to, limit: 10, sortBy: 'revenue', merchantId, storeId: storeId || undefined }),
+          getPosDaily({ from, to, merchantId, groupBy: dailyGroupBy, storeId: storeId || undefined }),
         ]);
         if (!cancelled) {
           if (Array.isArray(top)) {
@@ -175,7 +187,7 @@ export const PosReportsPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [data, merchantId, dailyGroupBy]);
+  }, [data, merchantId, dailyGroupBy, storeId]);
 
   useEffect(() => {
     if (!data?.period || !merchantId) return;
@@ -189,6 +201,7 @@ export const PosReportsPage: React.FC = () => {
         from: f,
         to: t,
         merchantId,
+        storeId: storeId || undefined,
       });
       if (cancelled) return;
       if (out && typeof out === 'object' && 'buckets' in out && Array.isArray((out as { buckets?: unknown }).buckets)) {
@@ -201,7 +214,7 @@ export const PosReportsPage: React.FC = () => {
       setOrderValueDistLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [data?.period, merchantId]);
+  }, [data?.period, merchantId, storeId]);
 
   return (
     <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm" data-testid="e2e-pos-reports">
@@ -215,7 +228,7 @@ export const PosReportsPage: React.FC = () => {
               <Link className="text-brand-primary hover:underline" to="/admin/reports">金流報表</Link>
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted">時間區段</span>
             <select
               className="rounded-xl border border-brand-surface bg-white px-3 py-1.5 text-sm"
@@ -229,8 +242,9 @@ export const PosReportsPage: React.FC = () => {
                 } else {
                   params.set('preset', next);
                 }
-                navigate({ pathname: '/pos/reports', search: params.toString() ? `?${params.toString()}` : '' }, { replace: true });
+                setSearchParams(params, { replace: true });
               }}
+              data-testid="e2e-pos-reports-preset"
             >
               <option value="today">今日</option>
               <option value="last7d">近 7 日</option>
@@ -238,6 +252,29 @@ export const PosReportsPage: React.FC = () => {
               <option value="currentMonth">本月</option>
               <option value="last60d">近 60 日</option>
               <option value="lastHalfYear">近半年</option>
+            </select>
+            <span className="text-xs text-muted">門市</span>
+            <select
+              className="rounded-xl border border-brand-surface bg-white px-3 py-1.5 text-sm"
+              value={storeId}
+              onChange={(e) => {
+                const next = e.target.value;
+                const params = new URLSearchParams(searchParams);
+                if (next) {
+                  params.set('storeId', next);
+                } else {
+                  params.delete('storeId');
+                }
+                setSearchParams(params, { replace: true });
+              }}
+              data-testid="e2e-pos-reports-store"
+            >
+              <option value="">全部門市</option>
+              {stores.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -282,6 +319,36 @@ export const PosReportsPage: React.FC = () => {
           </>
         ) : null}
       </div>
+
+      {!storeId && data?.byStore && data.byStore.length > 0 && (
+        <div className="mt-6 rounded-xl border border-brand-surface bg-white p-4" data-testid="e2e-pos-reports-by-store">
+          <h3 className="mb-3 text-sm font-semibold text-content">門市營收對比</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[320px] text-sm">
+              <thead>
+                <tr className="border-b border-brand-surface">
+                  <th className="pb-2 pr-4 text-left text-xs font-semibold text-muted">門市</th>
+                  <th className="pb-2 pr-4 text-right text-xs font-semibold text-muted">營收</th>
+                  <th className="pb-2 pr-4 text-right text-xs font-semibold text-muted">訂單數</th>
+                  <th className="pb-2 text-right text-xs font-semibold text-muted">平均客單</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.byStore.map((row) => (
+                  <tr key={row.storeId} className="border-b border-brand-surface/50">
+                    <td className="py-2 pr-4 font-medium text-content">{row.storeName ?? row.storeCode ?? row.storeId}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-content">{money(String(row.revenue))}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-muted">{row.ordersCount}</td>
+                    <td className="py-2 text-right tabular-nums text-muted">
+                      {row.avgOrder != null ? money(String(row.avgOrder)) : row.ordersCount > 0 ? money(String(row.revenue / row.ordersCount)) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {data?.memberContribution && (
         <div className="mt-6 rounded-xl border border-brand-surface bg-white p-4">

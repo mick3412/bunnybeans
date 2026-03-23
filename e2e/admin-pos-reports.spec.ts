@@ -24,6 +24,44 @@ test.describe('Admin POS 報表', () => {
     await expect(page).toHaveURL(/preset=last7d/);
   });
 
+  test('門市篩選 select 存在、URL storeId 同步、全部門市時門市對比區塊', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('button', { name: '進入門市收銀' }).click();
+    await page.getByRole('link', { name: '報表' }).click();
+
+    const container = page.getByTestId('e2e-pos-reports');
+    await expect(container).toBeVisible({ timeout: 15_000 });
+
+    // 門市篩選 select 存在
+    const storeSelect = container.getByTestId('e2e-pos-reports-store');
+    await expect(storeSelect).toBeVisible();
+    await expect(storeSelect).toContainText('全部門市');
+
+    // 預設全部門市時 URL 無 storeId 或 storeId 空
+    await expect(page).not.toHaveURL(/storeId=[^&]/);
+
+    // 選單一門市後 URL 應有 storeId
+    const firstStoreOption = storeSelect.locator('option').filter({ hasNotText: '全部門市' }).first();
+    if (await firstStoreOption.isVisible()) {
+      const storeValue = await firstStoreOption.getAttribute('value');
+      if (storeValue) {
+        await storeSelect.selectOption(storeValue);
+        await expect(page).toHaveURL(new RegExp(`storeId=${storeValue}`));
+      }
+    }
+
+    // 切回全部門市
+    await storeSelect.selectOption({ value: '' });
+    await expect(page.url()).not.toMatch(/[?&]storeId=[^&]/);
+
+    // 全部門市時：門市對比區塊有資料則可見，無則不顯示（皆為有效）
+    const byStoreTitle = container.getByText('門市營收對比');
+    const hasByStore = await byStoreTitle.isVisible().catch(() => false);
+    if (hasByStore) {
+      await expect(container.getByTestId('e2e-pos-reports-by-store')).toBeVisible();
+    }
+  });
+
   test('summary / top-items / daily 區塊存在或顯示空態', async ({ page }) => {
     await page.goto('/login');
     await page.getByRole('button', { name: '進入門市收銀' }).click();
