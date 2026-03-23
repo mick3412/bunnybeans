@@ -8,6 +8,7 @@ import {
   getCustomerContacts,
   addCustomerContact,
   exportSegmentCsv,
+  listSegments,
   fetchCsvExport,
   type ApiError,
   type CustomerContactItem,
@@ -52,6 +53,7 @@ export const AdminCustomersPage: React.FC = () => {
   const [createForm, setCreateForm] = useState({ name: '', phone: '', email: '', memberLevel: '', memberCode: '' });
   const [createSaving, setCreateSaving] = useState(false);
   const [listExporting, setListExporting] = useState(false);
+  const [segments, setSegments] = useState<{ id: string; name: string }[]>([]);
 
   const load = useCallback(async () => {
     if (!merchantId) {
@@ -78,6 +80,18 @@ export const AdminCustomersPage: React.FC = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!merchantId) return;
+    void (async () => {
+      const out = await listSegments(merchantId, 1, 200);
+      if ('items' in out && Array.isArray(out.items)) {
+        setSegments(out.items.map((s) => ({ id: s.id, name: s.name })));
+      } else {
+        setSegments([]);
+      }
+    })();
+  }, [merchantId]);
 
   const levels = useMemo(() => {
     const set = new Set<string>();
@@ -126,8 +140,8 @@ export const AdminCustomersPage: React.FC = () => {
     <StandardListLayout
       title="會員管理"
       filters={
-        <div className="flex flex-col gap-3">
-          <div className="rounded-2xl border border-brand-surface bg-table-head px-3 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 rounded-2xl border border-brand-surface bg-table-head px-3 py-3">
             <div className="mb-1 text-xs font-semibold text-muted">篩選</div>
             <div className="mb-1.5 flex flex-wrap items-center gap-1">
               <span className="mr-1 text-xs font-medium text-muted">搜尋</span>
@@ -206,8 +220,8 @@ export const AdminCustomersPage: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
                 size="sm"
@@ -228,7 +242,7 @@ export const AdminCustomersPage: React.FC = () => {
                   if (out !== true) showToast(getErrorMessage(out as ApiError), 'err');
                 }}
               >
-                {listExporting ? '匯出中…' : '匯出列表'}
+                {listExporting ? '匯出中…' : '全部匯出'}
               </Button>
               <Link to="/admin/customers/import">
                 <Button type="button" size="sm" variant="primary" className="shadow-sm">
@@ -242,7 +256,7 @@ export const AdminCustomersPage: React.FC = () => {
                 onClick={() => setExportPanelOpen((o) => !o)}
                 aria-expanded={exportPanelOpen}
               >
-                匯出
+                分群匯出
               </Button>
               {selectedIds.size >= 2 && (
                 <Button
@@ -273,18 +287,23 @@ export const AdminCustomersPage: React.FC = () => {
             </div>
           </div>
           {exportPanelOpen && (
-            <div className="flex flex-wrap items-end gap-3 border-t border-brand-surface pt-3">
+            <div className="mt-2 flex flex-wrap items-end gap-3 border-t border-brand-surface pt-3">
               <span className="w-full text-xs font-semibold text-muted">分群名單匯出</span>
-              <input
-                type="text"
-                className="w-56 rounded-lg border border-brand-surface bg-white px-3 py-1.5 text-sm font-mono focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                placeholder="分群 ID (Segment UUID)"
+              <select
+                className="min-w-[180px] rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm text-content focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                 value={segmentExportId}
                 onChange={(e) => {
                   setSegmentExportId(e.target.value);
                   setSegmentExportErr(null);
                 }}
-              />
+              >
+                <option value="">— 選擇分群 —</option>
+                {segments.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
               <Button
                 type="button"
                 size="sm"
@@ -293,7 +312,7 @@ export const AdminCustomersPage: React.FC = () => {
                 onClick={async () => {
                   const id = segmentExportId.trim();
                   if (!id) {
-                    setSegmentExportErr('缺少分群 ID');
+                    setSegmentExportErr('請選擇分群');
                     return;
                   }
                   setSegmentExporting(true);
