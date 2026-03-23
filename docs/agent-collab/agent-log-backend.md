@@ -15,12 +15,22 @@
 
 ---
 
+### INSTRUCTIONS-048（047 收斂 + 掛單 500 修正）
+- 做了：依 `BACKEND-INSTRUCTIONS 048.md` §1 完成本輪任務。
+  - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
+  - **#1 迴歸確認**：047 變更無遺漏、測試全綠。
+  - **#2 掛單 Internal server error 修正**：holdCart 前驗證 store 存在，否則 `throwNotFound('POS_STORE_NOT_FOUND')`；補 integration test。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、162 tests 全綠。
+- commits：`e34bd5f0` fix(pos) holdCart validate store, POS_STORE_NOT_FOUND；`8319f5ff` docs(agent-log) 048
+
+---
+
 ### INSTRUCTIONS-047（046 收斂）
 - 做了：依 `BACKEND-INSTRUCTIONS 047.md` §1 完成本輪任務。
   - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
   - **#1 迴歸確認**：046 變更無遺漏、測試全綠；未提交後端變更已補 atomic commits（PosHeldCart 實作、e2e-seed 修正、docs）。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、161 tests 全綠。
-- commits：`ffe85337` feat(pos) PosHeldCart；`04565d4c` fix(e2e-seed) ReferenceIdLink order；`2694a45d` docs db-seed e2e-pos；`bd1be9ab` docs(agent-log) 047；`34332378` docs(agent-log) fix sha
+- commits：`ffe85337` feat(pos) PosHeldCart；`04565d4c` fix(e2e-seed) ReferenceIdLink order；`2694a45d` docs db-seed e2e-pos；`bd1be9ab` docs(agent-log) 047
 
 ---
 
