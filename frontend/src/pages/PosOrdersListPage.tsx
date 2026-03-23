@@ -88,50 +88,52 @@ export const PosOrdersListPage: React.FC = () => {
       title="訂單查詢"
       description={`共 ${total} 筆`}
       filters={
-          <div className="flex flex-wrap items-end gap-2 text-xs">
-            <div className="flex min-w-[120px] flex-col">
-              <label className="mb-0.5 text-muted">門市</label>
-              <select
-                className="h-8 min-w-0 rounded-md border border-brand-surface bg-white px-2 text-xs text-content focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-                value={storeIdFilter}
-                onChange={(e) => setStoreIdFilter(e.target.value)}
-              >
-                <option value="">全部</option>
-                {stores.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+          <div className="flex flex-wrap items-end justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex min-w-[120px] flex-col">
+                <label className="mb-0.5 text-muted">門市</label>
+                <select
+                  className="h-8 min-w-0 rounded-md border border-brand-surface bg-white px-2 text-xs text-content focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                  value={storeIdFilter}
+                  onChange={(e) => setStoreIdFilter(e.target.value)}
+                >
+                  <option value="">全部</option>
+                  {stores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="mb-0.5 text-muted">起日</label>
+                <input
+                  type="date"
+                  className="h-8 rounded-md border border-brand-surface bg-white px-2 text-xs text-content"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="mb-0.5 text-muted">迄日</label>
+                <input
+                  type="date"
+                  className="h-8 rounded-md border border-brand-surface bg-white px-2 text-xs text-content"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                />
+              </div>
+              <label className="flex cursor-pointer items-center gap-1 text-muted">
+                <input
+                  type="checkbox"
+                  checked={includeLines}
+                  onChange={(e) => setIncludeLines(e.target.checked)}
+                  className="rounded border-brand-surface"
+                />
+                <span className="text-xs">含明細</span>
+              </label>
             </div>
-            <div className="flex flex-col">
-              <label className="mb-0.5 text-muted">起日</label>
-              <input
-                type="date"
-                className="h-8 rounded-md border border-brand-surface bg-white px-2 text-xs text-content"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="mb-0.5 text-muted">迄日</label>
-              <input
-                type="date"
-                className="h-8 rounded-md border border-brand-surface bg-white px-2 text-xs text-content"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-            <label className="flex cursor-pointer items-center gap-1 text-muted">
-              <input
-                type="checkbox"
-                checked={includeLines}
-                onChange={(e) => setIncludeLines(e.target.checked)}
-                className="rounded border-brand-surface"
-              />
-              <span className="text-xs">含明細</span>
-            </label>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex shrink-0 flex-wrap gap-1">
               <Button
                 type="button"
                 size="sm"
