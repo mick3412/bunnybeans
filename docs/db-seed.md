@@ -24,13 +24,25 @@ pnpm db:seed
 - `DATABASE_URL` 已設定。
 - 已執行過 migration（表已存在）。
 
+**若後台採購單／驗收單／供應商排行等頁面顯示「尚無資料」**：請執行 `pnpm db:seed` 建立示範劇本。
+
 ## 執行方式
+
+**完整清除後重載（推薦，含 E2E／測試資料）**：
+
+```bash
+pnpm db:reset
+```
+
+（等同 `prisma migrate reset --force`：刪除 DB → 重建 → 跑 migration → 跑 seed）
+
+**僅重灌資料（不刪 DB schema）**：
 
 ```bash
 pnpm db:seed
-# 或
-pnpm --filter pos-erp-backend db:seed
 ```
+
+（seed 內會先 `wipeAll()` 清除所有業務表）
 
 ## 建立內容（摘要）
 
@@ -39,21 +51,29 @@ pnpm --filter pos-erp-backend db:seed
 | **Merchant / Store / Warehouse** | M001、S001、W001 |
 | **會員／客戶** | **M001～M018** 會員碼、VIP／GOLD／NORMAL、新客／零消費／多筆訂單／折抵點、無電話訪客；見下「會員 ↔ POS ↔ 點數」。**E2E** 客戶由 `pnpm e2e:seed` 建立，不在此列。 |
 | **Supplier** | 3 啟用 + 1 停用；含聯絡人、付款條件等 |
-| **Product** | **24 筆**：衣服（T恤多尺寸）、牧草、飼料、用品（食盆、水壺、兔籠）、零食、玩具；**規格欄位**：specSize、specStyle、specWeight、specCapacity、expiryDescription 皆有填寫 |
+| **Product** | **27 筆**：衣服、牧草、飼料、用品、零食、玩具；**規格欄位** specSize／specStyle／specWeight／specCapacity／expiryDescription 皆有填寫；**條碼** 全部為台灣 EAN-13（前綴 471）；**飼料／零食效期** 涵蓋兩種模式：productionDate+shelfLifeMonths（推算）與 expiryDate（直接） |
 | **Category** | 6 筆：衣服、牧草、飼料、用品、零食、玩具 |
 | **Brand** | 4 筆：品牌A、品牌B、品牌C、品牌D |
 | **採購單** | DRAFT、ORDERED、PARTIALLY_RECEIVED、RECEIVED、CANCELLED |
 | **驗收單** | PENDING、IN_PROGRESS、COMPLETED（含部分合格+退回）、RETURNED |
-| **庫存** | 與「驗收合格入庫」一致；低庫存 1、零庫存 0 各一 SKU；零食／兔籠／玩具／水壺另有 SEED-BULK 初始 |
+| **庫存** | 與「驗收合格入庫」一致；**每分類**（衣服、牧草、飼料、用品、零食、玩具）皆有**多庫存**、**少庫存**、**0庫存**各至少一商品 |
 | **POS** | **30 筆**訂單（`DEMO-POS-{年}-001～030`），**createdAt 分散近 60 天**（供報表區間篩選）；多會員＋**匿名客**（customerId=null）；金額分散（99～2000+）供**客單價分布**、**營收趨勢**、**熱銷品項**測試；**PointLedger** 與訂單 **referenceId** 對齊；每筆訂單對應 **SALE_RECEIVABLE**＋**SALE_PAYMENT**（金流報表全流程）；**FinanceEvent.partyId** 使用 `customer:{id}`、`supplier:{id}`、`STORE:WALKIN`（匿名） |
 | **促銷** | 2 上架 + 1 草稿 |
 | **BulkImportJob** | done / failed 各 1（測 async 列表） |
-| **Segment（分群）** | 3 筆：「全部 ACTIVE 會員」、「VIP 會員」、「GOLD 會員」；手測 GET /crm/segments/:id/preview |
+| **Segment（分群）** | 5 筆：「全部 ACTIVE 會員」、「VIP 會員」、「GOLD 會員」、「NORMAL 會員」、「多筆消費會員」；手測 GET /crm/segments/:id/preview |
 | **TierRule** | 2 筆：消費滿 5000 升 VIP、滿 2000 升 GOLD |
 | **LoyaltyCoupon** | 2 筆：WELCOME10、VIP50 |
-| **CrmCouponDispatchRule** | 2 筆：新會員發歡迎券、VIP 發折 50 券 |
+| **CrmCouponDispatchRule** | 5 筆：新會員發歡迎券、VIP／GOLD／NORMAL／多筆消費發券規則 |
 | **ProductTag** | 3 筆：熱銷、新品、清倉（SEED-TAG-HOT／NEW／CLEARANCE）；供前端類別管理／商品頁選用 |
-| **CustomerContactLog** | 1 筆：VIP001 客戶、type=CALL、SEED 示範 |
+| **CustomerContactLog** | 5 筆：5 位客戶各有 1 筆、type=CALL、SEED 示範 |
+| **LoyaltyCouponIssue** | 5 筆：VIP001 持有 WELCOME10；VIP001/002/MEM005/MEM010 持有 VIP50（與 Segment 發券規則一致） |
+| **FinanceSnapshot** | 5 筆 daily，由 FinanceEvent 彙總；與金流報表數據一致 |
+| **FinancePeriodClose** | 2 筆關帳區間（當年度 1/1～1/15、1/16～1/31）；供關帳區間頁 |
+| **FinanceAuditLog** | 15 筆，對應部分 FinanceEvent；供稽核紀錄頁 |
+| **ReportClickAudit** | 5 筆：referenceId 對應實際 PosOrder / ReceivingNote，source=finance-events |
+| **即期庫存** | 採購→驗收（batchCode/expiryDate）→入庫鏈，DEMO-PO/RN-*-EXPIRING，供即期庫存頁 |
+| **商品情境** | 部分退貨給供應商、銷售退貨、換貨（exchangeFromOrderId）；見 db-seed-coverage.md |
+| **會員情境** | 促銷套用（promotionApplied）、折價券核銷（usedCount）；訂單↔點數↔促銷↔折價券關聯 |
 
 ## 採購 → 驗收 → 庫存 → 訂單（鏈路與多樣情境）
 
