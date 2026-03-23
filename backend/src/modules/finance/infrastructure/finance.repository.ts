@@ -36,6 +36,7 @@ export class FinanceRepository {
 
   async listEvents(params: {
     partyId?: string;
+    partyIds?: string[];
     referenceId?: string;
     type?: FinanceEventType;
     from?: Date;
@@ -45,6 +46,7 @@ export class FinanceRepository {
   }) {
     const where: Prisma.FinanceEventWhereInput = {};
     if (params.partyId !== undefined) where.partyId = params.partyId;
+    if (params.partyIds?.length) where.partyId = { in: params.partyIds };
     if (params.referenceId !== undefined) where.referenceId = params.referenceId;
     if (params.type) where.type = params.type;
     if (params.from || params.to) {
@@ -53,10 +55,23 @@ export class FinanceRepository {
       if (params.to) where.occurredAt.lte = params.to;
     }
     const skip = (params.page - 1) * params.pageSize;
+    const select = {
+      id: true,
+      occurredAt: true,
+      type: true,
+      partyId: true,
+      amount: true,
+      referenceId: true,
+      note: true,
+      currency: true,
+      taxAmount: true,
+      createdAt: true,
+    } as const;
     const [total, rows] = await Promise.all([
       this.prisma.financeEvent.count({ where }),
       this.prisma.financeEvent.findMany({
         where,
+        select,
         orderBy: { occurredAt: 'desc' },
         skip,
         take: params.pageSize,
@@ -181,12 +196,28 @@ export class FinanceRepository {
     };
   }
 
+  /** 依 displayName 模糊搜尋取得 partyIds（ILIKE） */
+  async findPartyIdsByDisplayName(q: string, merchantId?: string): Promise<string[]> {
+    const term = (q ?? '').trim();
+    if (!term) return [];
+    const pattern = '%' + term + '%';
+    const rows = await this.prisma.$queryRaw<{ partyId: string }[]>(
+      Prisma.sql`
+        SELECT "partyId" FROM "Party"
+        WHERE "displayName" ILIKE ${pattern}
+          ${merchantId ? Prisma.sql`AND "merchantId" = ${merchantId}` : Prisma.empty}
+      `,
+    );
+    return rows.map((r) => r.partyId);
+  }
+
   /** 應收／應付餘額：SQL 層分頁與排序，避免 groupBy 全量後記憶體分頁。allowedPartyIds 以子查詢取代 IN 清單。 */
   async balancesByPartyId(
     params: {
       merchantId: string;
       partyId?: string;
       kind?: 'customer' | 'supplier';
+      q?: string;
       page: number;
       pageSize: number;
     },
@@ -242,6 +273,7 @@ export class FinanceRepository {
           FROM agg a
           LEFT JOIN "Party" p ON p."partyId" = a."partyId"
           WHERE ${kindFilter && !merchantId ? Prisma.sql`p."kind" = ${kindFilter}` : Prisma.sql`1=1`}
+            ${params.q?.trim() ? Prisma.sql`AND p."displayName" ILIKE ${'%' + params.q.trim() + '%'}` : Prisma.empty}
         ),
         paginated AS (
           SELECT *,

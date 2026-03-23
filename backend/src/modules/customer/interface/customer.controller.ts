@@ -28,7 +28,7 @@ import { MergeCustomersDto } from '../dto/merge-customers.dto';
 export class CustomerController {
   constructor(private readonly service: CustomerService) {}
 
-  /** GET 唯讀；支援 status、tag、phone、name、memberLevel 篩選 */
+  /** GET 唯讀；支援 status、tag、phone、name、memberLevel 篩選；分頁 page、pageSize */
   @Get()
   list(
     @Query('merchantId') merchantId: string,
@@ -37,6 +37,8 @@ export class CustomerController {
     @Query('phone') phone?: string,
     @Query('name') name?: string,
     @Query('memberLevel') memberLevel?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     return this.service.listByMerchant(merchantId, {
       status,
@@ -44,6 +46,8 @@ export class CustomerController {
       phone,
       name,
       memberLevel,
+      page: page != null ? parseInt(page, 10) : undefined,
+      pageSize: pageSize != null ? parseInt(pageSize, 10) : undefined,
     });
   }
 

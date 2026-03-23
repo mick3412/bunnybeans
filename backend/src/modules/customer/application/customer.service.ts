@@ -203,6 +203,8 @@ export class CustomerService {
       phone?: string;
       name?: string;
       memberLevel?: string;
+      page?: number;
+      pageSize?: number;
     },
   ) {
     const m = merchantId?.trim();
@@ -222,32 +224,37 @@ export class CustomerService {
     if (filters?.memberLevel?.trim()) {
       where.memberLevel = filters.memberLevel.trim();
     }
-    let rows = await this.prisma.customer.findMany({
-      where,
-      select: {
-        id: true,
-        name: true,
-        code: true,
-        phone: true,
-        memberLevel: true,
-        memberCode: true,
-        joinDate: true,
-        status: true,
-        blockReason: true,
-        tags: true,
-      },
-      orderBy: [{ code: 'asc' }, { name: 'asc' }],
-      take: 5000,
-    });
     if (filters?.tag?.trim()) {
-      const tag = filters.tag.trim();
-      rows = rows.filter((r) => {
-        const arr = Array.isArray(r.tags) ? r.tags : (r.tags as unknown as string[]);
-        return Array.isArray(arr) && arr.includes(tag);
-      });
+      where.tags = { array_contains: filters.tag.trim() };
     }
+    const page = filters?.page ?? 1;
+    const pageSize = Math.min(200, Math.max(1, filters?.pageSize ?? 50));
+    const skip = (page - 1) * pageSize;
+
+    const [total, rows] = await Promise.all([
+      this.prisma.customer.count({ where }),
+      this.prisma.customer.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          phone: true,
+          memberLevel: true,
+          memberCode: true,
+          joinDate: true,
+          status: true,
+          blockReason: true,
+          tags: true,
+        },
+        orderBy: [{ code: 'asc' }, { name: 'asc' }],
+        skip,
+        take: pageSize,
+      }),
+    ]);
+
     const ids = rows.map((r) => r.id);
-    if (!ids.length) return [];
+    if (!ids.length) return { items: [], total: 0, page, pageSize };
     const balances = await this.prisma.$queryRaw<
       { customerId: string; balanceAfter: number }[]
     >(Prisma.sql`
@@ -291,7 +298,7 @@ export class CustomerService {
       expiringAtMap.set(g.customerId, exp.toISOString());
     }
 
-    return rows.map((r) => {
+    const items = rows.map((r) => {
       const pointBalance = balMap.get(r.id) ?? 0;
       const expiringAt = expiringAtMap.get(r.id) ?? null;
       const expiringSoon =
@@ -318,6 +325,7 @@ export class CustomerService {
         expiringAt,
       };
     });
+    return { items, total, page, pageSize };
   }
 
   /** 單筆詳情（含 pointBalance、expiringSoon、expiringAt）；merchantId 可選用於驗證同商家 */

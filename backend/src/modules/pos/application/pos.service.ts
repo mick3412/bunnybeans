@@ -625,7 +625,10 @@ export class PosService {
       throwNotFound('POS_STORE_NOT_FOUND', 'Store not found');
     }
     const warehouseIds = store.warehouses.map((w) => w.id);
-    const products = await this.productService.listProducts(undefined, { includeBrand: true });
+    const { items: products } = await this.productService.listProducts(undefined, {
+      includeBrand: true,
+      pageSize: 200,
+    });
 
     let qtyByProduct = new Map<string, number>();
     if (warehouseIds.length > 0) {

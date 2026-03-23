@@ -480,6 +480,7 @@ model FinanceEvent {
 
   @@index([partyId, occurredAt])
   @@index([partyId, type])
+  @@index([occurredAt])
 }
 
 model PosOrder {

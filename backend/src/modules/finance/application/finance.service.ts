@@ -112,6 +112,8 @@ export class FinanceService {
     type?: FinanceEventType;
     from?: string;
     to?: string;
+    /** 依 Party.displayName 模糊搜尋（ILIKE） */
+    q?: string;
     /** 僅在未帶 from 且未帶 to 時生效：`last30d` = 近 30 日（報表預設，不破壞既有不帶參行為） */
     preset?: string;
     page?: number;
@@ -138,8 +140,16 @@ export class FinanceService {
     if (to && Number.isNaN(to.getTime())) {
       throwBadRequest('FINANCE_LIST_PAGE_INVALID', 'invalid to');
     }
+    let partyIds: string[] | undefined;
+    if (q.q?.trim()) {
+      partyIds = await this.repo.findPartyIdsByDisplayName(q.q.trim());
+      if (partyIds.length === 0) {
+        return { items: [], page, pageSize, total: 0 };
+      }
+    }
     const { items, total } = await this.repo.listEvents({
       partyId: q.partyId,
+      partyIds: q.partyId ? undefined : partyIds,
       referenceId: q.referenceId,
       type: q.type,
       from,
@@ -269,6 +279,8 @@ export class FinanceService {
     merchantId: string;
     partyId?: string;
     kind?: 'customer' | 'supplier';
+    /** 依 Party.displayName 模糊搜尋（ILIKE） */
+    q?: string;
     page?: number;
     pageSize?: number;
   }): Promise<{
@@ -299,6 +311,7 @@ export class FinanceService {
       merchantId: q.merchantId,
       partyId: q.partyId,
       kind,
+      q: q.q?.trim(),
       page,
       pageSize,
     });

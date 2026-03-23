@@ -146,7 +146,7 @@ export async function getStores(traceId?: string): Promise<StoreDto[] | ApiError
   return Array.isArray(out.data) ? out.data : [];
 }
 
-/** GET /customers?merchantId= 唯讀；POS 選客戶顯示 memberLevel（與 seed 對齊） */
+/** GET /customers?merchantId= 唯讀；POS 選客戶顯示 memberLevel；回傳 { items, total, page, pageSize } */
 export type PosCustomerRow = {
   id: string;
   name: string;
@@ -156,11 +156,11 @@ export type PosCustomerRow = {
 };
 export async function listCustomersForPos(merchantId: string): Promise<PosCustomerRow[] | ApiError> {
   const qs = new URLSearchParams({ merchantId });
-  const out = await request<PosCustomerRow[]>(`customers?${qs}`, {
+  const out = await request<{ items: PosCustomerRow[] }>(`customers?${qs}`, {
     traceId: genTraceId(),
   });
   if (!out.ok) return out.error;
-  return Array.isArray(out.data) ? out.data : [];
+  return Array.isArray(out.data?.items) ? out.data.items : [];
 }
 
 /** 供 POS 選預設門市：有 storeId 的倉庫對應可扣庫門市（舊後端未回傳 store.warehouseIds 時後備） */

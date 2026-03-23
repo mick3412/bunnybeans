@@ -57,7 +57,7 @@ export class ProductRepository {
     return and.length ? { AND: and } : {};
   }
 
-  findAll(
+  async findAll(
     filter?: {
       search?: string;
       sku?: string;
@@ -67,7 +67,7 @@ export class ProductRepository {
       /** 僅回傳 expiryDate 之「日曆剩餘天數」嚴格大於 N 之商品（UTC 日界；需有 expiryDate） */
       minDaysUntilExpiry?: number;
     },
-    opts?: { includeBrand?: boolean },
+    opts?: { includeBrand?: boolean; page?: number; pageSize?: number },
   ) {
     const where = this.buildProductWhere(filter) as Prisma.ProductWhereInput;
     const select: Prisma.ProductSelect = {
@@ -93,12 +93,20 @@ export class ProductRepository {
     if (opts?.includeBrand) {
       select.brand = { select: { name: true } };
     }
-    return this.prisma.product.findMany({
-      where: Object.keys(where).length ? where : undefined,
-      orderBy: { sku: 'asc' },
-      take: 5000,
-      select,
-    });
+    const page = opts?.page ?? 1;
+    const pageSize = Math.min(200, Math.max(1, opts?.pageSize ?? 50));
+    const skip = (page - 1) * pageSize;
+    const [total, items] = await Promise.all([
+      this.prisma.product.count({ where: Object.keys(where).length ? where : undefined }),
+      this.prisma.product.findMany({
+        where: Object.keys(where).length ? where : undefined,
+        orderBy: { sku: 'asc' },
+        skip,
+        take: pageSize,
+        select,
+      }),
+    ]);
+    return { items, total, page, pageSize };
   }
 
   /** 匯出用：與 list 同篩選，最多 1 萬列；含 categoryCode、brandCode 以對齊 import 格式 */

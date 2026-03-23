@@ -180,14 +180,16 @@ export type LoyaltyCustomerRow = {
 
 export async function listLoyaltyCustomers(
   merchantId: string,
-  opts?: { status?: string; tag?: string },
+  opts?: { status?: string; tag?: string; page?: number; pageSize?: number },
 ): Promise<LoyaltyCustomerRow[] | ApiError> {
   const q = new URLSearchParams({ merchantId });
   if (opts?.status?.trim()) q.set('status', opts.status.trim());
   if (opts?.tag?.trim()) q.set('tag', opts.tag.trim());
-  const out = await req<LoyaltyCustomerRow[]>(`customers?${q}`);
+  if (opts?.page != null) q.set('page', String(opts.page));
+  if (opts?.pageSize != null) q.set('pageSize', String(opts.pageSize));
+  const out = await req<{ items: LoyaltyCustomerRow[]; total: number }>(`customers?${q}`);
   if (!out.ok) return out.error;
-  return Array.isArray(out.data) ? out.data : [];
+  return Array.isArray(out.data?.items) ? out.data.items : [];
 }
 
 /** §8 GET /customers/search?merchantId=&q= — 模糊搜尋 phone／name／memberCode，最多 20 筆；q 空白回傳空陣列 */

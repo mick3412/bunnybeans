@@ -31,6 +31,8 @@ export class ProductController {
     @Query('brandId') brandId?: string,
     @Query('tag') tag?: string,
     @Query('minDaysUntilExpiry') minDaysUntilExpiry?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     let minDays: number | undefined;
     if (minDaysUntilExpiry?.trim()) {
@@ -56,6 +58,10 @@ export class ProductController {
             minDaysUntilExpiry: minDays,
           }
         : undefined,
+      {
+        page: page != null ? parseInt(page, 10) : undefined,
+        pageSize: pageSize != null ? parseInt(pageSize, 10) : undefined,
+      },
     );
   }
 

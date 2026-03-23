@@ -114,10 +114,10 @@ export class ProductService {
       tag?: string;
       minDaysUntilExpiry?: number;
     },
-    opts?: { includeBrand?: boolean },
+    opts?: { includeBrand?: boolean; page?: number; pageSize?: number },
   ) {
-    const rows = await this.repo.findAll(filter, opts);
-    return rows.map((p) => {
+    const result = await this.repo.findAll(filter, opts);
+    const items = result.items.map((p) => {
       const base = toProductResponse(p);
       if (opts?.includeBrand && p && typeof p === 'object' && 'brand' in p) {
         const b = (p as { brand?: { name: string } | null }).brand;
@@ -125,6 +125,7 @@ export class ProductService {
       }
       return base;
     });
+    return { items, total: result.total, page: result.page, pageSize: result.pageSize };
   }
 
   /**

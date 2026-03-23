@@ -214,13 +214,13 @@ describe('CustomerService member 2.0 + contacts (integration)', () => {
     });
     try {
       const list = await svc.listByMerchant(m.id);
-      expect(list.length).toBeGreaterThanOrEqual(2);
-      const a = list.find((x) => x.id === c1.id);
+      expect(list.items.length).toBeGreaterThanOrEqual(2);
+      const a = list.items.find((x) => x.id === c1.id);
       expect(a?.status).toBe('ACTIVE');
       expect(a?.tags).toEqual(['vip']);
       const byStatus = await svc.listByMerchant(m.id, { status: 'BLOCKED' });
-      expect(byStatus.find((x) => x.id === c2.id)).toBeDefined();
-      expect(byStatus.find((x) => x.id === c1.id)).toBeUndefined();
+      expect(byStatus.items.find((x) => x.id === c2.id)).toBeDefined();
+      expect(byStatus.items.find((x) => x.id === c1.id)).toBeUndefined();
     } finally {
       await prisma.customer.deleteMany({ where: { merchantId: m.id } });
       await prisma.merchant.delete({ where: { id: m.id } });
