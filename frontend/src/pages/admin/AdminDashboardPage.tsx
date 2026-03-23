@@ -37,10 +37,12 @@ export const AdminDashboardPage: React.FC = () => {
   const [expiringCount, setExpiringCount] = useState<number | null>(null);
   const [newMembersCount, setNewMembersCount] = useState<number | null>(null);
   const [dailyRevenue, setDailyRevenue] = useState<{ date: string; revenue: number }[]>([]);
+  const [dailyRange, setDailyRange] = useState<'last7d' | 'last30d'>('last7d');
+  const [dailyLoading, setDailyLoading] = useState(false);
 
   /**
    * 首屏資料：已合併為 2 個 effect（本頁無 8 段 useEffect；034 僅評估確認）。
-   * - 此 effect：不依 merchantId 的摘要／分類／今日營收／即期筆數 + 近 7 日營收曲線
+   * - 此 effect：不依 merchantId 的摘要／分類／今日營收／即期筆數
    */
   useEffect(() => {
     let cancelled = false;
@@ -75,25 +77,45 @@ export const AdminDashboardPage: React.FC = () => {
         setTodayRevenue(todayRes.totalRevenue as string);
       }
       if (expRes && typeof expRes === 'object' && 'total' in expRes) setExpiringCount(expRes.total);
-
-      const summary = await getPosReportsSummary({ preset: 'last7d' });
-      if (cancelled) return;
-      if (!summary || 'statusCode' in summary || !summary.period) {
-        setDailyRevenue([]);
-        return;
-      }
-      const d = await getPosDaily({ from: summary.period.from, to: summary.period.to });
-      if (cancelled) return;
-      if (Array.isArray(d)) {
-        setDailyRevenue(d.map((r) => ({ date: r.date, revenue: r.revenue })));
-      } else {
-        setDailyRevenue([]);
-      }
     })();
     return () => {
       cancelled = true;
     };
   }, [showToast]);
+
+  /** 近期營收趨勢：依 dailyRange 切換 7 日／30 日，傳 merchantId 支援多租戶 */
+  useEffect(() => {
+    setDailyLoading(true);
+    setDailyRevenue([]);
+    let cancelled = false;
+    (async () => {
+      const summary = await getPosReportsSummary({
+        preset: dailyRange,
+        merchantId: merchantId ?? undefined,
+      });
+      if (cancelled) return;
+      if (!summary || 'statusCode' in summary || !summary.period) {
+        setDailyRevenue([]);
+        setDailyLoading(false);
+        return;
+      }
+      const d = await getPosDaily({
+        from: summary.period.from,
+        to: summary.period.to,
+        merchantId: merchantId ?? undefined,
+      });
+      if (cancelled) return;
+      if (Array.isArray(d)) {
+        setDailyRevenue(d.map((r) => ({ date: r.label, revenue: r.value })));
+      } else {
+        setDailyRevenue([]);
+      }
+      setDailyLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [dailyRange, merchantId]);
 
   useEffect(() => {
     if (!merchantId) return;
@@ -192,16 +214,38 @@ export const AdminDashboardPage: React.FC = () => {
         </Link>
       </div>
 
-      {dailyRevenue.length > 0 && (
-        <div className="mt-6 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-muted">近期營收趨勢（近 7 日）</h3>
+      <div className="mt-6 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-muted">近期營收趨勢</h3>
+          <div className="flex gap-1">
+            {(['last7d', 'last30d'] as const).map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setDailyRange(preset)}
+                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  dailyRange === preset
+                    ? 'bg-brand-primary text-white'
+                    : 'bg-table-head text-content hover:bg-brand-surface'
+                }`}
+              >
+                {preset === 'last7d' ? '近 7 日' : '近 30 日'}
+              </button>
+            ))}
+          </div>
+        </div>
+        {dailyLoading ? (
+          <div className="flex h-24 items-center justify-center text-sm text-muted">載入中…</div>
+        ) : dailyRevenue.length === 0 ? (
+          <div className="flex h-24 items-center justify-center text-sm text-muted">無營收資料</div>
+        ) : (
           <MiniLineChart
             items={dailyRevenue.map((r) => ({ label: r.date, value: r.revenue }))}
             height={80}
             formatValue={(n) => formatMoney(n)}
           />
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Link to="/admin/products" className={`kpi-card-accent-blue ${cardLinkClass}`}>
