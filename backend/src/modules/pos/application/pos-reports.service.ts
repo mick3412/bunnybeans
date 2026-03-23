@@ -72,6 +72,7 @@ export interface ByStoreItemDto {
   storeName?: string;
   revenue: number;
   ordersCount: number;
+  avgOrder: number;
 }
 
 export interface PosReportsSummaryDto {
@@ -191,12 +192,14 @@ export class PosReportsService {
           },
         },
       }),
-      this.prisma.posOrder.groupBy({
-        by: ['storeId'],
-        where: orderWhere,
-        _sum: { totalAmount: true },
-        _count: true,
-      }),
+      filter.storeId?.trim()
+        ? Promise.resolve([] as { storeId: string | null; _sum: { totalAmount: number | null }; _count: number }[])
+        : this.prisma.posOrder.groupBy({
+            by: ['storeId'],
+            where: orderWhere,
+            _sum: { totalAmount: true },
+            _count: true,
+          }),
     ]);
 
     const total = aggOrders._sum.totalAmount;
@@ -249,7 +252,7 @@ export class PosReportsService {
 
     let byStore: ByStoreItemDto[] | undefined;
     if (byStoreRows.length > 0) {
-      const storeIds = byStoreRows.map((r) => r.storeId).filter(Boolean);
+      const storeIds = byStoreRows.map((r) => r.storeId).filter((id): id is string => id != null);
       const stores =
         storeIds.length > 0
           ? await this.prisma.store.findMany({
@@ -262,12 +265,15 @@ export class PosReportsService {
         .filter((r) => r.storeId)
         .map((r) => {
           const s = storeMap.get(r.storeId!);
+          const revenue = r._sum.totalAmount != null ? Number(r._sum.totalAmount) : 0;
+          const ordersCount = r._count;
           return {
             storeId: r.storeId!,
             storeCode: s?.code,
             storeName: s?.name,
-            revenue: r._sum.totalAmount != null ? Number(r._sum.totalAmount) : 0,
-            ordersCount: r._count,
+            revenue,
+            ordersCount,
+            avgOrder: ordersCount > 0 ? revenue / ordersCount : 0,
           };
         })
         .sort((a, b) => b.revenue - a.revenue);

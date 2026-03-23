@@ -491,6 +491,8 @@ describe('PosReportsService (integration)', () => {
     expect(byStoreMap.get(store1.id)?.storeCode).toBe(store1.code);
     expect(byStoreMap.get(store2.id)?.revenue).toBe(300);
     expect(byStoreMap.get(store2.id)?.ordersCount).toBe(1);
+    expect(byStoreMap.get(store1.id)?.avgOrder).toBe(200);
+    expect(byStoreMap.get(store2.id)?.avgOrder).toBe(300);
     expect(out.byStore![0].revenue).toBeGreaterThanOrEqual(out.byStore![1].revenue);
 
     await prisma.posOrderItem.deleteMany({ where: { orderId: { in: [o1.id, o2.id] } } });
@@ -504,6 +506,17 @@ describe('PosReportsService (integration)', () => {
     await prisma.store.deleteMany({ where: { id: { in: [store1.id, store2.id] } } });
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 25000);
+
+  it('summary with storeId skips byStore (undefined or empty)', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.findFirst();
+    const store = await prisma.store.findFirst({ where: { merchantId: merchant!.id } });
+    if (!merchant || !store) return;
+
+    const out = await reports.summary({ merchantId: merchant.id, preset: 'today', storeId: store.id });
+    expect(out.byStore === undefined || out.byStore?.length === 0).toBe(true);
+  }, 10000);
 
   it('daily with groupBy=week returns items with periodStart', async () => {
     if (!process.env.DATABASE_URL) return;
