@@ -13,6 +13,15 @@ import {
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { Alert } from '../../shared/components/Alert';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
+import {
+  WH_STORES_FIELD_CLASS,
+  WH_STORES_FORM_ROW_CLASS,
+  WH_STORES_TABLE_WRAPPER_CLASS,
+  WH_STORES_TABLE_CLASS,
+  WH_STORES_THEAD_CLASS,
+  WH_STORES_TH_OP_CLASS,
+  WH_STORES_EMPTY_CLASS,
+} from './warehouses-stores-layout';
 
 export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const merchantId = useDefaultMerchantId();
@@ -108,7 +117,6 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
   };
 
   const H = embedded ? 'h2' : 'h1';
-  const fieldClass = 'h-9 rounded-lg border border-brand-surface px-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
   return (
     <div className={embedded ? '' : 'mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm'}>
       <H className="mb-2 text-lg font-semibold text-content">倉庫</H>
@@ -120,11 +128,11 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
           <Alert variant="error">{err}</Alert>
         </div>
       )}
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+      <div className={WH_STORES_FORM_ROW_CLASS}>
         <div>
           <label className="mb-1 block text-xs text-muted">代碼</label>
           <input
-            className={`${fieldClass} w-24`}
+            className={`${WH_STORES_FIELD_CLASS} w-24`}
             placeholder="代碼"
             value={code}
             onChange={(e) => setCode(e.target.value)}
@@ -133,7 +141,7 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
         <div>
           <label className="mb-1 block text-xs text-muted">名稱</label>
           <input
-            className={`${fieldClass} min-w-[140px]`}
+            className={`${WH_STORES_FIELD_CLASS} min-w-[140px]`}
             placeholder="名稱"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -142,7 +150,7 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
         <div>
           <label className="mb-1 block text-xs text-muted">門市（可空）</label>
           <select
-            className={`${fieldClass} max-w-[180px]`}
+            className={`${WH_STORES_FIELD_CLASS} max-w-[180px]`}
             value={storeId}
             onChange={(e) => setStoreId(e.target.value)}
           >
@@ -158,14 +166,14 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
           新增
         </Button>
       </div>
-      <div className="table-sticky-head overflow-x-auto rounded-xl border border-brand-surface bg-white">
-        <table className="w-full min-w-[500px] text-left text-sm">
-          <thead className="border-b border-brand-surface bg-table-head text-xs font-semibold uppercase text-muted">
+      <div className={WH_STORES_TABLE_WRAPPER_CLASS}>
+        <table className={WH_STORES_TABLE_CLASS}>
+          <thead className={WH_STORES_THEAD_CLASS}>
             <tr>
               <th className="px-4 py-2 font-medium">代碼</th>
               <th className="px-4 py-2 font-medium">名稱</th>
               <th className="min-w-[140px] px-4 py-2 font-medium">門市</th>
-              <th className="w-32 px-4 py-2 text-right">操作</th>
+              <th className={WH_STORES_TH_OP_CLASS}>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -175,21 +183,21 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
                   <>
                     <td className="px-4 py-2">
                       <input
-                        className={`${fieldClass} w-full`}
+                        className={`${WH_STORES_FIELD_CLASS} w-full`}
                         value={editCode}
                         onChange={(e) => setEditCode(e.target.value)}
                       />
                     </td>
                     <td className="px-4 py-2">
                       <input
-                        className={`${fieldClass} w-full`}
+                        className={`${WH_STORES_FIELD_CLASS} w-full`}
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                       />
                     </td>
                     <td className="px-4 py-2">
                       <select
-                        className={`${fieldClass} w-full min-w-[140px]`}
+                        className={`${WH_STORES_FIELD_CLASS} w-full min-w-[140px]`}
                         value={editStoreId}
                         onChange={(e) => setEditStoreId(e.target.value)}
                         aria-label="綁定門市"
@@ -233,7 +241,7 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
           </tbody>
         </table>
         {rows.length === 0 && (
-          <div className="px-4 py-8 text-center text-sm text-muted">尚無倉庫</div>
+          <div className={WH_STORES_EMPTY_CLASS}>尚無倉庫</div>
         )}
       </div>
     </div>

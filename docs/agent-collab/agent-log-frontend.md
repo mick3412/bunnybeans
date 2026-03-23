@@ -15,6 +15,22 @@
 
 ---
 
+### INSTRUCTIONS 051（050 收斂 + 倉庫/門市頁對齊）
+- 做了：① **迴歸確認**：build 全綠；050 變更無遺漏。② **倉庫/門市頁對齊**（erp-roadmap 0.7）：新增 `warehouses-stores-layout.ts` 共用常數（WH_STORES_FIELD_CLASS、FORM_ROW、TABLE_WRAPPER、TABLE、THEAD、TH_OP、EMPTY）；`AdminStoresPage` 與 `AdminWarehousesPage` 改為使用共用樣式，統一表格寬度（min-w-[560px]）、表單間距（mb-5 gap-4）、按鈕與表格結構。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：`6a60b225` feat(admin): warehouses-stores layout alignment (INSTRUCTIONS 051, erp-roadmap 0.7)
+- 檔案：warehouses-stores-layout.ts、AdminStoresPage、AdminWarehousesPage
+
+---
+
+### AdminLayout 採購/入庫區塊調整
+- 做了：① 側欄「採購管理」更名為「採購/入庫」。② 在該區塊新增「倉庫/門市」連結（`/admin/warehouses`），置於入庫／盤點與採購總覽之間。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：待補
+- 檔案：AdminLayout.tsx
+
+---
+
 ### INSTRUCTIONS 050（兩門市情境 + 營業報表門市維度）
 - 做了：① **PosPage 門市切換修正**：apiStores 型別加入 `merchantId`；setApiStores 保留 merchantId；門市 onChange 時從 apiStores 取選中門市的 merchantId 並 setApiMerchantId。② **posOrdersApi 型別擴充**：PosReportsSummaryDto 新增 `byStore?: { storeId, storeCode?, storeName?, revenue, ordersCount, avgOrder? }[]`。③ **PosReportsPage 門市篩選器**：getStores 載入門市；時間區段旁新增門市 select（全部門市 + 各門市）；storeId 從 URL `?storeId=` 讀取；切換時 setSearchParams 更新 URL；getPosReportsSummary、getPosTopItems、getPosDaily、getPosOrderValueDistribution、listOrders 皆傳 storeId。④ **門市營收對比區塊**：storeId 空且 data.byStore?.length > 0 時顯示表格（門市、營收、訂單數、平均客單）。⑤ **E2E 擴充**：admin-pos-reports 新增門市篩選 select 存在、URL storeId 同步、全部門市時門市對比區塊驗證。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E admin-pos-reports 門市篩選測試 pass（其餘需後端 3003）
