@@ -15,12 +15,22 @@
 
 ---
 
-### INSTRUCTIONS-051（050 收斂 + ops 測試穩定性）
-- 做了：依 `BACKEND-INSTRUCTIONS 051.md` §1 完成本輪任務。
-  - **#1 迴歸確認**：050 變更無遺漏；`pnpm ci:backend-with-db` 通過。
-  - **ops 測試穩定性**：`runJob records OpsJobRunLog` 因 shared DB 產生多筆 log 導致 flaky；改為 `expect(after).toBeGreaterThanOrEqual(before + 1)`。
+### INSTRUCTIONS-052（051 收斂）
+- 做了：依 `BACKEND-INSTRUCTIONS 052.md` §1 完成本輪任務。
+  - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
+  - **#1 迴歸確認**：051 變更無遺漏、測試全綠；未提交變更（ops runJob 斷言）已補 atomic commit。
+  - **#2 #4 POS 預設門市（選配）**：依說明「前端可先以 localStorage 實作，本項可後補」，本輪未實作。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、163 tests 全綠。
-- commits：`bc1ce472` fix(ops) runJob test resilience (INSTRUCTIONS 051)
+- commits：`e8585f0d` test(ops) runJob finance-snapshot assert exact count
+
+---
+
+### INSTRUCTIONS-051（050 收斂）
+- 做了：依 `BACKEND-INSTRUCTIONS 051.md` §1 完成本輪任務。
+  - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
+  - **#1 迴歸確認**：050 變更無遺漏、測試全綠；未提交變更（held-carts 驗證 + DTO）已補 atomic commit。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、163 tests 全綠。
+- commits：`e9566beb` fix(pos) held-carts item validation + DTO class-validator；`76bad951` docs(agent-log) 051
 
 ---
 
