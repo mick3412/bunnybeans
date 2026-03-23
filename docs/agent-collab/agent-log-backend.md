@@ -15,13 +15,21 @@
 
 ---
 
+### INSTRUCTIONS-045（044 收斂）
+- 做了：依 `BACKEND-INSTRUCTIONS 045.md` §1 完成本輪任務。
+  - **#1 迴歸確認**：044 變更無遺漏、測試全綠；044 未提交變更（含 seed 補強）已補 atomic commits。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；21 suites、158 tests 全綠。
+- commits：`3dc05793` feat(seed)；`d748a22d` docs(db-seed-coverage)；`25230948` docs(agent-log) 044；`782271c2` docs(agent-log) 045
+
+---
+
 ### INSTRUCTIONS-044（043 收斂 + Seed 補強）
 - 做了：依 `BACKEND-INSTRUCTIONS 044.md` §1 完成本輪任務。
   - **#1 迴歸確認**：043 變更無遺漏、測試全綠；`pnpm ci:backend-with-db` 通過。
   - **#2 Seed 補強 CashRegisterSession**：S002 建立 3 筆（1 OPEN、2 CLOSED），openedAt 分散過去 7 天；供 AdminPosSessionsPage。
   - **#3 Seed 補強 補貨建議**：DEMO-POS-REPL 銷售 pLowStock 1 單位 → SALE_OUT、庫存歸零；供 AdminReplenishmentPage。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；21 suites、158 tests 全綠。
-- commits：`dce69c28` docs(agent-log): INSTRUCTIONS 044；`b7ecaf6a` docs(agent-log): INSTRUCTIONS 044 commit sha；（本輪 seed 變更待提交）
+- commits：`3dc05793` feat(seed)；`d748a22d` docs(db-seed-coverage)；`25230948` docs(agent-log) 044
 
 ---
 
