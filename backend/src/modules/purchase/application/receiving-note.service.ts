@@ -22,7 +22,12 @@ export class ReceivingNoteService {
     return `RN-${y}${mo}${day}-${randomBytes(3).toString('hex').toUpperCase()}`;
   }
 
-  async list(merchantId: string, status?: string, q?: string) {
+  async list(
+    merchantId: string,
+    status?: string,
+    q?: string,
+    opts?: { page?: number; pageSize?: number },
+  ) {
     const m = merchantId?.trim();
     if (!m) {
       throwBadRequest('RN_MERCHANT_REQUIRED', 'merchantId required');
@@ -38,16 +43,25 @@ export class ReceivingNoteService {
         { purchaseOrder: { orderNumber: { contains: s, mode: 'insensitive' } } },
       ];
     }
-    return this.prisma.receivingNote.findMany({
-      where,
-      include: {
-        purchaseOrder: {
-          select: { id: true, orderNumber: true, supplier: { select: { name: true } } },
+    const page = opts?.page ?? 1;
+    const pageSize = Math.min(100, Math.max(1, opts?.pageSize ?? 20));
+    const skip = (page - 1) * pageSize;
+    const [total, items] = await Promise.all([
+      this.prisma.receivingNote.count({ where }),
+      this.prisma.receivingNote.findMany({
+        where,
+        include: {
+          purchaseOrder: {
+            select: { id: true, orderNumber: true, supplier: { select: { name: true } } },
+          },
+          _count: { select: { lines: true } },
         },
-        _count: { select: { lines: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+    ]);
+    return { items, total, page, pageSize };
   }
 
   async getById(id: string, merchantId?: string) {

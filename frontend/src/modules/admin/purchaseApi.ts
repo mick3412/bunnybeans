@@ -7,6 +7,8 @@ const BASE = (
   (import.meta.env.DEV ? 'http://127.0.0.1:3003' : '')
 ).replace(/\/$/, '');
 
+const ADMIN_KEY = (import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim() ?? '';
+
 export interface ApiError {
   statusCode: number;
   message: string;
@@ -28,6 +30,7 @@ async function req<T>(path: string, init: RequestInit = {}): Promise<{ ok: true;
     'X-Trace-Id': traceId,
     ...(init.headers as Record<string, string>),
   };
+  if (ADMIN_KEY) (headers as Record<string, string>)['X-Admin-Key'] = ADMIN_KEY;
   try {
     const res = await fetch(url, { ...init, headers });
     let body: unknown = {};
@@ -435,9 +438,9 @@ export async function listSuppliers(merchantId: string, q?: string): Promise<Pur
   }
   const qs = new URLSearchParams({ merchantId });
   if (q) qs.set('q', q);
-  const out = await req<SupplierDto[]>(`suppliers?${qs}`);
+  const out = await req<{ items: SupplierDto[] }>(`suppliers?${qs}`);
   if (!out.ok) return { data: [], error: out.error };
-  return { data: Array.isArray(out.data) ? out.data : [] };
+  return { data: Array.isArray(out.data?.items) ? out.data.items : [] };
 }
 
 export async function createSupplier(body: {
@@ -519,9 +522,9 @@ export async function listPurchaseOrders(
   const qs = new URLSearchParams({ merchantId });
   if (status && status !== 'ALL') qs.set('status', status);
   if (q) qs.set('q', q);
-  const out = await req<unknown>(`purchase-orders?${qs}`);
+  const out = await req<{ items: unknown[] }>(`purchase-orders?${qs}`);
   if (!out.ok) return { data: [], error: out.error };
-  const arr = Array.isArray(out.data) ? out.data : [];
+  const arr = Array.isArray(out.data?.items) ? out.data.items : [];
   return { data: arr.map((row) => normalizePoFromApi(row as Record<string, unknown>)) };
 }
 
@@ -624,10 +627,10 @@ export async function listReceivingNotes(
   const qs = new URLSearchParams({ merchantId });
   if (status && status !== 'ALL') qs.set('status', status);
   if (q) qs.set('q', q);
-  const out = await req<Record<string, unknown>[]>(`receiving-notes?${qs}`);
+  const out = await req<{ items: Record<string, unknown>[] }>(`receiving-notes?${qs}`);
   if (!out.ok) return { data: [], error: out.error };
-  const rows = Array.isArray(out.data) ? out.data.map((r) => normalizeRnFromApi(r)) : [];
-  return { data: rows };
+  const arr = Array.isArray(out.data?.items) ? out.data.items : [];
+  return { data: arr.map((r) => normalizeRnFromApi(r)) };
 }
 
 export async function getReceivingNote(id: string): Promise<ReceivingNoteDto | ApiError> {

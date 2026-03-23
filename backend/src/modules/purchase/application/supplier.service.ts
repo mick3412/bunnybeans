@@ -12,7 +12,11 @@ import { Prisma } from '@prisma/client';
 export class SupplierService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async list(merchantId: string, q?: string) {
+  async list(
+    merchantId: string,
+    q?: string,
+    opts?: { page?: number; pageSize?: number },
+  ) {
     const m = merchantId?.trim();
     if (!m) {
       throwBadRequest('SUPPLIER_MERCHANT_REQUIRED', 'merchantId required');
@@ -26,10 +30,19 @@ export class SupplierService {
         { contactPerson: { contains: s, mode: 'insensitive' } },
       ];
     }
-    return this.prisma.supplier.findMany({
-      where,
-      orderBy: { code: 'asc' },
-    });
+    const page = opts?.page ?? 1;
+    const pageSize = Math.min(200, Math.max(1, opts?.pageSize ?? 50));
+    const skip = (page - 1) * pageSize;
+    const [total, items] = await Promise.all([
+      this.prisma.supplier.count({ where }),
+      this.prisma.supplier.findMany({
+        where,
+        orderBy: { code: 'asc' },
+        skip,
+        take: pageSize,
+      }),
+    ]);
+    return { items, total, page, pageSize };
   }
 
   async getById(id: string, merchantId?: string) {

@@ -16,7 +16,12 @@ export class PurchaseOrderService {
     private readonly receivingNotes: ReceivingNoteService,
   ) {}
 
-  async list(merchantId: string, status?: string, q?: string) {
+  async list(
+    merchantId: string,
+    status?: string,
+    q?: string,
+    opts?: { page?: number; pageSize?: number },
+  ) {
     const m = merchantId?.trim();
     if (!m) {
       throwBadRequest('PO_MERCHANT_REQUIRED', 'merchantId required');
@@ -32,23 +37,32 @@ export class PurchaseOrderService {
         { supplier: { name: { contains: s, mode: 'insensitive' } } },
       ];
     }
-    return this.prisma.purchaseOrder.findMany({
-      where,
-      include: {
-        supplier: { select: { id: true, name: true, code: true } },
-        /** 列表需品項數／金額；與前端 poTotal、lines.length 對齊 */
-        lines: {
-          select: {
-            id: true,
-            productId: true,
-            qtyOrdered: true,
-            unitCost: true,
-            qtyReceived: true,
+    const page = opts?.page ?? 1;
+    const pageSize = Math.min(100, Math.max(1, opts?.pageSize ?? 20));
+    const skip = (page - 1) * pageSize;
+    const [total, items] = await Promise.all([
+      this.prisma.purchaseOrder.count({ where }),
+      this.prisma.purchaseOrder.findMany({
+        where,
+        include: {
+          supplier: { select: { id: true, name: true, code: true } },
+          /** 列表需品項數／金額；與前端 poTotal、lines.length 對齊 */
+          lines: {
+            select: {
+              id: true,
+              productId: true,
+              qtyOrdered: true,
+              unitCost: true,
+              qtyReceived: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+    ]);
+    return { items, total, page, pageSize };
   }
 
   async getById(id: string, merchantId?: string) {

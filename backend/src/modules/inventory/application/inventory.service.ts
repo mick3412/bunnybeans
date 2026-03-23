@@ -84,6 +84,8 @@ export interface SlowMovingFilter {
   lookbackDays?: number;
   salesThreshold?: number;
   onHandThreshold?: number;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface ScanStocktakeInput {
@@ -753,7 +755,14 @@ export class InventoryService {
       const to = new Date();
       const from = new Date(to);
       from.setDate(from.getDate() - lookbackDays);
-      return { items: [], from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+      return {
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: Math.min(200, Math.max(1, Math.floor(Number(filter.pageSize ?? 50)))),
+        from: from.toISOString().slice(0, 10),
+        to: to.toISOString().slice(0, 10),
+      };
     }
 
     const from = new Date();
@@ -819,8 +828,17 @@ export class InventoryService {
       }
     }
 
+    const total = items.length;
+    const page = Math.max(1, Math.floor(Number(filter.page ?? 1)));
+    const pageSize = Math.min(200, Math.max(1, Math.floor(Number(filter.pageSize ?? 50))));
+    const skip = (page - 1) * pageSize;
+    const pageItems = items.slice(skip, skip + pageSize);
+
     return {
-      items,
+      items: pageItems,
+      total,
+      page,
+      pageSize,
       from: from.toISOString().slice(0, 10),
       to: to.toISOString().slice(0, 10),
     };

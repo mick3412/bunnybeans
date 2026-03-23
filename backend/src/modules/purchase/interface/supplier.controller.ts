@@ -18,8 +18,16 @@ export class SupplierController {
   constructor(private readonly svc: SupplierService) {}
 
   @Get()
-  list(@Query('merchantId') merchantId: string, @Query('q') q?: string) {
-    return this.svc.list(merchantId, q);
+  list(
+    @Query('merchantId') merchantId: string,
+    @Query('q') q?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.svc.list(merchantId, q, {
+      page: page != null ? parseInt(page, 10) : undefined,
+      pageSize: pageSize != null ? parseInt(pageSize, 10) : undefined,
+    });
   }
 
   @Get(':id')

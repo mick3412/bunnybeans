@@ -16,8 +16,13 @@ export class PurchaseOrderController {
     @Query('merchantId') merchantId: string,
     @Query('status') status?: string,
     @Query('q') q?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
-    return this.svc.list(merchantId, status, q);
+    return this.svc.list(merchantId, status, q, {
+      page: page != null ? parseInt(page, 10) : undefined,
+      pageSize: pageSize != null ? parseInt(pageSize, 10) : undefined,
+    });
   }
 
   @Get(':id')

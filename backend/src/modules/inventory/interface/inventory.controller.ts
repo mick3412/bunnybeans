@@ -215,6 +215,8 @@ export class InventoryController {
     @Query('lookbackDays') lookbackDays?: string,
     @Query('salesThreshold') salesThreshold?: string,
     @Query('onHandThreshold') onHandThreshold?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     const filter: SlowMovingFilter = {
       merchantId,
@@ -222,6 +224,8 @@ export class InventoryController {
       lookbackDays: lookbackDays ? Number(lookbackDays) : undefined,
       salesThreshold: salesThreshold != null ? Number(salesThreshold) : undefined,
       onHandThreshold: onHandThreshold != null ? Number(onHandThreshold) : undefined,
+      page: page != null ? Number(page) : undefined,
+      pageSize: pageSize != null ? Number(pageSize) : undefined,
     };
     return this.service.getSlowMoving(filter);
   }
