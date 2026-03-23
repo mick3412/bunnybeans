@@ -15,12 +15,25 @@
 
 ---
 
+### INSTRUCTIONS-054（後端優化 #2～#6）
+- 做了：依 `BACKEND-INSTRUCTIONS 054.md` §1 完成本輪任務。
+  - **#2 Finance 對象名稱搜尋**：`GET /finance/balances`、`GET /finance/events` 新增 `?q=`，依 Party.displayName ILIKE 搜尋；balances 的 with_party CTE 加條件；listEvents 依 q 查 partyIds 篩選。
+  - **#3 Product 分頁**：findAll 回傳 `{ items, total, page, pageSize }`；預設 pageSize 50，上限 200；pos.service listProductsWithInventory 使用 `{ items }`。
+  - **#4 Customer 分頁與 tag 下推**：listByMerchant 回傳 `{ items, total, page, pageSize }`；tag 篩選改為 Prisma `tags: { array_contains }` 下推至 DB。
+  - **#5 Finance listEvents select**：findMany 只 select 必要欄位。
+  - **#6 索引檢查**：FinanceEvent 新增 `@@index([occurredAt])`。
+  - **前端**：posOrdersApi、loyaltyApi 處理 `{ items }` 回應形狀。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 22 suites、163 tests 全綠。`pnpm ci:backend-with-db` 有 1 flaky ops runJob 測試（單獨執行通過）。
+- commits：`4dc8210d` feat(backend-054): finance q search, product/customer pagination, listEvents select, FinanceEvent index
+
+---
+
 ### INSTRUCTIONS-053（052 收斂）
 - 做了：依 `BACKEND-INSTRUCTIONS 053.md` §1 完成本輪任務。
   - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
   - **#1 迴歸確認**：052 變更無遺漏、測試全綠；無待提交變更。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、163 tests 全綠。
-- commits：無（本輪無後端變更）
+- commits：`32c99f94` docs(agent-log) 053
 
 ---
 
