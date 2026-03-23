@@ -72,6 +72,9 @@ async function main() {
   const store = await prisma.store.create({
     data: { code: 'S001', name: 'Demo 門市', merchantId: merchant.id },
   });
+  const storeSessions = await prisma.store.create({
+    data: { code: 'S002', name: 'Demo 門市二（關帳示範）', merchantId: merchant.id },
+  });
   const warehouse = await prisma.warehouse.create({
     data: {
       code: 'W001',
@@ -1006,6 +1009,48 @@ async function main() {
   await addBalance(pCageLForInv.id, 15, 'SEED-BULK', '兔籠初始', t0);
   await addBalance(pBottleForInv.id, 80, 'SEED-BULK', '水壺初始', t0);
 
+  /** CashRegisterSession 示範：1 OPEN、2 CLOSED，openedAt 分散過去 7 天，供 AdminPosSessionsPage 列表（使用 S002 避免與 pos-sessions 整合測試衝突） */
+  await prisma.cashRegisterSession.create({
+    data: {
+      storeId: storeSessions.id,
+      merchantId: merchant.id,
+      openingCashAmount: 5000,
+      openedAt: daysAgo(1),
+      openedBy: '李小華',
+      status: 'OPEN',
+    },
+  });
+  await prisma.cashRegisterSession.create({
+    data: {
+      storeId: storeSessions.id,
+      merchantId: merchant.id,
+      openingCashAmount: 3000,
+      openedAt: daysAgo(3),
+      closedAt: daysAgo(3),
+      openedBy: '王大明',
+      closedBy: '王大明',
+      status: 'CLOSED',
+      expectedCashAmount: 3200,
+      actualCashAmount: 3180,
+      differenceAmount: -20,
+    },
+  });
+  await prisma.cashRegisterSession.create({
+    data: {
+      storeId: storeSessions.id,
+      merchantId: merchant.id,
+      openingCashAmount: 4000,
+      openedAt: daysAgo(6),
+      closedAt: daysAgo(6),
+      openedBy: '陳小美',
+      closedBy: '陳小美',
+      status: 'CLOSED',
+      expectedCashAmount: 4500,
+      actualCashAmount: 4500,
+      differenceAmount: 0,
+    },
+  });
+
   /** POS 訂單 + SALE_OUT（日期分散近 60 天，供報表篩選） */
   const custVip = await prisma.customer.findFirst({
     where: { merchantId: merchant.id, code: 'VIP001' },
@@ -1477,6 +1522,8 @@ async function main() {
   await posSale({ orderNumber: `DEMO-POS-${y}-028`, customerId: custMem2.id, subtotal: 650, discount: 0, total: 650, method: 'CASH', occurredAt: daysAgo(54), lines: [{ productId: pFeed.id, qty: 2, unitPrice: 280 }, { productId: pBowl.id, qty: 1, unitPrice: 90 }], note: '' });
   await posSaleGuest({ orderNumber: `DEMO-POS-${y}-029`, subtotal: 278, discount: 0, total: 278, method: 'CASH', occurredAt: daysAgo(56), lines: [{ productId: pFeed.id, qty: 1, unitPrice: 278 }], note: '匿名' });
   await posSale({ orderNumber: `DEMO-POS-${y}-030`, customerId: custMem6.id, subtotal: 115, discount: 0, total: 115, method: 'CASH', occurredAt: daysAgo(58), lines: [{ productId: pBowl.id, qty: 1, unitPrice: 99 }, { productId: pSnack.id, qty: 1, unitPrice: 16 }], note: '' });
+  /** 補貨建議示範：DEMO-LOW-STOCK 售出 1 單位，庫存歸零，供 AdminReplenishmentPage */
+  await posSale({ orderNumber: `DEMO-POS-${y}-REPL`, customerId: custVip!.id, subtotal: 50, discount: 0, total: 50, method: 'CASH', occurredAt: daysAgo(10), lines: [{ productId: pLowStock.id, qty: 1, unitPrice: 50 }], note: 'POS DEMO-POS-REPL 補貨建議示範' });
   /** 報表時間區段：today/last7d/last30d 至少 5 筆，供 preset 篩選有內容 */
   const orderT1 = await posSale({ orderNumber: `DEMO-POS-${y}-T1`, customerId: custVip!.id, subtotal: 150, discount: 0, total: 150, method: 'CASH', occurredAt: daysAgo(0), lines: [{ productId: pTee.id, qty: 1, unitPrice: 150 }], note: '今日' });
   const orderT2 = await posSale({ orderNumber: `DEMO-POS-${y}-T2`, customerId: custGold.id, subtotal: 298, discount: 0, total: 298, method: 'CASH', occurredAt: daysAgo(1), lines: [{ productId: pHay.id, qty: 2, unitPrice: 149 }], note: '近7日' });
