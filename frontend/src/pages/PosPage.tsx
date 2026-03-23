@@ -24,9 +24,11 @@ import { holdCart } from '../modules/pos/posHeldCartsApi';
 import { useDebouncedValue } from '../shared/hooks/useDebouncedValue';
 import { formatMoney } from '../shared/utils/formatMoney';
 import { getErrorMessage } from '../shared/errors/errorMessages';
+import { POS_DEFAULT_STORE_KEY } from '../shared/constants/pos';
 
 const ALL_ID = '';
 const POS_FAVORITES_KEY = 'pos-favorites';
+const POS_HIDE_OUT_OF_STOCK_KEY = 'pos-hide-out-of-stock';
 
 function loadFavorites(): string[] {
   try {
@@ -43,6 +45,19 @@ function loadFavorites(): string[] {
 
 function saveFavorites(ids: string[]) {
   localStorage.setItem(POS_FAVORITES_KEY, JSON.stringify(ids));
+}
+
+function loadHideOutOfStock(): boolean {
+  try {
+    const s = localStorage.getItem(POS_HIDE_OUT_OF_STOCK_KEY);
+    return s === '1' || s === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveHideOutOfStock(hide: boolean) {
+  localStorage.setItem(POS_HIDE_OUT_OF_STOCK_KEY, hide ? '1' : '0');
 }
 
 const mockProducts: PosProductDisplay[] = Array.from({ length: 16 }).map((_, index) => {
@@ -74,6 +89,7 @@ export const PosPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchQueryDebounced = useDebouncedValue(searchQuery, 300);
   const [gridCols, setGridCols] = useState<3 | 4 | 5>(5);
+  const [hideOutOfStock, setHideOutOfStock] = useState(loadHideOutOfStock);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [brands, setBrands] = useState<BrandDto[]>([]);
   const [apiStoreId, setApiStoreId] = useState<string | null>(null);
@@ -140,17 +156,29 @@ export const PosPage: React.FC = () => {
       if (Array.isArray(storesRes) && storesRes.length > 0) {
         setApiStores(storesRes.map((s) => ({ id: s.id, name: s.name, merchantId: s.merchantId })));
         let chosen: string | null = null;
-        const withWh = storesRes.find((s) => (s.warehouseIds?.length ?? 0) > 0);
-        if (withWh) chosen = withWh.id;
-        if (!withWh) {
-          const wh = await getWarehouses();
-          if (Array.isArray(wh)) {
-            const linked = wh.find((w) => w.storeId);
-            if (linked?.storeId) chosen = linked.storeId;
+        try {
+          const defaultId = localStorage.getItem(POS_DEFAULT_STORE_KEY)?.trim();
+          if (defaultId && storesRes.some((s) => s.id === defaultId)) {
+            chosen = defaultId;
           }
+        } catch {
+          /* ignore */
         }
-        setApiStoreId(chosen ?? storesRes[0].id);
-        setApiMerchantId(withWh?.merchantId ?? storesRes[0]?.merchantId ?? null);
+        if (!chosen) {
+          const withWh = storesRes.find((s) => (s.warehouseIds?.length ?? 0) > 0);
+          if (withWh) chosen = withWh.id;
+          if (!withWh) {
+            const wh = await getWarehouses();
+            if (Array.isArray(wh)) {
+              const linked = wh.find((w) => w.storeId);
+              if (linked?.storeId) chosen = linked.storeId;
+            }
+          }
+          if (!chosen) chosen = storesRes[0].id;
+        }
+        const foundStore = storesRes.find((s) => s.id === chosen);
+        setApiStoreId(chosen);
+        setApiMerchantId(foundStore?.merchantId ?? storesRes[0]?.merchantId ?? null);
       } else {
         setApiStoreId(null);
         setApiMerchantId(null);
@@ -348,6 +376,9 @@ export const PosPage: React.FC = () => {
           p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q)),
       );
     }
+    if (hideOutOfStock) {
+      list = list.filter((p) => (typeof p.onHandQty !== 'number' ? true : p.onHandQty > 0));
+    }
     /* 排序：品牌(brandName) → SKU */
     list = [...list].sort((a, b) => {
       const brandA = (a.brandName ?? a.brandId ?? '').toLowerCase();
@@ -356,7 +387,7 @@ export const PosPage: React.FC = () => {
       return (a.sku ?? '').localeCompare(b.sku ?? '');
     });
     return list;
-  }, [productsForGrid, selectedCategoryIds, selectedBrandIds, selectedDiscountTag, searchQueryDebounced]);
+  }, [productsForGrid, selectedCategoryIds, selectedBrandIds, selectedDiscountTag, searchQueryDebounced, hideOutOfStock]);
 
   const clearFilters = () => {
     setSelectedCategoryIds([]);
@@ -386,46 +417,50 @@ export const PosPage: React.FC = () => {
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* 門市選擇器：有門市資料時顯示 */}
-      {apiStores.length > 0 ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-brand-surface bg-table-head px-3 py-2">
-          <label htmlFor="pos-store-select" className="text-xs font-medium text-muted">
-            門市
-          </label>
-          <select
-            id="pos-store-select"
-            value={apiStoreId ?? ''}
-            onChange={(e) => {
-              const v = e.target.value;
-              setApiStoreId(v || null);
-              const found = apiStores.find((s) => s.id === v);
-              setApiMerchantId(found?.merchantId ?? null);
-              setHoldError(null);
-            }}
-            className="min-w-[10rem] rounded-lg border border-brand-surface bg-white px-2 py-1.5 text-xs text-content focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-            data-testid="e2e-pos-store-select"
-          >
-            <option value="">— 請選擇門市 —</option>
-            {apiStores.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          {!apiStoreId && (
-            <span className="text-xs text-brand-danger">請先選擇門市（掛單／取單／結帳皆需門市）</span>
+      {/* 門市與班次合併同一列：左側門市 select，右側班次狀態＋開班／結班 */}
+      {apiStores.length > 0 || apiLoadError ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-surface bg-table-head px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {apiStores.length > 0 ? (
+              <>
+                <label htmlFor="pos-store-select" className="text-xs font-medium text-muted">
+                  門市
+                </label>
+                <select
+                  id="pos-store-select"
+                  value={apiStoreId ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setApiStoreId(v || null);
+                    const found = apiStores.find((s) => s.id === v);
+                    setApiMerchantId(found?.merchantId ?? null);
+                    setHoldError(null);
+                  }}
+                  className="min-w-[10rem] rounded-lg border border-brand-surface bg-white px-2 py-1.5 text-xs text-content focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                  data-testid="e2e-pos-store-select"
+                >
+                  <option value="">— 請選擇門市 —</option>
+                  {apiStores.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                {!apiStoreId && (
+                  <span className="text-xs text-brand-danger">請先選擇門市（掛單／取單／結帳皆需門市）</span>
+                )}
+              </>
+            ) : (
+              apiLoadError && (
+                <span className="text-sm text-brand-warning">{apiLoadError}</span>
+              )
+            )}
+          </div>
+          {storeId && (
+            <PosSessionBar storeId={storeId} storeName={storeName} inline />
           )}
         </div>
-      ) : (
-        apiLoadError && (
-          <div className="mb-3 rounded-lg border border-brand-warning/40 bg-brand-warning/10 px-3 py-2 text-sm text-brand-warning">
-            {apiLoadError}
-          </div>
-        )
-      )}
-      {storeId && (
-        <PosSessionBar storeId={storeId} storeName={storeName} />
-      )}
+      ) : null}
       <main className="flex min-h-0 flex-1 flex-col gap-3 pb-[calc(14rem+env(safe-area-inset-bottom))] lg:flex-row lg:pb-4">
         <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl bg-white p-2 shadow-sm shadow-black/5 sm:p-3 lg:min-w-0 lg:flex-[3]">
           <div className="mb-3 grid grid-cols-1 gap-2 min-[640px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] min-[640px]:grid-rows-[auto_auto]">
@@ -590,6 +625,27 @@ export const PosPage: React.FC = () => {
                     {n} 欄
                   </button>
                 ))}
+                <span className="ml-2 mr-1 shrink-0 text-muted">無庫存</span>
+                {(['show', 'hide'] as const).map((opt) => {
+                  const selected = (opt === 'hide') === hideOutOfStock;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => {
+                        const next = opt === 'hide';
+                        setHideOutOfStock(next);
+                        saveHideOutOfStock(next);
+                      }}
+                      className={`rounded px-2 py-0.5 text-xs font-medium ${
+                        selected ? 'bg-brand-primary text-white' : 'bg-table-head text-muted hover:bg-brand-surface'
+                      }`}
+                      data-testid={`e2e-pos-out-of-stock-${opt}`}
+                    >
+                      {opt === 'show' ? '顯示' : '不顯示'}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -673,8 +729,10 @@ export const PosPage: React.FC = () => {
               return (
                 <div
                   key={product.id}
-                  className={`relative flex h-[118px] w-full min-w-0 shrink-0 flex-col justify-between rounded-lg bg-white px-2 py-1.5 shadow-sm shadow-black/5 transition hover:-translate-y-0.5 hover:bg-brand-primary/5 sm:h-[120px] ${
-                    isOutOfStock ? 'opacity-75' : ''
+                  className={`relative flex h-[118px] w-full min-w-0 shrink-0 flex-col justify-between rounded-lg px-2 py-1.5 shadow-sm shadow-black/5 transition hover:-translate-y-0.5 sm:h-[120px] ${
+                    isOutOfStock
+                      ? 'bg-table-head hover:bg-brand-surface'
+                      : 'bg-white hover:bg-brand-primary/5'
                   }`}
                 >
                   <button
@@ -722,7 +780,11 @@ export const PosPage: React.FC = () => {
                     {qty !== null ? (
                       <span
                         className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium tabular-nums ${
-                          isLowStock ? 'bg-brand-warning/20 text-brand-warning' : 'bg-table-head text-muted'
+                          isOutOfStock
+                            ? 'bg-table-head text-brand-danger'
+                            : isLowStock
+                              ? 'bg-brand-warning/20 text-brand-warning'
+                              : 'bg-table-head text-muted'
                         }`}
                         title="庫存"
                       >

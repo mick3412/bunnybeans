@@ -20,6 +20,21 @@ import {
   WH_STORES_TH_OP_CLASS,
   WH_STORES_EMPTY_CLASS,
 } from './warehouses-stores-layout';
+import { POS_DEFAULT_STORE_KEY } from '../../shared/constants/pos';
+
+function loadPosDefaultStoreId(): string | null {
+  try {
+    const s = localStorage.getItem(POS_DEFAULT_STORE_KEY);
+    return s && s.trim() ? s.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function savePosDefaultStoreId(id: string | null) {
+  if (id) localStorage.setItem(POS_DEFAULT_STORE_KEY, id);
+  else localStorage.removeItem(POS_DEFAULT_STORE_KEY);
+}
 
 export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) => {
   const merchantId = useDefaultMerchantId();
@@ -30,6 +45,7 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
   const [editId, setEditId] = useState<string | null>(null);
   const [editCode, setEditCode] = useState('');
   const [editName, setEditName] = useState('');
+  const [posDefaultStoreId, setPosDefaultStoreId] = useState<string | null>(() => loadPosDefaultStoreId());
 
   const load = useCallback(async () => {
     setErr(null);
@@ -83,6 +99,12 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
     await load();
   };
 
+  const handleSetPosDefault = (storeId: string) => {
+    const next = posDefaultStoreId === storeId ? null : storeId;
+    setPosDefaultStoreId(next);
+    savePosDefaultStoreId(next);
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('確定刪除此門市？')) return;
     setErr(null);
@@ -90,6 +112,10 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
     if (r && typeof r === 'object' && 'statusCode' in r) {
       setErr(getErrorMessage(r as ApiError));
       return;
+    }
+    if (posDefaultStoreId === id) {
+      setPosDefaultStoreId(null);
+      savePosDefaultStoreId(null);
     }
     await load();
   };
@@ -135,6 +161,7 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
             <tr>
               <th className="px-4 py-2 font-medium">代碼</th>
               <th className="px-4 py-2 font-medium">名稱</th>
+              <th className="w-20 px-4 py-2 text-center font-medium">POS 預設</th>
               <th className={WH_STORES_TH_OP_CLASS}>操作</th>
             </tr>
           </thead>
@@ -157,6 +184,7 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
                         onChange={(e) => setEditName(e.target.value)}
                       />
                     </td>
+                    <td className="px-4 py-2 text-center">—</td>
                     <td className="px-4 py-2 text-right">
                       <Button type="button" size="sm" variant="primary" onClick={() => void saveEdit()}>
                         儲存
@@ -170,6 +198,18 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
                   <>
                     <td className="px-4 py-2 font-medium">{s.code}</td>
                     <td className="px-4 py-2 text-muted">{s.name}</td>
+                    <td className="px-4 py-2 text-center">
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={posDefaultStoreId === s.id}
+                        aria-label={`POS 預設：${s.name}`}
+                        onClick={() => handleSetPosDefault(posDefaultStoreId === s.id ? null : s.id)}
+                        className="flex w-full justify-center text-base text-muted hover:text-brand-primary"
+                      >
+                        {posDefaultStoreId === s.id ? '●' : '○'}
+                      </button>
+                    </td>
                     <td className="px-4 py-2 text-right">
                       <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(s)}>
                         編輯

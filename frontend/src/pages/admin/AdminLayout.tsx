@@ -7,13 +7,13 @@ import { useTodoDismiss } from '../../shared/hooks/useTodoDismiss';
 import { getMerchantCurrent, listMerchants, type MerchantCurrentDto, type MerchantDto, type ApiError } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 
-/** Forge：選中 = 近黑底 + 左線主色；未選 = 淺灰字 + hover 微亮 */
+/** Forge：選中 = 近黑底 + 左線主色；未選 = text-white/80 + hover text-white 確保可讀性 */
 const navClass = ({ isActive }: { isActive: boolean }) =>
   [
     'block rounded-r-lg border-l-[3px] py-2.5 pl-3 pr-3 text-sm font-medium leading-snug transition-colors',
     isActive
       ? 'border-brand-primary bg-forge-sidebar-active text-white'
-      : 'border-transparent text-muted hover:bg-white/[0.06] hover:text-content/90',
+      : 'border-transparent text-white/80 hover:bg-white/[0.06] hover:text-white',
   ].join(' ');
 
 function headerTitle(
@@ -47,7 +47,9 @@ function headerTitle(
     return '商品總覽';
   }
   if (pathname.startsWith('/admin/categories')) return '類別管理';
+  if (pathname.startsWith('/admin/discount-tags')) return '折扣標籤';
   if (pathname.startsWith('/admin/warehouses')) return '倉庫/門市';
+  if (pathname.startsWith('/admin/pos/sessions')) return '收銀班次';
   if (pathname.startsWith('/admin/reports') || pathname.startsWith('/admin/balances') || pathname.startsWith('/admin/finance/')) {
     if (financeTab === 'balances') return '應收應付';
     if (financeTab === 'periods') return '關帳區間';
@@ -261,17 +263,23 @@ export const AdminLayout: React.FC = () => {
             <NavLink to="/admin/products" className={navClass}>
               商品總覽
             </NavLink>
+            <NavLink to="/admin/discount-tags" className={navClass}>
+              折扣標籤
+            </NavLink>
             <NavLink to="/admin/inventory" className={navClass}>
               庫存總覽
             </NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />
 
-            {/* 第一層：採購管理（不可點） */}
-            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">採購管理</div>
+            {/* 第一層：採購/入庫（不可點） */}
+            <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">採購/入庫</div>
             {/* 第二層：主入口（可點） */}
             <NavLink to="/admin/inventory/adjust" className={navClass}>
               入庫／盤點
+            </NavLink>
+            <NavLink to="/admin/warehouses" className={navClass}>
+              倉庫/門市
             </NavLink>
             <NavLink to="/admin/procurement" className={navClass}>
               採購總覽
@@ -287,6 +295,9 @@ export const AdminLayout: React.FC = () => {
             </NavLink>
             <NavLink to="/admin/balances" className={navClass}>
               應收應付
+            </NavLink>
+            <NavLink to="/admin/pos/sessions" className={navClass}>
+              收銀班次
             </NavLink>
 
             <div className="my-2 border-t border-white/25" aria-hidden />

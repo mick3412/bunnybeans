@@ -200,13 +200,13 @@ export const AdminDashboardPage: React.FC = () => {
             {expiringCount != null ? formatInt(expiringCount) : '—'}
           </p>
         </Link>
-        <Link to="/admin/receiving-notes" className={cardLinkClass}>
+        <Link to="/admin/receiving-notes" className={`kpi-card-accent-amber ${cardLinkClass}`}>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">待驗收</p>
           <p className="mt-1.5 text-xl font-bold tabular-nums tracking-tight text-content">
             {pendingPOCount != null ? formatInt(pendingPOCount) : '—'}
           </p>
         </Link>
-        <Link to="/admin/customers" className={cardLinkClass}>
+        <Link to="/admin/customers" className={`kpi-card-accent-slate ${cardLinkClass}`}>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">會員增長</p>
           <p className="mt-1.5 text-xl font-bold tabular-nums tracking-tight text-content">
             {newMembersCount != null ? formatInt(newMembersCount) : '—'}
@@ -265,13 +265,13 @@ export const AdminDashboardPage: React.FC = () => {
             {data ? formatInt(data.skuOutOfStockCount) : '—'}
           </p>
         </Link>
-        <Link to="/admin/inventory" className={cardLinkClass}>
+        <Link to="/admin/inventory" className={`kpi-card-accent-slate ${cardLinkClass}`}>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">庫存總件數</p>
           <p className="mt-1.5 text-xl font-bold tabular-nums text-content">
             {data ? formatInt(data.totalOnHandUnits) : '—'}
           </p>
         </Link>
-        <Link to="/admin/inventory" className={cardLinkClass}>
+        <Link to="/admin/inventory" className={`kpi-card-accent-slate ${cardLinkClass}`}>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">庫存參考金額</p>
           <p className="mt-1.5 text-xl font-bold tabular-nums text-content">
             {data ? formatMoney(data.inventoryValueApprox) : '—'}

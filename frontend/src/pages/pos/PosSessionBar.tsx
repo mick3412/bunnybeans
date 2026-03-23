@@ -16,12 +16,15 @@ interface PosSessionBarProps {
   storeId: string;
   storeName?: string;
   onSessionChange?: () => void;
+  /** 與門市選擇器同一列呈現，不另佔區塊 */
+  inline?: boolean;
 }
 
 export const PosSessionBar: React.FC<PosSessionBarProps> = ({
   storeId,
   storeName,
   onSessionChange,
+  inline,
 }) => {
   const [current, setCurrent] = useState<(CashRegisterSessionDto & { report: SessionReportDto }) | null | undefined>(
     undefined,
@@ -63,7 +66,7 @@ export const PosSessionBar: React.FC<PosSessionBarProps> = ({
   return (
     <>
       <div
-        className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-brand-surface bg-table-head px-3 py-2"
+        className={`flex flex-wrap items-center gap-3 ${inline ? '' : 'mb-3 rounded-xl border border-brand-surface bg-table-head px-3 py-2'}`}
         data-testid="e2e-pos-session-bar"
       >
         {err && (

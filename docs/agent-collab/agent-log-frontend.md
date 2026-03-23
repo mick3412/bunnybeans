@@ -15,10 +15,11 @@
 
 ---
 
-### INSTRUCTIONS 051（050 收斂 + 倉庫/門市對齊驗證）
-- 做了：① **#1 迴歸確認**：build 全綠；050 變更無遺漏。② **#2 倉庫/門市頁對齊**：`AdminStoresPage` 與 `AdminWarehousesPage` 已使用 `warehouses-stores-layout.ts` 共用常數，表格寬度、表單間距、按鈕風格一致；無需變更。
+### INSTRUCTIONS 052（051 收斂 + 新增需求 #1～#6）
+- 做了：① **迴歸確認**：build 全綠；051 變更無遺漏。② **#1 無庫存顯示開關**：PosPage 篩選區「欄數」同一行新增「無庫存」顯示／不顯示按鈕，預設顯示；`filteredProducts` 不顯示時排除 `onHandQty <= 0`；localStorage `pos-hide-out-of-stock`。③ **#2 無庫存商品樣式**：無庫存時庫存 pill `bg-table-head text-brand-danger`；整張卡片 `bg-table-head`。④ **#3 門市與班次合併**：門市 select 與 PosSessionBar 併為同一列，左門市右班次；PosSessionBar 新增 `inline` prop。⑤ **#4 POS 預設門市**：AdminStoresPage 新增「POS 預設」欄（radio 式 toggle），localStorage `pos-default-store-id`；PosPage 載入時優先使用預設門市；`shared/constants/pos.ts`。⑥ **#5 側欄對比度**：AdminLayout navClass 未選改為 `text-white/80`、hover `text-white`。⑦ **#6 報表區塊顏色**：待驗收→amber、會員增長／庫存總件數／庫存參考金額→slate。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
-- commits：無需 commit（無前端工作區變更）
+- commits：待補
+- 檔案：PosPage、PosSessionBar、AdminStoresPage、AdminLayout、AdminDashboardPage、shared/constants/pos.ts
 
 ---
 
