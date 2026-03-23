@@ -19,7 +19,7 @@
 - 做了：依 `BACKEND-INSTRUCTIONS 045.md` §1 完成本輪任務。
   - **#1 迴歸確認**：044 變更無遺漏、測試全綠；044 未提交變更（含 seed 補強）已補 atomic commits。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；21 suites、158 tests 全綠。
-- commits：`3dc05793` feat(seed)；`d748a22d` docs(db-seed-coverage)；`25230948` docs(agent-log) 044；`782271c2` docs(agent-log) 045
+- commits：`3dc05793` feat(seed)；`d748a22d` docs(db-seed-coverage)；`25230948` docs(agent-log) 044；`09153cd3` docs(agent-log) 045
 
 ---
 
