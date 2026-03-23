@@ -5,6 +5,7 @@ import { InventoryService } from '../../inventory/application/inventory.service'
 import { FinanceService } from '../../finance/application/finance.service';
 import { ProductService } from '../../product/application/product.service';
 import { PosRepository } from '../infrastructure/pos.repository';
+import { DiscountTagResolverService } from './discount-tag-resolver.service';
 import { PromotionService } from '../../promotion/application/promotion.service';
 import { LoyaltyService } from '../../loyalty/application/loyalty.service';
 
@@ -53,6 +54,7 @@ export class PosService {
     private readonly productService: ProductService,
     private readonly promotionService: PromotionService,
     private readonly loyaltyService: LoyaltyService,
+    private readonly discountTagResolver: DiscountTagResolverService,
   ) {}
 
   private generateOrderNumber(): string {
@@ -612,6 +614,7 @@ export class PosService {
 
   /**
    * POS 收銀區產品列表含庫存。依 storeId 取得門市對應倉庫，彙總 InventoryBalance.onHandQty。
+   * 合併 ProductTag 自動條件計算之 effectiveTags。
    */
   async listProductsWithInventory(storeId: string) {
     const store = await this.prisma.store.findUnique({
@@ -623,20 +626,34 @@ export class PosService {
     }
     const warehouseIds = store.warehouses.map((w) => w.id);
     const products = await this.productService.listProducts(undefined, { includeBrand: true });
-    if (warehouseIds.length === 0) {
-      return products.map((p) => ({ ...p, onHandQty: 0 }));
+
+    let qtyByProduct = new Map<string, number>();
+    if (warehouseIds.length > 0) {
+      const balances = await this.prisma.inventoryBalance.findMany({
+        where: { warehouseId: { in: warehouseIds } },
+        select: { productId: true, onHandQty: true },
+      });
+      for (const b of balances) {
+        qtyByProduct.set(b.productId, (qtyByProduct.get(b.productId) ?? 0) + b.onHandQty);
+      }
     }
-    const balances = await this.prisma.inventoryBalance.findMany({
-      where: { warehouseId: { in: warehouseIds } },
-      select: { productId: true, onHandQty: true },
+
+    const effectiveTags = await this.discountTagResolver.resolveEffectiveTags({
+      products: products.map((p) => ({
+        id: p.id,
+        tags: p.tags,
+        listPrice: p.listPrice,
+        salePrice: p.salePrice,
+        createdAt: p.createdAt,
+      })),
+      merchantId: store.merchantId,
+      storeId,
     });
-    const qtyByProduct = new Map<string, number>();
-    for (const b of balances) {
-      qtyByProduct.set(b.productId, (qtyByProduct.get(b.productId) ?? 0) + b.onHandQty);
-    }
+
     return products.map((p) => ({
       ...p,
       onHandQty: qtyByProduct.get(p.id) ?? 0,
+      tags: effectiveTags.get(p.id) ?? p.tags ?? [],
     }));
   }
 

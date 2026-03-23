@@ -11,9 +11,11 @@ import { PosProductsController } from './interface/pos-products.controller';
 import { PosReportsController } from './interface/pos-reports.controller';
 import { PosPromotionsController } from './interface/pos-promotions.controller';
 import { PosSessionsController } from './interface/pos-sessions.controller';
+import { PosHeldCartsController } from './interface/pos-held-carts.controller';
 import { PosService } from './application/pos.service';
 import { PosReportsService } from './application/pos-reports.service';
 import { PosSessionsService } from './application/pos-sessions.service';
+import { PosHeldCartsService } from './application/pos-held-carts.service';
 import { DiscountTagResolverService } from './application/discount-tag-resolver.service';
 import { PosRepository } from './infrastructure/pos.repository';
 
@@ -33,8 +35,16 @@ import { PosRepository } from './infrastructure/pos.repository';
     PosReportsController,
     PosPromotionsController,
     PosSessionsController,
+    PosHeldCartsController,
   ],
-  providers: [PosService, PosReportsService, PosSessionsService, DiscountTagResolverService, PosRepository],
+  providers: [
+    PosService,
+    PosReportsService,
+    PosSessionsService,
+    PosHeldCartsService,
+    DiscountTagResolverService,
+    PosRepository,
+  ],
   exports: [PosService, PosSessionsService],
 })
 export class PosModule {}

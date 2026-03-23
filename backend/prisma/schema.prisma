@@ -292,6 +292,23 @@ model Store {
   warehouses          Warehouse[]
   posOrders           PosOrder[]
   cashRegisterSessions CashRegisterSession[]
+  heldCarts           PosHeldCart[]
+}
+
+/// POS 掛單（暫存購物車）
+model PosHeldCart {
+  id        String   @id @default(uuid())
+  storeId   String
+  /// JSON: [{ productId, name, unitPrice, quantity }] 與 CartItem 對齊
+  itemsJson String   @map("items_json")
+  subtotal  Decimal  @db.Decimal(12, 2)
+  total     Decimal  @db.Decimal(12, 2)
+  heldAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, heldAt])
 }
 
 /// 收銀班次（開班／日結）
