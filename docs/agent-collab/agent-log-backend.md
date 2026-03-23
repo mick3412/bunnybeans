@@ -20,7 +20,7 @@
   - **#1 迴歸確認**：045 變更無遺漏、測試全綠。
   - **#2 掛單／取單收斂**：① seed wipeAll 加入 `posHeldCart.deleteMany()`（store 之前）；② api-design-pos 新增 § 掛單／取單 API 契約（POST/GET /pos/held-carts、POST /pos/held-carts/:id/retrieve）；③ 新增 `pos-held-carts.integration-spec.ts`（hold→list→retrieve、storeId/items 空拋錯、NOT_FOUND）。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、161 tests 全綠。
-- commits：`a2717b79` fix(seed) wipeAll posHeldCart；`88b8df3d` docs(api-design-pos)；`6f5d5add` test(pos) pos-held-carts；`0db7f5f8` docs(agent-log) 046
+- commits：`a2717b79` fix(seed) wipeAll posHeldCart；`88b8df3d` docs(api-design-pos)；`6f5d5add` test(pos) pos-held-carts；`b3b47bf9` docs(agent-log) 046
 
 ---
 
