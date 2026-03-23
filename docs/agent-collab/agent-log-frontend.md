@@ -18,7 +18,7 @@
 ### INSTRUCTIONS 051（050 收斂 + 倉庫/門市頁對齊）
 - 做了：① **迴歸確認**：build 全綠；050 變更無遺漏。② **倉庫/門市頁對齊**（erp-roadmap 0.7）：新增 `warehouses-stores-layout.ts` 共用常數（WH_STORES_FIELD_CLASS、FORM_ROW、TABLE_WRAPPER、TABLE、THEAD、TH_OP、EMPTY）；`AdminStoresPage` 與 `AdminWarehousesPage` 改為使用共用樣式，統一表格寬度（min-w-[560px]）、表單間距（mb-5 gap-4）、按鈕與表格結構。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
-- commits：`6a60b225` feat(admin): warehouses-stores layout alignment (INSTRUCTIONS 051, erp-roadmap 0.7)
+- commits：`7bbda292` feat(admin): warehouses-stores layout alignment (INSTRUCTIONS 051, erp-roadmap 0.7)
 - 檔案：warehouses-stores-layout.ts、AdminStoresPage、AdminWarehousesPage
 
 ---
