@@ -47,20 +47,34 @@ export class PosHeldCartsService {
       throwNotFound('POS_STORE_NOT_FOUND', 'Store not found');
     }
 
-    const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+    const sanitized = items.map((i) => ({
+      productId: String(i?.productId ?? '').trim(),
+      name: String(i?.name ?? '').trim(),
+      unitPrice: Number(i?.unitPrice),
+      quantity: Number(i?.quantity),
+    }));
+    const invalidItem = sanitized.find(
+      (i) =>
+        !i.productId ||
+        Number.isNaN(i.unitPrice) ||
+        i.unitPrice < 0 ||
+        Number.isNaN(i.quantity) ||
+        i.quantity <= 0,
+    );
+    if (invalidItem) {
+      throwBadRequest('POS_HELD_CART_ITEM_INVALID', 'Each item needs valid productId, unitPrice (>=0), quantity (>0)');
+    }
+
+    const subtotal = sanitized.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
     const total = subtotal; // 掛單不套促銷，以原始小計為 total
+    if (!Number.isFinite(subtotal) || subtotal < 0) {
+      throwBadRequest('POS_HELD_CART_INVALID_TOTAL', 'Invalid subtotal');
+    }
 
     const created = await this.prisma.posHeldCart.create({
       data: {
         storeId: storeId.trim(),
-        itemsJson: JSON.stringify(
-          items.map((i) => ({
-            productId: i.productId,
-            name: i.name,
-            unitPrice: i.unitPrice,
-            quantity: i.quantity,
-          })),
-        ),
+        itemsJson: JSON.stringify(sanitized),
         subtotal,
         total,
       },
