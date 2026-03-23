@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 046（營運總覽近期營收趨勢修復與功能）
+- 做了：排查並修復 AdminDashboardPage「近期營收趨勢」無法顯示；修正 getPosDaily `{ label, value }` 映射為圖表所需 `{ date, revenue }`，並支援多租戶傳入 `merchantId`。另新增 7 日／30 日切換 pill，切換會重新 fetch；區塊維持常顯並提供載入中／無資料空態。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅（E2E：選配未執行）
+- commits：`d0ea462d` fix(admin): recent revenue trends 7/30 toggle
+- 檔案：AdminDashboardPage.tsx
+
+---
+
 ### INSTRUCTIONS 045（044 收斂後迴歸）
 - 做了：① **迴歸確認**：build 全綠；044 變更無遺漏。② **E2E 迴歸（選配）**：環境未就緒（port 5173 已佔用），註記 skip 條件；需釋放 port 或 reuseExistingServer 後重跑。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用）
