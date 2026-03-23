@@ -19,7 +19,7 @@
 - 做了：依 `BACKEND-INSTRUCTIONS 044.md` §1 完成本輪任務。
   - **#1 迴歸確認**：043 變更無遺漏、測試全綠；`pnpm ci:backend-with-db` 通過。
 - 測試/驗收：`pnpm ci:backend-with-db` 通過；21 suites、158 tests 全綠。
-- commits：`46e41b2a` docs(agent-log): INSTRUCTIONS 044
+- commits：`dce69c28` docs(agent-log): INSTRUCTIONS 044
 
 ---
 
