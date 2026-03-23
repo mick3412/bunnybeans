@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 045（044 收斂後迴歸）
+- 做了：① **迴歸確認**：build 全綠；044 變更無遺漏。② **E2E 迴歸（選配）**：環境未就緒（port 5173 已佔用），註記 skip 條件；需釋放 port 或 reuseExistingServer 後重跑。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E skip（port 5173 佔用）
+- commits：`ce4af81b` agent-log
+- 檔案：agent-log-frontend.md
+
+---
+
 ### INSTRUCTIONS 044（會員整合文件 + E2E 註記 + 會員匯入匯出 UX + 全站對齊）
 - 做了：① **迴歸**：build 全綠。② **會員整合方案文件**：`member-management-review.md` 新增 §5 分群／點數／折價券整合方向（分群名稱下拉、點數連結、折價券閉環；本輪不改路由）。③ **E2E 迴歸**：`pnpm exec playwright test e2e/` 環境未就緒（5173 已佔用），需 `reuseExistingServer:true` 或停止既有 Vite 後重跑；註記 skip 條件。④ **會員管理匯入匯出 UX**：AdminCustomersPage 篩選左、操作右（與 AdminProductsPage 一致）；「匯出列表」→「全部匯出」、「匯出」→「分群匯出」；分群名單匯出改為 listSegments 名稱下拉。⑤ **全站對齊**：AdminSegmentExportPage 分群 ID 輸入改為 listSegments 名稱下拉；PosOrdersListPage 篩選左、操作右（justify-between）。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 5173 佔用）
