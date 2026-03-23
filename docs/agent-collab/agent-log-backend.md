@@ -15,6 +15,15 @@
 
 ---
 
+### INSTRUCTIONS-047（046 收斂）
+- 做了：依 `BACKEND-INSTRUCTIONS 047.md` §1 完成本輪任務。
+  - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
+  - **#1 迴歸確認**：046 變更無遺漏、測試全綠；未提交後端變更已補 atomic commits（PosHeldCart 實作、e2e-seed 修正、docs）。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、161 tests 全綠。
+- commits：`ffe85337` feat(pos) PosHeldCart；`04565d4c` fix(e2e-seed) ReferenceIdLink order；`2694a45d` docs db-seed e2e-pos；`47bb7f8d` docs(agent-log) 047
+
+---
+
 ### INSTRUCTIONS-046（045 收斂 + 掛單／取單收斂）
 - 做了：依 `BACKEND-INSTRUCTIONS 046.md` §1 完成本輪任務。
   - **#1 迴歸確認**：045 變更無遺漏、測試全綠。
