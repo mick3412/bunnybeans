@@ -15,6 +15,18 @@
 
 ---
 
+### INSTRUCTIONS-050（兩門市情境 + 營業報表門市維度）
+- 做了：依 `BACKEND-INSTRUCTIONS 050.md` §1 完成本輪任務。
+  - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
+  - **#1 迴歸確認**：049 變更無遺漏、測試全綠。
+  - **#2 summary byStore 加入 avgOrder**：ByStoreItemDto 新增 `avgOrder`（revenue/ordersCount，0 時為 0）；api-design-pos §4.4 更新。
+  - **#3 summary storeId 指定時跳過 byStoreRows**：條件式 `filter.storeId ? Promise.resolve([]) : groupBy(...)`，減少 DB 查詢。
+  - **#4 integration-spec 補強**：byStore 含 avgOrder 且計算正確；帶 storeId 時 byStore 為 undefined 或空。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、163 tests 全綠。
+- commits：`08eef150` feat(pos-reports) byStore avgOrder, skip when storeId
+
+---
+
 ### INSTRUCTIONS-048（047 收斂 + 掛單 500 修正）
 - 做了：依 `BACKEND-INSTRUCTIONS 048.md` §1 完成本輪任務。
   - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
