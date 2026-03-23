@@ -109,11 +109,11 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
   const isFull = profile === 'full';
 
   // Deterministic finance `occurredAt` for E2E: ensure the first clickable `ReferenceIdLink`
-  // in `/admin/reports` is a `posOrder` (not `receivingNote`).
+  // in `/admin/reports` is a `posOrder` (not `receivingNote`). List sorted by occurredAt desc.
   // All are still within `last30d`, so the list page won't be empty.
   const nowMs = Date.now();
-  const tDrilldownOrderFinance = new Date(nowMs - 20_000);
-  const tDrilldownReceivingNoteFinance = new Date(nowMs - 10_000);
+  const tDrilldownReceivingNoteFinance = new Date(nowMs - 20_000);
+  const tDrilldownOrderFinance = new Date(nowMs - 10_000);
   const tExchangeFinance = new Date(nowMs);
 
   // ---- Barcode fixtures ----

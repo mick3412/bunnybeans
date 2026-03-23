@@ -100,11 +100,11 @@ async function runE2ESeed(opts) {
     const profile = (opts?.profile ?? process.env.E2E_PROFILE ?? '').trim().toLowerCase();
     const isFull = profile === 'full';
     // Deterministic finance `occurredAt` for E2E: ensure the first clickable `ReferenceIdLink`
-    // in `/admin/reports` is a `posOrder` (not `receivingNote`).
+    // in `/admin/reports` is a `posOrder` (not `receivingNote`). List sorted by occurredAt desc.
     // All are still within `last30d`, so the list page won't be empty.
     const nowMs = Date.now();
-    const tDrilldownOrderFinance = new Date(nowMs - 20000);
-    const tDrilldownReceivingNoteFinance = new Date(nowMs - 10000);
+    const tDrilldownReceivingNoteFinance = new Date(nowMs - 20000);
+    const tDrilldownOrderFinance = new Date(nowMs - 10000);
     const tExchangeFinance = new Date(nowMs);
     // ---- Barcode fixtures ----
     // single: ensure exactly one product has barcode
