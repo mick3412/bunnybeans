@@ -51,6 +51,7 @@ async function wipeAll() {
   await prisma.product.deleteMany();
   await prisma.warehouse.deleteMany();
   await prisma.cashRegisterSession.deleteMany();
+  await prisma.posHeldCart.deleteMany();
   await prisma.store.deleteMany();
   await prisma.segment.deleteMany();
   await prisma.productTag.deleteMany();
@@ -410,6 +411,40 @@ async function main() {
       joinDate: new Date(now.getTime() - 1 * 86400000),
     },
   });
+  /** 加倍：更多會員 dummy（MEM017～MEM034） */
+  const moreCustData = [
+    { code: 'MEM017', name: '錢常買', phone: '0910010001', level: 'VIP' as const, memberCode: 'M019', daysAgo: 3 },
+    { code: 'MEM018', name: '孫試吃', phone: '0910011002', level: 'NORMAL' as const, memberCode: 'M020', daysAgo: 7 },
+    { code: 'MEM019', name: '李回頭', phone: '0910012003', level: 'GOLD' as const, memberCode: 'M021', daysAgo: 14 },
+    { code: 'MEM020', name: '周小慧', phone: '0910013004', level: 'NORMAL' as const, memberCode: 'M022', daysAgo: 21 },
+    { code: 'MEM021', name: '吳大志', phone: '0910014005', level: 'VIP' as const, memberCode: 'M023', daysAgo: 28 },
+    { code: 'MEM022', name: '鄭美玲', phone: '0910015006', level: 'NORMAL' as const, memberCode: 'M024', daysAgo: 35 },
+    { code: 'MEM023', name: '王建明', phone: '0910016007', level: 'GOLD' as const, memberCode: 'M025', daysAgo: 42 },
+    { code: 'MEM024', name: '陳雅婷', phone: '0910017008', level: 'NORMAL' as const, memberCode: 'M026', daysAgo: 49 },
+    { code: 'MEM025', name: '林志豪', phone: '0910018009', level: 'VIP' as const, memberCode: 'M027', daysAgo: 56 },
+    { code: 'MEM026', name: '黃淑芬', phone: '0910019010', level: 'NORMAL' as const, memberCode: 'M028', daysAgo: 5 },
+    { code: 'MEM027', name: '劉俊傑', phone: '0910020011', level: 'GOLD' as const, memberCode: 'M029', daysAgo: 12 },
+    { code: 'MEM028', name: '楊雅筑', phone: '0910021012', level: 'NORMAL' as const, memberCode: 'M030', daysAgo: 19 },
+    { code: 'MEM029', name: '張志偉', phone: '0910022013', level: 'VIP' as const, memberCode: 'M031', daysAgo: 26 },
+    { code: 'MEM030', name: '何美惠', phone: '0910023014', level: 'NORMAL' as const, memberCode: 'M032', daysAgo: 33 },
+    { code: 'MEM031', name: '許明達', phone: '0910024015', level: 'GOLD' as const, memberCode: 'M033', daysAgo: 40 },
+    { code: 'MEM032', name: '羅雅如', phone: '0910025016', level: 'NORMAL' as const, memberCode: 'M034', daysAgo: 47 },
+    { code: 'MEM033', name: '謝俊賢', phone: '0910026017', level: 'VIP' as const, memberCode: 'M035', daysAgo: 54 },
+    { code: 'MEM034', name: '唐怡君', phone: '0910027018', level: 'NORMAL' as const, memberCode: 'M036', daysAgo: 2 },
+  ];
+  for (const c of moreCustData) {
+    await prisma.customer.create({
+      data: {
+        merchantId: merchant.id,
+        code: c.code,
+        name: c.name,
+        phone: c.phone,
+        memberLevel: c.level,
+        memberCode: c.memberCode,
+        joinDate: new Date(now.getTime() - c.daysAgo * 86400000),
+      },
+    });
+  }
 
   /** 分群（階段 E）：手測 GET /crm/segments/:id/preview 用 */
   const segAll = await prisma.segment.create({
@@ -431,19 +466,41 @@ async function main() {
   await prisma.segment.create({
     data: { merchantId: merchant.id, name: '多筆消費會員', conditions: { minOrderCount: 2 } },
   });
-  /** 分級規則（TierRule） */
+  /** 加倍：更多分群（使用 memberLevel／tag 等既有條件） */
+  await prisma.segment.create({
+    data: { merchantId: merchant.id, name: 'VIP 常客', conditions: { memberLevel: 'VIP' } },
+  });
+  await prisma.segment.create({
+    data: { merchantId: merchant.id, name: 'GOLD 常客', conditions: { memberLevel: 'GOLD' } },
+  });
+  await prisma.segment.create({
+    data: { merchantId: merchant.id, name: 'NORMAL 新客', conditions: { memberLevel: 'NORMAL' } },
+  });
+  await prisma.segment.create({
+    data: { merchantId: merchant.id, name: '潛力會員', conditions: { memberLevel: 'NORMAL' } },
+  });
+  await prisma.segment.create({
+    data: { merchantId: merchant.id, name: '銀卡以上', conditions: { memberLevel: 'GOLD' } },
+  });
+  /** 分級規則（TierRule）：4 筆（加倍） */
   await prisma.tierRule.create({
     data: { merchantId: merchant.id, name: '消費滿 5000 升 VIP', ruleType: 'SPEND_SUM', threshold: 5000, targetLevel: 'VIP', lookbackDays: 365 },
   });
   await prisma.tierRule.create({
     data: { merchantId: merchant.id, name: '消費滿 2000 升 GOLD', ruleType: 'SPEND_SUM', threshold: 2000, targetLevel: 'GOLD', lookbackDays: 365 },
   });
-  /** 互動紀錄（階段 F）：5 筆，不同客戶與類型 */
-  const custsForLog = await prisma.customer.findMany({
-    where: { merchantId: merchant.id, code: { in: ['VIP001', 'VIP002', 'MEM001', 'MEM005', 'MEM010'] } },
+  await prisma.tierRule.create({
+    data: { merchantId: merchant.id, name: '消費滿 10000 升 VIP', ruleType: 'SPEND_SUM', threshold: 10000, targetLevel: 'VIP', lookbackDays: 365 },
   });
-  const logTypes = ['CALL', 'VISIT', 'NOTE', 'CALL', 'VISIT'] as const;
-  for (let i = 0; i < Math.min(5, custsForLog.length); i++) {
+  await prisma.tierRule.create({
+    data: { merchantId: merchant.id, name: '消費滿 3000 升 GOLD', ruleType: 'SPEND_SUM', threshold: 3000, targetLevel: 'GOLD', lookbackDays: 180 },
+  });
+  /** 互動紀錄（階段 F）：10 筆（加倍），不同客戶與類型 */
+  const custsForLog = await prisma.customer.findMany({
+    where: { merchantId: merchant.id, code: { in: ['VIP001', 'VIP002', 'MEM001', 'MEM005', 'MEM010', 'MEM007', 'MEM015', 'MEM020', 'MEM025', 'MEM030'] } },
+  });
+  const logTypes = ['CALL', 'VISIT', 'NOTE', 'CALL', 'VISIT', 'CALL', 'NOTE', 'VISIT', 'CALL', 'NOTE'] as const;
+  for (let i = 0; i < Math.min(10, custsForLog.length, logTypes.length); i++) {
     await prisma.customerContactLog.create({
       data: {
         customerId: custsForLog[i].id,
@@ -495,6 +552,30 @@ async function main() {
       name: '永豐配件貿易',
       contactPerson: '王建國',
       phone: '03-3345-6789',
+      paymentTerms: '貨到付款',
+      status: 'ACTIVE',
+    },
+  });
+  /** 加倍：額外供應商 */
+  const supActive4 = await prisma.supplier.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'SUP-東昇食品',
+      name: '東昇食品原料行',
+      contactPerson: '李東昇',
+      phone: '05-5566-7788',
+      paymentTerms: '月結60天',
+      status: 'ACTIVE',
+      email: 'lee@tungsheng-food.com',
+    },
+  });
+  const supActive5 = await prisma.supplier.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'SUP-瑞豐包裝',
+      name: '瑞豐包裝材料',
+      contactPerson: '張瑞豐',
+      phone: '06-6677-8899',
       paymentTerms: '貨到付款',
       status: 'ACTIVE',
     },
@@ -552,9 +633,10 @@ async function main() {
     },
   });
 
-  /** 2) PO CANCELLED（供應商不足／取消）：5 筆 */
-  for (let i = 0; i < 5; i++) {
-    const pid = [pBowl, pHay, pFeed, pTee, pTeeW][i].id;
+  /** 2) PO CANCELLED（供應商不足／取消）：10 筆（加倍） */
+  const poProducts = [pBowl, pHay, pFeed, pTee, pTeeW];
+  for (let i = 0; i < 10; i++) {
+    const pid = poProducts[i % poProducts.length]!.id;
     await prisma.purchaseOrder.create({
       data: {
         merchantId: merchant.id,
@@ -823,8 +905,8 @@ async function main() {
     });
   }
 
-  /** 8b) RN RETURNED（整單退回，不入庫）：5 筆供報表篩選 */
-  for (let i = 0; i < 5; i++) {
+  /** 8b) RN RETURNED（整單退回，不入庫）：10 筆供報表篩選（加倍） */
+  for (let i = 0; i < 10; i++) {
     const poR = await prisma.purchaseOrder.create({
       data: {
         merchantId: merchant.id,
@@ -833,7 +915,7 @@ async function main() {
         orderNumber: `DEMO-PO-${y}-RET${i + 1}`,
         status: 'ORDERED',
         orderDate: new Date(now.getTime() - (30 + i * 5) * 86400000),
-        lines: { create: [{ productId: [pZeroStock, pLowStock, pHay, pBowl, products['DEMO-SNACK-CARROT']][i].id, qtyOrdered: 5 + i, unitCost: 50 }] },
+        lines: { create: [{ productId: [pZeroStock, pLowStock, pHay, pBowl, products['DEMO-SNACK-CARROT']][i % 5].id, qtyOrdered: 5 + i, unitCost: 50 }] },
       },
       include: { lines: true },
     });
@@ -1009,7 +1091,7 @@ async function main() {
   await addBalance(pCageLForInv.id, 15, 'SEED-BULK', '兔籠初始', t0);
   await addBalance(pBottleForInv.id, 80, 'SEED-BULK', '水壺初始', t0);
 
-  /** CashRegisterSession 示範：1 OPEN、2 CLOSED，openedAt 分散過去 7 天，供 AdminPosSessionsPage 列表（使用 S002 避免與 pos-sessions 整合測試衝突） */
+  /** CashRegisterSession 示範：2 OPEN、4 CLOSED（加倍），openedAt 分散過去 7 天，供 AdminPosSessionsPage 列表（使用 S002 避免與 pos-sessions 整合測試衝突） */
   await prisma.cashRegisterSession.create({
     data: {
       storeId: storeSessions.id,
@@ -1017,6 +1099,16 @@ async function main() {
       openingCashAmount: 5000,
       openedAt: daysAgo(1),
       openedBy: '李小華',
+      status: 'OPEN',
+    },
+  });
+  await prisma.cashRegisterSession.create({
+    data: {
+      storeId: storeSessions.id,
+      merchantId: merchant.id,
+      openingCashAmount: 4500,
+      openedAt: daysAgo(0),
+      openedBy: '王大明',
       status: 'OPEN',
     },
   });
@@ -1048,6 +1140,36 @@ async function main() {
       expectedCashAmount: 4500,
       actualCashAmount: 4500,
       differenceAmount: 0,
+    },
+  });
+  await prisma.cashRegisterSession.create({
+    data: {
+      storeId: storeSessions.id,
+      merchantId: merchant.id,
+      openingCashAmount: 3500,
+      openedAt: daysAgo(4),
+      closedAt: daysAgo(4),
+      openedBy: '李小華',
+      closedBy: '李小華',
+      status: 'CLOSED',
+      expectedCashAmount: 3800,
+      actualCashAmount: 3820,
+      differenceAmount: 20,
+    },
+  });
+  await prisma.cashRegisterSession.create({
+    data: {
+      storeId: storeSessions.id,
+      merchantId: merchant.id,
+      openingCashAmount: 4200,
+      openedAt: daysAgo(5),
+      closedAt: daysAgo(5),
+      openedBy: '陳小美',
+      closedBy: '陳小美',
+      status: 'CLOSED',
+      expectedCashAmount: 4600,
+      actualCashAmount: 4580,
+      differenceAmount: -20,
     },
   });
 
@@ -1139,6 +1261,32 @@ async function main() {
       active: true,
     },
   });
+  const coup20 = await prisma.loyaltyCoupon.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'GOLD20',
+      name: 'GOLD 滿 300 折 20',
+      discountType: 'FIXED',
+      value: 20,
+      validFrom: new Date(y, 0, 1),
+      validTo: new Date(y, 11, 31),
+      maxUses: 200,
+      active: true,
+    },
+  });
+  const coup30 = await prisma.loyaltyCoupon.create({
+    data: {
+      merchantId: merchant.id,
+      code: 'FEST30',
+      name: '節慶折 30',
+      discountType: 'FIXED',
+      value: 30,
+      validFrom: new Date(y, 0, 1),
+      validTo: new Date(y, 11, 31),
+      maxUses: 50,
+      active: true,
+    },
+  });
   /** 發券規則（CrmCouponDispatchRule）— 須在 segment 與 coupon 之後 */
   const segAllCreated = await prisma.segment.findFirst({ where: { merchantId: merchant.id, name: '全部 ACTIVE 會員' } });
   const segVipCreated = await prisma.segment.findFirst({ where: { merchantId: merchant.id, name: 'VIP 會員' } });
@@ -1186,17 +1334,52 @@ async function main() {
       data: { merchantId: merchant.id, name: '多筆消費發折 50 券', segmentId: segMulti.id, couponId: coup50.id, enabled: true, scheduleType: 'weekly', nextRunAt: new Date(now.getTime() + 14 * 86400000) },
     });
   }
-  /** 發券紀錄：5 筆 Customer ↔ LoyaltyCoupon 關聯（與 Segment/CrmCouponDispatchRule 一致） */
+  const segVipRegular = await prisma.segment.findFirst({ where: { merchantId: merchant.id, name: 'VIP 常客' } });
+  const segGoldRegular = await prisma.segment.findFirst({ where: { merchantId: merchant.id, name: 'GOLD 常客' } });
+  const segPotential = await prisma.segment.findFirst({ where: { merchantId: merchant.id, name: '潛力會員' } });
+  const segSilverPlus = await prisma.segment.findFirst({ where: { merchantId: merchant.id, name: '銀卡以上' } });
+  if (segVipRegular && coup50) {
+    await prisma.crmCouponDispatchRule.create({
+      data: { merchantId: merchant.id, name: 'VIP 常客發折 50 券', segmentId: segVipRegular.id, couponId: coup50.id, enabled: true, scheduleType: 'weekly', nextRunAt: new Date(now.getTime() + 3 * 86400000) },
+    });
+  }
+  if (segGoldRegular && coup20) {
+    await prisma.crmCouponDispatchRule.create({
+      data: { merchantId: merchant.id, name: 'GOLD 常客發折 20 券', segmentId: segGoldRegular.id, couponId: coup20.id, enabled: true, scheduleType: 'weekly', nextRunAt: new Date(now.getTime() + 5 * 86400000) },
+    });
+  }
+  if (segPotential && coupWelcome) {
+    await prisma.crmCouponDispatchRule.create({
+      data: { merchantId: merchant.id, name: '潛力會員發歡迎券', segmentId: segPotential.id, couponId: coupWelcome.id, enabled: true, scheduleType: 'daily', nextRunAt: new Date(now.getTime() + 2 * 86400000) },
+    });
+  }
+  if (segSilverPlus && coup30) {
+    await prisma.crmCouponDispatchRule.create({
+      data: { merchantId: merchant.id, name: '銀卡以上發節慶券', segmentId: segSilverPlus.id, couponId: coup30.id, enabled: true, scheduleType: 'weekly', nextRunAt: new Date(now.getTime() + 7 * 86400000) },
+    });
+  }
+  /** 發券紀錄：加倍，Customer ↔ LoyaltyCoupon 關聯涵蓋更多會員 */
   const custForCoupon = await prisma.customer.findMany({
-    where: { merchantId: merchant.id, code: { in: ['VIP001', 'VIP002', 'MEM005', 'MEM010'] } },
+    where: { merchantId: merchant.id, code: { in: ['VIP001', 'VIP002', 'MEM005', 'MEM010', 'MEM017', 'MEM018', 'MEM019', 'MEM020', 'GOLD001', 'GOLD002'] } },
   });
   if (coupWelcome) {
-    const v = custForCoupon.find((x) => x.code === 'VIP001');
-    if (v) await prisma.loyaltyCouponIssue.create({ data: { customerId: v.id, couponId: coupWelcome.id } });
+    for (const v of custForCoupon.filter((x) => x.code && ['VIP001', 'MEM005', 'MEM017', 'MEM019'].includes(x.code))) {
+      await prisma.loyaltyCouponIssue.create({ data: { customerId: v.id, couponId: coupWelcome.id } }).catch(() => {});
+    }
   }
   if (coup50) {
-    for (const c of custForCoupon) {
+    for (const c of custForCoupon.filter((x) => x.code && ['VIP001', 'VIP002', 'MEM005', 'MEM010'].includes(x.code))) {
       await prisma.loyaltyCouponIssue.create({ data: { customerId: c.id, couponId: coup50.id } }).catch(() => {});
+    }
+  }
+  if (coup20) {
+    for (const c of custForCoupon.filter((x) => x.code && ['GOLD001', 'GOLD002', 'MEM018', 'MEM020'].includes(x.code))) {
+      await prisma.loyaltyCouponIssue.create({ data: { customerId: c.id, couponId: coup20.id } }).catch(() => {});
+    }
+  }
+  if (coup30) {
+    for (const c of custForCoupon.filter((x) => x.code && ['VIP001', 'GOLD001', 'MEM017'].includes(x.code))) {
+      await prisma.loyaltyCouponIssue.create({ data: { customerId: c.id, couponId: coup30.id } }).catch(() => {});
     }
   }
 
@@ -1522,6 +1705,31 @@ async function main() {
   await posSale({ orderNumber: `DEMO-POS-${y}-028`, customerId: custMem2.id, subtotal: 650, discount: 0, total: 650, method: 'CASH', occurredAt: daysAgo(54), lines: [{ productId: pFeed.id, qty: 2, unitPrice: 280 }, { productId: pBowl.id, qty: 1, unitPrice: 90 }], note: '' });
   await posSaleGuest({ orderNumber: `DEMO-POS-${y}-029`, subtotal: 278, discount: 0, total: 278, method: 'CASH', occurredAt: daysAgo(56), lines: [{ productId: pFeed.id, qty: 1, unitPrice: 278 }], note: '匿名' });
   await posSale({ orderNumber: `DEMO-POS-${y}-030`, customerId: custMem6.id, subtotal: 115, discount: 0, total: 115, method: 'CASH', occurredAt: daysAgo(58), lines: [{ productId: pBowl.id, qty: 1, unitPrice: 99 }, { productId: pSnack.id, qty: 1, unitPrice: 16 }], note: '' });
+  /** 加倍：更多 POS 訂單 031～060 */
+  const custMem17 = await c('MEM017');
+  const custMem20 = await c('MEM020');
+  const custMem25 = await c('MEM025');
+  const custMem30 = await c('MEM030');
+  await posSale({ orderNumber: `DEMO-POS-${y}-031`, customerId: custMem17.id, subtotal: 199, discount: 0, total: 199, method: 'CASH', occurredAt: daysAgo(3), lines: [{ productId: pTeeW.id, qty: 1, unitPrice: 150 }, { productId: pSnack.id, qty: 1, unitPrice: 49 }], note: '' });
+  await posSaleGuest({ orderNumber: `DEMO-POS-${y}-032`, subtotal: 280, discount: 0, total: 280, method: 'CASH', occurredAt: daysAgo(8), lines: [{ productId: pFeed.id, qty: 1, unitPrice: 280 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-033`, customerId: custMem20.id, subtotal: 447, discount: 0, total: 447, method: 'CASH', occurredAt: daysAgo(11), lines: [{ productId: pHay.id, qty: 2, unitPrice: 150 }, { productId: pSnack.id, qty: 2, unitPrice: 49 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-034`, customerId: custGold.id, subtotal: 598, discount: 0, total: 598, method: 'CARD', occurredAt: daysAgo(15), lines: [{ productId: pHay.id, qty: 4, unitPrice: 149 }], note: '' });
+  await posSaleGuest({ orderNumber: `DEMO-POS-${y}-035`, subtotal: 249, discount: 0, total: 249, method: 'CASH', occurredAt: daysAgo(17), lines: [{ productId: pToyTunnel.id, qty: 1, unitPrice: 249 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-036`, customerId: custMem25.id, subtotal: 379, discount: 0, total: 379, method: 'CASH', occurredAt: daysAgo(19), lines: [{ productId: pFeed.id, qty: 1, unitPrice: 280 }, { productId: pBowl.id, qty: 1, unitPrice: 99 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-037`, customerId: custMem1.id, subtotal: 129, discount: 0, total: 129, method: 'CASH', occurredAt: daysAgo(23), lines: [{ productId: pBottle.id, qty: 1, unitPrice: 129 }], note: '' });
+  await posSaleGuest({ orderNumber: `DEMO-POS-${y}-038`, subtotal: 349, discount: 0, total: 349, method: 'CASH', occurredAt: daysAgo(27), lines: [{ productId: pHay.id, qty: 2, unitPrice: 150 }, { productId: pSnack.id, qty: 2, unitPrice: 24 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-039`, customerId: custMem30.id, subtotal: 528, discount: 0, total: 528, method: 'CASH', occurredAt: daysAgo(31), lines: [{ productId: pFeed.id, qty: 1, unitPrice: 280 }, { productId: pHay.id, qty: 1, unitPrice: 150 }, { productId: pBowl.id, qty: 1, unitPrice: 98 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-040`, customerId: custVip!.id, subtotal: 1099, discount: 0, total: 1099, method: 'CARD', occurredAt: daysAgo(35), lines: [{ productId: pCageS.id, qty: 1, unitPrice: 1099 }], note: '' });
+  await posSaleGuest({ orderNumber: `DEMO-POS-${y}-041`, subtotal: 75, discount: 0, total: 75, method: 'CASH', occurredAt: daysAgo(37), lines: [{ productId: pToyBall.id, qty: 1, unitPrice: 20 }, { productId: pSnack.id, qty: 1, unitPrice: 55 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-042`, customerId: custMem3.id, subtotal: 450, discount: 0, total: 450, method: 'CASH', occurredAt: daysAgo(41), lines: [{ productId: pTeeW.id, qty: 3, unitPrice: 150 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-043`, customerId: custMem7.id, subtotal: 198, discount: 0, total: 198, method: 'CASH', occurredAt: daysAgo(43), lines: [{ productId: pBowl.id, qty: 2, unitPrice: 99 }], note: '' });
+  await posSaleGuest({ orderNumber: `DEMO-POS-${y}-044`, subtotal: 1699, discount: 0, total: 1699, method: 'CARD', occurredAt: daysAgo(45), lines: [{ productId: pCageL.id, qty: 1, unitPrice: 1699 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-045`, customerId: custMem8.id, subtotal: 278, discount: 0, total: 278, method: 'CASH', occurredAt: daysAgo(47), lines: [{ productId: pFeed.id, qty: 1, unitPrice: 278 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-046`, customerId: custMem9.id, subtotal: 320, discount: 0, total: 320, method: 'CASH', occurredAt: daysAgo(51), lines: [{ productId: pFeed.id, qty: 1, unitPrice: 280 }, { productId: pSnack.id, qty: 1, unitPrice: 40 }], note: '' });
+  await posSaleGuest({ orderNumber: `DEMO-POS-${y}-047`, subtotal: 150, discount: 0, total: 150, method: 'CASH', occurredAt: daysAgo(53), lines: [{ productId: pTee.id, qty: 1, unitPrice: 150 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-048`, customerId: custMem10.id, subtotal: 498, discount: 0, total: 498, method: 'CASH', occurredAt: daysAgo(55), lines: [{ productId: pHay.id, qty: 2, unitPrice: 150 }, { productId: pBottle.id, qty: 2, unitPrice: 99 }], note: '' });
+  await posSale({ orderNumber: `DEMO-POS-${y}-049`, customerId: custMem2.id, subtotal: 99, discount: 0, total: 99, method: 'CASH', occurredAt: daysAgo(57), lines: [{ productId: pBowl.id, qty: 1, unitPrice: 99 }], note: '' });
+  await posSaleGuest({ orderNumber: `DEMO-POS-${y}-050`, subtotal: 399, discount: 0, total: 399, method: 'CASH', occurredAt: daysAgo(59), lines: [{ productId: pTee.id, qty: 2, unitPrice: 150 }, { productId: pSnack.id, qty: 2, unitPrice: 49 }], note: '' });
   /** 補貨建議示範：DEMO-LOW-STOCK 售出 1 單位，庫存歸零，供 AdminReplenishmentPage */
   await posSale({ orderNumber: `DEMO-POS-${y}-REPL`, customerId: custVip!.id, subtotal: 50, discount: 0, total: 50, method: 'CASH', occurredAt: daysAgo(10), lines: [{ productId: pLowStock.id, qty: 1, unitPrice: 50 }], note: 'POS DEMO-POS-REPL 補貨建議示範' });
   /** 報表時間區段：today/last7d/last30d 至少 5 筆，供 preset 篩選有內容 */
@@ -1578,13 +1786,18 @@ async function main() {
     });
   }
 
-  /** 銷售退貨：5 筆 RETURN_FROM_CUSTOMER + SALE_REFUND，分散 today/last7d/last30d */
+  /** 銷售退貨：10 筆（加倍）RETURN_FROM_CUSTOMER + SALE_REFUND，分散 today/last7d/last30d */
   const salesReturns: { orderId: string; orderNum: string; productId: string; qty: number; amount: number; custId: string; at: Date }[] = [
     { orderId: orderMem2.id, orderNum: orderMem2.orderNumber, productId: pTeeW.id, qty: 1, amount: 150, custId: custMem2.id, at: daysAgo(7) },
     { orderId: orderMem1a.id, orderNum: orderMem1a.orderNumber, productId: pBowl.id, qty: 1, amount: 99, custId: custMem1.id, at: daysAgo(12) },
     { orderId: orderGold.id, orderNum: orderGold.orderNumber, productId: pTee.id, qty: 1, amount: 150, custId: custGold.id, at: daysAgo(15) },
     { orderId: orderMem5a.id, orderNum: orderMem5a.orderNumber, productId: pTee.id, qty: 1, amount: 150, custId: custMem5.id, at: daysAgo(20) },
     { orderId: orderT2.id, orderNum: orderT2.orderNumber, productId: pHay.id, qty: 1, amount: 149, custId: custGold.id, at: daysAgo(2) },
+    { orderId: orderMem3.id, orderNum: orderMem3.orderNumber, productId: pFeed.id, qty: 1, amount: 280, custId: custMem3.id, at: daysAgo(4) },
+    { orderId: orderMem6.id, orderNum: orderMem6.orderNumber, productId: pBowl.id, qty: 1, amount: 100, custId: custMem6.id, at: daysAgo(10) },
+    { orderId: orderMem1b.id, orderNum: orderMem1b.orderNumber, productId: pTee.id, qty: 1, amount: 150, custId: custMem1.id, at: daysAgo(8) },
+    { orderId: order014.id, orderNum: order014.orderNumber, productId: pHay.id, qty: 1, amount: 150, custId: custMem8.id, at: daysAgo(14) },
+    { orderId: order016.id, orderNum: order016.orderNumber, productId: pBowl.id, qty: 1, amount: 95, custId: custMem9.id, at: daysAgo(18) },
   ];
   for (const r of salesReturns) {
     await prisma.inventoryEvent.create({
@@ -1714,7 +1927,7 @@ async function main() {
     },
   });
 
-  /** 換貨：再加 4 筆，共 5 筆，分散時間 */
+  /** 換貨：再加 8 筆（加倍），共 9 筆，分散時間 */
   const exchanges: {
     srcOrder: typeof orderMem1b;
     newProductId: string;
@@ -1730,6 +1943,10 @@ async function main() {
     { srcOrder: orderMem2, newProductId: pSnack.id, newQty: 1, newPrice: 65, returnProductId: pTeeW.id, returnQty: 1, refundDelta: 85, custId: custMem2.id, at: daysAgo(13) },
     { srcOrder: orderMem5a, newProductId: pBottle.id, newQty: 1, newPrice: 129, returnProductId: pTee.id, returnQty: 1, refundDelta: 21, custId: custMem5.id, at: daysAgo(18) },
     { srcOrder: order014, newProductId: pBowl.id, newQty: 1, newPrice: 99, returnProductId: pHay.id, returnQty: 1, refundDelta: 51, custId: custMem8.id, at: daysAgo(24) },
+    { srcOrder: order1b, newProductId: pBottle.id, newQty: 1, newPrice: 129, returnProductId: pTee.id, returnQty: 1, refundDelta: 21, custId: custVip!.id, at: daysAgo(2) },
+    { srcOrder: orderGold, newProductId: pSnack.id, newQty: 1, newPrice: 65, returnProductId: pTee.id, returnQty: 1, refundDelta: 85, custId: custGold.id, at: daysAgo(16) },
+    { srcOrder: order016, newProductId: pSnack.id, newQty: 1, newPrice: 65, returnProductId: pBowl.id, returnQty: 1, refundDelta: 30, custId: custMem9.id, at: daysAgo(27) },
+    { srcOrder: orderMem6, newProductId: pBottle.id, newQty: 1, newPrice: 129, returnProductId: pTee.id, returnQty: 1, refundDelta: 21, custId: custMem6.id, at: daysAgo(19) },
   ];
   for (let i = 0; i < exchanges.length; i++) {
     const ex = exchanges[i];
@@ -1829,6 +2046,43 @@ async function main() {
       actions: [{ type: 'WHOLE_FIXED', fixedOff: 5 }],
     },
   });
+  /** 加倍：更多促銷規則 */
+  await prisma.promotionRule.create({
+    data: {
+      merchantId: merchant.id,
+      name: '滿 500 折 50',
+      priority: 3,
+      draft: false,
+      startsAt: yearStart,
+      endsAt: yearEnd,
+      conditions: [{ type: 'SPEND', op: '>=', value: 500 }],
+      actions: [{ type: 'WHOLE_FIXED', fixedOff: 50 }],
+    },
+  });
+  await prisma.promotionRule.create({
+    data: {
+      merchantId: merchant.id,
+      name: '滿 200 折 20',
+      priority: 4,
+      draft: false,
+      startsAt: yearStart,
+      endsAt: yearEnd,
+      conditions: [{ type: 'SPEND', op: '>=', value: 200 }],
+      actions: [{ type: 'WHOLE_FIXED', fixedOff: 20 }],
+    },
+  });
+  await prisma.promotionRule.create({
+    data: {
+      merchantId: merchant.id,
+      name: '草稿促銷二（未上架）',
+      priority: 98,
+      draft: true,
+      startsAt: yearStart,
+      endsAt: yearEnd,
+      conditions: [{ type: 'SPEND', op: '>=', value: 300 }],
+      actions: [{ type: 'WHOLE_PERCENT', percentOff: 5 }],
+    },
+  });
 
   /** 促銷／折價券關聯：訂單 promotionApplied、PromotionRule.usageCount、LoyaltyCoupon.usedCount */
   const promoRule1 = await prisma.promotionRule.findFirst({
@@ -1889,9 +2143,24 @@ async function main() {
       resultJson: null,
     },
   });
+  await prisma.bulkImportJob.create({
+    data: {
+      kind: 'products_csv',
+      status: 'done',
+      resultJson: JSON.stringify({ ok: 5, failed: 1 }),
+    },
+  });
+  await prisma.bulkImportJob.create({
+    data: {
+      kind: 'customers_csv',
+      status: 'failed',
+      error: '重複 phone 欄位',
+      resultJson: null,
+    },
+  });
 
-  /** 金流快照：5 筆，由實際 FinanceEvent 彙總，供 /admin/finance/snapshots 與金流報表數據一致 */
-  const snapshotDates = [order1Occurred, daysAgo(7), daysAgo(14), daysAgo(21), daysAgo(28)];
+  /** 金流快照：10 筆（加倍），由實際 FinanceEvent 彙總，供 /admin/finance/snapshots 與金流報表數據一致 */
+  const snapshotDates = [order1Occurred, daysAgo(3), daysAgo(7), daysAgo(10), daysAgo(14), daysAgo(18), daysAgo(21), daysAgo(25), daysAgo(28), daysAgo(35)];
   for (const d of snapshotDates) {
     const sd = new Date(d);
     sd.setUTCHours(0, 0, 0, 0);
@@ -1947,9 +2216,9 @@ async function main() {
     },
   });
 
-  /** 稽核紀錄：對應部分 FinanceEvent，供 /admin/finance/audit-log 展示 */
+  /** 稽核紀錄：30 筆（加倍）對應部分 FinanceEvent，供 /admin/finance/audit-log 展示 */
   const sampleEvents = await prisma.financeEvent.findMany({
-    take: 15,
+    take: 30,
     orderBy: { occurredAt: 'desc' },
   });
   for (const ev of sampleEvents) {
@@ -2019,6 +2288,22 @@ async function main() {
       success: true,
       resultCode: 'ok',
     },
+  });
+  /** 加倍：更多報表穿透審計 */
+  await prisma.reportClickAudit.create({
+    data: { merchantId: merchant.id, source: 'finance-events', field: 'referenceId', referenceId: order014.id, resolvedKind: 'posOrder', success: true, resultCode: 'ok' },
+  });
+  await prisma.reportClickAudit.create({
+    data: { merchantId: merchant.id, source: 'finance-events', field: 'referenceId', referenceId: order016.id, resolvedKind: 'posOrder', success: true, resultCode: 'ok' },
+  });
+  await prisma.reportClickAudit.create({
+    data: { merchantId: merchant.id, source: 'pos-reports', field: 'referenceId', referenceId: order1b.id, resolvedKind: 'posOrder', success: true, resultCode: 'ok' },
+  });
+  await prisma.reportClickAudit.create({
+    data: { merchantId: merchant.id, source: 'loyalty-ledger', field: 'referenceId', referenceId: orderGold.id, resolvedKind: 'posOrder', success: true, resultCode: 'ok' },
+  });
+  await prisma.reportClickAudit.create({
+    data: { merchantId: merchant.id, source: 'finance-events', field: 'referenceId', referenceId: rnFull.id, resolvedKind: 'receivingNote', success: true, resultCode: 'ok' },
   });
 
   console.log('Seed OK (wipe + full demo). Merchant', merchant.code);
