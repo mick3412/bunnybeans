@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 050（兩門市情境 + 營業報表門市維度）
+- 做了：① **PosPage 門市切換修正**：apiStores 型別加入 `merchantId`；setApiStores 保留 merchantId；門市 onChange 時從 apiStores 取選中門市的 merchantId 並 setApiMerchantId。② **posOrdersApi 型別擴充**：PosReportsSummaryDto 新增 `byStore?: { storeId, storeCode?, storeName?, revenue, ordersCount, avgOrder? }[]`。③ **PosReportsPage 門市篩選器**：getStores 載入門市；時間區段旁新增門市 select（全部門市 + 各門市）；storeId 從 URL `?storeId=` 讀取；切換時 setSearchParams 更新 URL；getPosReportsSummary、getPosTopItems、getPosDaily、getPosOrderValueDistribution、listOrders 皆傳 storeId。④ **門市營收對比區塊**：storeId 空且 data.byStore?.length > 0 時顯示表格（門市、營收、訂單數、平均客單）。⑤ **E2E 擴充**：admin-pos-reports 新增門市篩選 select 存在、URL storeId 同步、全部門市時門市對比區塊驗證。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E admin-pos-reports 門市篩選測試 pass（其餘需後端 3003）
+- commits：`79ed5465` feat(pos): store switch merchantId fix, reports store filter + byStore (INSTRUCTIONS 050)
+- 檔案：PosPage、posOrdersApi、PosReportsPage、admin-pos-reports.spec.ts
+
+---
+
 ### INSTRUCTIONS 048（迴歸確認 + 掛單／取單 E2E 修復 + 掛單錯誤文案）
 - 做了：① **迴歸確認**：build 全綠；047 變更無遺漏。② **掛單／取單 E2E 修復**：`requireStoreIdReady` 等待 storeId 就緒，否則可控 skip；hold 流程加 `hasAdminKey` 與 hold API `waitForResponse`，API 失敗時 skip（需 VITE_ADMIN_API_KEY 與後端 ADMIN_API_KEY 一致）；`getByText(/共 \d+ 件/).first()` 避免 strict mode 多筆命中。結果：空態 pass；hold+retrieve 在 key 就緒時 pass、否則 skip。③ **掛單 Internal server error 排查**：errorMessages 已補 `POS_HELD_CART_STORE_REQUIRED`、`POS_HELD_CART_ITEMS_EMPTY`、`POS_HELD_CART_NOT_FOUND`；`POS_STORE_NOT_FOUND` 已存在；後端 048 改回 404，前端 getErrorMessage 會對應顯示。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E pos-held-retrieve 1 passed、1 skipped（無 key 或 hold API 401 時 skip）
