@@ -136,6 +136,32 @@ interface PosOrderListResponse {
 | `/pos/orders/:id/returns/stock` | POST | 依訂單明細沖銷入庫（`RETURN_FROM_CUSTOMER`） | **stable** |
 | `/pos/orders/:id/return-to-stock` | POST | 同上（相容舊路徑） | **stable** |
 | `/pos/promotions/preview` | POST | 促銷試算（subtotal / discount / total） | **stable** |
+| `/pos/held-carts` | POST | 掛單（暫存購物車）；Admin Key | **stable** |
+| `/pos/held-carts` | GET | 依 storeId 列出掛單 | **stable** |
+| `/pos/held-carts/:id/retrieve` | POST | 取單（回傳明細後刪除）；Admin Key | **stable** |
+
+#### 掛單／取單 API（stable）
+
+- **POST /pos/held-carts**：掛單。暫存購物車內容，供稍後取回結帳。
+  - **Request body**：
+    ```json
+    {
+      "storeId": "uuid-of-store",
+      "items": [
+        { "productId": "uuid", "name": "品名", "unitPrice": 99, "quantity": 2 }
+      ]
+    }
+    ```
+  - **Response**：`200`，`{ id, storeId, items, subtotal, total, heldAt }`（ISO datetime）。
+  - **錯誤**：`400` **`POS_HELD_CART_STORE_REQUIRED`**（storeId 空）；`400` **`POS_HELD_CART_ITEMS_EMPTY`**（items 空）；`401` **`ADMIN_API_KEY_REQUIRED`**（已設 Admin Key 未帶或錯誤）。
+
+- **GET /pos/held-carts?storeId=**：依門市列出掛單。
+  - **Query**：`storeId`（必填）；未帶或空回傳 `[]`。
+  - **Response**：`200`，`Array<{ id, storeId, items, subtotal, total, heldAt }>`，依 heldAt 降序。
+
+- **POST /pos/held-carts/:id/retrieve**：取單。回傳掛單內容後刪除該筆。
+  - **Response**：`200`，`{ items, subtotal, total }`。
+  - **錯誤**：`404` **`POS_HELD_CART_NOT_FOUND`**；`401` **`ADMIN_API_KEY_REQUIRED`**。
 
 #### 報表穿透（referenceId 跨模組連結）
 
