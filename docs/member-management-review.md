@@ -77,7 +77,30 @@
 
 ---
 
-## 五、相關文件
+## 五、分群／點數／折價券整合方向
+
+### 5.1 分群（Segments）
+
+- **現況**：`GET /crm/segments` 提供分群列表（id、name）；分群名單匯出、發券等皆以 segmentId 為參數。
+- **整合方向**：會員管理頁與分群匯出頁皆以**分群名稱下拉**選取（`listSegments` 提供選項），取代 UUID 手輸；分群管理頁（`/admin/segments`）與會員管理頁維持獨立入口，但匯出流程統一採用名稱選單。
+
+### 5.2 點數（Points）
+
+- **現況**：點數存摺（`/admin/loyalty/point-ledger`）與會員列表（`/admin/customers`）分離；會員列可顯示 pointBalance、expiringSoon。
+- **整合方向**：會員管理頁每列可連結至點數存摺（帶 `customerId` 篩選）；未來可考慮在會員詳情 Drawer 內嵌「近期點數流水」摘要。
+
+### 5.3 折價券（Coupons）
+
+- **現況**：LoyaltyCoupon 模板 CRUD、發券 job 綁 segmentId；CustomerCoupon 發放／核銷尚未完全閉環。
+- **整合方向**：分群發券流程：選分群（名稱下拉）→ 選券 → 發送；會員詳情可顯示「已領／已核銷」券列表（待 API 支援）；POS 選券核銷與 PointLedger BURNED 對齊。
+
+### 5.4 本輪不改路由
+
+- 以上為整合方向提案，本輪不變更路由與導覽結構。
+
+---
+
+## 六、相關文件
 
 - [crm-loyalty-ui-plan.md](crm-loyalty-ui-plan.md) — 範本六區與 L1～L6  
 - [crm-member-roadmap.md](crm-member-roadmap.md) — 階段 A～G  
@@ -86,7 +109,7 @@
 
 ---
 
-## 六、INSTRUCTIONS 021 補充（路由收斂提案摘要）
+## 七、INSTRUCTIONS 021 補充（路由收斂提案摘要）
 
 - 本輪維持「**只寫提案、不改路由**」：`/admin/customers` 與 `/admin/loyalty/members` 並存。
 - 建議下一階段收斂為 **單一路由**：以 `/admin/customers` 為唯一會員管理入口，`/admin/loyalty/members` 改 redirect。
