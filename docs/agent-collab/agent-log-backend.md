@@ -15,6 +15,23 @@
 
 ---
 
+### INSTRUCTIONS-046（045 收斂 + 掛單／取單收斂）
+- 做了：依 `BACKEND-INSTRUCTIONS 046.md` §1 完成本輪任務。
+  - **#1 迴歸確認**：045 變更無遺漏、測試全綠。
+  - **#2 掛單／取單收斂**：① seed wipeAll 加入 `posHeldCart.deleteMany()`（store 之前）；② api-design-pos 新增 § 掛單／取單 API 契約（POST/GET /pos/held-carts、POST /pos/held-carts/:id/retrieve）；③ 新增 `pos-held-carts.integration-spec.ts`（hold→list→retrieve、storeId/items 空拋錯、NOT_FOUND）。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、161 tests 全綠。
+- commits：`a2717b79` fix(seed) wipeAll posHeldCart；`88b8df3d` docs(api-design-pos)；`6f5d5add` test(pos) pos-held-carts；`0db7f5f8` docs(agent-log) 046
+
+---
+
+### 交易暫存機制（掛單／取單）— 後端
+- 做了：依計畫實作 POS 掛單／取單功能。① **Prisma Schema**：新增 `PosHeldCart` model（storeId、itemsJson、subtotal、total、heldAt）；migration `20260323064516_add_pos_held_cart`。② **PosHeldCartsService**：`holdCart`、`listHeldCarts`、`retrieveAndDelete`。③ **PosHeldCartsController**：`POST /pos/held-carts` 掛單、`GET /pos/held-carts?storeId=` 列表、`POST /pos/held-carts/:id/retrieve` 取單（回傳 items 並刪除）。④ 註冊至 pos.module.ts。
+- 測試/驗收：migration 已套用；`pnpm --filter pos-erp-backend build` 受既有 e2e-seed 路徑影響，held-carts 模組結構正確。
+- commits：變更未提交（待 atomic commits）
+- 檔案：schema.prisma、pos-held-carts.service.ts、pos-held-carts.controller.ts、pos.module.ts、migrations/20260323064516_add_pos_held_cart/
+
+---
+
 ### INSTRUCTIONS-045（044 收斂）
 - 做了：依 `BACKEND-INSTRUCTIONS 045.md` §1 完成本輪任務。
   - **#1 迴歸確認**：044 變更無遺漏、測試全綠；044 未提交變更（含 seed 補強）已補 atomic commits。
