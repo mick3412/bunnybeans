@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 044（會員整合文件 + E2E 註記 + 會員匯入匯出 UX + 全站對齊）
+- 做了：① **迴歸**：build 全綠。② **會員整合方案文件**：`member-management-review.md` 新增 §5 分群／點數／折價券整合方向（分群名稱下拉、點數連結、折價券閉環；本輪不改路由）。③ **E2E 迴歸**：`pnpm exec playwright test e2e/` 環境未就緒（5173 已佔用），需 `reuseExistingServer:true` 或停止既有 Vite 後重跑；註記 skip 條件。④ **會員管理匯入匯出 UX**：AdminCustomersPage 篩選左、操作右（與 AdminProductsPage 一致）；「匯出列表」→「全部匯出」、「匯出」→「分群匯出」；分群名單匯出改為 listSegments 名稱下拉。⑤ **全站對齊**：AdminSegmentExportPage 分群 ID 輸入改為 listSegments 名稱下拉；PosOrdersListPage 篩選左、操作右（justify-between）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E 未跑（port 5173 佔用）
+- commits：`7e847bd0` member-management-review；`cadb4cfd` customers UX；`0afeefaf` segment dropdown；`dba096a9` orders layout；`80855b58` agent-log
+- 檔案：member-management-review.md、AdminCustomersPage、AdminSegmentExportPage、PosOrdersListPage
+
+---
+
 ### INSTRUCTIONS 043（庫存 header 重排 + 促銷規則左右兩欄 + 集點設定 UI 對齊）
 - 做了：① **迴歸**：build 全綠。② **庫存餘額 header 重排**：AdminInventoryPage 將 CSV 匯入／匯出區塊縮小，收進 `<details>` 置右上角與倉庫選單同列；餘額 CSV、一般匯入、大檔匯入皆在 details 內。③ **促銷規則面板 layout**：AdminPromotionEditPage 主編輯區改為左右兩欄（條件｜行動）；規則預覽、優先級、基本資訊移至上方單一區塊；預設 1 條件＋1 行動已符合。④ **集點設定 UI 對齊**：LoyaltySettingsPage 大卡樣式改為 `rounded-xl border bg-table-head p-4`、標題底線、儲存按鈕加 rounded-xl，與 AdminFinancePeriodsPage 等設定頁一致。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
