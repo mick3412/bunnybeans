@@ -15,6 +15,14 @@
 
 ---
 
+### INSTRUCTIONS 047（迴歸確認 + 掛單／取單 E2E）
+- 做了：① **迴歸確認**：build 全綠；046 變更無遺漏。② **掛單／取單 E2E**：新增 `e2e/pos-held-retrieve.spec.ts` — 暫無掛單 Modal 空態、加品項→掛單→購物車清空→取單→選掛單→購物車回填；PosPage 購物車空態 `e2e-pos-cart-empty`、PosRetrieveHeldModal 空態 `e2e-pos-retrieve-empty`；同步掛單取單 UI、posHeldCartsApi、usePosCart replaceCart、PosRetrieveHeldModal、PosSessionBar 等。③ **E2E 迴歸（選配）**：pos-held-retrieve 2 failed — 取單/掛單按鈕因 storeId 未就緒而 disabled（需後端 3003 + db:seed 門市）；port 5173 reuseExistingServer 可跑，註記 skip 條件。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；E2E pos-held-retrieve 2 failed（storeId 未就緒）
+- commits：`805ff5d8` feat(pos): hold/retrieve E2E + testids (INSTRUCTIONS 047)；`3b5db7ab` docs(agent-collab): INSTRUCTIONS 047 frontend log
+- 檔案：pos-held-retrieve.spec.ts、PosPage、PosRetrieveHeldModal、posHeldCartsApi、usePosCart、e2e-pos.md
+
+---
+
 ### INSTRUCTIONS 046（營運總覽近期營收趨勢修復與功能）
 - 做了：排查並修復 AdminDashboardPage「近期營收趨勢」無法顯示；修正 getPosDaily `{ label, value }` 映射為圖表所需 `{ date, revenue }`，並支援多租戶傳入 `merchantId`。另新增 7 日／30 日切換 pill，切換會重新 fetch；區塊維持常顯並提供載入中／無資料空態。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅（E2E：選配未執行）
