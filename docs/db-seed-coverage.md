@@ -98,7 +98,7 @@
 | **供應商採購排行** (AdminProcurementHubPage) | ReceivingNote COMPLETED、createdAt 在近 30 日內 | rnFull、rnPartial、rnExpiring 設定 **createdAt: daysAgo(5)**，確保「近 30 日」報表有示範資料 | ✅ |
 | 庫存列表 | InventoryBalance、Product | 多 SKU 有庫存；低庫存 1、零庫存 0 | ✅ |
 | **即期庫存** (AdminExpiringInventoryPage) | **InventoryEvent.batchCode+expiryDate** | **seed 已補 1 即期批次** | ✅ |
-| 補貨建議 | onHandQty=0 + SALE_OUT 歷史 | DEMO-ZERO-STOCK 零庫存；e2e:seed 補 replenishment | ⚠️ 補貨需歷史銷量 |
+| 補貨建議 | onHandQty 低 + SALE_OUT 歷史 | DEMO-POS-REPL 銷售 pLowStock 1 單位 → SALE_OUT、庫存歸零 | ✅ |
 | 快速驗收 | PO ORDERED、可選商品 | DEMO-PO-*-ORDERED | ✅ |
 
 ### 會員／CRM
@@ -112,9 +112,10 @@
 | 折價券 | LoyaltyCoupon、LoyaltyCouponIssue | 2 券 | ✅ |
 | 客服紀錄 | CustomerContactLog | **5 筆** | ✅ |
 
-### 營運／Ops
+### 收銀班次／營運
 | 頁面 | 資料需求 | Seed 對應 | 狀態 |
 |------|----------|-----------|------|
+| **收銀班次** (AdminPosSessionsPage) | **CashRegisterSession** | **3 筆**（S002：1 OPEN、2 CLOSED），openedAt 分散過去 7 天 | ✅ |
 | Ops 作業 (AdminOpsJobsPage) | OpsJobRunLog | 需手動觸發或 seed 補 run log | ⚠️ 可空表 |
 | **報表穿透審計** (AdminOpsReportClicksPage) | **ReportClickAudit** | **5 筆**（finance-events、loyalty-ledger、pos-reports） | ✅ |
 | Bulk 匯入 | BulkImportJob | done / failed 各 1 | ✅ |
@@ -132,6 +133,11 @@
 1. **FinanceSnapshot**：由當日 `order1Occurred` 之 FinanceEvent 彙總 `byType`、`byParty`，與金流報表數據一致
 2. **ReportClickAudit**：referenceId 對應實際 PosOrder / ReceivingNote，source=finance-events（與金流報表穿透來源一致）
 3. **即期庫存**：完整鏈路 `PO → RN (batchCode/expiryDate) → InventoryEvent.referenceId=ReceivingNoteLine.id` + PURCHASE_PAYABLE
+
+## 已補強（本輪完成）
+
+1. **CashRegisterSession**：3 筆 demo session（S002：1 OPEN、2 CLOSED），openedAt 分散過去 7 天，供 AdminPosSessionsPage
+2. **補貨建議**：DEMO-POS-REPL 銷售 DEMO-LOW-STOCK（pLowStock）1 單位，建立 SALE_OUT 並使庫存歸零
 
 ## 驗證指令
 
