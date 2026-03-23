@@ -15,6 +15,23 @@
 
 ---
 
+### INSTRUCTIONS-051（050 收斂）
+- 做了：依 `BACKEND-INSTRUCTIONS 051.md` §1 完成本輪任務。
+  - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
+  - **#1 迴歸確認**：050 變更無遺漏、測試全綠；未提交變更（held-carts 驗證 + DTO）已補 atomic commit。
+- 測試/驗收：`pnpm ci:backend-with-db` 通過；22 suites、163 tests 全綠。
+- commits：`e9566beb` fix(pos) held-carts item validation + DTO class-validator
+
+---
+
+### 掛單 DTO whitelist 修復（bugfix）
+- 做了：`pos-held-carts.controller.ts` 的 `HeldCartItemDto`、`HoldCartBodyDto` 原先無 class-validator 裝飾器，導致 NestJS 全域 `ValidationPipe({ whitelist: true })` 移除 body 屬性，storeId 變成空字串、後端拋 `POS_HELD_CART_STORE_REQUIRED`。補上 `@IsString`、`@IsNumber`、`@Min`、`@IsArray`、`@ArrayMinSize`、`@ValidateNested`、`@Type` 等裝飾器，仿 create-pos-order.dto 模式。
+- 測試/驗收：pos-held-carts integration 4 passed；全後端 163 tests 全綠。
+- commits：待補 atomic commit
+- 檔案：pos-held-carts.controller.ts
+
+---
+
 ### INSTRUCTIONS-050（兩門市情境 + 營業報表門市維度）
 - 做了：依 `BACKEND-INSTRUCTIONS 050.md` §1 完成本輪任務。
   - **前置**：迴歸維護 `pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 通過。
