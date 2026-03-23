@@ -5,10 +5,10 @@ import type { CartItem, CartSummary, PosProduct } from './types';
 export const POS_TAX_RATE = 0;
 
 export const usePosCart = () => {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItemsState] = useState<CartItem[]>([]);
 
   const addProduct = (product: PosProduct) => {
-    setItems((prev) => {
+    setItemsState((prev) => {
       const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
         return prev.map((item) =>
@@ -27,14 +27,24 @@ export const usePosCart = () => {
   };
 
   const changeQuantity = (itemId: string, quantity: number) => {
-    setItems((prev) =>
+    setItemsState((prev) =>
       prev
         .map((item) => (item.id === itemId ? { ...item, quantity } : item))
         .filter((item) => item.quantity > 0),
     );
   };
 
-  const clearCart = () => setItems([]);
+  const clearCart = () => setItemsState([]);
+
+  /** 取單時回填購物車；每個 item 會產生新的 id */
+  const replaceCart = (newItems: Omit<CartItem, 'id'>[]) => {
+    setItemsState(
+      newItems.map((item) => ({
+        ...item,
+        id: `${item.productId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      })),
+    );
+  };
 
   const summary: CartSummary = useMemo(() => {
     const subtotal = items.reduce((acc, item) => acc + item.unitPrice * item.quantity, 0);
@@ -50,6 +60,7 @@ export const usePosCart = () => {
     addProduct,
     changeQuantity,
     clearCart,
+    replaceCart,
   };
 };
 

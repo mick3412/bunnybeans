@@ -17,8 +17,13 @@ import {
   type PromotionPreviewResult,
 } from '../modules/pos/posOrdersApi';
 import { searchCustomers, type CustomerSearchItem } from '../modules/admin/loyaltyApi';
+import { listProductTagsForPosDiscount } from '../modules/admin/adminApi';
+import { PosSessionBar } from './pos/PosSessionBar';
+import { PosRetrieveHeldModal } from './pos/PosRetrieveHeldModal';
+import { holdCart } from '../modules/pos/posHeldCartsApi';
 import { useDebouncedValue } from '../shared/hooks/useDebouncedValue';
 import { formatMoney } from '../shared/utils/formatMoney';
+import { getErrorMessage } from '../shared/errors/errorMessages';
 
 const ALL_ID = '';
 const POS_FAVORITES_KEY = 'pos-favorites';
@@ -40,22 +45,14 @@ function saveFavorites(ids: string[]) {
   localStorage.setItem(POS_FAVORITES_KEY, JSON.stringify(ids));
 }
 
-/** 與後端 Product.tags / seed 一致；選「無」不帶 tag query */
-const DISCOUNT_TAG_OPTIONS: { tag: string; name: string }[] = [
-  { tag: '', name: '無' },
-  { tag: '促銷中', name: '促銷中' },
-  { tag: '熱賣', name: '熱賣' },
-  { tag: '會員價', name: '會員價' },
-];
-
 const mockProducts: PosProductDisplay[] = Array.from({ length: 16 }).map((_, index) => {
   const categoryIds = ['cat-1', 'cat-2', 'cat-3'];
   const categoryId = categoryIds[index % categoryIds.length];
   const brandId = `brand-${(index % 3) + 1}`;
   const tags: string[] = [];
-  if (index % 3 === 0) tags.push('促銷中');
-  if (index % 4 === 0) tags.push('熱賣');
-  if (index % 5 === 0) tags.push('會員價');
+  if (index % 3 === 0) tags.push('熱銷');
+  if (index % 4 === 0) tags.push('新品');
+  if (index % 5 === 0) tags.push('清倉');
   return {
     id: `p${index + 1}`,
     name: `示意商品 ${index + 1}`,
@@ -68,7 +65,7 @@ const mockProducts: PosProductDisplay[] = Array.from({ length: 16 }).map((_, ind
 });
 
 export const PosPage: React.FC = () => {
-  const { items, summary, addProduct, changeQuantity, clearCart } = usePosCart();
+  const { items, summary, addProduct, changeQuantity, clearCart, replaceCart } = usePosCart();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [lastOrderResult, setLastOrderResult] = useState<CreateOrderResult | null>(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
@@ -80,6 +77,7 @@ export const PosPage: React.FC = () => {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [brands, setBrands] = useState<BrandDto[]>([]);
   const [apiStoreId, setApiStoreId] = useState<string | null>(null);
+  const [apiStores, setApiStores] = useState<Array<{ id: string; name: string }>>([]);
   const [apiMerchantId, setApiMerchantId] = useState<string | null>(null);
   const [apiProducts, setApiProducts] = useState<PosProductDisplay[] | null>(null);
   const [apiLoadError, setApiLoadError] = useState<string | null>(null);
@@ -93,6 +91,9 @@ export const PosPage: React.FC = () => {
   const [barcodeChoices, setBarcodeChoices] = useState<PosProduct[]>([]);
   const [barcodeLoading, setBarcodeLoading] = useState(false);
   const [stockOverflowHint, setStockOverflowHint] = useState<string | null>(null);
+  const [discountTagOptions, setDiscountTagOptions] = useState<{ tag: string; name: string }[]>([{ tag: '', name: '無' }]);
+  const [retrieveModalOpen, setRetrieveModalOpen] = useState(false);
+  const [holdError, setHoldError] = useState<string | null>(null);
 
   const handleBarcodeScan = async () => {
     const q = searchQuery.trim();
@@ -137,6 +138,7 @@ export const PosPage: React.FC = () => {
       ]);
       if (!mounted) return;
       if (Array.isArray(storesRes) && storesRes.length > 0) {
+        setApiStores(storesRes.map((s) => ({ id: s.id, name: s.name })));
         let chosen: string | null = null;
         const withWh = storesRes.find((s) => (s.warehouseIds?.length ?? 0) > 0);
         if (withWh) chosen = withWh.id;
@@ -199,8 +201,48 @@ export const PosPage: React.FC = () => {
     };
   }, [apiStoreId]);
 
+  useEffect(() => {
+    const mid = apiMerchantId ?? '';
+    if (!mid) {
+      setDiscountTagOptions([{ tag: '', name: '無' }]);
+      return;
+    }
+    let mounted = true;
+    (async () => {
+      const out = await listProductTagsForPosDiscount(mid);
+      if (!mounted) return;
+      if (Array.isArray(out)) {
+        setDiscountTagOptions([{ tag: '', name: '無' }, ...out.map((t) => ({ tag: t.name, name: t.name }))]);
+      } else {
+        setDiscountTagOptions([{ tag: '', name: '無' }]);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [apiMerchantId]);
+
   const storeId = apiStoreId ?? '';
   const [promoPreview, setPromoPreview] = useState<PromotionPreviewResult | null>(null);
+
+  const handleHold = useCallback(async () => {
+    if (!storeId || items.length === 0) return;
+    setHoldError(null);
+    const out = await holdCart(storeId, items);
+    if (out && typeof out === 'object' && 'statusCode' in out) {
+      setHoldError(getErrorMessage(out));
+      return;
+    }
+    clearCart();
+  }, [storeId, items, clearCart]);
+
+  const handleRetrieveSelect = useCallback(
+    (retrievedItems: { productId: string; name: string; unitPrice: number; quantity: number }[]) => {
+      replaceCart(retrievedItems);
+      setRetrieveModalOpen(false);
+    },
+    [replaceCart],
+  );
 
   const handleAddProduct = useCallback(
     (product: PosProductDisplay) => {
@@ -296,8 +338,7 @@ export const PosPage: React.FC = () => {
     if (selectedBrandIds.length > 0) {
       list = list.filter((p) => p.brandId && selectedBrandIds.includes(p.brandId));
     }
-    /* 折扣由 API tag 篩選；mock 離線時於此補過濾 */
-    if (apiProducts === null && selectedDiscountTag) {
+    if (selectedDiscountTag) {
       list = list.filter((p) => p.tags?.includes(selectedDiscountTag));
     }
     if (searchQueryDebounced.trim()) {
@@ -315,7 +356,7 @@ export const PosPage: React.FC = () => {
       return (a.sku ?? '').localeCompare(b.sku ?? '');
     });
     return list;
-  }, [productsForGrid, selectedCategoryIds, selectedBrandIds, selectedDiscountTag, searchQueryDebounced, apiProducts]);
+  }, [productsForGrid, selectedCategoryIds, selectedBrandIds, selectedDiscountTag, searchQueryDebounced]);
 
   const clearFilters = () => {
     setSelectedCategoryIds([]);
@@ -338,12 +379,20 @@ export const PosPage: React.FC = () => {
         : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5';
   const activeFavoriteIds = favoriteEditMode ? favoriteDraftIds : favoriteIds;
 
+  const storeName = useMemo(
+    () => (apiStoreId ? apiStores.find((s) => s.id === apiStoreId)?.name : undefined),
+    [apiStoreId, apiStores],
+  );
+
   return (
     <div className="flex min-h-full flex-col">
       {apiLoadError && !apiStoreId && (
         <div className="mb-3 rounded-lg border border-brand-warning/40 bg-brand-warning/10 px-3 py-2 text-sm text-brand-warning">
           {apiLoadError}
         </div>
+      )}
+      {storeId && (
+        <PosSessionBar storeId={storeId} storeName={storeName} />
       )}
       <main className="flex min-h-0 flex-1 flex-col gap-3 pb-[calc(14rem+env(safe-area-inset-bottom))] lg:flex-row lg:pb-4">
         <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl bg-white p-2 shadow-sm shadow-black/5 sm:p-3 lg:min-w-0 lg:flex-[3]">
@@ -395,7 +444,7 @@ export const PosPage: React.FC = () => {
               </div>
               <div className="mb-1.5 flex flex-wrap items-center gap-1">
                 <span className="mr-1 text-xs font-medium text-muted">折扣</span>
-                {DISCOUNT_TAG_OPTIONS.map((d) => {
+                {discountTagOptions.map((d) => {
                   const selected = selectedDiscountTag === d.tag;
                   return (
                     <button
@@ -661,15 +710,40 @@ export const PosPage: React.FC = () => {
         </section>
 
         <section className="fixed bottom-0 left-0 right-0 z-20 max-h-[42vh] w-full border-t border-brand-surface bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] lg:static lg:z-0 lg:max-h-none lg:w-[340px] lg:shrink-0 lg:self-stretch lg:border-t-0 lg:shadow-sm lg:rounded-2xl lg:pb-3">
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-content">購物車</span>
-            <Button type="button" size="sm" variant="secondary" onClick={clearCart}>
-              清空
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setRetrieveModalOpen(true)}
+                disabled={!storeId}
+                data-testid="e2e-pos-retrieve-btn"
+              >
+                取單
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={handleHold}
+                disabled={!storeId || items.length === 0}
+                data-testid="e2e-pos-hold-btn"
+              >
+                掛單
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={clearCart}>
+                清空
+              </Button>
+            </div>
           </div>
+          {holdError && (
+            <div className="mb-2 text-xs text-brand-danger">{holdError}</div>
+          )}
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto text-xs">
             {items.length === 0 ? (
-              <div className="py-8 text-center text-muted">尚無品項</div>
+              <div className="py-8 text-center text-muted" data-testid="e2e-pos-cart-empty">尚無品項</div>
             ) : (
               items.map((line) => (
                 <div
@@ -825,6 +899,12 @@ export const PosPage: React.FC = () => {
         merchantId={apiMerchantId ?? ''}
         onOrderCreated={setLastOrderResult}
         initialMemberInput={previewMemberRaw}
+      />
+      <PosRetrieveHeldModal
+        open={retrieveModalOpen}
+        storeId={storeId}
+        onClose={() => setRetrieveModalOpen(false)}
+        onSelect={handleRetrieveSelect}
       />
     </div>
   );

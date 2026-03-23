@@ -114,6 +114,7 @@ E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test
 | 檔案 | 行為 |
 |------|------|
 | `e2e/pos-checkout.spec.ts` | 登入 → 加「商品 A」→ 全額結帳 → 訂單列表第一列有單號 |
+| `e2e/pos-held-retrieve.spec.ts` | 掛單（加品項 → 點掛單 → 購物車清空）→ 取單（點取單 → 選掛單 → 購物車回填）；暫無掛單 Modal 空態 |
 | `e2e/pos-credit.spec.ts` | 掛帳（實收 0 + Demo 客戶 UUID）→ 明細 → 補款 → 未收金額下降 |
 | `e2e/pos-refund.spec.ts` | 全額結帳 → 訂單明細 → 小額退款 → 金額欄清空（API 成功） |
 | `e2e/pos-return-stock.spec.ts` | 全額結帳 → 明細 → 退貨入庫 1 件 → 成功提示 |
