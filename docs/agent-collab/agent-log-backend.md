@@ -23,7 +23,7 @@
   - **#5 文件與型別同步**：更新 `api-design-pos` 列表欄位與 query 說明；前端 `posOrdersApi` query 型別、`posOrdersMockService` summary 型別同步。
   - **#6 測試**：新增 `pos-create-order.integration-spec` 測試覆蓋（僅退款/僅退貨/換貨衍生/afterSalesOnly 與各 filter）。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（22 suites、164 tests）；`pnpm ci:backend-with-db` 全綠。
-- commits：（待補）
+- commits：`3a71c125` feat(pos-after-sales): enhance order list fields and filters；`3f7d9f2c` docs(agent-log) 056
 
 ---
 
