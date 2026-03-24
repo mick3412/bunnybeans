@@ -15,6 +15,17 @@
 
 ---
 
+### INSTRUCTIONS-057（售後 API 二次驗收與契約凍結）
+- 做了：依 `BACKEND-INSTRUCTIONS 057.md` §1 完成本輪任務（遵循售後計劃邊界：不新增 DB、不破壞既有退款/退貨核心 API）。
+  - **#2 售後查詢 API 二次驗收**：補強 `GET /pos/orders` 邊界測試（空資料、混合情境、分頁）；驗證 `hasRefund` / `hasReturn` / `hasExchange` / `afterSalesOnly` 篩選正確。
+  - **#3 明細資料完整性**：`GET /pos/orders/:id` 向後相容擴充售後摘要欄位（`hasRefunds`、`refundTotal`、`hasReturns`、`returnedItemCount`、`hasExchangeDerived`），支援明細頁 Tab 式售後重構。
+  - **#4 契約凍結與相容保護**：維持 `POST /pos/orders/:id/refunds`、`POST /pos/orders/:id/returns/stock`、`POST /pos/orders`（含 `exchangeFromOrderId`）行為不變，回歸測試通過。
+  - 文件同步：`api-design-pos` 補上明細擴充欄位說明。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（22 suites、164 tests）；`pnpm ci:backend-with-db` 全綠（曾遇既有 pos-sessions 間歇失敗，重跑即通過）。
+- commits：`d9ad2d71` feat(pos-after-sales): validate filters/pagination and enrich order detail after-sales fields
+
+---
+
 ### INSTRUCTIONS-056（售後重整：POS 訂單列表欄位與篩選）
 - 做了：依 `BACKEND-INSTRUCTIONS 056.md` §1 完成本輪任務（遵循售後重整計劃邊界：不新增 DB、不改退款/退貨核心 API）。
   - **#2 欄位擴充**：`GET /pos/orders` 新增 `hasRefunds`、`refundTotal`、`hasReturns`、`returnedItemCount`、`exchangeFromOrderId`、`hasExchangeDerived`。
