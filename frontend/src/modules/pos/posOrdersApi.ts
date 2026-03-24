@@ -93,6 +93,23 @@ export interface ListOrdersParams {
   afterSalesOnly?: boolean;
 }
 
+export interface PosFinanceEventRow {
+  id: string;
+  type: string;
+  amount: number;
+  occurredAt: string;
+  referenceId: string | null;
+  note?: string | null;
+}
+
+export interface PosInventoryEventRow {
+  id: string;
+  type: string;
+  quantity: number;
+  occurredAt: string;
+  referenceId?: string | null;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit & { traceId?: string } = {},
@@ -566,4 +583,48 @@ export async function postReturnToStock(
     };
   }
   return { statusCode: 201, message: 'OK', body: out.data, traceId: tid };
+}
+
+export async function getPosFinanceEvents(params?: {
+  from?: string;
+  to?: string;
+  type?: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ items: PosFinanceEventRow[]; total: number } | ApiError> {
+  const q = new URLSearchParams();
+  if (params?.from) q.set('from', params.from);
+  if (params?.to) q.set('to', params.to);
+  if (params?.type) q.set('type', params.type);
+  if (params?.page != null) q.set('page', String(params.page));
+  if (params?.pageSize != null) q.set('pageSize', String(params.pageSize));
+  const out = await request<{ items: PosFinanceEventRow[]; total: number }>(
+    `finance/events${q.toString() ? `?${q.toString()}` : ''}`,
+    { traceId: genTraceId() },
+  );
+  if (!out.ok) return out.error;
+  return {
+    items: Array.isArray(out.data.items) ? out.data.items : [],
+    total: typeof out.data.total === 'number' ? out.data.total : 0,
+  };
+}
+
+export async function getPosInventoryEvents(params: {
+  warehouseId: string;
+  page?: number;
+  pageSize?: number;
+}): Promise<{ items: PosInventoryEventRow[]; total: number } | ApiError> {
+  const q = new URLSearchParams();
+  q.set('warehouseId', params.warehouseId);
+  if (params.page != null) q.set('page', String(params.page));
+  if (params.pageSize != null) q.set('pageSize', String(params.pageSize));
+  const out = await request<{ items: PosInventoryEventRow[]; total: number }>(
+    `inventory/events?${q.toString()}`,
+    { traceId: genTraceId() },
+  );
+  if (!out.ok) return out.error;
+  return {
+    items: Array.isArray(out.data.items) ? out.data.items : [],
+    total: typeof out.data.total === 'number' ? out.data.total : 0,
+  };
 }

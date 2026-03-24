@@ -1346,6 +1346,30 @@ describe('PosService (integration)', () => {
     expect(afterSalesOnly.items.some((r) => r.id === source.id)).toBe(true);
     expect(afterSalesOnly.items.some((r) => r.id === derived.id)).toBe(true);
 
+    const page1 = await posService.listOrders({ storeId: store.id, page: 1, pageSize: 2 });
+    const page2 = await posService.listOrders({ storeId: store.id, page: 2, pageSize: 2 });
+    expect(page1.items.length).toBe(2);
+    expect(page2.items.length).toBeGreaterThanOrEqual(2);
+    const p1Ids = new Set(page1.items.map((i) => i.id));
+    expect(page2.items.some((i) => p1Ids.has(i.id))).toBe(false);
+
+    const emptyMerchant = await prisma.merchant.create({
+      data: { code: `AS-EMPTY-${Date.now()}`, name: 'AfterSales Empty' },
+    });
+    const emptyStore = await prisma.store.create({
+      data: { code: `AS-ES-${Date.now()}`, name: 'AfterSales Empty Store', merchantId: emptyMerchant.id },
+    });
+    const emptyList = await posService.listOrders({
+      storeId: emptyStore.id,
+      afterSalesOnly: true,
+      page: 1,
+      pageSize: 20,
+    });
+    expect(emptyList.items).toHaveLength(0);
+    expect(emptyList.total).toBe(0);
+    await prisma.store.delete({ where: { id: emptyStore.id } });
+    await prisma.merchant.delete({ where: { id: emptyMerchant.id } });
+
     const orderIds = [refundOnly.id, returnOnly.id, source.id, derived.id];
     await prisma.financeEvent.deleteMany({ where: { referenceId: { in: orderIds } } });
     await prisma.posOrderItem.deleteMany({ where: { orderId: { in: orderIds } } });

@@ -122,6 +122,12 @@ interface PosOrderDetail extends PosOrderSummary {
   credit: boolean;
   /** 客戶代碼；明細專用；未掛或無 code 為 null */
   customerCode: string | null;
+  /** 明細頁售後摘要（與列表同語意；向後相容新增） */
+  hasRefunds?: boolean;
+  refundTotal?: number;
+  hasReturns?: boolean;
+  returnedItemCount?: number;
+  hasExchangeDerived?: boolean;
 }
 
 interface PosOrderListResponse {

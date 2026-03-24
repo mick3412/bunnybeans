@@ -501,7 +501,8 @@ export class PosService {
       const sourceOrderId = detail.exchangeFromOrderId;
       const sourceId = sourceOrderId || order.id;
 
-      const [derived, source, refundedAgg, refundEvents] = await Promise.all([
+      const [derived, source, refundedAgg, refundEvents, selfRefundAgg, selfReturnAgg, selfDerivedCount] =
+        await Promise.all([
         this.prisma.posOrder.findMany({
           where: { exchangeFromOrderId: sourceId },
           select: { id: true, totalAmount: true, payments: { select: { amount: true } } },
@@ -522,6 +523,15 @@ export class PosService {
           select: { id: true, amount: true, occurredAt: true, note: true },
           take: 50,
         }),
+        this.prisma.financeEvent.aggregate({
+          where: { referenceId: order.id, type: 'SALE_REFUND' },
+          _sum: { amount: true },
+        }),
+        this.prisma.inventoryEvent.aggregate({
+          where: { referenceId: order.id, type: 'RETURN_FROM_CUSTOMER' },
+          _sum: { quantity: true },
+        }),
+        this.prisma.posOrder.count({ where: { exchangeFromOrderId: order.id } }),
       ]);
 
       const sourceTotal = source ? toNum(source.totalAmount) : 0;
@@ -542,6 +552,11 @@ export class PosService {
         sourceOrderId: sourceOrderId,
         derivedOrderIds: derived.map((d) => d.id),
       };
+      detail.refundTotal = Math.round(Number(selfRefundAgg._sum.amount ?? 0) * 100) / 100;
+      detail.hasRefunds = detail.refundTotal > 0;
+      detail.returnedItemCount = Math.abs(Number(selfReturnAgg._sum.quantity ?? 0));
+      detail.hasReturns = detail.returnedItemCount > 0;
+      detail.hasExchangeDerived = selfDerivedCount > 0;
       detail.exchangeSettlement = {
         sourceOrderId: sourceId,
         derivedOrderIds: derived.map((d) => d.id),
@@ -572,6 +587,11 @@ export class PosService {
         sourceOrderId: detail.exchangeFromOrderId,
         derivedOrderIds: [],
       };
+      detail.refundTotal = 0;
+      detail.hasRefunds = false;
+      detail.returnedItemCount = 0;
+      detail.hasReturns = false;
+      detail.hasExchangeDerived = false;
       detail.exchangeSettlement = null;
     }
     return detail;
@@ -922,6 +942,11 @@ export class PosService {
           },
       customerName: order.customer?.name ?? null,
       customerCode: order.customer?.code ?? null,
+      hasRefunds: false,
+      refundTotal: 0,
+      hasReturns: false,
+      returnedItemCount: 0,
+      hasExchangeDerived: false,
       subtotalAmount: subtotal,
       discountAmount: discount,
       promotionApplied: order.promotionApplied ?? null,
