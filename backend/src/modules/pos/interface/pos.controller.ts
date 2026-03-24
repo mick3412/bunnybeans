@@ -93,13 +93,28 @@ export class PosController {
     @Query('to') to?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Query('hasRefund') hasRefund?: string,
+    @Query('hasReturn') hasReturn?: string,
+    @Query('hasExchange') hasExchange?: string,
+    @Query('afterSalesOnly') afterSalesOnly?: string,
   ) {
+    const asBool = (v?: string): boolean | undefined => {
+      if (v == null) return undefined;
+      const s = v.trim().toLowerCase();
+      if (s === '1' || s === 'true') return true;
+      if (s === '0' || s === 'false') return false;
+      return undefined;
+    };
     return this.service.listOrders({
       storeId,
       from,
       to,
       page: page ? Number(page) : undefined,
       pageSize: pageSize ? Number(pageSize) : undefined,
+      hasRefund: asBool(hasRefund),
+      hasReturn: asBool(hasReturn),
+      hasExchange: asBool(hasExchange),
+      afterSalesOnly: asBool(afterSalesOnly),
     });
   }
 

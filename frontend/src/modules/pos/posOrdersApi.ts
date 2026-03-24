@@ -87,6 +87,10 @@ export interface ListOrdersParams {
   to?: string;
   page?: number;
   pageSize?: number;
+  hasRefund?: boolean;
+  hasReturn?: boolean;
+  hasExchange?: boolean;
+  afterSalesOnly?: boolean;
 }
 
 async function request<T>(
@@ -468,6 +472,10 @@ export async function listOrders(
   if (params?.to) q.set('to', params.to);
   if (params?.page != null) q.set('page', String(params.page));
   if (params?.pageSize != null) q.set('pageSize', String(params.pageSize));
+  if (params?.hasRefund != null) q.set('hasRefund', String(params.hasRefund));
+  if (params?.hasReturn != null) q.set('hasReturn', String(params.hasReturn));
+  if (params?.hasExchange != null) q.set('hasExchange', String(params.hasExchange));
+  if (params?.afterSalesOnly != null) q.set('afterSalesOnly', String(params.afterSalesOnly));
   const path = `pos/orders${q.toString() ? `?${q.toString()}` : ''}`;
   const out = await request<PosOrderListResponse>(path, { traceId: traceId ?? genTraceId() });
   if (!out.ok) return out.error;

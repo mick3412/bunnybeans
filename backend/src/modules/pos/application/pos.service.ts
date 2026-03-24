@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { InventoryService } from '../../inventory/application/inventory.service';
@@ -582,29 +583,114 @@ export class PosService {
     to?: string;
     page?: number;
     pageSize?: number;
+    hasRefund?: boolean;
+    hasReturn?: boolean;
+    hasExchange?: boolean;
+    afterSalesOnly?: boolean;
   }) {
     const page = Math.max(1, filter.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, filter.pageSize ?? 50));
     const from = filter.from ? new Date(filter.from) : undefined;
     const to = filter.to ? new Date(filter.to) : undefined;
+    const conds: Prisma.Sql[] = [Prisma.sql`TRUE`];
+    if (filter.storeId?.trim()) {
+      conds.push(Prisma.sql`o."storeId" = ${filter.storeId.trim()}`);
+    }
+    if (from && !Number.isNaN(from.getTime())) {
+      conds.push(Prisma.sql`o."createdAt" >= ${from}`);
+    }
+    if (to && !Number.isNaN(to.getTime())) {
+      conds.push(Prisma.sql`o."createdAt" <= ${to}`);
+    }
+    if (filter.hasRefund) {
+      conds.push(Prisma.sql`EXISTS (SELECT 1 FROM "FinanceEvent" fe WHERE fe."referenceId" = o.id AND fe.type = 'SALE_REFUND')`);
+    }
+    if (filter.hasReturn) {
+      conds.push(Prisma.sql`EXISTS (SELECT 1 FROM "InventoryEvent" ie WHERE ie."referenceId" = o.id AND ie.type = 'RETURN_FROM_CUSTOMER')`);
+    }
+    if (filter.hasExchange) {
+      conds.push(
+        Prisma.sql`(o."exchangeFromOrderId" IS NOT NULL OR EXISTS (SELECT 1 FROM "PosOrder" d WHERE d."exchangeFromOrderId" = o.id))`,
+      );
+    }
+    if (filter.afterSalesOnly) {
+      conds.push(Prisma.sql`(
+        EXISTS (SELECT 1 FROM "FinanceEvent" fe WHERE fe."referenceId" = o.id AND fe.type = 'SALE_REFUND')
+        OR EXISTS (SELECT 1 FROM "InventoryEvent" ie WHERE ie."referenceId" = o.id AND ie.type = 'RETURN_FROM_CUSTOMER')
+        OR o."exchangeFromOrderId" IS NOT NULL
+        OR EXISTS (SELECT 1 FROM "PosOrder" d WHERE d."exchangeFromOrderId" = o.id)
+      )`);
+    }
+    const whereSql = Prisma.sql`WHERE ${Prisma.join(conds, ' AND ')}`;
+    const offset = (page - 1) * pageSize;
 
-    const { items, total } = await this.posRepo.findMany({
-      storeId: filter.storeId,
-      from,
-      to,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    });
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        orderNumber: string;
+        storeId: string;
+        totalAmount: unknown;
+        createdAt: Date;
+        customerId: string | null;
+        customerName: string | null;
+        exchangeFromOrderId: string | null;
+        hasExchangeDerived: boolean;
+        refundTotal: number;
+        returnedItemCount: number;
+      }>
+    >(Prisma.sql`
+      SELECT
+        o.id,
+        o."orderNumber",
+        o."storeId",
+        o."totalAmount",
+        o."createdAt",
+        o."customerId",
+        c.name AS "customerName",
+        o."exchangeFromOrderId",
+        EXISTS (SELECT 1 FROM "PosOrder" d WHERE d."exchangeFromOrderId" = o.id) AS "hasExchangeDerived",
+        COALESCE((
+          SELECT SUM(fe.amount)::float
+          FROM "FinanceEvent" fe
+          WHERE fe."referenceId" = o.id
+            AND fe.type = 'SALE_REFUND'
+        ), 0)::float AS "refundTotal",
+        COALESCE((
+          SELECT SUM(ABS(ie.quantity))::int
+          FROM "InventoryEvent" ie
+          WHERE ie."referenceId" = o.id
+            AND ie.type = 'RETURN_FROM_CUSTOMER'
+        ), 0)::int AS "returnedItemCount"
+      FROM "PosOrder" o
+      LEFT JOIN "Customer" c ON c.id = o."customerId"
+      ${whereSql}
+      ORDER BY o."createdAt" DESC
+      OFFSET ${offset}
+      LIMIT ${pageSize}
+    `);
+
+    const totalRows = await this.prisma.$queryRaw<Array<{ total: number }>>(Prisma.sql`
+      SELECT COUNT(*)::int AS total
+      FROM "PosOrder" o
+      ${whereSql}
+    `);
+    const total = totalRows[0]?.total ?? 0;
 
     return {
-      items: items.map((o) => ({
+      items: rows.map((o) => ({
         id: o.id,
         orderNumber: o.orderNumber,
         storeId: o.storeId,
         totalAmount: Number(o.totalAmount),
         createdAt: o.createdAt.toISOString(),
         customerId: o.customerId ?? null,
-        customerName: o.customer?.name ?? null,
+        customerName: o.customerName ?? null,
+        hasRefunds: Number(o.refundTotal) > 0,
+        refundTotal: Math.round(Number(o.refundTotal) * 100) / 100,
+        hasReturns: Number(o.returnedItemCount) > 0,
+        returnedItemCount: Number(o.returnedItemCount),
+        exchangeFromOrderId: o.exchangeFromOrderId ?? null,
+        hasExchangeDerived: Boolean(o.hasExchangeDerived),
       })),
       page,
       pageSize,

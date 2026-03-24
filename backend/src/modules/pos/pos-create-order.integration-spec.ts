@@ -1228,6 +1228,138 @@ describe('PosService (integration)', () => {
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 30000);
 
+  it('listOrders includes after-sales fields and supports filters', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `AS-${Date.now()}`, name: 'AfterSales Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `AS-S-${Date.now()}`, name: 'AfterSales Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: { code: `AS-W-${Date.now()}`, name: 'AfterSales WH', merchantId: merchant.id, storeId: store.id },
+    });
+    const product = await prisma.product.create({
+      data: { sku: `AS-SKU-${Date.now()}`, name: 'AfterSales Product' },
+    });
+    await prisma.inventoryBalance.upsert({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 20 },
+      update: { onHandQty: 20 },
+    });
+    await prisma.inventoryEvent.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouse.id,
+        type: 'PURCHASE_IN',
+        quantity: 20,
+        occurredAt: new Date(),
+        note: 'after-sales seed',
+      },
+    });
+
+    const refundOnly = await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 100 }],
+      payments: [{ method: 'CASH', amount: 100 }],
+    });
+    await posService.refundToOrder(refundOnly.id, { amount: 30 });
+
+    const returnOnly = await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 2, unitPrice: 50 }],
+      payments: [{ method: 'CASH', amount: 100 }],
+    });
+    await posService.returnToStock(returnOnly.id, {
+      items: [{ productId: product.id, quantity: 1 }],
+    });
+
+    const source = await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 100 }],
+      payments: [{ method: 'CASH', amount: 100 }],
+    });
+    const derived = await posService.createOrder({
+      storeId: store.id,
+      exchangeFromOrderId: source.id,
+      items: [{ productId: product.id, quantity: 1, unitPrice: 80 }],
+      payments: [{ method: 'CASH', amount: 80 }],
+    });
+
+    const listAll = await posService.listOrders({ storeId: store.id, page: 1, pageSize: 50 });
+    const rowRefund = listAll.items.find((r) => r.id === refundOnly.id);
+    const rowReturn = listAll.items.find((r) => r.id === returnOnly.id);
+    const rowSource = listAll.items.find((r) => r.id === source.id);
+    const rowDerived = listAll.items.find((r) => r.id === derived.id);
+
+    expect(rowRefund?.hasRefunds).toBe(true);
+    expect(rowRefund?.refundTotal).toBe(30);
+    expect(rowRefund?.hasReturns).toBe(false);
+    expect(rowRefund?.returnedItemCount).toBe(0);
+
+    expect(rowReturn?.hasRefunds).toBe(false);
+    expect(rowReturn?.refundTotal).toBe(0);
+    expect(rowReturn?.hasReturns).toBe(true);
+    expect(rowReturn?.returnedItemCount).toBe(1);
+
+    expect(rowSource?.exchangeFromOrderId).toBeNull();
+    expect(rowSource?.hasExchangeDerived).toBe(true);
+    expect(rowDerived?.exchangeFromOrderId).toBe(source.id);
+    expect(rowDerived?.hasExchangeDerived).toBe(false);
+
+    const onlyRefund = await posService.listOrders({
+      storeId: store.id,
+      hasRefund: true,
+      page: 1,
+      pageSize: 50,
+    });
+    expect(onlyRefund.items.some((r) => r.id === refundOnly.id)).toBe(true);
+    expect(onlyRefund.items.some((r) => r.id === returnOnly.id)).toBe(false);
+
+    const onlyReturn = await posService.listOrders({
+      storeId: store.id,
+      hasReturn: true,
+      page: 1,
+      pageSize: 50,
+    });
+    expect(onlyReturn.items.some((r) => r.id === returnOnly.id)).toBe(true);
+    expect(onlyReturn.items.some((r) => r.id === refundOnly.id)).toBe(false);
+
+    const onlyExchange = await posService.listOrders({
+      storeId: store.id,
+      hasExchange: true,
+      page: 1,
+      pageSize: 50,
+    });
+    expect(onlyExchange.items.some((r) => r.id === source.id)).toBe(true);
+    expect(onlyExchange.items.some((r) => r.id === derived.id)).toBe(true);
+
+    const afterSalesOnly = await posService.listOrders({
+      storeId: store.id,
+      afterSalesOnly: true,
+      page: 1,
+      pageSize: 50,
+    });
+    expect(afterSalesOnly.items.some((r) => r.id === refundOnly.id)).toBe(true);
+    expect(afterSalesOnly.items.some((r) => r.id === returnOnly.id)).toBe(true);
+    expect(afterSalesOnly.items.some((r) => r.id === source.id)).toBe(true);
+    expect(afterSalesOnly.items.some((r) => r.id === derived.id)).toBe(true);
+
+    const orderIds = [refundOnly.id, returnOnly.id, source.id, derived.id];
+    await prisma.financeEvent.deleteMany({ where: { referenceId: { in: orderIds } } });
+    await prisma.posOrderItem.deleteMany({ where: { orderId: { in: orderIds } } });
+    await prisma.posOrderPayment.deleteMany({ where: { orderId: { in: orderIds } } });
+    await prisma.posOrder.deleteMany({ where: { id: { in: orderIds } } });
+    await prisma.inventoryEvent.deleteMany({ where: { referenceId: { in: orderIds } } });
+    await prisma.inventoryEvent.deleteMany({ where: { productId: product.id, warehouseId: warehouse.id } });
+    await prisma.inventoryBalance.deleteMany({ where: { productId: product.id, warehouseId: warehouse.id } });
+    await prisma.product.delete({ where: { id: product.id } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 30000);
+
   it('createOrder: concurrent orders — at most one succeeds when stock=5 and each wants 4', async () => {
     if (!process.env.DATABASE_URL) return;
 

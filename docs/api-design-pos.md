@@ -85,6 +85,18 @@ interface PosOrderSummary {
   customerId: string | null;
   /** 客戶名稱；未掛客戶為 null */
   customerName: string | null;
+  /** 是否有退款（FinanceEvent: SALE_REFUND） */
+  hasRefunds: boolean;
+  /** 累計退款金額 */
+  refundTotal: number;
+  /** 是否有退貨入庫（InventoryEvent: RETURN_FROM_CUSTOMER） */
+  hasReturns: boolean;
+  /** 累計退貨件數 */
+  returnedItemCount: number;
+  /** 若此單為換貨衍生單，指向原單 id */
+  exchangeFromOrderId: string | null;
+  /** 是否存在由本單衍生的換貨新單 */
+  hasExchangeDerived: boolean;
 }
 
 // POS 銷售單明細（單筆查詢用；POST 建單成功回應亦同結構）
@@ -374,6 +386,10 @@ interface PosOrderListResponse {
 - `to?`：結束時間（ISO datetime）。
 - `page?`：頁碼（預設 `1`）。
 - `pageSize?`：每頁筆數（預設 `50`）。
+- `hasRefund?`：`true/1` 時只回傳有退款訂單（`SALE_REFUND`）。
+- `hasReturn?`：`true/1` 時只回傳有退貨入庫訂單（`RETURN_FROM_CUSTOMER`）。
+- `hasExchange?`：`true/1` 時只回傳有換貨關聯訂單（衍生單或原單）。
+- `afterSalesOnly?`：`true/1` 時只回傳任一售後情境（退款／退貨／換貨）訂單。
 
 **成功回應（計畫結構）**
 
@@ -387,7 +403,13 @@ interface PosOrderListResponse {
       "totalAmount": 600,
       "createdAt": "2026-03-13T10:00:01Z",
       "customerId": "uuid-or-null",
-      "customerName": "客戶名稱或 null"
+      "customerName": "客戶名稱或 null",
+      "hasRefunds": false,
+      "refundTotal": 0,
+      "hasReturns": false,
+      "returnedItemCount": 0,
+      "exchangeFromOrderId": null,
+      "hasExchangeDerived": false
     }
   ],
   "page": 1,

@@ -36,6 +36,12 @@ export interface PosOrderSummary {
   /** api-design-pos；後端未回傳時可缺 */
   customerId?: string | null;
   customerName?: string | null;
+  hasRefunds?: boolean;
+  refundTotal?: number;
+  hasReturns?: boolean;
+  returnedItemCount?: number;
+  exchangeFromOrderId?: string | null;
+  hasExchangeDerived?: boolean;
 }
 
 export interface PosOrderDetailItem {
