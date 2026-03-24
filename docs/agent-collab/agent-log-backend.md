@@ -15,6 +15,18 @@
 
 ---
 
+### INSTRUCTIONS-056（售後重整：POS 訂單列表欄位與篩選）
+- 做了：依 `BACKEND-INSTRUCTIONS 056.md` §1 完成本輪任務（遵循售後重整計劃邊界：不新增 DB、不改退款/退貨核心 API）。
+  - **#2 欄位擴充**：`GET /pos/orders` 新增 `hasRefunds`、`refundTotal`、`hasReturns`、`returnedItemCount`、`exchangeFromOrderId`、`hasExchangeDerived`。
+  - **#3 篩選參數**：新增 `hasRefund`、`hasReturn`、`hasExchange`、`afterSalesOnly`（true/1 啟用）。
+  - **#4 查詢效能/正確性**：改為單次 SQL 聚合與 `EXISTS` 條件，避免 N+1；退款使用 `FinanceEvent(SALE_REFUND)`，退貨使用 `InventoryEvent(RETURN_FROM_CUSTOMER)`，換貨使用 `exchangeFromOrderId`/衍生單關聯。
+  - **#5 文件與型別同步**：更新 `api-design-pos` 列表欄位與 query 說明；前端 `posOrdersApi` query 型別、`posOrdersMockService` summary 型別同步。
+  - **#6 測試**：新增 `pos-create-order.integration-spec` 測試覆蓋（僅退款/僅退貨/換貨衍生/afterSalesOnly 與各 filter）。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（22 suites、164 tests）；`pnpm ci:backend-with-db` 全綠。
+- commits：（待補）
+
+---
+
 ### INSTRUCTIONS-055（後端優化 #2～#5 採購／庫存分頁）
 - 做了：依 `BACKEND-INSTRUCTIONS 055.md` §1 完成本輪任務。
   - **#2 Supplier 分頁**：`GET /suppliers` 新增 `page`、`pageSize`，回傳 `{ items, total, page, pageSize }`；預設 50，上限 200；保留 q 搜尋。
