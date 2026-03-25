@@ -87,7 +87,7 @@
 | POS 報表 (PosReportsPage) | 同上 | 同上 | ✅ |
 | 金流餘額 (AdminFinanceBalancesPage) | FinanceEvent、partyId | customer:/supplier:/STORE:WALKIN | ✅ |
 | 金流稽核 (AdminFinanceAuditPage) | FinanceAuditLog | 依 FinanceEvent 寫入 | ⚠️ 視後端實作 |
-| 關帳區間 (AdminFinancePeriodsPage) | FinancePeriodClose | db:seed 無關帳；可顯示空表 | ✅ |
+| 關帳區間 (AdminFinancePeriodsPage) | FinancePeriodClose | **2 筆** demo CLOSED 區間 | ✅ |
 | **金流快照** (AdminFinanceSnapshotsPage) | **FinanceSnapshot** | **5 筆** daily，由 FinanceEvent 彙總 | ✅ |
 
 ### 採購／驗收／庫存
@@ -115,8 +115,8 @@
 ### 收銀班次／營運
 | 頁面 | 資料需求 | Seed 對應 | 狀態 |
 |------|----------|-----------|------|
-| **收銀班次** (AdminPosSessionsPage) | **CashRegisterSession** | **3 筆**（S002：1 OPEN、2 CLOSED），openedAt 分散過去 7 天 | ✅ |
-| Ops 作業 (AdminOpsJobsPage) | OpsJobRunLog | 需手動觸發或 seed 補 run log | ⚠️ 可空表 |
+| **收銀班次** (AdminPosSessionsPage) | **CashRegisterSession** | **6 筆**（S002：2 OPEN、4 CLOSED），openedAt 分散過去 7 天 | ✅ |
+| Ops 作業 (AdminOpsJobsPage) | OpsJobRunLog | **5 筆**（finance-snapshot、crm-run-scheduled、finance-period-close 等） | ✅ |
 | **報表穿透審計** (AdminOpsReportClicksPage) | **ReportClickAudit** | **5 筆**（finance-events、loyalty-ledger、pos-reports） | ✅ |
 | Bulk 匯入 | BulkImportJob | done / failed 各 1 | ✅ |
 
@@ -136,8 +136,12 @@
 
 ## 已補強（本輪完成）
 
-1. **CashRegisterSession**：3 筆 demo session（S002：1 OPEN、2 CLOSED），openedAt 分散過去 7 天，供 AdminPosSessionsPage
-2. **補貨建議**：DEMO-POS-REPL 銷售 DEMO-LOW-STOCK（pLowStock）1 單位，建立 SALE_OUT 並使庫存歸零
+1. **CashRegisterSession**：6 筆（2 OPEN、4 CLOSED），供 AdminPosSessionsPage
+2. **補貨建議**：DEMO-POS-REPL 銷售 DEMO-LOW-STOCK，建立 SALE_OUT
+3. **OpsJobRunLog**：5 筆，供 AdminOpsJobsPage
+4. **CrmMarketingJob**：2 筆 done，供 /admin/crm/jobs
+5. **商品效期**：牧草／飼料／零食具可計算剩餘天數之欄位
+6. **LoyaltyCouponIssue**：發券對象改為實際存在之會員 code（移除不存在的 GOLD001/GOLD002）
 
 ## 驗證指令
 
@@ -150,4 +154,4 @@ pnpm db:seed
 ```
 
 收銀：/pos、/pos/orders、/pos/reports  
-後台：/admin/* 各頁逐一檢查無空表（除 OpsJobRunLog、關帳區間可為空）
+後台：/admin/* 各頁逐一檢查；**行銷規則常駐**（`/admin/marketing/rules`）為 API placeholder，列表可為空屬預期

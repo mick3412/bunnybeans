@@ -47,7 +47,7 @@ pnpm manual:build
 - [03 商品與條碼/標籤](03-products.md)
 - [04 會員與 CRM（分群/等級/聯絡紀錄）](04-customers-crm.md)
 - [05 促銷（規則、POS 驗證）](05-promotions.md)
-- [06 庫存（查詢/調整/批號效期）](06-inventory.md)
+- [06 庫存（查詢/調整/批號效期/補貨建議）](06-inventory.md)
 - [07 採購與驗收](07-purchase-and-receiving.md)
 - [08 POS 訂單（開單/付款/退款作廢）](08-pos-orders.md)
 - [09 報表與稽核](09-reports-and-audit.md)
