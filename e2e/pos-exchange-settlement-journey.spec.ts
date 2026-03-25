@@ -3,6 +3,9 @@ import { test, expect } from '@playwright/test';
 test.describe('換貨 Phase2：差額/對帳旅程', () => {
   test('原單 → 換貨單 → 顯示差額與狀態（可 skip）', async ({ page }) => {
     const full = (process.env.E2E_PROFILE ?? '').trim() === 'full';
+    if (!full) {
+      test.skip(true, '換貨 fixture 僅於 E2E_PROFILE=full 建立（exchange/settlement）；一般 e2e:seed 無此資料');
+    }
     // backend/scripts/e2e-seed.ts：Exchange source order id
     const EX_SOURCE_ORDER_REF_ID = 'e2e00005-0000-4000-8000-00000000d001';
     await page.goto('/login');

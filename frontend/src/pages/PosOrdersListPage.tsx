@@ -16,6 +16,14 @@ function customerLabel(o: PosOrderSummary): string {
   return '—';
 }
 
+function orderAfterSalesBadges(o: PosOrderSummary): Array<{ key: string; text: string; cls: string }> {
+  const out: Array<{ key: string; text: string; cls: string }> = [];
+  if (o.hasRefunds) out.push({ key: 'refund', text: '有退款', cls: 'bg-amber-100 text-amber-800' });
+  if (o.hasReturns) out.push({ key: 'return', text: '有退貨', cls: 'bg-sky-100 text-sky-800' });
+  if (o.exchangeFromOrderId || o.hasExchangeDerived) out.push({ key: 'exchange', text: '換貨', cls: 'bg-violet-100 text-violet-800' });
+  return out;
+}
+
 export const PosOrdersListPage: React.FC = () => {
   const [orders, setOrders] = useState<PosOrderSummary[]>([]);
   const [page, setPage] = useState(1);
@@ -39,16 +47,18 @@ export const PosOrdersListPage: React.FC = () => {
   }, [stores]);
 
   const load = useCallback(
-    async (pageNum: number, opts?: { resetPage?: boolean }) => {
+    async (pageNum: number, opts?: { resetPage?: boolean; from?: string; to?: string }) => {
       setLoading(true);
       setError(null);
       setErrorTraceId(null);
+      const from = opts?.from ?? fromDate;
+      const to = opts?.to ?? toDate;
       const result = await listOrders({
         page: opts?.resetPage ? 1 : pageNum,
         pageSize: PAGE_SIZE,
         storeId: storeIdFilter || undefined,
-        from: fromDate || undefined,
-        to: toDate || undefined,
+        from: from || undefined,
+        to: to || undefined,
       });
       if ('items' in result && Array.isArray(result.items)) {
         setOrders(result.items);
@@ -122,6 +132,40 @@ export const PosOrdersListPage: React.FC = () => {
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                 />
+              </div>
+              <div className="flex items-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const to = new Date();
+                    const from = new Date();
+                    from.setDate(from.getDate() - 6);
+                    const fromStr = from.toISOString().slice(0, 10);
+                    const toStr = to.toISOString().slice(0, 10);
+                    setFromDate(fromStr);
+                    setToDate(toStr);
+                    load(1, { resetPage: true, from: fromStr, to: toStr });
+                  }}
+                  className="rounded border border-brand-surface bg-white px-2 py-1 text-[11px] text-muted hover:bg-table-head"
+                >
+                  近 7 日
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const to = new Date();
+                    const from = new Date();
+                    from.setDate(from.getDate() - 29);
+                    const fromStr = from.toISOString().slice(0, 10);
+                    const toStr = to.toISOString().slice(0, 10);
+                    setFromDate(fromStr);
+                    setToDate(toStr);
+                    load(1, { resetPage: true, from: fromStr, to: toStr });
+                  }}
+                  className="rounded border border-brand-surface bg-white px-2 py-1 text-[11px] text-muted hover:bg-table-head"
+                >
+                  近 30 日
+                </button>
               </div>
               <label className="flex cursor-pointer items-center gap-1 text-muted">
                 <input
@@ -208,6 +252,13 @@ export const PosOrdersListPage: React.FC = () => {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="font-semibold text-content">{order.orderNumber}</div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {orderAfterSalesBadges(order).map((b) => (
+                            <span key={b.key} className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${b.cls}`}>
+                              {b.text}
+                            </span>
+                          ))}
+                        </div>
                         <div className="mt-1 text-muted">
                           客戶：<span className="text-content">{customerLabel(order)}</span>
                         </div>
@@ -265,6 +316,13 @@ export const PosOrdersListPage: React.FC = () => {
                           data-testid={idx === 0 ? 'e2e-orders-first-order-number' : undefined}
                         >
                           {order.orderNumber}
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {orderAfterSalesBadges(order).map((b) => (
+                              <span key={b.key} className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${b.cls}`}>
+                                {b.text}
+                              </span>
+                            ))}
+                          </div>
                         </td>
                         <td className="truncate px-2 py-2 text-muted" title={order.storeId}>
                           {storeNameMap[order.storeId] ?? order.storeId?.slice(0, 8) ?? '—'}

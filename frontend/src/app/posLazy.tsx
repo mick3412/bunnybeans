@@ -8,6 +8,9 @@ export const PosOrdersListPageLazy = lazy(() =>
 export const PosOrderDetailPageLazy = lazy(() =>
   import('../pages/PosOrderDetailPage').then((m) => ({ default: m.PosOrderDetailPage })),
 );
+export const PosAfterSalesPageLazy = lazy(() =>
+  import('../pages/PosAfterSalesPage').then((m) => ({ default: m.PosAfterSalesPage })),
+);
 export const PosPromosPageLazy = lazy(() =>
   import('../pages/PosPromosPage').then((m) => ({ default: m.PosPromosPage })),
 );

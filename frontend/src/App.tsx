@@ -4,6 +4,7 @@ import { ErrorBoundary } from './shared/components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { PosLayout } from './pages/PosLayout';
 import {
+  PosAfterSalesPageLazy,
   PosOrderDetailPageLazy,
   PosOrdersListPageLazy,
   PosPageLazy,
@@ -14,6 +15,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import {
   AdminCustomerImportPageLazy,
   AdminFinanceHubPageLazy,
+  AdminPosSessionsPageLazy,
   AdminInventoryAdjustPageLazy,
   AdminInventoryQueryHubPageLazy,
   AdminLayoutLazy,
@@ -45,6 +47,7 @@ export const App: React.FC = () => {
         <Route index element={<PosPageLazy />} />
         <Route path="orders" element={<PosOrdersListPageLazy />} />
         <Route path="orders/:id" element={<PosOrderDetailPageLazy />} />
+        <Route path="after-sales" element={<PosAfterSalesPageLazy />} />
         <Route path="promos" element={<PosPromosPageLazy />} />
         <Route path="reports" element={<PosReportsPageLazy />} />
       </Route>
@@ -66,6 +69,7 @@ export const App: React.FC = () => {
         <Route path="warehouses" element={<AdminWarehousesStoresPageLazy />} />
         <Route path="stores" element={<Navigate to="/admin/warehouses" replace />} />
         <Route path="categories" element={<AdminProductHubPageLazy initialTab="categories" />} />
+        <Route path="discount-tags" element={<AdminProductHubPageLazy initialTab="discountTags" />} />
         <Route path="reports" element={<AdminFinanceHubPageLazy initialTab="reports" />} />
         <Route path="balances" element={<AdminFinanceHubPageLazy initialTab="balances" />} />
         <Route path="promotions" element={<AdminMarketingCenterHubPageLazy initialTab="promotions" />} />
@@ -79,6 +83,7 @@ export const App: React.FC = () => {
         <Route path="finance/periods" element={<AdminFinanceHubPageLazy initialTab="periods" />} />
         <Route path="finance/audit" element={<AdminFinanceHubPageLazy initialTab="audit" />} />
         <Route path="finance/snapshots" element={<AdminFinanceHubPageLazy initialTab="snapshots" />} />
+        <Route path="pos/sessions" element={<AdminPosSessionsPageLazy />} />
         <Route path="performance" element={<AdminPerformancePageLazy />} />
         <Route path="ops/jobs" element={<AdminOpsMonitoringHubPageLazy initialTab="jobs" />} />
         <Route path="ops/report-clicks" element={<AdminOpsMonitoringHubPageLazy initialTab="clicks" />} />

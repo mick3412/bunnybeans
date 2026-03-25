@@ -211,9 +211,16 @@ export async function getProducts(
   if (params?.tag?.trim()) q.set('tag', params.tag.trim());
   if (params?.sku?.trim()) q.set('sku', params.sku.trim());
   const path = `products${q.toString() ? `?${q.toString()}` : ''}`;
-  const out = await request<ProductDto[]>(path, { traceId: traceId ?? genTraceId() });
+  const out = await request<
+    ProductDto[] | { items: ProductDto[]; total: number; page: number; pageSize: number }
+  >(path, { traceId: traceId ?? genTraceId() });
   if (!out.ok) return out.error;
-  return Array.isArray(out.data) ? out.data : [];
+  const d = out.data;
+  if (Array.isArray(d)) return d;
+  if (d && typeof d === 'object' && Array.isArray((d as { items?: unknown }).items)) {
+    return (d as { items: ProductDto[] }).items;
+  }
+  return [];
 }
 
 /** GET /pos/products?storeId= — 產品列表含門市倉庫庫存（onHandQty） */
@@ -583,6 +590,188 @@ export async function postReturnToStock(
     };
   }
   return { statusCode: 201, message: 'OK', body: out.data, traceId: tid };
+}
+
+// ─── Return & Exchange API ────────────────────────────────────
+
+export type ReturnReasonCode =
+  | 'SIZE_WRONG'
+  | 'DEFECTIVE'
+  | 'CHANGED_MIND'
+  | 'WRONG_ITEM'
+  | 'DUPLICATE_PURCHASE'
+  | 'OTHER';
+
+export type ItemConditionCode = 'GOOD' | 'DEFECTIVE_ITEM';
+export type RefundMethodCode = 'CASH' | 'STORE_CREDIT';
+export type ReturnTypeCode = 'FULL_RETURN' | 'PARTIAL_RETURN' | 'EXCHANGE';
+
+export interface ReturnItemInput {
+  productId: string;
+  quantity: number;
+  reason: ReturnReasonCode;
+  condition: ItemConditionCode;
+  note?: string;
+}
+
+export interface ExchangeItemInput {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface PreviewReturnRequest {
+  type: ReturnTypeCode;
+  items: ReturnItemInput[];
+  refundMethod: RefundMethodCode;
+  exchangeItems?: ExchangeItemInput[];
+}
+
+export interface ReturnPreviewResult {
+  eligible: boolean;
+  returnWindowExpiry: string | null;
+  returnSubtotal: number;
+  discountShare: number;
+  refundAmount: number;
+  pointsToDeduct: number;
+  pointsToReturn: number;
+  exchangeTotal: number;
+  deltaAmount: number;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    unitPrice: number;
+    itemDiscountShare: number;
+    itemRefund: number;
+  }>;
+}
+
+export interface ExecuteReturnRequest extends PreviewReturnRequest {
+  exchangePayments?: Array<{ method: string; amount: number }>;
+  note?: string;
+}
+
+export interface ReturnResult {
+  id: string;
+  returnNumber: string;
+  orderId: string;
+  type: ReturnTypeCode;
+  status: string;
+  returnSubtotal: number;
+  discountShare: number;
+  refundAmount: number;
+  refundMethod: RefundMethodCode;
+  pointsDeducted: number;
+  pointsReturned: number;
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    unitPrice: number;
+    reason: ReturnReasonCode;
+    condition: ItemConditionCode;
+    note: string | null;
+  }>;
+  exchangeOrder: {
+    id: string;
+    orderNumber: string;
+    totalAmount: number;
+  } | null;
+  settlement: {
+    deltaAmount: number;
+    customerPays: number;
+    customerReceives: number;
+  } | null;
+  createdAt: string;
+}
+
+export interface ReturnListItem {
+  id: string;
+  returnNumber: string;
+  orderId: string;
+  orderNumber: string | null;
+  type: ReturnTypeCode;
+  status: string;
+  refundAmount: number;
+  refundMethod: RefundMethodCode;
+  createdAt: string;
+  itemCount: number;
+  topReason: ReturnReasonCode | null;
+}
+
+export async function previewReturn(
+  orderId: string,
+  body: PreviewReturnRequest,
+  traceId?: string,
+): Promise<ReturnPreviewResult | ApiError> {
+  const tid = traceId ?? genTraceId();
+  const out = await request<ReturnPreviewResult>(
+    `pos/orders/${encodeURIComponent(orderId)}/returns/preview`,
+    { method: 'POST', body: JSON.stringify(body), traceId: tid },
+  );
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+export async function executeReturn(
+  orderId: string,
+  body: ExecuteReturnRequest,
+  traceId?: string,
+): Promise<{ statusCode: number; message: string; body?: ReturnResult; code?: string }> {
+  const tid = traceId ?? genTraceId();
+  const out = await request<ReturnResult>(
+    `pos/orders/${encodeURIComponent(orderId)}/returns`,
+    { method: 'POST', body: JSON.stringify(body), traceId: tid },
+  );
+  if (!out.ok) {
+    return {
+      statusCode: out.error.statusCode,
+      message: out.error.message,
+      code: out.error.code,
+    };
+  }
+  return { statusCode: 201, message: 'OK', body: out.data };
+}
+
+export async function listReturns(
+  params?: {
+    storeId?: string;
+    type?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+    pageSize?: number;
+  },
+  traceId?: string,
+): Promise<{ items: ReturnListItem[]; page: number; pageSize: number; total: number } | ApiError> {
+  const q = new URLSearchParams();
+  if (params?.storeId) q.set('storeId', params.storeId);
+  if (params?.type) q.set('type', params.type);
+  if (params?.from) q.set('from', params.from);
+  if (params?.to) q.set('to', params.to);
+  if (params?.page != null) q.set('page', String(params.page));
+  if (params?.pageSize != null) q.set('pageSize', String(params.pageSize));
+  const path = `pos/returns${q.toString() ? `?${q.toString()}` : ''}`;
+  const out = await request<{ items: ReturnListItem[]; page: number; pageSize: number; total: number }>(
+    path,
+    { traceId: traceId ?? genTraceId() },
+  );
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
+export async function getStoreCredit(
+  customerId: string,
+  merchantId?: string,
+): Promise<{ customerId: string; merchantId: string; balance: number } | ApiError> {
+  const q = new URLSearchParams();
+  if (merchantId) q.set('merchantId', merchantId);
+  const out = await request<{ customerId: string; merchantId: string; balance: number }>(
+    `pos/store-credit/${encodeURIComponent(customerId)}${q.toString() ? `?${q.toString()}` : ''}`,
+    { traceId: genTraceId() },
+  );
+  if (!out.ok) return out.error;
+  return out.data;
 }
 
 export async function getPosFinanceEvents(params?: {
