@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from '../shared/components/Button';
 import {
   getOrderById,
   getProducts,
@@ -11,10 +10,14 @@ import {
 } from '../modules/pos/posOrdersApi';
 import { Alert } from '../shared/components/Alert';
 import { EmptyState } from '../shared/components/EmptyState';
-import { Modal } from '../shared/components/Modal';
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import { formatMoney } from '../shared/utils/formatMoney';
 import type { PosOrderDetail } from '../modules/pos/posOrdersMockService';
+import { OrderHeader } from './pos/orderDetail/OrderHeader';
+import { OrderContent } from './pos/orderDetail/OrderContent';
+import { PaymentSection } from './pos/orderDetail/PaymentSection';
+import { AfterSalesPanel } from './pos/orderDetail/AfterSalesPanel';
+import { ExchangeRelation } from './pos/orderDetail/ExchangeRelation';
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   CASH: '現金',
@@ -52,7 +55,7 @@ export const PosOrderDetailPage: React.FC = () => {
   const [returnStockSubmitting, setReturnStockSubmitting] = useState(false);
   const [returnStockError, setReturnStockError] = useState<string | null>(null);
   const [returnStockOk, setReturnStockOk] = useState<string | null>(null);
-  const [exchangeOpen, setExchangeOpen] = useState(false);
+  const [afterSalesTab, setAfterSalesTab] = useState<'refund' | 'return' | 'exchange'>('refund');
 
   useEffect(() => {
     if (!id) {
@@ -251,74 +254,34 @@ export const PosOrderDetailPage: React.FC = () => {
     setReturnStockSubmitting(false);
   };
 
+  const orderCtx = order
+    ? {
+        order,
+        returnTo,
+        customerIdDisplay,
+        customerNameDisplay,
+        customerCodeDisplay,
+        computed: { displayPaid, remainingAmount, credit, paymentMethodsText },
+        productMap,
+        categoryMap,
+      }
+    : null;
+
+  const jumpToRefund = () => setAfterSalesTab('refund');
+  const jumpToTopup = () => {
+    const el = document.getElementById('append-payment');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-brand-surface pb-2">
-        <h2 className="text-lg font-semibold text-content">訂單明細</h2>
-        <div className="flex flex-wrap gap-2">
-          {returnTo && (
-            <Button type="button" size="sm" variant="secondary" onClick={() => navigate(returnTo)}>
-              回到來源
-            </Button>
-          )}
-          <Button type="button" size="sm" variant="primary" onClick={() => setExchangeOpen(true)}>
-            換貨
-          </Button>
-          <Button type="button" size="sm" variant="secondary" onClick={() => navigate('/pos/orders')}>
-            返回列表
-          </Button>
-          <Button type="button" size="sm" variant="secondary" onClick={() => navigate('/pos')}>
-            收銀
-          </Button>
-        </div>
-      </div>
+      <OrderHeader
+        returnTo={returnTo}
+        onBackToSource={() => (returnTo ? navigate(returnTo) : undefined)}
+        onBackToOrders={() => navigate('/pos/orders')}
+        onBackToPos={() => navigate('/pos')}
+      />
       <div className="min-h-0">
-        <Modal
-          open={exchangeOpen}
-          onClose={() => setExchangeOpen(false)}
-          labelledBy="pos-order-exchange-title"
-          className="z-30"
-          panelClassName="w-full max-w-lg rounded-2xl bg-white p-4 shadow-xl"
-        >
-              <div className="mb-3 flex items-center justify-between">
-                <h2 id="pos-order-exchange-title" className="text-sm font-semibold text-content">換貨（MVP）</h2>
-                <button
-                  type="button"
-                  className="rounded px-2 py-1 text-xs text-muted hover:bg-brand-canvas"
-                  onClick={() => setExchangeOpen(false)}
-                >
-                  關閉
-                </button>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div className="rounded-xl border border-brand-surface bg-table-head p-3">
-                  <div className="mt-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => {
-                        setExchangeOpen(false);
-                        const el = document.getElementById('return-to-stock');
-                        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }}
-                    >
-                      前往退貨入庫區塊
-                    </Button>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-brand-surface bg-table-head p-3">
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="primary" onClick={() => navigate('/pos')}>
-                      前往收銀
-                    </Button>
-                    <Button type="button" size="sm" variant="secondary" onClick={() => navigate('/pos/orders')}>
-                      保留稍後處理
-                    </Button>
-                  </div>
-                </div>
-              </div>
-        </Modal>
         <div className="w-full rounded-xl border border-brand-surface bg-white p-4">
           {error && (
             <Alert variant="error" className="mb-3">
@@ -337,414 +300,52 @@ export const PosOrderDetailPage: React.FC = () => {
             </div>
           ) : !order && !error ? (
             <EmptyState message="找不到此訂單或訂單已不存在" />
-          ) : order ? (
-            <div className="space-y-3 text-xs">
-              {credit && (
-                <div
-                  className="rounded-xl border-2 border-brand-warning/50 bg-brand-warning/10 px-3 py-3 shadow-sm sm:px-4"
-                  role="alert"
-                >
-                  <div className="text-center text-[11px] font-bold uppercase tracking-wide text-brand-warning">
-                    賒帳單 · 尚有未收
-                  </div>
-                  <div
-                    className="mt-1 text-center text-lg font-bold tabular-nums text-brand-warning"
-                    data-testid="e2e-detail-remaining"
-                  >
-                    未收 {formatMoney(remainingAmount)}
-                  </div>
-                </div>
-              )}
-
-              {(() => {
-                const ex = order.exchange ?? null;
-                const st = order.exchangeSettlement ?? null;
-                const sourceOrderId = ex?.sourceOrderId ?? order.exchangeFromOrderId ?? null;
-                const derivedOrderIds = ex?.derivedOrderIds ?? [];
-                const visible = Boolean(sourceOrderId || derivedOrderIds.length);
-                if (!visible) return null;
-                const selfReturnTo = `${location.pathname}${location.search}`;
-                const delta = st?.deltaAmount;
-                const deltaText =
-                  typeof delta === 'number' && Number.isFinite(delta)
-                    ? delta === 0
-                      ? '差額 $0'
-                      : delta > 0
-                        ? `需補款 ${formatMoney(Math.abs(delta))}`
-                        : `需退款 ${formatMoney(Math.abs(delta))}`
-                    : null;
-                const refundStatus = st?.refundStatus;
-                const topupStatus = st?.topupStatus;
-                return (
-                  <div className="rounded-lg border border-brand-surface bg-white px-3 py-2 sm:px-4">
-                    <div className="text-[10px] font-semibold uppercase text-muted">換貨關聯</div>
-                    {deltaText ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                        <span className="rounded-full bg-table-head px-2 py-1 font-semibold text-content">{deltaText}</span>
-                        {refundStatus ? (
-                          <span className="rounded-full bg-table-head px-2 py-1 text-muted">
-                            退款狀態：{refundStatus === 'REQUIRED' ? '需退款' : refundStatus === 'SETTLED' ? '已退款' : '不需'}
-                          </span>
-                        ) : null}
-                        {topupStatus ? (
-                          <span className="rounded-full bg-table-head px-2 py-1 text-muted">
-                            補款狀態：{topupStatus === 'REQUIRED' ? '需補款' : topupStatus === 'SETTLED' ? '已補款' : '不需'}
-                          </span>
-                        ) : null}
-                        {refundStatus === 'REQUIRED' ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => {
-                              const el = document.getElementById('refund');
-                              el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }}
-                          >
-                            前往退款
-                          </Button>
-                        ) : null}
-                        {topupStatus === 'REQUIRED' ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => {
-                              const el = document.getElementById('append-payment');
-                              el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }}
-                          >
-                            前往補款
-                          </Button>
-                        ) : null}
-                      </div>
-                    ) : (
-                      null
-                    )}
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      <div className="min-w-0 rounded-lg bg-table-head px-3 py-2">
-                        <div className="text-[10px] font-semibold uppercase text-muted">來源（原單）</div>
-                        {sourceOrderId ? (
-                          <div className="mt-1 flex items-center justify-between gap-2">
-                            <span className="truncate font-mono text-[11px] text-content" title={sourceOrderId}>
-                              {sourceOrderId}
-                            </span>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => {
-                                const qs = new URLSearchParams();
-                                qs.set('returnTo', selfReturnTo);
-                                navigate(`/pos/orders/${encodeURIComponent(sourceOrderId)}?${qs.toString()}`);
-                              }}
-                            >
-                              查看
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="mt-1 text-xs text-muted">—</div>
-                        )}
-                      </div>
-                      <div className="min-w-0 rounded-lg bg-table-head px-3 py-2">
-                        <div className="text-[10px] font-semibold uppercase text-muted">衍生（換貨單）</div>
-                        {derivedOrderIds.length ? (
-                          <div className="mt-1 space-y-1">
-                            {derivedOrderIds.slice(0, 3).map((oid) => (
-                              <div key={oid} className="flex items-center justify-between gap-2">
-                                <span className="truncate font-mono text-[11px] text-content" title={oid}>
-                                  {oid}
-                                </span>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => {
-                                    const qs = new URLSearchParams();
-                                    qs.set('returnTo', selfReturnTo);
-                                    navigate(`/pos/orders/${encodeURIComponent(oid)}?${qs.toString()}`);
-                                  }}
-                                >
-                                  查看
-                                </Button>
-                              </div>
-                            ))}
-                            {derivedOrderIds.length > 3 ? (
-                              <div className="text-[11px] text-muted">…尚有 {derivedOrderIds.length - 3} 筆</div>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <div className="mt-1 text-xs text-muted">—</div>
-                        )}
-                      </div>
-                    </div>
-                    {returnTo ? <div className="mt-2 text-[11px] text-muted" aria-hidden="true" /> : null}
-                  </div>
-                );
-              })()}
-
-              <div className="rounded-lg border border-brand-surface bg-table-head/90 px-3 py-2 sm:px-4">
-                <div className="text-[10px] font-semibold uppercase text-muted">消費者</div>
-                <div className="mt-1 space-y-0.5 text-content">
-                  <div>
-                    <span className="text-muted">ID</span>{' '}
-                    <span className="break-all font-mono text-[11px]">{customerIdDisplay ?? '—'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted">姓名</span>{' '}
-                    <span className="font-medium">{customerNameDisplay ?? '—'}</span>
-                  </div>
-                  {customerCodeDisplay && (
-                    <div>
-                      <span className="text-muted">代碼</span> {customerCodeDisplay}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-between border-b border-brand-surface pb-2">
-                <span className="text-muted">單號</span>
-                <span className="font-medium text-content">{order.orderNumber}</span>
-              </div>
-              <div className="flex justify-between border-b border-brand-surface pb-2">
-                <span className="text-muted">門市</span>
-                <span className="break-all text-right text-content">{order.storeId}</span>
-              </div>
-              <div className="flex justify-between border-b border-brand-surface pb-2">
-                <span className="text-muted">建立時間</span>
-                <span className="text-content">{new Date(order.createdAt).toLocaleString('zh-TW')}</span>
-              </div>
-              {(typeof order.subtotalAmount === 'number' ||
-                typeof order.discountAmount === 'number' ||
-                order.promotionApplied != null) && (
-                <div className="rounded-lg border border-brand-success/25 bg-brand-success/5 px-3 py-2">
-                  <div className="text-[10px] font-semibold uppercase text-brand-success">金額明細（促銷）</div>
-                  {typeof order.subtotalAmount === 'number' && (
-                    <div className="mt-1 flex justify-between text-muted">
-                      <span>小計</span>
-                      <span className="tabular-nums font-medium">{formatMoney(order.subtotalAmount)}</span>
-                    </div>
-                  )}
-                  {typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
-                    <div className="flex justify-between text-[#28A745]">
-                      <span>折讓</span>
-                      <span className="tabular-nums">-{formatMoney(order.discountAmount)}</span>
-                    </div>
-                  )}
-                  {order.promotionApplied != null && (
-                    <div className="mt-1 text-[10px] text-muted">
-                      <span className="text-muted">套用促銷</span>{' '}
-                      <span className="break-all font-mono">
-                        {typeof order.promotionApplied === 'string'
-                          ? order.promotionApplied
-                          : JSON.stringify(order.promotionApplied)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {remainingAmount > 0 && (
-                <div id="append-payment" className="rounded-lg border border-brand-primary/25 bg-brand-primary/5 px-3 py-2">
-                  <div className="mb-2 text-[11px] font-semibold text-content">補款</div>
-                  <div className="flex flex-wrap items-end gap-2">
-                    <div className="flex gap-1">
-                      {(['CASH', 'CARD', 'TRANSFER'] as const).map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setPayMethod(m)}
-                          className={`rounded px-2 py-1 text-[10px] font-medium ${
-                            payMethod === m ? 'bg-brand-primary text-white' : 'bg-white text-muted ring-1 ring-brand-surface'
-                          }`}
-                        >
-                          {paymentMethodLabel(m)}
-                        </button>
-                      ))}
-                    </div>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="金額"
-                      data-testid="e2e-detail-pay-amount"
-                      className="h-8 w-24 rounded border border-brand-surface px-2 text-right tabular-nums"
-                      value={payAmount}
-                      onChange={(e) => setPayAmount(e.target.value)}
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="primary"
-                      data-testid="e2e-detail-append-payment"
-                      disabled={paySubmitting}
-                      onClick={() => void handleAppendPayment()}
-                    >
-                      {paySubmitting ? '送出…' : '確認補款'}
-                    </Button>
-                  </div>
-                  {payError && <p className="mt-1 text-[11px] text-brand-danger">{payError}</p>}
-                </div>
-              )}
-
-              {displayPaid >= 0.01 && (
-                <div id="refund" className="rounded-lg border border-brand-surface bg-table-head px-3 py-2">
-                  <div className="mb-1 text-[11px] font-semibold text-content">退款（沖帳）</div>
-                  <p className="mb-2 text-[10px] text-muted">
-                    已實收範圍內登記退款，不超過實收合計；全賒未收單不可退。
-                  </p>
-                  <div className="flex flex-wrap items-end gap-2">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="退款金額"
-                      data-testid="e2e-detail-refund-amount"
-                      className="h-8 w-24 rounded border border-brand-surface bg-white px-2 text-right tabular-nums"
-                      value={refundAmount}
-                      onChange={(e) => setRefundAmount(e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      placeholder="備註（選填）"
-                      className="h-8 min-w-[120px] flex-1 rounded border border-brand-surface bg-white px-2 text-[11px]"
-                      value={refundNote}
-                      onChange={(e) => setRefundNote(e.target.value)}
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={refundSubmitting}
-                      data-testid="e2e-detail-refund-submit"
-                      onClick={() => void handleRefund()}
-                    >
-                      {refundSubmitting ? '送出…' : '確認退款'}
-                    </Button>
-                  </div>
-                  {refundError && <p className="mt-1 text-[11px] text-brand-danger">{refundError}</p>}
-                </div>
-              )}
-
-              <div id="return-to-stock" className="rounded-lg border border-brand-success/30 bg-brand-success/5 px-3 py-2">
-                <div className="mb-1 text-[11px] font-semibold text-brand-success">退貨入庫（實體回倉）</div>
-                <p className="mb-2 text-[10px] text-brand-success">
-                  依本單明細加回庫存（RETURN_FROM_CUSTOMER）；與退款分開；單筆不得超過該列銷量。
-                </p>
-                <div className="space-y-1.5">
-                  {order.items.map((line, idx) => {
-                    const meta = productMap[line.productId];
-                    const label = meta?.name ?? line.productId.slice(0, 8);
-                    return (
-                      <div key={line.id} className="flex flex-wrap items-center gap-2 text-[11px]">
-                        <span className="min-w-0 flex-1 truncate text-content">{label}</span>
-                        <span className="text-brand-success">售 {line.quantity}</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          placeholder="入庫數"
-                          data-testid={idx === 0 ? 'e2e-detail-return-qty' : undefined}
-                          className="h-7 w-14 rounded border border-brand-surface bg-white px-1 text-right tabular-nums"
-                          value={returnQtyByLine[line.id] ?? ''}
-                          onChange={(e) =>
-                            setReturnQtyByLine((prev) => ({ ...prev, [line.id]: e.target.value }))
-                          }
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="primary"
-                    disabled={returnStockSubmitting}
-                    data-testid="e2e-detail-return-submit"
-                    onClick={() => void handleReturnToStock()}
-                  >
-                    {returnStockSubmitting ? '送出…' : '確認退貨入庫'}
-                  </Button>
-                </div>
-                {returnStockOk && (
-                  <p
-                    className="mt-1 text-[11px] text-brand-success"
-                    data-testid="e2e-detail-return-success"
-                  >
-                    {returnStockOk}
-                  </p>
-                )}
-                {returnStockError && (
-                  <p className="mt-1 text-[11px] text-brand-danger">{returnStockError}</p>
-                )}
-              </div>
-
-              <div className="pt-2">
-                <div className="mb-1.5 font-medium text-muted">品項</div>
-                <div className="-mx-1 overflow-x-auto sm:mx-0">
-                  <table className="w-full min-w-[520px] border-collapse text-left">
-                    <thead>
-                      <tr className="border-b border-brand-surface text-[11px] text-muted">
-                        <th className="py-1.5">分類</th>
-                        <th className="py-1.5">品牌</th>
-                        <th className="py-1.5">品名</th>
-                        <th className="py-1.5">商品 ID</th>
-                        <th className="py-1.5 text-right">數量</th>
-                        <th className="py-1.5 text-right">單價</th>
-                        <th className="py-1.5 text-right">小計</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {order.items.map((item) => (
-                        <tr key={item.id} className="border-b border-brand-surface">
-                          {(() => {
-                            const meta = productMap[item.productId];
-                            const category = meta?.categoryId ? categoryMap[meta.categoryId] : undefined;
-                            const displayCategory = category?.name ?? '—';
-                            const displayBrand = '—';
-                            const displayName = meta?.name ?? '—';
-                            const displayId = meta?.sku ?? item.productId;
-                            return (
-                              <>
-                                <td className="py-1.5 text-muted">{displayCategory}</td>
-                                <td className="py-1.5 text-muted">{displayBrand}</td>
-                                <td className="py-1.5 text-content">{displayName}</td>
-                                <td className="py-1.5 font-mono text-[11px] text-muted">{displayId}</td>
-                              </>
-                            );
-                          })()}
-                          <td className="py-1.5 text-right tabular-nums">{item.quantity}</td>
-                          <td className="py-1.5 text-right tabular-nums">{formatMoney(item.unitPrice)}</td>
-                          <td className="py-1.5 text-right tabular-nums font-medium">
-                            {formatMoney(item.quantity * item.unitPrice)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div className="space-y-2 border-t border-brand-surface pt-2 text-sm">
-                <div className="flex justify-between font-semibold">
-                  <span>應收金額</span>
-                  <span className="tabular-nums">{formatMoney(order.totalAmount)}</span>
-                </div>
-                <div className="flex justify-between font-semibold">
-                  <span>實收合計</span>
-                  <span className="tabular-nums">{formatMoney(displayPaid)}</span>
-                </div>
-                <div className="flex justify-between text-xs text-muted">
-                  <span>未收餘額</span>
-                  <span className="tabular-nums font-medium">{formatMoney(remainingAmount)}</span>
-                </div>
-                {credit && (
-                  <div className="rounded-lg bg-brand-warning/10 px-2 py-1 text-center text-[11px] font-medium text-brand-warning">
-                    掛帳（尚有未收）
-                  </div>
-                )}
-                <div className="flex justify-between border-t border-brand-surface pt-2 text-xs font-normal">
-                  <span className="text-muted">收款方式</span>
-                  <span className="max-w-[70%] text-right text-content">{paymentMethodsText}</span>
-                </div>
-              </div>
+          ) : order && orderCtx ? (
+            <div className="space-y-4">
+              <OrderContent ctx={orderCtx} />
+              <PaymentSection
+                visible={remainingAmount > 0}
+                payMethod={payMethod}
+                payAmount={payAmount}
+                paySubmitting={paySubmitting}
+                payError={payError}
+                onChangeMethod={(m) => setPayMethod(m)}
+                onChangeAmount={(v) => setPayAmount(v)}
+                onSubmit={() => void handleAppendPayment()}
+              />
+              <AfterSalesPanel
+                order={order}
+                tab={afterSalesTab}
+                setTab={setAfterSalesTab}
+                displayPaid={displayPaid}
+                refundAmount={refundAmount}
+                refundNote={refundNote}
+                refundSubmitting={refundSubmitting}
+                refundError={refundError}
+                onRefundAmount={(v) => setRefundAmount(v)}
+                onRefundNote={(v) => setRefundNote(v)}
+                onRefundSubmit={() => void handleRefund()}
+                returnQtyByLine={returnQtyByLine}
+                returnStockSubmitting={returnStockSubmitting}
+                returnStockError={returnStockError}
+                returnStockOk={returnStockOk}
+                onReturnQtyChange={(lineId, v) =>
+                  setReturnQtyByLine((prev) => ({ ...prev, [lineId]: v }))
+                }
+                onReturnSubmit={() => void handleReturnToStock()}
+                onGoPos={() => navigate('/pos')}
+              />
+              <ExchangeRelation
+                order={order}
+                selfReturnTo={`${location.pathname}${location.search}`}
+                onJumpRefund={jumpToRefund}
+                onJumpTopup={jumpToTopup}
+                onOpenOrder={(orderId) => {
+                  const qs = new URLSearchParams();
+                  qs.set('returnTo', `${location.pathname}${location.search}`);
+                  navigate(`/pos/orders/${encodeURIComponent(orderId)}?${qs.toString()}`);
+                }}
+              />
             </div>
           ) : null}
         </div>
