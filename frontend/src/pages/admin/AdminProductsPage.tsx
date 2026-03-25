@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePersistentTableColumnWidths } from '../../shared/hooks/usePersistentTableColumnWidths';
 import {
@@ -33,7 +33,7 @@ import { StandardFloatBar } from '../../shared/components/StandardFloatBar';
 import { TextInput } from '../../shared/components/TextInput';
 import { useAdminToast } from './AdminToastContext';
 import { pollImportJob } from '../../shared/utils/pollImportJob';
-import { hasAdminApiKey } from '../../shared/rbac/adminKey';
+import { getAdminApiKey, hasAdminApiKey, setAdminApiKey } from '../../shared/rbac/adminKey';
 import { DEFAULT_TAGS } from '../../shared/utils/adminTagMaster';
 
 const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v3';
@@ -122,7 +122,15 @@ export const AdminProductsPage: React.FC = () => {
   const location = useLocation();
   const merchantId = useDefaultMerchantId();
   const { showToast } = useAdminToast();
-  const canWrite = hasAdminApiKey();
+  const hasKeyNow = hasAdminApiKey();
+  const adminKeyInputRef = useRef<HTMLInputElement | null>(null);
+  const [adminKeyDraft, setAdminKeyDraft] = useState(() => getAdminApiKey());
+  const ensureAdminKey = useCallback((): boolean => {
+    if (getAdminApiKey()) return true;
+    showToast('此操作需要管理金鑰（Admin Key）。請先於右側區塊輸入並保存。', 'err');
+    setTimeout(() => adminKeyInputRef.current?.focus(), 0);
+    return false;
+  }, [showToast]);
   const [tagOptions, setTagOptions] = useState<string[]>([]);
   const [products, setProducts] = useState<ProductFullDto[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -217,6 +225,7 @@ export const AdminProductsPage: React.FC = () => {
         brandId: filterBrandId || undefined,
         tag: filterTags.length === 1 ? filterTags[0] : undefined,
         minDaysUntilExpiry: minDays,
+        pageSize: 200,
       }),
       getCategories(),
       getBrands(),
@@ -575,7 +584,7 @@ export const AdminProductsPage: React.FC = () => {
       <p className="mb-4 max-w-xl text-sm text-muted">
         與 POS 共用主檔 API；庫存唯讀。
       </p>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-start gap-3">
         <div className="rounded-2xl border border-brand-surface bg-table-head px-3 py-3 min-w-0 flex-1">
           <div className="mb-1 text-xs font-semibold text-muted">篩選</div>
           <div className="mb-1.5 flex flex-wrap items-center gap-1">
@@ -614,84 +623,69 @@ export const AdminProductsPage: React.FC = () => {
               );
             })}
           </div>
-          {tagOptions.length > 0 && (
-            <div className="mb-1.5 flex flex-wrap items-center gap-1">
-              <span className="mr-1 text-xs font-medium text-muted">折扣／標籤</span>
-              {tagOptions.map((tag) => {
-                const selected = filterTags.includes(tag);
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleFilterTag(tag)}
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      selected ? 'bg-brand-primary text-white' : 'bg-white text-content hover:bg-brand-surface border border-brand-surface'
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <div className="mb-1.5 flex flex-wrap items-center gap-1">
+            <span className="mr-1 text-xs font-medium text-muted">剩餘天數 &gt;</span>
+            <input
+              type="number"
+              min={0}
+              placeholder="留空"
+              value={filterMinDaysLeft}
+              onChange={(e) => setFilterMinDaysLeft(e.target.value)}
+              className="h-7 w-16 rounded-lg border border-brand-surface bg-table-head px-2 text-xs"
+            />
+          </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-muted">共 {filteredProducts.length} 件</span>
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1">
-                <span className="text-xs text-muted">剩餘天數 &gt;</span>
-                <input
-                  type="number"
-                  min={0}
-                  placeholder="留空"
-                  value={filterMinDaysLeft}
-                  onChange={(e) => setFilterMinDaysLeft(e.target.value)}
-                  className="h-7 w-16 rounded-lg border border-brand-surface bg-white px-2 text-xs"
-                />
-              </span>
-              <input
-                type="search"
-                placeholder="SKU、條碼或名稱"
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                className="h-7 w-40 rounded-lg border border-brand-surface bg-white px-2 text-xs placeholder:text-muted"
-              />
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="text-xs font-medium text-muted underline hover:text-content"
-                >
-                  清除篩選
-                </button>
-              )}
-            </div>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-xs font-medium text-muted underline hover:text-content"
+              >
+                清除篩選
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            disabled={exporting || !canWrite}
-            onClick={async () => {
-              setExporting(true);
-              const minDays = filterMinDaysLeft.trim() ? parseInt(filterMinDaysLeft, 10) : undefined;
-              const q = new URLSearchParams();
-              if (searchQDebounced.trim()) q.set('search', searchQDebounced.trim());
-              if (filterCategoryId) q.set('categoryId', filterCategoryId);
-              if (filterBrandId) q.set('brandId', filterBrandId);
-              if (filterTags.length === 1) q.set('tag', filterTags[0]);
-              if (minDays != null && !Number.isNaN(minDays) && minDays >= 0) q.set('minDaysUntilExpiry', String(minDays));
-              const path = q.toString() ? `products/export?${q.toString()}` : 'products/export';
-              const out = await fetchCsvExport(path, 'products.csv');
-              setExporting(false);
-              if (out !== true) showToast(getErrorMessage(out as ApiError), 'err');
-            }}
-          >
-            {exporting ? '匯出中…' : '匯出 CSV'}
-          </Button>
-        </div>
-        <details className="rounded-lg border border-brand-surface bg-table-head px-3 py-1.5 shrink-0" data-testid="e2e-admin-products-import">
+
+        <div className="flex flex-col gap-2 shrink-0">
+          <div className="rounded-2xl border border-brand-surface bg-table-head px-3 py-2">
+            <div className="mb-1 text-xs font-semibold text-muted">商品搜尋</div>
+            <input
+              type="search"
+              placeholder="SKU、條碼或名稱"
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              className="h-8 w-56 rounded-lg border border-brand-surface bg-table-head px-2 text-xs placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+            />
+          </div>
+          <div className="rounded-2xl border border-brand-surface bg-table-head px-3 py-2">
+            <div className="mb-1.5 text-xs font-semibold text-muted">批量匯入／匯出</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={exporting}
+                onClick={async () => {
+                  if (!ensureAdminKey()) return;
+                  setExporting(true);
+                  const minDays = filterMinDaysLeft.trim() ? parseInt(filterMinDaysLeft, 10) : undefined;
+                  const q = new URLSearchParams();
+                  if (searchQDebounced.trim()) q.set('search', searchQDebounced.trim());
+                  if (filterCategoryId) q.set('categoryId', filterCategoryId);
+                  if (filterBrandId) q.set('brandId', filterBrandId);
+                  if (filterTags.length === 1) q.set('tag', filterTags[0]);
+                  if (minDays != null && !Number.isNaN(minDays) && minDays >= 0) q.set('minDaysUntilExpiry', String(minDays));
+                  const path = q.toString() ? `products/export?${q.toString()}` : 'products/export';
+                  const out = await fetchCsvExport(path, 'products.csv');
+                  setExporting(false);
+                  if (out !== true) showToast(getErrorMessage(out as ApiError), 'err');
+                }}
+              >
+                {exporting ? '匯出中…' : '匯出 CSV'}
+              </Button>
+              <details className="min-w-0" data-testid="e2e-admin-products-import">
           <summary className="cursor-pointer text-xs font-medium text-muted hover:text-content">CSV 匯入</summary>
           <div className="mt-2 flex flex-wrap items-center gap-3 pb-1">
             <span className="flex items-center gap-2">
@@ -804,7 +798,51 @@ export const AdminProductsPage: React.FC = () => {
               非同步失敗：{jobError}
             </Alert>
           )}
-        </details>
+              </details>
+            </div>
+            <div className="mt-2 rounded-xl border border-brand-surface bg-white px-3 py-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">Admin Key</span>
+                <input
+                  ref={adminKeyInputRef}
+                  type="password"
+                  placeholder="輸入後台管理金鑰（本機暫存）"
+                  className="h-8 w-56 rounded-lg border border-brand-surface bg-table-head px-2 text-xs placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                  value={adminKeyDraft}
+                  onChange={(e) => setAdminKeyDraft(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="primary"
+                  onClick={() => {
+                    const v = adminKeyDraft.trim();
+                    setAdminApiKey(v);
+                    setAdminKeyDraft(v);
+                    showToast(v ? '已保存管理金鑰（本機暫存）。' : '已清除管理金鑰。', v ? 'ok' : 'err');
+                  }}
+                >
+                  保存
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setAdminKeyDraft('');
+                    setAdminApiKey('');
+                    showToast('已清除管理金鑰。', 'ok');
+                  }}
+                >
+                  清除
+                </Button>
+                <span className="text-[11px] text-muted">
+                  {hasKeyNow ? '已就緒（可寫入）' : '未設定（僅能唯讀）'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       {err && (
         <Alert variant="error" className="mb-4">
@@ -1257,7 +1295,7 @@ export const AdminProductsPage: React.FC = () => {
                 <input
                   type="number"
                   min={0}
-                  className="h-9 w-40 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                  className="h-9 w-40 rounded-lg border border-brand-surface bg-table-head px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                   placeholder="例如 120"
                   value={bulkSalePrice}
                   onChange={(e) => setBulkSalePrice(e.target.value)}
@@ -1267,8 +1305,9 @@ export const AdminProductsPage: React.FC = () => {
                 type="button"
                 size="sm"
                 variant="primary"
-                disabled={bulkSubmitting || !bulkSalePrice.trim() || !canWrite}
+                disabled={bulkSubmitting || !bulkSalePrice.trim()}
                 onClick={async () => {
+                  if (!ensureAdminKey()) return;
                   const salePrice = bulkSalePrice.trim();
                   if (!salePrice) return;
                   setBulkSubmitting(true);
@@ -1323,8 +1362,9 @@ export const AdminProductsPage: React.FC = () => {
                 type="button"
                 size="sm"
                 variant="primary"
-                disabled={bulkTagsSubmitting || bulkTags.size === 0 || !canWrite}
+                disabled={bulkTagsSubmitting || bulkTags.size === 0}
                 onClick={async () => {
+                  if (!ensureAdminKey()) return;
                   setBulkTagsSubmitting(true);
                   const out = await batchUpdateProductTags({
                     productIds: Array.from(selectedIds),
@@ -1456,7 +1496,7 @@ export const AdminProductsPage: React.FC = () => {
                     <div>
                       <label className="mb-1 block text-xs font-medium text-muted">類別</label>
                       <select
-                        className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                        className="w-full rounded-lg border border-brand-surface bg-table-head px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                         value={form.categoryId}
                         onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
                       >
@@ -1471,7 +1511,7 @@ export const AdminProductsPage: React.FC = () => {
                     <div>
                       <label className="mb-1 block text-xs font-medium text-muted">品牌</label>
                       <select
-                        className="w-full rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                        className="w-full rounded-lg border border-brand-surface bg-table-head px-3 py-2 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                         value={form.brandId}
                         onChange={(e) => setForm((f) => ({ ...f, brandId: e.target.value }))}
                       >
@@ -1516,7 +1556,7 @@ export const AdminProductsPage: React.FC = () => {
                     />
                     <div className="sm:col-span-2">
                       <div className="mb-2 text-xs font-medium text-muted">效期模式</div>
-                      <div className="flex flex-wrap gap-3 rounded-lg border border-brand-surface bg-white p-2">
+                      <div className="flex flex-wrap gap-3 rounded-lg border border-brand-surface bg-table-head p-2">
                         <label className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-brand-canvas">
                           <input
                             type="radio"
@@ -1553,7 +1593,7 @@ export const AdminProductsPage: React.FC = () => {
                             <label className="mb-1 block text-xs text-muted">生產日期</label>
                             <input
                               type="date"
-                              className="h-9 w-40 rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                              className="h-9 w-40 rounded-lg border border-brand-surface bg-table-head px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                               value={form.productionDate}
                               onChange={(e) =>
                                 setForm((f) => ({ ...f, productionDate: e.target.value }))
@@ -1566,7 +1606,7 @@ export const AdminProductsPage: React.FC = () => {
                             </label>
                             <input
                               type="text"
-                              className="h-9 w-36 rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                              className="h-9 w-36 rounded-lg border border-brand-surface bg-table-head px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                               placeholder="1年6月 或 18月"
                               value={form.shelfLifeMonths}
                               onChange={(e) =>
@@ -1580,7 +1620,7 @@ export const AdminProductsPage: React.FC = () => {
                           <label className="mb-1 block text-xs text-muted">到期日期</label>
                           <input
                             type="date"
-                            className="h-9 w-40 rounded-lg border border-brand-surface bg-white px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                            className="h-9 w-40 rounded-lg border border-brand-surface bg-table-head px-3 text-sm focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                             value={form.expiryDate}
                             onChange={(e) =>
                               setForm((f) => ({ ...f, expiryDate: e.target.value }))
@@ -1702,7 +1742,7 @@ export const AdminProductsPage: React.FC = () => {
                 <select
                   multiple
                   size={Math.min(6, tagOptions.length + 1)}
-                  className="w-full min-h-[100px] rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm text-content focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                  className="w-full min-h-[100px] rounded-lg border border-brand-surface bg-table-head px-3 py-2 text-sm text-content focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
                   value={form.tags}
                   onChange={(e) => {
                     const selected = Array.from(e.target.selectedOptions, (o) => o.value);
