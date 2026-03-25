@@ -182,6 +182,12 @@ export class ProductController {
       operation?: 'add' | 'set';
     },
   ) {
+    if (body.operation != null && body.operation !== 'add' && body.operation !== 'set') {
+      throw new BadRequestException({
+        message: 'operation must be add or set',
+        code: 'PRODUCT_BATCH_INVALID',
+      });
+    }
     return this.service.batchUpdateTags(
       body.productIds ?? [],
       body.tags ?? [],

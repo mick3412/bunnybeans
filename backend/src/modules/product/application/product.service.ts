@@ -64,6 +64,9 @@ function toProductResponse(p: {
   specStyle: string | null;
   specWeight: string | null;
   expiryDescription: string | null;
+  productionDate?: Date | null;
+  shelfLifeMonths?: number | null;
+  expiryDate?: Date | null;
   listPrice: Decimal;
   salePrice: Decimal;
   costPrice: Decimal | null;
@@ -87,6 +90,9 @@ function toProductResponse(p: {
     specStyle: p.specStyle,
     specWeight: p.specWeight,
     expiryDescription: p.expiryDescription,
+    productionDate: p.productionDate?.toISOString() ?? null,
+    shelfLifeMonths: p.shelfLifeMonths ?? null,
+    expiryDate: p.expiryDate?.toISOString() ?? null,
     listPrice: decToStr(p.listPrice) ?? '0.00',
     salePrice: decToStr(p.salePrice) ?? '0.00',
     costPrice: decToStr(p.costPrice),
@@ -411,15 +417,18 @@ export class ProductService {
     tags: string[],
     operation: 'add' | 'set' = 'add',
   ): Promise<{ updated: number }> {
+    if (operation !== 'add' && operation !== 'set') {
+      throwBadRequest('PRODUCT_BATCH_INVALID', 'operation must be add or set');
+    }
     const ids = Array.isArray(productIds)
       ? productIds.filter((id) => typeof id === 'string' && id.trim())
       : [];
     if (ids.length === 0) {
-      throwBadRequest('PRODUCT_BATCH_TAGS_EMPTY_PRODUCTS', 'productIds required and must be non-empty');
+      throwBadRequest('PRODUCT_BATCH_EMPTY', 'productIds required and must be non-empty');
     }
     const tagList = Array.isArray(tags) ? tags.filter((t) => typeof t === 'string') : [];
     if (tagList.length === 0) {
-      throwBadRequest('PRODUCT_BATCH_TAGS_EMPTY_TAGS', 'tags required and must be non-empty');
+      throwBadRequest('PRODUCT_BATCH_INVALID', 'tags required and must be non-empty');
     }
 
     let updated = 0;

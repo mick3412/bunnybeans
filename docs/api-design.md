@@ -174,7 +174,7 @@
 
 ### 6.2 `GET /products`（stable）
 
-- **Query**：`search?`、`sku?`、`categoryId?`、`brandId?`、`tag?`（標籤需與 `tags` 陣列中某一元素**完全相等**，含繁體與空白）。`search` 亦會比對 `description` 與 `barcode`。**`minDaysUntilExpiry?`**（非負整數）：僅回傳有 **`expiryDate`** 且「日曆剩餘天數」**嚴格大於** N 之商品（UTC 日界；供商品總覽「剩餘天數 &gt; N」篩選）。非法值 → **400 `PRODUCT_FILTER_INVALID`**。
+- **Query**：`search?`、`sku?`、`categoryId?`、`brandId?`、`tag?`（標籤需與 `tags` 陣列中某一元素**完全相等**，含繁體與空白）。`search` 亦會比對 `description` 與 `barcode`。**`minDaysUntilExpiry?`**（非負整數）：僅回傳有**效期**且「日曆剩餘天數」**嚴格大於** N 之商品（UTC 日界；供商品總覽「剩餘天數 &gt; N」篩選）。效期來源支援：`expiryDate` 或 `productionDate + shelfLifeMonths` 推算。非法值 → **400 `PRODUCT_FILTER_INVALID`**。
 
 ### 6.2b `GET /products/search-barcode?q=`（stable）
 
@@ -190,7 +190,7 @@
 - **Query**：`includeBalances?`（`true` 或 `1` 時回傳庫存餘額）
 - **Response**：與列表單筆欄位相同；若 `includeBalances=true` 則額外含 **`balances`**：`[{ warehouseId, warehouseCode, warehouseName, onHandQty }]`（無庫存則空陣列）
 
-- **Response 單筆欄位**：`id`、`sku`、`barcode?`、`name`、`description?`、`specSize?`、`specCapacity?`（容量，如「500ml」）、`specStyle?`（款式；取代 `specColor`）、`specWeight?`（重量含單位；取代 `weightGrams`）、`expiryDescription?`（有效期限描述，如「常溫 1 年」）、`listPrice`、`salePrice`、`costPrice?`（金額為兩位小數字串）、`categoryId`、`brandId`、`tags[]`、`createdAt`、`updatedAt`
+- **Response 單筆欄位**：`id`、`sku`、`barcode?`、`name`、`description?`、`specSize?`、`specCapacity?`（容量，如「500ml」）、`specStyle?`（款式；取代 `specColor`）、`specWeight?`（重量含單位；取代 `weightGrams`）、`expiryDescription?`（有效期限描述，如「常溫 1 年」）、`productionDate?`、`shelfLifeMonths?`、`expiryDate?`、`listPrice`、`salePrice`、`costPrice?`（金額為兩位小數字串）、`categoryId`、`brandId`、`tags[]`、`createdAt`、`updatedAt`
 
 **Seed 與 POS「折扣」列對齊之 `tag` 值**（`pnpm db:seed` 後可查 `GET /products?tag=熱銷` 等）：
 

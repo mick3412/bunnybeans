@@ -87,6 +87,94 @@ describe('ProductService importFromCsvBuffer (integration)', () => {
     await prisma.product.deleteMany({ where: { id: { in: [p1.id, p2.id] } } });
   }, 15000);
 
+  it('batchUpdateTags supports add/set and validates input', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const p1 = await prisma.product.create({
+      data: { sku: `BT-P1-${Date.now()}`, name: 'BT P1', tags: ['a'] as any },
+    });
+    const p2 = await prisma.product.create({
+      data: { sku: `BT-P2-${Date.now()}`, name: 'BT P2', tags: [] as any },
+    });
+    try {
+      const addOut = await productService.batchUpdateTags([p1.id, p2.id], ['b', 'c'], 'add');
+      expect(addOut.updated).toBeGreaterThanOrEqual(1);
+
+      const a1 = await prisma.product.findUnique({ where: { id: p1.id }, select: { tags: true } });
+      const a2 = await prisma.product.findUnique({ where: { id: p2.id }, select: { tags: true } });
+      expect(Array.isArray(a1?.tags)).toBe(true);
+      expect(Array.isArray(a2?.tags)).toBe(true);
+
+      const setOut = await productService.batchUpdateTags([p1.id], ['z'], 'set');
+      expect(setOut.updated).toBe(1);
+      const s1 = await prisma.product.findUnique({ where: { id: p1.id }, select: { tags: true } });
+      expect(s1?.tags).toEqual(['z']);
+
+      await expect(productService.batchUpdateTags([], ['x'], 'add')).rejects.toMatchObject({
+        response: { code: 'PRODUCT_BATCH_EMPTY' },
+      });
+      await expect(productService.batchUpdateTags([p1.id], [], 'add')).rejects.toMatchObject({
+        response: { code: 'PRODUCT_BATCH_INVALID' },
+      });
+      await expect(productService.batchUpdateTags([p1.id], ['x'], 'oops' as any)).rejects.toMatchObject({
+        response: { code: 'PRODUCT_BATCH_INVALID' },
+      });
+    } finally {
+      await prisma.product.deleteMany({ where: { id: { in: [p1.id, p2.id] } } });
+    }
+  }, 15000);
+
+  it('exportProductsCsv respects minDaysUntilExpiry and supports computed expiryDate', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const skuOk = `EXP-OK-${Date.now()}`;
+    const skuNo = `EXP-NO-${Date.now()}`;
+    const now = new Date();
+    const far = new Date(now);
+    far.setUTCDate(far.getUTCDate() + 60);
+
+    // computed expiry: productionDate + shelfLifeMonths
+    const pOk = await prisma.product.create({
+      data: {
+        sku: skuOk,
+        name: 'Export OK',
+        productionDate: now,
+        shelfLifeMonths: 2,
+        expiryDate: null,
+        listPrice: 10,
+        salePrice: 10,
+      },
+    });
+    const pNo = await prisma.product.create({
+      data: {
+        sku: skuNo,
+        name: 'Export NO',
+        expiryDate: far,
+        productionDate: null,
+        shelfLifeMonths: null,
+        listPrice: 10,
+        salePrice: 10,
+      },
+    });
+    try {
+      const csv = await productService.exportProductsCsv({ minDaysUntilExpiry: 10 });
+      expect(csv.includes(skuOk)).toBe(true);
+      // pNo is far future too, should also be included; create a near-expiry and exclude
+      const nearSku = `EXP-NEAR-${Date.now()}`;
+      const near = new Date(now);
+      near.setUTCDate(near.getUTCDate() + 1);
+      const pNear = await prisma.product.create({
+        data: { sku: nearSku, name: 'Export NEAR', expiryDate: near, listPrice: 10, salePrice: 10 },
+      });
+      const csv2 = await productService.exportProductsCsv({ minDaysUntilExpiry: 10 });
+      expect(csv2.includes(skuOk)).toBe(true);
+      expect(csv2.includes(nearSku)).toBe(false);
+      await prisma.product.delete({ where: { id: pNear.id } });
+    } finally {
+      await prisma.product.deleteMany({ where: { id: { in: [pOk.id, pNo.id] } } });
+    }
+  }, 20000);
+
   it('searchBarcode returns matched product by exact barcode', async () => {
     if (!process.env.DATABASE_URL) return;
     const barcode = `BC-${Date.now()}`;

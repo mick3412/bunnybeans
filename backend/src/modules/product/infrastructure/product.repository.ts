@@ -11,6 +11,27 @@ function toDec(v: string | number | null | undefined, fallback = '0'): Prisma.De
 export class ProductRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  private computeExpiryDate(p: { expiryDate: Date | null; productionDate: Date | null; shelfLifeMonths: number | null }): Date | null {
+    if (p.expiryDate) return p.expiryDate;
+    if (p.productionDate && p.shelfLifeMonths != null && Number.isFinite(p.shelfLifeMonths)) {
+      const d = new Date(p.productionDate);
+      d.setUTCMonth(d.getUTCMonth() + p.shelfLifeMonths);
+      return d;
+    }
+    return null;
+  }
+
+  private buildExpiryBoundaryUtc(minDaysUntilExpiry: number): Date | null {
+    if (!Number.isFinite(minDaysUntilExpiry)) return null;
+    const n = Math.floor(minDaysUntilExpiry);
+    if (n < 0) return null;
+    // 「日曆剩餘天數」嚴格大於 N：以 UTC 當日 00:00 為界，需 >= today + (N+1) 天的 00:00
+    const boundary = new Date();
+    boundary.setUTCHours(0, 0, 0, 0);
+    boundary.setUTCDate(boundary.getUTCDate() + n + 1);
+    return boundary;
+  }
+
   private buildProductWhere(filter?: {
     search?: string;
     sku?: string;
@@ -45,15 +66,6 @@ export class ProductRepository {
         tags: { array_contains: filter.tag.trim() },
       });
     }
-    if (filter?.minDaysUntilExpiry != null && Number.isFinite(filter.minDaysUntilExpiry)) {
-      const n = Math.floor(filter.minDaysUntilExpiry);
-      if (n >= 0) {
-        const boundary = new Date();
-        boundary.setUTCHours(0, 0, 0, 0);
-        boundary.setUTCDate(boundary.getUTCDate() + n + 1);
-        and.push({ expiryDate: { not: null, gte: boundary } });
-      }
-    }
     return and.length ? { AND: and } : {};
   }
 
@@ -64,12 +76,15 @@ export class ProductRepository {
       categoryId?: string;
       brandId?: string;
       tag?: string;
-      /** 僅回傳 expiryDate 之「日曆剩餘天數」嚴格大於 N 之商品（UTC 日界；需有 expiryDate） */
+      /** 僅回傳「日曆剩餘天數」嚴格大於 N 之商品（UTC 日界；支援 expiryDate 或 productionDate+shelfLifeMonths 推算） */
       minDaysUntilExpiry?: number;
     },
     opts?: { includeBrand?: boolean; page?: number; pageSize?: number },
   ) {
-    const where = this.buildProductWhere(filter) as Prisma.ProductWhereInput;
+    const boundary = filter?.minDaysUntilExpiry != null ? this.buildExpiryBoundaryUtc(filter.minDaysUntilExpiry) : null;
+    const baseWhere = this.buildProductWhere(
+      boundary ? { ...(filter ?? {}), minDaysUntilExpiry: undefined } : filter,
+    ) as Prisma.ProductWhereInput;
     const select: Prisma.ProductSelect = {
       id: true,
       sku: true,
@@ -81,6 +96,9 @@ export class ProductRepository {
       specStyle: true,
       specWeight: true,
       expiryDescription: true,
+      productionDate: true,
+      shelfLifeMonths: true,
+      expiryDate: true,
       listPrice: true,
       salePrice: true,
       costPrice: true,
@@ -96,10 +114,32 @@ export class ProductRepository {
     const page = opts?.page ?? 1;
     const pageSize = Math.min(200, Math.max(1, opts?.pageSize ?? 50));
     const skip = (page - 1) * pageSize;
+
+    // 若有 minDaysUntilExpiry，需納入 productionDate+shelfLifeMonths 推算效期；
+    // Prisma 無法方便地在 DB 端計算 addMonths，因此改以應用層過濾後再分頁。
+    if (boundary) {
+      const all = await this.prisma.product.findMany({
+        where: Object.keys(baseWhere).length ? baseWhere : undefined,
+        orderBy: { sku: 'asc' },
+        take: 10_000,
+        select,
+      });
+      const filtered = all.filter((p) => {
+        const exp = this.computeExpiryDate({
+          expiryDate: (p as { expiryDate: Date | null }).expiryDate ?? null,
+          productionDate: (p as { productionDate: Date | null }).productionDate ?? null,
+          shelfLifeMonths: (p as { shelfLifeMonths: number | null }).shelfLifeMonths ?? null,
+        });
+        return exp != null && exp >= boundary;
+      });
+      const items = filtered.slice(skip, skip + pageSize);
+      return { items, total: filtered.length, page, pageSize };
+    }
+
     const [total, items] = await Promise.all([
-      this.prisma.product.count({ where: Object.keys(where).length ? where : undefined }),
+      this.prisma.product.count({ where: Object.keys(baseWhere).length ? baseWhere : undefined }),
       this.prisma.product.findMany({
-        where: Object.keys(where).length ? where : undefined,
+        where: Object.keys(baseWhere).length ? baseWhere : undefined,
         orderBy: { sku: 'asc' },
         skip,
         take: pageSize,
@@ -110,7 +150,7 @@ export class ProductRepository {
   }
 
   /** 匯出用：與 list 同篩選，最多 1 萬列；含 categoryCode、brandCode 以對齊 import 格式 */
-  findManyForExport(filter?: {
+  async findManyForExport(filter?: {
     search?: string;
     sku?: string;
     categoryId?: string;
@@ -118,28 +158,49 @@ export class ProductRepository {
     tag?: string;
     minDaysUntilExpiry?: number;
   }) {
-    const where = this.buildProductWhere(filter) as Prisma.ProductWhereInput;
-    return this.prisma.product.findMany({
-      where: Object.keys(where).length ? where : undefined,
+    const boundary =
+      filter?.minDaysUntilExpiry != null
+        ? this.buildExpiryBoundaryUtc(filter.minDaysUntilExpiry)
+        : null;
+    const baseWhere = this.buildProductWhere(
+      boundary ? { ...(filter ?? {}), minDaysUntilExpiry: undefined } : filter,
+    ) as Prisma.ProductWhereInput;
+    const where = Object.keys(baseWhere).length ? baseWhere : undefined;
+    const select = {
+      sku: true,
+      name: true,
+      barcode: true,
+      description: true,
+      specSize: true,
+      specCapacity: true,
+      specStyle: true,
+      specWeight: true,
+      expiryDescription: true,
+      productionDate: true,
+      shelfLifeMonths: true,
+      expiryDate: true,
+      listPrice: true,
+      salePrice: true,
+      costPrice: true,
+      tags: true,
+      category: { select: { code: true } },
+      brand: { select: { code: true } },
+    } as const;
+
+    const rows = await this.prisma.product.findMany({
+      where,
       orderBy: { sku: 'asc' },
       take: 10_000,
-      select: {
-        sku: true,
-        name: true,
-        barcode: true,
-        description: true,
-        specSize: true,
-        specCapacity: true,
-        specStyle: true,
-        specWeight: true,
-        expiryDescription: true,
-        listPrice: true,
-        salePrice: true,
-        costPrice: true,
-        tags: true,
-        category: { select: { code: true } },
-        brand: { select: { code: true } },
-      },
+      select,
+    });
+    if (!boundary) return rows;
+    return rows.filter((p) => {
+      const exp = this.computeExpiryDate({
+        expiryDate: p.expiryDate ?? null,
+        productionDate: p.productionDate ?? null,
+        shelfLifeMonths: p.shelfLifeMonths ?? null,
+      });
+      return exp != null && exp >= boundary;
     });
   }
 
