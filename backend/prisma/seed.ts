@@ -108,9 +108,9 @@ async function main() {
     { sku: 'DEMO-FEED-ADULT', barcode: ean13Taiwan('200000001'), name: '成兔飼料 2kg', cat: catFeed, brand: brandFeed, list: 320, sale: 280, cost: 180, tags: ['熱銷'], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '常溫 12 個月', productionDate: prodDate(3), shelfLifeMonths: 12 },
     { sku: 'DEMO-FEED-JR', barcode: ean13Taiwan('200000002'), name: '幼兔飼料 1kg', cat: catFeed, brand: brandFeed, list: 200, sale: 179, cost: 100, tags: [], specSize: null, specStyle: null, specWeight: '1kg', specCapacity: null, expiryDescription: '常溫 12 個月', expiryDate: expDate(6) },
     { sku: 'DEMO-FEED-SENIOR', barcode: ean13Taiwan('200000003'), name: '高齡兔飼料 2kg', cat: catFeed, brand: brandFeed, list: 380, sale: 340, cost: 200, tags: [], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '常溫 10 個月', productionDate: prodDate(2), shelfLifeMonths: 10 },
-    { sku: 'DEMO-HAY-TIMOTHY', barcode: ean13Taiwan('300000001'), name: '提摩西牧草 1kg', cat: catHay, brand: brandHouse, list: 180, sale: 150, cost: 90, tags: ['熱銷'], specSize: null, specStyle: null, specWeight: '1kg', specCapacity: null, expiryDescription: '乾燥保存 6 個月' },
-    { sku: 'DEMO-HAY-ALFALFA', barcode: ean13Taiwan('300000002'), name: '苜蓿牧草 500g', cat: catHay, brand: brandHouse, list: 120, sale: 99, cost: 50, tags: [], specSize: null, specStyle: null, specWeight: '500g', specCapacity: null, expiryDescription: '乾燥保存 6 個月' },
-    { sku: 'DEMO-HAY-MIX', barcode: ean13Taiwan('300000003'), name: '綜合牧草 2kg', cat: catHay, brand: brandPremium, list: 350, sale: 299, cost: 160, tags: [], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '乾燥保存 6 個月' },
+    { sku: 'DEMO-HAY-TIMOTHY', barcode: ean13Taiwan('300000001'), name: '提摩西牧草 1kg', cat: catHay, brand: brandHouse, list: 180, sale: 150, cost: 90, tags: ['熱銷'], specSize: null, specStyle: null, specWeight: '1kg', specCapacity: null, expiryDescription: '乾燥保存 6 個月', productionDate: prodDate(2), shelfLifeMonths: 6 },
+    { sku: 'DEMO-HAY-ALFALFA', barcode: ean13Taiwan('300000002'), name: '苜蓿牧草 500g', cat: catHay, brand: brandHouse, list: 120, sale: 99, cost: 50, tags: [], specSize: null, specStyle: null, specWeight: '500g', specCapacity: null, expiryDescription: '乾燥保存 6 個月', productionDate: prodDate(1), shelfLifeMonths: 6 },
+    { sku: 'DEMO-HAY-MIX', barcode: ean13Taiwan('300000003'), name: '綜合牧草 2kg', cat: catHay, brand: brandPremium, list: 350, sale: 299, cost: 160, tags: [], specSize: null, specStyle: null, specWeight: '2kg', specCapacity: null, expiryDescription: '乾燥保存 6 個月', productionDate: prodDate(3), shelfLifeMonths: 6 },
     { sku: 'DEMO-BOWL-S', barcode: ean13Taiwan('400000001'), name: '食盆 小', cat: catSupplies, brand: brandHouse, list: 120, sale: 99, cost: 45, tags: [], specSize: 'S', specStyle: '圓形', specWeight: '80g', specCapacity: '200ml', expiryDescription: null },
     { sku: 'DEMO-BOWL-M', barcode: ean13Taiwan('400000002'), name: '食盆 中', cat: catSupplies, brand: brandHouse, list: 180, sale: 149, cost: 65, tags: [], specSize: 'M', specStyle: '圓形', specWeight: '150g', specCapacity: '400ml', expiryDescription: null },
     { sku: 'DEMO-BOWL-L', barcode: ean13Taiwan('400000003'), name: '食盆 大', cat: catSupplies, brand: brandHouse, list: 250, sale: 199, cost: 90, tags: [], specSize: 'L', specStyle: '圓形', specWeight: '280g', specCapacity: '800ml', expiryDescription: null },
@@ -1358,9 +1358,9 @@ async function main() {
       data: { merchantId: merchant.id, name: '銀卡以上發節慶券', segmentId: segSilverPlus.id, couponId: coup30.id, enabled: true, scheduleType: 'weekly', nextRunAt: new Date(now.getTime() + 7 * 86400000) },
     });
   }
-  /** 發券紀錄：加倍，Customer ↔ LoyaltyCoupon 關聯涵蓋更多會員 */
+  /** 發券紀錄：加倍，Customer ↔ LoyaltyCoupon 關聯涵蓋更多會員（使用實際存在的 code：VIP002/MEM019 為 GOLD） */
   const custForCoupon = await prisma.customer.findMany({
-    where: { merchantId: merchant.id, code: { in: ['VIP001', 'VIP002', 'MEM005', 'MEM010', 'MEM017', 'MEM018', 'MEM019', 'MEM020', 'GOLD001', 'GOLD002'] } },
+    where: { merchantId: merchant.id, code: { in: ['VIP001', 'VIP002', 'MEM005', 'MEM010', 'MEM017', 'MEM018', 'MEM019', 'MEM020'] } },
   });
   if (coupWelcome) {
     for (const v of custForCoupon.filter((x) => x.code && ['VIP001', 'MEM005', 'MEM017', 'MEM019'].includes(x.code))) {
@@ -1373,14 +1373,41 @@ async function main() {
     }
   }
   if (coup20) {
-    for (const c of custForCoupon.filter((x) => x.code && ['GOLD001', 'GOLD002', 'MEM018', 'MEM020'].includes(x.code))) {
+    for (const c of custForCoupon.filter((x) => x.code && ['VIP002', 'MEM019', 'MEM018', 'MEM020'].includes(x.code))) {
       await prisma.loyaltyCouponIssue.create({ data: { customerId: c.id, couponId: coup20.id } }).catch(() => {});
     }
   }
   if (coup30) {
-    for (const c of custForCoupon.filter((x) => x.code && ['VIP001', 'GOLD001', 'MEM017'].includes(x.code))) {
+    for (const c of custForCoupon.filter((x) => x.code && ['VIP001', 'VIP002', 'MEM017'].includes(x.code))) {
       await prisma.loyaltyCouponIssue.create({ data: { customerId: c.id, couponId: coup30.id } }).catch(() => {});
     }
+  }
+  /** CrmMarketingJob 示範：供 /admin/crm/jobs 行銷工作台列表展示 */
+  if (segVipCreated && coup50) {
+    await prisma.crmMarketingJob.create({
+      data: {
+        merchantId: merchant.id,
+        kind: 'segment-coupon',
+        segmentId: segVipCreated.id,
+        couponId: coup50.id,
+        status: 'done',
+        resultJson: JSON.stringify({ sent: 4, skipped: 0, errors: [] }),
+        error: null,
+      },
+    });
+  }
+  if (segAllCreated && coupWelcome) {
+    await prisma.crmMarketingJob.create({
+      data: {
+        merchantId: merchant.id,
+        kind: 'segment-coupon',
+        segmentId: segAllCreated.id,
+        couponId: coupWelcome.id,
+        status: 'done',
+        resultJson: JSON.stringify({ sent: 2, skipped: 1, errors: [] }),
+        error: null,
+      },
+    });
   }
 
   const c = async (code: string) =>
@@ -2157,6 +2184,17 @@ async function main() {
       error: '重複 phone 欄位',
       resultJson: null,
     },
+  });
+
+  /** OpsJobRunLog 示範：供 /admin/ops/jobs Job 監控頁列表展示 */
+  await prisma.opsJobRunLog.createMany({
+    data: [
+      { jobType: 'finance-snapshot', lastRunAt: daysAgo(1), success: true, message: null },
+      { jobType: 'crm-run-scheduled', lastRunAt: daysAgo(2), success: true, message: null },
+      { jobType: 'finance-snapshot', lastRunAt: daysAgo(3), success: true, message: null },
+      { jobType: 'finance-period-close', lastRunAt: daysAgo(5), success: true, message: null },
+      { jobType: 'crm-run-scheduled', lastRunAt: daysAgo(7), success: false, message: '部分會員無電話略過' },
+    ],
   });
 
   /** 金流快照：10 筆（加倍），由實際 FinanceEvent 彙總，供 /admin/finance/snapshots 與金流報表數據一致 */

@@ -500,6 +500,7 @@ model PosOrder {
 
   items    PosOrderItem[]
   payments PosOrderPayment[]
+  returns  PosReturn[]
 
   @@index([storeId, createdAt])
   @@index([customerId])
@@ -537,6 +538,7 @@ enum InventoryEventType {
   TRANSFER_IN
   STOCKTAKE_GAIN
   STOCKTAKE_LOSS
+  SCRAP_LOSS
 }
 
 enum FinanceEventType {
@@ -677,6 +679,103 @@ model OpsJobRunLog {
   message   String?  // error summary when success=false
   createdAt DateTime @default(now())
   @@index([jobType])
+}
+
+// ─── 退換貨 (Return & Exchange) ───────────────────────────────
+
+enum ReturnType {
+  FULL_RETURN
+  PARTIAL_RETURN
+  EXCHANGE
+}
+
+enum ReturnStatus {
+  COMPLETED
+  CANCELLED
+}
+
+enum ReturnReason {
+  SIZE_WRONG
+  DEFECTIVE
+  CHANGED_MIND
+  WRONG_ITEM
+  DUPLICATE_PURCHASE
+  OTHER
+}
+
+enum ItemCondition {
+  GOOD
+  DEFECTIVE_ITEM
+}
+
+enum RefundMethod {
+  CASH
+  STORE_CREDIT
+}
+
+model PosReturn {
+  id              String       @id @default(uuid())
+  returnNumber    String       @unique
+  order           PosOrder     @relation(fields: [orderId], references: [id])
+  orderId         String
+  storeId         String
+  customerId      String?
+  type            ReturnType
+  status          ReturnStatus @default(COMPLETED)
+
+  returnSubtotal  Decimal      @db.Decimal(12, 2)
+  discountShare   Decimal      @db.Decimal(12, 2)
+  refundAmount    Decimal      @db.Decimal(12, 2)
+  refundMethod    RefundMethod
+
+  pointsDeducted  Int          @default(0)
+  pointsReturned  Int          @default(0)
+
+  /// Exchange → 換貨新單 PosOrder.id
+  exchangeOrderId String?
+  note            String?
+  createdAt       DateTime     @default(now())
+
+  items           PosReturnItem[]
+
+  @@index([orderId])
+  @@index([storeId, createdAt])
+}
+
+model PosReturnItem {
+  id          String        @id @default(uuid())
+  posReturn   PosReturn     @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  returnId    String
+  productId   String
+  quantity    Int
+  unitPrice   Decimal       @db.Decimal(12, 2)
+  reason      ReturnReason
+  condition   ItemCondition
+  note        String?
+
+  @@index([returnId])
+}
+
+model StoreCreditLedger {
+  id           String   @id @default(uuid())
+  merchantId   String
+  customerId   String
+  amount       Decimal  @db.Decimal(12, 2)
+  balanceAfter Decimal  @db.Decimal(12, 2)
+  referenceId  String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([merchantId, customerId, createdAt])
+}
+
+model ReturnPolicy {
+  id                 String   @id @default(uuid())
+  merchantId         String   @unique
+  returnWindowDays   Int      @default(7)
+  exchangeWindowDays Int      @default(30)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 /// 報表穿透審計（ReportClickAudit）：記錄使用者點擊 referenceId 的解析結果與成功率

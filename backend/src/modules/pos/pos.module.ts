@@ -12,12 +12,17 @@ import { PosReportsController } from './interface/pos-reports.controller';
 import { PosPromotionsController } from './interface/pos-promotions.controller';
 import { PosSessionsController } from './interface/pos-sessions.controller';
 import { PosHeldCartsController } from './interface/pos-held-carts.controller';
+import { PosReturnsController } from './interface/pos-returns.controller';
+import { PosReturnPolicyController } from './interface/pos-return-policy.controller';
 import { PosService } from './application/pos.service';
 import { PosReportsService } from './application/pos-reports.service';
 import { PosSessionsService } from './application/pos-sessions.service';
 import { PosHeldCartsService } from './application/pos-held-carts.service';
+import { PosReturnService } from './application/pos-return.service';
+import { StoreCreditService } from './application/store-credit.service';
 import { DiscountTagResolverService } from './application/discount-tag-resolver.service';
 import { PosRepository } from './infrastructure/pos.repository';
+import { PosReturnRepository } from './infrastructure/pos-return.repository';
 
 @Module({
   imports: [
@@ -36,16 +41,21 @@ import { PosRepository } from './infrastructure/pos.repository';
     PosPromotionsController,
     PosSessionsController,
     PosHeldCartsController,
+    PosReturnsController,
+    PosReturnPolicyController,
   ],
   providers: [
     PosService,
     PosReportsService,
     PosSessionsService,
     PosHeldCartsService,
+    PosReturnService,
+    StoreCreditService,
     DiscountTagResolverService,
     PosRepository,
+    PosReturnRepository,
   ],
-  exports: [PosService, PosSessionsService],
+  exports: [PosService, PosSessionsService, PosReturnService, StoreCreditService],
 })
 export class PosModule {}
 

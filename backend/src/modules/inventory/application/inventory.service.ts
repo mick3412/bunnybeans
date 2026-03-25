@@ -110,6 +110,7 @@ export class InventoryService {
       'RETURN_TO_SUPPLIER',
       'TRANSFER_OUT',
       'STOCKTAKE_LOSS',
+      'SCRAP_LOSS',
     ];
 
     if (negativeTypes.includes(type)) {
