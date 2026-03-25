@@ -2,7 +2,7 @@
  * 倉庫/門市頁共用 layout 常數（erp-roadmap 0.7 對齊）
  */
 export const WH_STORES_FIELD_CLASS =
-  'h-9 rounded-lg border border-brand-surface px-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
+  'h-9 min-w-0 rounded-lg border border-brand-surface bg-table-head px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
 
 export const WH_STORES_FORM_ROW_CLASS = 'mb-5 flex flex-wrap items-end gap-4';
 export const WH_STORES_TABLE_WRAPPER_CLASS =

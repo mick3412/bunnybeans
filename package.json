@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "db:seed": "pnpm --filter pos-erp-backend db:seed",
+    "db:reset": "pnpm --filter pos-erp-backend exec prisma migrate reset --force",
     "dev": "pnpm --filter pos-erp-backend dev & pnpm --filter pos-erp-frontend dev",
     "dev:app": "./scripts/restart-dev.sh",
     "build": "pnpm --filter pos-erp-backend build && pnpm --filter pos-erp-frontend build",

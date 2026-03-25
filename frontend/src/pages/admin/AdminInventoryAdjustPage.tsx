@@ -14,6 +14,10 @@ import { Alert } from '../../shared/components/Alert';
 import { Button } from '../../shared/components/Button';
 import { ReferenceIdLink } from '../../shared/components/ReferenceIdLink';
 import { useAdminToast } from './AdminToastContext';
+import {
+  WH_STORES_FIELD_CLASS,
+  WH_STORES_FORM_ROW_CLASS,
+} from './warehouses-stores-layout';
 
 const EVENT_TYPES: { value: InventoryEventType; label: string }[] = [
   { value: 'PURCHASE_IN', label: '進貨入庫' },
@@ -22,10 +26,10 @@ const EVENT_TYPES: { value: InventoryEventType; label: string }[] = [
   { value: 'RETURN_FROM_CUSTOMER', label: '客戶退貨入庫' },
 ];
 
-const titleCls = 'text-xl font-bold leading-tight text-content';
+const titleCls = 'text-lg font-semibold leading-tight text-content';
 const descCls = 'mt-2 text-sm leading-relaxed text-muted';
 const alertBox = 'rounded-lg border px-3 py-2 text-sm';
-const formCard = 'space-y-1 rounded-xl border border-brand-surface bg-white p-4 shadow-sm';
+const formCard = 'rounded-xl border border-brand-surface bg-white p-6 shadow-sm';
 
 export const AdminInventoryAdjustPage: React.FC = () => {
   const { showToast } = useAdminToast();
@@ -117,12 +121,6 @@ export const AdminInventoryAdjustPage: React.FC = () => {
     setTransferNote('');
   };
 
-  const row = 'flex flex-row items-center gap-3 py-1';
-  const labelCls =
-    'w-36 shrink-0 text-right text-xs font-medium text-muted sm:text-left';
-  const fieldCls =
-    'min-w-0 flex-1 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm text-[#1e293b]';
-
   const HeaderLeft = (
     <div className="flex min-h-0 flex-col self-stretch border-b border-brand-surface pb-4 lg:border-0 lg:pb-0">
       <h2 className={`${titleCls} border-b border-brand-surface pb-2`}>入庫事件</h2>
@@ -176,55 +174,71 @@ export const AdminInventoryAdjustPage: React.FC = () => {
 
   const FormEvent = (
     <form onSubmit={submit} className={formCard}>
-      <div className={row}>
-        <label className={labelCls}>倉庫</label>
-        <select className={fieldCls} value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-          {warehouses.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.code} — {w.name}
-            </option>
-          ))}
-        </select>
+      <div className={WH_STORES_FORM_ROW_CLASS}>
+        <div>
+          <label className="mb-1 block text-xs text-muted">倉庫</label>
+          <select
+            className={`${WH_STORES_FIELD_CLASS} min-w-[180px]`}
+            value={warehouseId}
+            onChange={(e) => setWarehouseId(e.target.value)}
+          >
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.code} — {w.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted">商品</label>
+          <select
+            className={`${WH_STORES_FIELD_CLASS} min-w-[200px]`}
+            value={productId}
+            onChange={(e) => setProductId(e.target.value)}
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.sku} — {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <div className={row}>
-        <label className={labelCls}>商品</label>
-        <select className={fieldCls} value={productId} onChange={(e) => setProductId(e.target.value)}>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.sku} — {p.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className={row}>
-        <label className={labelCls}>事件類型</label>
-        <select className={fieldCls} value={type} onChange={(e) => setType(e.target.value as InventoryEventType)}>
-          {EVENT_TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label} ({t.value})
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className={`${row} items-start`}>
-        <label className={`${labelCls} pt-2 leading-snug`}>
-          數量
-          <span className="mt-0.5 block font-normal text-muted">（正數；出庫類由後端轉負）</span>
-        </label>
-        <input
-          type="number"
-          min={1}
-          className={fieldCls}
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value) || 1)}
-        />
-      </div>
-      <div className={row}>
-        <label className={labelCls}>備註</label>
-        <input className={fieldCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="選填" />
-      </div>
-      <div className="pt-3">
-        <Button type="submit" fullWidth>
+      <div className={WH_STORES_FORM_ROW_CLASS}>
+        <div>
+          <label className="mb-1 block text-xs text-muted">事件類型</label>
+          <select
+            className={`${WH_STORES_FIELD_CLASS} min-w-[160px]`}
+            value={type}
+            onChange={(e) => setType(e.target.value as InventoryEventType)}
+          >
+            {EVENT_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label} ({t.value})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted">數量（正數；出庫類由後端轉負）</label>
+          <input
+            type="number"
+            min={1}
+            className={`${WH_STORES_FIELD_CLASS} w-24`}
+            value={quantity}
+            onChange={(e) => setQuantity(Number(e.target.value) || 1)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted">備註</label>
+          <input
+            className={`${WH_STORES_FIELD_CLASS} min-w-[140px]`}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="選填"
+          />
+        </div>
+        <Button type="submit" size="sm" variant="primary">
           送出庫存事件
         </Button>
       </div>
@@ -233,61 +247,71 @@ export const AdminInventoryAdjustPage: React.FC = () => {
 
   const FormTransfer = (
     <form onSubmit={submitTransfer} className={formCard}>
-      <div className={row}>
-        <label className={labelCls}>來源倉（出）</label>
-        <select className={fieldCls} value={fromWh} onChange={(e) => setFromWh(e.target.value)}>
-          {warehouses.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.code} — {w.name}
-            </option>
-          ))}
-        </select>
+      <div className={WH_STORES_FORM_ROW_CLASS}>
+        <div>
+          <label className="mb-1 block text-xs text-muted">來源倉（出）</label>
+          <select
+            className={`${WH_STORES_FIELD_CLASS} min-w-[180px]`}
+            value={fromWh}
+            onChange={(e) => setFromWh(e.target.value)}
+          >
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.code} — {w.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted">目的倉（入）</label>
+          <select
+            className={`${WH_STORES_FIELD_CLASS} min-w-[180px]`}
+            value={toWh}
+            onChange={(e) => setToWh(e.target.value)}
+          >
+            {warehouses.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.code} — {w.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
-      <div className={row}>
-        <label className={labelCls}>目的倉（入）</label>
-        <select className={fieldCls} value={toWh} onChange={(e) => setToWh(e.target.value)}>
-          {warehouses.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.code} — {w.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className={row}>
-        <label className={labelCls}>商品</label>
-        <select
-          className={fieldCls}
-          value={transferProductId}
-          onChange={(e) => setTransferProductId(e.target.value)}
-        >
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.sku} — {p.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className={row}>
-        <label className={labelCls}>調撥數量</label>
-        <input
-          type="number"
-          min={1}
-          className={fieldCls}
-          value={transferQty}
-          onChange={(e) => setTransferQty(Number(e.target.value) || 1)}
-        />
-      </div>
-      <div className={row}>
-        <label className={labelCls}>備註</label>
-        <input
-          className={fieldCls}
-          value={transferNote}
-          onChange={(e) => setTransferNote(e.target.value)}
-          placeholder="選填"
-        />
-      </div>
-      <div className="pt-3">
-        <Button type="submit" fullWidth>
+      <div className={WH_STORES_FORM_ROW_CLASS}>
+        <div>
+          <label className="mb-1 block text-xs text-muted">商品</label>
+          <select
+            className={`${WH_STORES_FIELD_CLASS} min-w-[200px]`}
+            value={transferProductId}
+            onChange={(e) => setTransferProductId(e.target.value)}
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.sku} — {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted">調撥數量</label>
+          <input
+            type="number"
+            min={1}
+            className={`${WH_STORES_FIELD_CLASS} w-24`}
+            value={transferQty}
+            onChange={(e) => setTransferQty(Number(e.target.value) || 1)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted">備註</label>
+          <input
+            className={`${WH_STORES_FIELD_CLASS} min-w-[140px]`}
+            value={transferNote}
+            onChange={(e) => setTransferNote(e.target.value)}
+            placeholder="選填"
+          />
+        </div>
+        <Button type="submit" size="sm" variant="primary">
           送出調撥
         </Button>
       </div>
@@ -295,7 +319,7 @@ export const AdminInventoryAdjustPage: React.FC = () => {
   );
 
   return (
-    <div className="max-w-7xl">
+    <div className="mx-auto max-w-6xl">
       {/* 窄屏：維持上下堆疊 */}
       <div className="flex flex-col gap-8 lg:hidden">
         <section>

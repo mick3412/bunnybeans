@@ -37,7 +37,6 @@ export const AdminCustomersPage: React.FC = () => {
   const [mergeOpen, setMergeOpen] = useState(false);
   const [mergePrimaryId, setMergePrimaryId] = useState('');
   const [mergeSubmitting, setMergeSubmitting] = useState(false);
-  const [contactsCustomer, setContactsCustomer] = useState<LoyaltyCustomerRow | null>(null);
   const [contactsItems, setContactsItems] = useState<CustomerContactItem[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [newContactType, setNewContactType] = useState('');
@@ -420,25 +419,6 @@ export const AdminCustomersPage: React.FC = () => {
                           type="button"
                           className="text-xs font-medium text-brand-primary hover:underline"
                           onClick={() => {
-                            setContactsCustomer(r);
-                            setContactsItems([]);
-                            setNewContactType('');
-                            setNewContactNote('');
-                            if (merchantId) {
-                              setContactsLoading(true);
-                              getCustomerContacts(r.id, merchantId).then((res) => {
-                                setContactsLoading(false);
-                                if (res && typeof res === 'object' && 'items' in res) setContactsItems(res.items);
-                              });
-                            }
-                          }}
-                        >
-                          互動紀錄
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs font-medium text-brand-primary hover:underline"
-                          onClick={() => {
                             setEditCustomer(r);
                             setCreateForm({
                               name: r.name ?? '',
@@ -449,6 +429,16 @@ export const AdminCustomersPage: React.FC = () => {
                             });
                             setPanelMode('edit');
                             setPanelOpen(true);
+                            setContactsItems([]);
+                            setNewContactType('');
+                            setNewContactNote('');
+                            if (merchantId) {
+                              setContactsLoading(true);
+                              getCustomerContacts(r.id, merchantId).then((res) => {
+                                setContactsLoading(false);
+                                if (res && typeof res === 'object' && 'items' in res) setContactsItems(res.items);
+                              });
+                            }
                           }}
                         >
                           編輯
@@ -512,6 +502,61 @@ export const AdminCustomersPage: React.FC = () => {
               <TextInput label="Email" value={createForm.email} onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))} placeholder="" />
               <TextInput label="會員等級" value={createForm.memberLevel} onChange={(e) => setCreateForm((f) => ({ ...f, memberLevel: e.target.value }))} placeholder="" />
               <TextInput label="會員碼" value={createForm.memberCode} onChange={(e) => setCreateForm((f) => ({ ...f, memberCode: e.target.value }))} placeholder="" />
+              {panelMode === 'edit' && editCustomer && (
+                <div className="border-t border-brand-surface pt-4 space-y-3">
+                  <h4 className="text-sm font-semibold text-content">互動紀錄</h4>
+                  {contactsLoading ? (
+                    <p className="text-sm text-muted">載入中…</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {contactsItems.map((c) => (
+                        <li key={c.id} className="rounded-lg border border-brand-surface bg-table-head p-2 text-xs">
+                          <span className="font-mono text-muted">{c.type}</span>
+                          {c.note && <p className="mt-1 text-muted">{c.note}</p>}
+                          <p className="mt-1 text-muted">{new Date(c.createdAt).toLocaleString('zh-TW')}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="border-t border-brand-surface pt-3">
+                    <div className="mb-2 text-xs font-medium text-muted">新增紀錄</div>
+                    <TextInput label="類型" value={newContactType} onChange={(e) => setNewContactType(e.target.value)} placeholder="例：來電" className="!py-1.5" />
+                    <div className="mt-2">
+                      <label className="mb-1 block text-xs text-muted">備註</label>
+                      <textarea
+                        className="w-full rounded-lg border border-brand-surface px-2 py-1.5 text-sm"
+                        rows={2}
+                        value={newContactNote}
+                        onChange={(e) => setNewContactNote(e.target.value)}
+                        placeholder="選填"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="mt-2"
+                      disabled={contactSubmitting || !newContactType.trim()}
+                      onClick={async () => {
+                        if (!editCustomer || !newContactType.trim() || !merchantId) return;
+                        setContactSubmitting(true);
+                        const out = await addCustomerContact(editCustomer.id, { type: newContactType.trim(), note: newContactNote.trim() || undefined }, merchantId);
+                        setContactSubmitting(false);
+                        if ('statusCode' in out) {
+                          showAdminApiErrorToast(showToast, out as ApiError);
+                          return;
+                        }
+                        showToast('已新增互動紀錄', 'ok');
+                        setNewContactType('');
+                        setNewContactNote('');
+                        const res = await getCustomerContacts(editCustomer.id, merchantId);
+                        if (res && typeof res === 'object' && 'items' in res) setContactsItems(res.items);
+                      }}
+                    >
+                      {contactSubmitting ? '送出中…' : '送出'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="border-t border-brand-surface p-4">
               <Button
@@ -625,70 +670,6 @@ export const AdminCustomersPage: React.FC = () => {
             </div>
       </Modal>
 
-      {/* 互動紀錄 Drawer */}
-      {contactsCustomer && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/25" aria-hidden onClick={() => setContactsCustomer(null)} />
-          <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-brand-surface bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="font-semibold text-content">互動紀錄 — {contactsCustomer.name}</h3>
-              <button type="button" className="rounded px-2 py-1 text-muted hover:bg-table-head" onClick={() => setContactsCustomer(null)}>關閉</button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-4">
-              {contactsLoading ? (
-                <p className="text-sm text-muted">載入中…</p>
-              ) : (
-                <ul className="space-y-2">
-                  {contactsItems.map((c) => (
-                    <li key={c.id} className="rounded-lg border border-brand-surface bg-table-head p-2 text-xs">
-                      <span className="font-mono text-muted">{c.type}</span>
-                      {c.note && <p className="mt-1 text-muted">{c.note}</p>}
-                      <p className="mt-1 text-muted">{new Date(c.createdAt).toLocaleString('zh-TW')}</p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="border-t pt-4">
-                <div className="mb-2 text-sm font-medium text-muted">新增紀錄</div>
-                <TextInput label="類型" value={newContactType} onChange={(e) => setNewContactType(e.target.value)} placeholder="例：來電" className="!py-1.5" />
-                <div className="mt-2">
-                  <label className="mb-1 block text-xs text-muted">備註</label>
-                  <textarea
-                    className="w-full rounded-lg border border-brand-surface px-2 py-1.5 text-sm"
-                    rows={2}
-                    value={newContactNote}
-                    onChange={(e) => setNewContactNote(e.target.value)}
-                    placeholder="選填"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="mt-2"
-                  disabled={contactSubmitting || !newContactType.trim()}
-                  onClick={async () => {
-                    if (!contactsCustomer || !newContactType.trim() || !merchantId) return;
-                    setContactSubmitting(true);
-                    const out = await addCustomerContact(contactsCustomer.id, { type: newContactType.trim(), note: newContactNote.trim() || undefined }, merchantId);
-                    setContactSubmitting(false);
-                    if ('statusCode' in out) {
-                      showAdminApiErrorToast(showToast, out as ApiError);
-                      return;
-                    }
-                    showToast('已新增互動紀錄', 'ok');
-                    setNewContactType('');
-                    setNewContactNote('');
-                    const res = await getCustomerContacts(contactsCustomer.id, merchantId);
-                    if (res && typeof res === 'object' && 'items' in res) setContactsItems(res.items);
-                  }}
-                >
-                  {contactSubmitting ? '送出中…' : '送出'}
-                </Button>
-              </div>
-            </div>
-          </aside>
-        </>
-      )}
     </>
   );
 };

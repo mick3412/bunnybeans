@@ -173,7 +173,7 @@ export const AdminFinanceAuditPage: React.FC = () => {
       error={err}
       empty={!loading && !err && items.length === 0}
       emptyMessage="尚無稽核紀錄"
-      emptyDescription=""
+      emptyDescription="若為首次使用，請先執行 pnpm db:seed 建立示範資料"
       testId="e2e-admin-finance-audit"
     >
       <div className="overflow-hidden rounded-xl border border-brand-surface bg-white">

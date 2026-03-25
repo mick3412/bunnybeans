@@ -113,7 +113,12 @@ export function AdminProcurementHubPage(props: { initialTab?: ProcurementHubTabK
           {rankingsErr ? (
             <p className="text-sm text-red-600">{rankingsErr}</p>
           ) : supplierRankings.length === 0 ? (
-            <p className="text-sm text-muted">尚無驗收完成資料</p>
+            <p className="text-sm text-muted">
+              尚無驗收完成資料
+              <span className="mt-1 block text-xs">
+                若為首次使用，請先執行 <code className="rounded bg-brand-surface px-1 py-0.5">pnpm db:seed</code> 建立示範資料
+              </span>
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[360px] text-left text-sm">

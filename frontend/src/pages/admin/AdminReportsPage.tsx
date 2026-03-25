@@ -18,6 +18,7 @@ import { Button } from '../../shared/components/Button';
 import { MiniBarChart } from '../../shared/components/MiniBarChart';
 import { ReferenceIdLink } from '../../shared/components/ReferenceIdLink';
 import { PartyViewSegmented } from '../../shared/components/PartyViewSegmented';
+import { PartySearchSelect, type PartyOption } from '../../shared/components/PartySearchSelect';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { useScopedSearchParams } from '../../shared/utils/useScopedSearchParams';
 import { FINANCE_EVENT_TYPE_LABELS, getFinanceEventTypeLabel } from '../../shared/utils/financeEventTypeLabels';
@@ -56,6 +57,7 @@ export const AdminReportsPage: React.FC = () => {
   const merchantId = useDefaultMerchantId();
   const [searchParams, setSearchParams] = useScopedSearchParams('finance.reports');
   const [partyNames, setPartyNames] = useState<Record<string, string>>({});
+  const [partyOptions, setPartyOptions] = useState<PartyOption[]>([]);
   const presetFromUrl = (searchParams.get('preset') as 'last30d' | 'all' | 'custom' | null) ?? 'last30d';
   const fromFromUrl = searchParams.get('from') ?? '';
   const toFromUrl = searchParams.get('to') ?? '';
@@ -104,12 +106,14 @@ export const AdminReportsPage: React.FC = () => {
         listSuppliers(merchantId),
       ]);
       if (cancelled) return;
+      const opts: PartyOption[] = [];
       if (Array.isArray(custRes)) {
         custRes.forEach((c) => {
           const label = c.name ?? c.phone ?? c.id;
           names[c.id] = label;
           names[`CUSTOMER:${c.id}`] = label;
           names[`customer:${c.id}`] = label;
+          opts.push({ partyId: `CUSTOMER:${c.id}`, displayName: label });
         });
       }
       if (supRes?.data) {
@@ -118,9 +122,11 @@ export const AdminReportsPage: React.FC = () => {
           names[s.id] = label;
           names[`SUPPLIER:${s.id}`] = label;
           names[`supplier:${s.id}`] = label;
+          opts.push({ partyId: `SUPPLIER:${s.id}`, displayName: label });
         });
       }
       setPartyNames(names);
+      setPartyOptions(opts);
     })();
     return () => { cancelled = true; };
   }, [merchantId]);
@@ -400,16 +406,15 @@ export const AdminReportsPage: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-muted">對象 (partyId)</label>
-            <input
-              type="text"
-              className="w-40 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
-              placeholder="ID（視角可自動加前綴）"
+            <label className="mb-1 block text-sm text-muted">對象</label>
+            <PartySearchSelect
+              options={partyOptions}
               value={partyId}
-              onChange={(e) => {
-                setPartyId(e.target.value);
+              onChange={(v) => {
+                setPartyId(v);
                 setPage(1);
               }}
+              placeholder="名稱或 partyId（視角可自動加前綴）"
             />
           </div>
           <div className="min-w-[240px]">

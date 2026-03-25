@@ -59,3 +59,6 @@ export const AdminMarketingCenterHubPageLazy = lazy(() =>
     default: m.AdminMarketingCenterHubPage,
   })),
 );
+export const AdminPosSessionsPageLazy = lazy(() =>
+  import('../pages/admin/AdminPosSessionsPage').then((m) => ({ default: m.AdminPosSessionsPage })),
+);

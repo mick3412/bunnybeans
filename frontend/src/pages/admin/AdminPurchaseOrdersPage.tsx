@@ -292,6 +292,11 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
       ) : undefined}
       empty={!listLoading && !listError && rows.length === 0}
       emptyMessage="尚無採購單"
+      emptyDescription={
+        merchantId
+          ? '若為首次使用，請先執行 pnpm db:seed 建立示範資料'
+          : undefined
+      }
       testId="e2e-admin-purchase-orders"
     >
       {!listLoading && rows.length > 0 && (

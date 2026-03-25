@@ -4,12 +4,14 @@ import { Button } from '../../../shared/components/Button';
 import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
 import { AdminProductsPage } from '../AdminProductsPage';
 import { AdminCategoriesPage } from '../AdminCategoriesPage';
+import { AdminDiscountTagsPage } from '../AdminDiscountTagsPage';
 
-export type ProductHubTabKey = 'products' | 'categories';
+export type ProductHubTabKey = 'products' | 'categories' | 'discountTags';
 
 const TAB_OPTIONS: Array<{ key: ProductHubTabKey; label: string }> = [
   { key: 'products', label: '商品總覽' },
   { key: 'categories', label: '類別管理' },
+  { key: 'discountTags', label: '折扣標籤' },
 ];
 
 function tabButtonClass(active: boolean) {
@@ -31,6 +33,7 @@ export function AdminProductHubPage(props: { initialTab?: ProductHubTabKey }) {
     const p = location.pathname;
     if (p === '/admin/products') return 'products';
     if (p === '/admin/categories') return 'categories';
+    if (p === '/admin/discount-tags') return 'discountTags';
     return null;
   }, [location.pathname]);
 
@@ -41,6 +44,7 @@ export function AdminProductHubPage(props: { initialTab?: ProductHubTabKey }) {
     () => ({
       products: '/admin/products',
       categories: '/admin/categories',
+      discountTags: '/admin/discount-tags',
     }),
     [],
   );
@@ -65,6 +69,7 @@ export function AdminProductHubPage(props: { initialTab?: ProductHubTabKey }) {
 
   const ActivePage = useMemo(() => {
     if (activeTab === 'categories') return AdminCategoriesPage;
+    if (activeTab === 'discountTags') return AdminDiscountTagsPage;
     return AdminProductsPage;
   }, [activeTab]);
 

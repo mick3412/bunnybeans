@@ -8,6 +8,7 @@ import { formatPartyDisplay, getPartyKindFromId } from '../../shared/utils/party
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
 import { Button } from '../../shared/components/Button';
 import { PartyViewSegmented, type PartyView } from '../../shared/components/PartyViewSegmented';
+import { PartySearchSelect, type PartyOption } from '../../shared/components/PartySearchSelect';
 import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import { Alert } from '../../shared/components/Alert';
 import { formatMoney } from '../../shared/utils/formatMoney';
@@ -25,12 +26,14 @@ export const AdminFinanceBalancesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [partyNames, setPartyNames] = useState<Record<string, string>>({});
+  const [partyOptions, setPartyOptions] = useState<PartyOption[]>([]);
 
   useEffect(() => {
     if (!merchantId) return;
     let cancelled = false;
     (async () => {
       const names: Record<string, string> = {};
+      const opts: PartyOption[] = [];
       const [custRes, supRes] = await Promise.all([
         listLoyaltyCustomers(merchantId),
         listSuppliers(merchantId),
@@ -42,6 +45,7 @@ export const AdminFinanceBalancesPage: React.FC = () => {
           names[c.id] = label;
           names[`CUSTOMER:${c.id}`] = label;
           names[`customer:${c.id}`] = label;
+          opts.push({ partyId: `CUSTOMER:${c.id}`, displayName: label });
         });
       }
       if (supRes?.data) {
@@ -50,9 +54,11 @@ export const AdminFinanceBalancesPage: React.FC = () => {
           names[s.id] = label;
           names[`SUPPLIER:${s.id}`] = label;
           names[`supplier:${s.id}`] = label;
+          opts.push({ partyId: `SUPPLIER:${s.id}`, displayName: label });
         });
       }
       setPartyNames(names);
+      setPartyOptions(opts);
     })();
     return () => {
       cancelled = true;
@@ -111,13 +117,12 @@ export const AdminFinanceBalancesPage: React.FC = () => {
     <div className="flex flex-wrap items-end gap-3">
       <PartyViewSegmented value={view} onChange={(v) => { setView(v); }} />
       <div>
-        <label className="mb-1 block text-sm text-muted">對象 (partyId)</label>
-        <input
-          type="text"
-          className="w-48 rounded-lg border border-brand-surface bg-white px-3 py-2 text-sm"
-          placeholder="留空＝全部"
+        <label className="mb-1 block text-sm text-muted">對象</label>
+        <PartySearchSelect
+          options={partyOptions}
           value={partyIdFilter}
-          onChange={(e) => setPartyIdFilter(e.target.value)}
+          onChange={setPartyIdFilter}
+          placeholder="名稱或 partyId，留空＝全部"
         />
       </div>
       <Button size="sm" variant="secondary" onClick={() => void load()}>

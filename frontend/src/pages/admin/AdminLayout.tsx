@@ -7,13 +7,13 @@ import { useTodoDismiss } from '../../shared/hooks/useTodoDismiss';
 import { getMerchantCurrent, listMerchants, type MerchantCurrentDto, type MerchantDto, type ApiError } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 
-/** Forge：選中 = 近黑底 + 左線主色；未選 = text-white/80 + hover text-white 確保可讀性 */
+/** Forge：選中 = 左線主色；未選 = 同色字體 + hover */
 const navClass = ({ isActive }: { isActive: boolean }) =>
   [
     'block rounded-r-lg border-l-[3px] py-2.5 pl-3 pr-3 text-sm font-medium leading-snug transition-colors',
     isActive
       ? 'border-brand-primary bg-forge-sidebar-active text-white'
-      : 'border-transparent text-white/80 hover:bg-white/[0.06] hover:text-white',
+      : 'border-transparent text-white hover:bg-white/[0.06]',
   ].join(' ');
 
 function headerTitle(
@@ -235,7 +235,7 @@ export const AdminLayout: React.FC = () => {
             <div className="flex rounded-lg bg-white/5 p-1">
               <button
                 type="button"
-                className="flex flex-1 items-center justify-center rounded-md py-2 text-sm font-medium text-muted transition-colors hover:bg-white/10 hover:text-white"
+                className="flex flex-1 items-center justify-center rounded-md py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
                 onClick={() => navigate('/pos')}
                 title="POS"
               >

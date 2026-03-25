@@ -178,7 +178,7 @@ export const AdminDashboardPage: React.FC = () => {
           </p>
         </Link>
         <Link to="/pos/orders" className={`kpi-card-accent-amber ${cardLinkClass}`}>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">待處理訂單</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">今日訂單數</p>
           <p className="mt-1.5 text-xl font-bold tabular-nums tracking-tight text-content">
             {data ? formatInt(data.ordersTodayCount) : '—'}
           </p>
@@ -201,7 +201,7 @@ export const AdminDashboardPage: React.FC = () => {
           </p>
         </Link>
         <Link to="/admin/receiving-notes" className={`kpi-card-accent-amber ${cardLinkClass}`}>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">待驗收</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">待驗收採購單</p>
           <p className="mt-1.5 text-xl font-bold tabular-nums tracking-tight text-content">
             {pendingPOCount != null ? formatInt(pendingPOCount) : '—'}
           </p>
