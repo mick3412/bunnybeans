@@ -72,48 +72,44 @@ export const PosSessionBar: React.FC<PosSessionBarProps> = ({
         {err && (
           <span className="text-xs text-brand-danger">{err}</span>
         )}
-        {current === null ? (
+        <span className="text-xs text-muted">
+          {current === null
+            ? `${storeName ? `${storeName} ` : ''}尚無開班`
+            : '班次進行中'}
+        </span>
+        {current?.report && (
           <>
             <span className="text-xs text-muted">
-              {storeName ? `${storeName} ` : ''}尚無開班
+              起始 {formatMoney(String(current.report.openingCash))}
             </span>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={() => setOpenModal(true)}
-              data-testid="e2e-pos-session-open-btn"
-            >
-              開班
-            </Button>
-          </>
-        ) : (
-          <>
-            <span className="text-xs font-medium text-content">班次進行中</span>
-            {current.report && (
-              <>
-                <span className="text-xs text-muted">
-                  起始 {formatMoney(String(current.report.openingCash))}
-                </span>
-                <span className="text-xs text-muted">
-                  應有現金 {formatMoney(String(current.report.expectedCash))}
-                </span>
-                <span className="text-xs text-muted">
-                  {current.report.ordersCount} 筆
-                </span>
-              </>
-            )}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setCloseModal(true)}
-              data-testid="e2e-pos-session-close-btn"
-            >
-              結班
-            </Button>
+            <span className="text-xs text-muted">
+              應有現金 {formatMoney(String(current.report.expectedCash))}
+            </span>
+            <span className="text-xs text-muted">
+              {current.report.ordersCount} 筆
+            </span>
           </>
         )}
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          onClick={() => setOpenModal(true)}
+          disabled={current !== null}
+          data-testid="e2e-pos-session-open-btn"
+        >
+          開班
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => setCloseModal(true)}
+          disabled={current === null}
+          data-testid="e2e-pos-session-close-btn"
+        >
+          結班
+        </Button>
       </div>
 
       {openModal && (

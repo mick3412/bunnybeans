@@ -34,10 +34,15 @@ export const ERROR_CODE_MAP: Record<string, string> = {
   POS_RETURN_ITEMS_EMPTY: '退貨入庫至少需要一項商品與數量',
   POS_RETURN_PRODUCT_NOT_ON_ORDER: '該商品不在此訂單明細內',
   POS_RETURN_EXCEEDS_SOLD: '退貨入庫數量不可超過原銷售數量',
+  POS_RETURN_WINDOW_EXPIRED: '已超過退換貨期限',
+  POS_RETURN_NOT_FOUND: '找不到此退換貨記錄',
+  RETURN_POLICY_INVALID: '退換貨政策參數不正確',
   /** 掛單／取單 */
   POS_HELD_CART_STORE_REQUIRED: '請先選擇門市',
   POS_HELD_CART_ITEMS_EMPTY: '購物車為空，無法掛單',
   POS_HELD_CART_NOT_FOUND: '找不到此掛單，可能已被取回或過期',
+  POS_HELD_CART_ITEM_INVALID: '購物車品項資料不正確，請重新加入商品',
+  POS_HELD_CART_INVALID_TOTAL: '購物車金額計算錯誤，請清空後重試',
 };
 
 export interface AdminApiErrorLike {
@@ -60,6 +65,9 @@ export function getErrorMessage(input: { code?: string; message?: string; status
   }
   if (code && ERROR_CODE_MAP[code]) {
     return ERROR_CODE_MAP[code];
+  }
+  if (statusCode === 500 && (!message || /internal server error/i.test(message))) {
+    return '伺服器錯誤：請確認後端已啟動、VITE_ADMIN_API_KEY 與後端 ADMIN_API_KEY 一致、門市已選擇。';
   }
   if (message && message.trim().length > 0) {
     return message;
