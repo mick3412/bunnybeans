@@ -13,6 +13,7 @@ import {
 } from '../../modules/admin/adminApi';
 import { getErrorMessage } from '../../shared/errors/errorMessages';
 import { useDefaultMerchantId } from '../../shared/hooks/useDefaultMerchantId';
+import { formatAutoConditionDetail } from '../../shared/utils/productTagDisplay';
 import { useAdminToast } from './AdminToastContext';
 
 const CONDITION_TYPES = [
@@ -171,11 +172,15 @@ export const AdminDiscountTagsPage: React.FC = () => {
     void load();
   };
 
-  const fieldClass = 'h-8 rounded-lg border border-brand-surface px-2 text-sm focus:border-brand-primary focus:outline-none';
+  const fieldClass =
+    'h-8 rounded-lg border border-brand-surface bg-table-head px-2 text-sm focus:border-brand-primary focus:outline-none';
   const labelClass = 'text-xs font-medium text-muted';
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6" data-testid="e2e-admin-discount-tags">
+    <div
+      className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm space-y-6"
+      data-testid="e2e-admin-discount-tags"
+    >
       <div>
         <h1 className="text-lg font-semibold text-content">折扣標籤設定</h1>
         <p className="mt-0.5 text-sm text-muted">
@@ -193,7 +198,7 @@ export const AdminDiscountTagsPage: React.FC = () => {
       )}
 
       {/* 新增 */}
-      <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-brand-surface bg-table-head p-4">
         <h2 className="text-sm font-semibold text-content">新增標籤</h2>
         <div className="mt-3 flex flex-wrap gap-4">
           <div>
@@ -313,7 +318,7 @@ export const AdminDiscountTagsPage: React.FC = () => {
       </div>
 
       {/* 列表 */}
-      <div className="rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-brand-surface bg-table-head p-4">
         <h2 className="text-sm font-semibold text-content">現有標籤</h2>
         {loading ? (
           <p className="mt-2 text-sm text-muted">載入中…</p>
@@ -389,11 +394,7 @@ export const AdminDiscountTagsPage: React.FC = () => {
                     <span className="font-medium">{t.name}</span>
                     {t.showInPosDiscount && <span className="rounded bg-brand-primary/10 px-1.5 py-0.5 text-xs text-brand-primary">POS</span>}
                     <span className="text-xs text-muted">
-                      {getConditionType(t.autoCondition) === 'SALES_QTY' && '銷量達門檻'}
-                      {getConditionType(t.autoCondition) === 'DISCOUNT_RATIO' && '有折扣'}
-                      {getConditionType(t.autoCondition) === 'LOW_STOCK' && '低庫存'}
-                      {getConditionType(t.autoCondition) === 'NEW_ARRIVAL' && '新上架'}
-                      {getConditionType(t.autoCondition) === 'MANUAL' && '僅手動'}
+                      {formatAutoConditionDetail(t.autoCondition)}
                     </span>
                     <Button type="button" size="sm" variant="secondary" onClick={() => startEdit(t)}>編輯</Button>
                     <Button type="button" size="sm" variant="secondary" onClick={() => void handleDelete(t)}>刪除</Button>
