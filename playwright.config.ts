@@ -21,8 +21,8 @@ export default defineConfig({
   webServer: {
     command: 'pnpm --filter pos-erp-frontend exec vite --port 5173',
     url: 'http://localhost:5173',
-    // 本機 5173 已被 Vite 佔用時改 true，避免「port in use」；CI 設 CI=1 強制起新服
-    reuseExistingServer: process.env.CI !== '1',
+    // 本機常會已有 Vite 佔用 5173；一律重用既有 server，避免「port in use」中斷本機驗收
+    reuseExistingServer: true,
     timeout: 120_000,
   },
 });

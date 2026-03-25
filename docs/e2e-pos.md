@@ -71,6 +71,13 @@ pnpm --filter pos-erp-backend dev
 pnpm exec playwright test
 ```
 
+### 常見問題：5173 被佔用（port in use）
+
+若你已在其他終端啟動 `pnpm --filter pos-erp-frontend dev`，Playwright 會嘗試再起一次 Vite，導致報錯。
+
+- 解法：保持前端 dev 常駐即可，Playwright 會**重用既有 5173**（`reuseExistingServer:true`）。
+- 或改用自訂網址：`E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test`
+
 ## Full profile（E2E_PROFILE=full）
 
 當 `E2E_PROFILE=full` 時，代表資料/後端/seed 已就緒，**不允許長期 skip**。若缺 fixture 應直接 fail，並在錯誤訊息中指出缺少 DB/seed/後端/ADMIN_KEY 等條件。
