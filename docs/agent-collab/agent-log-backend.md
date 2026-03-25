@@ -30,7 +30,7 @@
   - **#2 批次操作/匯出支援**：確認 `PATCH /products/batch-price`、`PATCH /products/batch-tags`、`GET /products/export` 皆受 Admin Key 保護；統一 batch-tags 的錯誤碼（空 productIds → `PRODUCT_BATCH_EMPTY`；空 tags / 非法 operation → `PRODUCT_BATCH_INVALID`），並補 integration-spec。
   - **#3 效期/剩餘天數篩選一致**：`GET /products` 回傳包含 `productionDate`、`shelfLifeMonths`、`expiryDate`；`minDaysUntilExpiry` 篩選與匯出改為支援 `expiryDate` 或 `productionDate+shelfLifeMonths` 推算，對齊前端規則；文件同步更新。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（22 suites、166 tests）；`pnpm ci:backend-with-db` 全綠。
-- commits：（待補）
+- commits：`eccae3a3` fix(products): align export/filter expiry logic and unify batch-tags errors；`bd838ad6` docs(agent-log) 058
 
 ---
 
