@@ -15,6 +15,25 @@
 
 ---
 
+### INSTRUCTIONS-058（商品總覽：列表回應形狀 / 效期欄位與篩選一致性）
+- 做了：
+  - **#1 商品列表契約補齊**：`GET /products` 列表回應補上 `productionDate`、`shelfLifeMonths`、`expiryDate`，以支援前端計算「到期日／剩餘天數」。
+  - **#2 效期篩選一致**：`minDaysUntilExpiry` 改為同時支援 `expiryDate` 或 `productionDate+shelfLifeMonths` 推算（與前端顯示一致），避免食品/牧草等大量落差。
+  - **#3 分頁行為**：有 `minDaysUntilExpiry` 時改於應用層過濾後再分頁（因 DB 端無法直接 addMonths 計算），避免誤排除。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` ⚠️（既有 `ops.integration-spec.ts` flaky：runJob log count 斷言偶發 +1 不穩；本輪未新增/修改 ops 邏輯）
+- commits：待提交
+
+---
+
+### INSTRUCTIONS-058（商品批次操作/匯出一致性 + 效期篩選對齊）
+- 做了：依 `BACKEND-INSTRUCTIONS 058.md` §1 完成本輪任務。
+  - **#2 批次操作/匯出支援**：確認 `PATCH /products/batch-price`、`PATCH /products/batch-tags`、`GET /products/export` 皆受 Admin Key 保護；統一 batch-tags 的錯誤碼（空 productIds → `PRODUCT_BATCH_EMPTY`；空 tags / 非法 operation → `PRODUCT_BATCH_INVALID`），並補 integration-spec。
+  - **#3 效期/剩餘天數篩選一致**：`GET /products` 回傳包含 `productionDate`、`shelfLifeMonths`、`expiryDate`；`minDaysUntilExpiry` 篩選與匯出改為支援 `expiryDate` 或 `productionDate+shelfLifeMonths` 推算，對齊前端規則；文件同步更新。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（22 suites、166 tests）；`pnpm ci:backend-with-db` 全綠。
+- commits：（待補）
+
+---
+
 ### INSTRUCTIONS-057（售後 API 二次驗收與契約凍結）
 - 做了：依 `BACKEND-INSTRUCTIONS 057.md` §1 完成本輪任務（遵循售後計劃邊界：不新增 DB、不破壞既有退款/退貨核心 API）。
   - **#2 售後查詢 API 二次驗收**：補強 `GET /pos/orders` 邊界測試（空資料、混合情境、分頁）；驗證 `hasRefund` / `hasReturn` / `hasExchange` / `afterSalesOnly` 篩選正確。
