@@ -5,7 +5,19 @@ export const API_BASE_URL =
   String(import.meta.env.VITE_API_BASE_URL ?? '').trim() ||
   (import.meta.env.DEV ? 'http://127.0.0.1:3003' : '');
 
-export const ADMIN_API_KEY = (import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim() ?? '';
+const ADMIN_API_KEY_ENV = (import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim() ?? '';
+
+function getAdminApiKey(): string {
+  if (ADMIN_API_KEY_ENV) return ADMIN_API_KEY_ENV;
+  try {
+    return (localStorage.getItem('admin-api-key') ?? '').trim();
+  } catch {
+    return '';
+  }
+}
+
+/** 僅供 legacy 匯入/外部檔案使用；請優先呼叫 getAdminApiKey() */
+export const ADMIN_API_KEY = ADMIN_API_KEY_ENV;
 
 /**
  * 與後端 AdminApiKeyGuard 一致：統一規則
@@ -56,7 +68,8 @@ export async function fetchCsvExport(
   const path = pathWithQuery.replace(/^\//, '');
   const url = `${API_BASE_URL.replace(/\/$/, '')}/${path}`;
   const headers: Record<string, string> = { 'X-Trace-Id': traceId };
-  if (ADMIN_API_KEY) headers['X-Admin-Key'] = ADMIN_API_KEY;
+  const adminKey = getAdminApiKey();
+  if (adminKey) headers['X-Admin-Key'] = adminKey;
   const res = await fetch(url, { headers });
   if (!res.ok) {
     let message = res.statusText;
@@ -95,8 +108,9 @@ export async function request<T>(
     ...(init.headers as Record<string, string>),
   };
   (headers as Record<string, string>)['X-Trace-Id'] = traceId;
-  if (ADMIN_API_KEY && needsAdminKey(path, init.method ?? 'GET')) {
-    (headers as Record<string, string>)['X-Admin-Key'] = ADMIN_API_KEY;
+  const adminKey = getAdminApiKey();
+  if (adminKey && needsAdminKey(path, init.method ?? 'GET')) {
+    (headers as Record<string, string>)['X-Admin-Key'] = adminKey;
   }
   let res: Response;
   try {

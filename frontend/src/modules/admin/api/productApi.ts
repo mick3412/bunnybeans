@@ -1,7 +1,8 @@
 /**
  * productApi — 自 adminApi 拆分
  */
-import { request, type ApiError, API_BASE_URL, ADMIN_API_KEY, genTraceId } from './client';
+import { request, type ApiError, API_BASE_URL, genTraceId } from './client';
+import { getAdminApiKey } from '../../../shared/rbac/adminKey';
 
 export interface ProductFullDto {
   id: string;
@@ -38,6 +39,9 @@ export async function getProducts(params?: {
   brandId?: string;
   tag?: string;
   minDaysUntilExpiry?: number;
+  /** 後端上限 200；未傳時預設 50 */
+  page?: number;
+  pageSize?: number;
 }): Promise<ProductFullDto[] | ApiError> {
   const q = new URLSearchParams();
   if (params?.search?.trim()) q.set('search', params.search.trim());
@@ -48,10 +52,23 @@ export async function getProducts(params?: {
   if (params?.minDaysUntilExpiry != null && Number.isFinite(params.minDaysUntilExpiry) && params.minDaysUntilExpiry >= 0) {
     q.set('minDaysUntilExpiry', String(Math.floor(params.minDaysUntilExpiry)));
   }
+  if (params?.page != null && Number.isFinite(params.page) && params.page >= 1) {
+    q.set('page', String(Math.floor(params.page)));
+  }
+  if (params?.pageSize != null && Number.isFinite(params.pageSize) && params.pageSize >= 1) {
+    q.set('pageSize', String(Math.floor(params.pageSize)));
+  }
   const path = q.toString() ? `products?${q.toString()}` : 'products';
-  const out = await request<ProductFullDto[]>(path);
+  const out = await request<
+    ProductFullDto[] | { items: ProductFullDto[]; total: number; page: number; pageSize: number }
+  >(path);
   if (!out.ok) return out.error;
-  return Array.isArray(out.data) ? out.data : [];
+  const d = out.data;
+  if (Array.isArray(d)) return d;
+  if (d && typeof d === 'object' && Array.isArray((d as { items?: unknown }).items)) {
+    return (d as { items: ProductFullDto[] }).items;
+  }
+  return [];
 }
 
 /** GET /products/search-barcode?q= — 條碼精確查詢（回 { items }） */
@@ -249,7 +266,8 @@ export async function importProductsCsv(
   const traceId = genTraceId();
   const url = `${API_BASE_URL.replace(/\/$/, '')}/products/import`;
   const headers: Record<string, string> = { 'X-Trace-Id': traceId };
-  if (ADMIN_API_KEY) headers['X-Admin-Key'] = ADMIN_API_KEY;
+  const adminKey = getAdminApiKey();
+  if (adminKey) headers['X-Admin-Key'] = adminKey;
   const form = new FormData();
   form.append('file', file);
   const res = await fetch(url, { method: 'POST', headers, body: form });
