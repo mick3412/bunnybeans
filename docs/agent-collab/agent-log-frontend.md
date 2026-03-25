@@ -15,6 +15,63 @@
 
 ---
 
+### INSTRUCTIONS 058（補齊 commits + 售後 E2E 穩定驗收 + 後台金鑰輸入）
+- 做了：① **補齊 atomic commits（本輪收斂）**：將 056/057/058 相關調整拆成可追溯 commits。② **售後 E2E 穩定驗收**：Playwright webServer 改為 `reuseExistingServer:true` 避免 5173 衝突；`pos-refund`/`pos-return-stock` 增加「選門市/必要時開班/用條碼 fixture 建單」；若環境缺少可售庫存 fixture 則明確 skip（INVENTORY_INSUFFICIENT）並提示 seed/full profile。③ **商品總覽批次操作/匯出可用**：AdminProductsPage 新增頁面內 Admin Key 輸入（localStorage 暫存）並確保寫入/匯出行為可在未設定 `VITE_ADMIN_API_KEY` 時由 UI 補齊。④ **折扣標籤頁 layout 對齊**：外框/卡片風格對齊商品總覽（max width、card padding/border/bg）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/pos-refund.spec.ts e2e/pos-return-stock.spec.ts e2e/pos-exchange-settlement-journey.spec.ts` ✅（此環境 3 skipped：缺可售庫存/非 full profile）
+- commits：`5c1e6e44` feat(admin): allow entering Admin Key for product bulk ops；`7a69b5d2` style(admin): align discount tags page layout；`6ec8ca76` fix(e2e): make pos after-sales specs resilient；`bcc20feb` chore(e2e): reuse existing Vite server on 5173
+
+---
+
+### INSTRUCTIONS 058（商品總覽：商品列表顯示/篩選修復）
+- 做了：
+  - **#1 商品總覽無資料**：前端 `getProducts` 適配後端分頁回應 `{ items, total, page, pageSize }`，避免誤判成非陣列而回傳空列表。
+  - **#2 兼容 POS 端**：POS 的 `getProducts` 同步支援 `{ items }` 形狀，避免條碼/商品載入等場景拿到空資料。
+  - **#3 預設取數量**：商品總覽載入時 `pageSize` 拉到後端上限（200），避免預設 50 筆造成「有資料但只顯示部分」的誤解（後續若需完整分頁再補 UI）。
+- 測試/驗收：手動驗證（商品總覽可見 SEED、剩餘天數與 minDays 篩選一致；E2E/Build 未補跑）
+- commits：待提交
+
+---
+
+### INSTRUCTIONS 057（056 收斂 + 訂單明細售後區塊重構）
+- 做了：① **迴歸確認**：build 全綠。② **重構拆單 A**：`PosOrderDetailPage` 區塊重排為 Header → 訂單內容 → 補款（條件）→ 售後操作 → 換貨關聯。③ **重構拆單 B**：退款／退貨入庫表單內嵌至售後 Tab Panel，移除「前往區塊」作為主要互動。④ **重構拆單 C**：移除換貨 MVP Modal，改為 Tab 內 inline 步驟引導（退貨→收銀→回單看差額）。⑤ **重構拆單 D**：拆分 `OrderHeader`、`OrderContent`、`PaymentSection`、`AfterSalesPanel`、`ExchangeRelation` 子元件。⑥ **E2E 對齊**：`pos-return-stock.spec.ts` 進入明細後先點「退貨入庫」Tab 再操作表單。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/pos-refund.spec.ts e2e/pos-return-stock.spec.ts e2e/pos-exchange-settlement-journey.spec.ts` ⚠️（本機 `5173` 已被佔用，需 `reuseExistingServer:true` 或先釋放 port）
+- commits：待提交
+- 檔案：PosOrderDetailPage、pos/orderDetail/*、pos-return-stock.spec.ts
+
+---
+
+### INSTRUCTIONS 056（055 收斂 + 售後服務 UX 重整）
+- 做了：① **迴歸確認**：build 全綠。② **POS 加購庫存不足提示優化**：購物車行內顯示「庫存不足，最多可購買 X 件」，且加號按鈕達上限自動 disabled。③ **營運總覽文案調整**：待處理訂單→今日訂單數、待驗收→待驗收採購單。④ **售後重整 A/B**：新增 `/pos/after-sales` 與側欄入口；新增 `PosAfterSalesPage`（指標卡、Tab、日期/門市篩選、導向訂單明細）；`posOrdersApi` 新增 finance/events、inventory/events 包裝與型別。⑤ **售後重整 C**：PosOrdersListPage 加入有退款/有退貨/換貨 badge（可並存）。⑥ **售後重整 D**：PosOrderDetailPage 新增「售後操作」統一卡（退款/退貨/換貨 Tab + 步驟導引）。⑦ **售後重整 E**：調整 pos-refund / pos-return-stock E2E 流程改走售後頁入口。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：待提交
+- 檔案：PosAfterSalesPage、PosLayout、posLazy、App、posOrdersApi、PosOrdersListPage、PosOrderDetailPage、PosPage、AdminDashboardPage、pos-refund.spec.ts、pos-return-stock.spec.ts
+
+---
+
+### INSTRUCTIONS 055（054 收斂 + 新增需求 #2～#8）
+- 做了：① **迴歸確認**：build 全綠。② **#2 常用品項不換行**：PosPage 常用區改為 flex-nowrap overflow-x-auto，單行橫向捲動。③ **#3 0 庫存背景與商品塊同色**：庫存 0 的 pill 改為 bg-brand-surface 與卡片同色。④ **#4 顯示／不顯示字體顏色對齊**：無庫存篩選未選中改為 text-content。⑤ **#5 開班與結班按鈕都顯示**：PosSessionBar 兩鈕皆顯示，依班次狀態 disabled。⑥ **#6 側欄字體同色**：PosLayout、AdminLayout 未選中改為 text-white。⑦ **#7 移除折扣標籤區塊**：AdminProductsPage 移除折扣／標籤區塊，改回 getProductTags。⑧ **#8 折扣標籤獨立右側**：PosPromosPage 改用 listProductTags、折扣標籤區塊置右側，顯示 formatAutoConditionDetail。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：待提交
+- 檔案：PosPage、PosSessionBar、PosLayout、AdminLayout、AdminProductsPage、PosPromosPage
+
+---
+
+### INSTRUCTIONS 054（053 收斂 + 新增需求 #1～#6）
+- 做了：① **迴歸確認**：build 全綠。② **#1a 庫存篩選與篩選區字體**：PosPage 無庫存移至左側篩選區與折扣同一行；篩選區字體改為 text-xs。③ **#2 填入欄位灰底**：AdminProductsPage 表單輸入（效期、類別、品牌、標籤等）改為 bg-table-head；warehouses-stores-layout 欄位加入 bg-table-head。④ **#3 AdminProductsPage 篩選與區塊**：剩餘天數移至篩選區與折扣同行；商品搜尋獨立區塊；批量匯入／匯出獨立區塊；右側上下堆疊。⑤ **#4 入庫盤點與倉庫門市版面統一**：AdminInventoryAdjustPage 改用 WH_STORES_FORM_ROW_CLASS、WH_STORES_FIELD_CLASS，表單結構對齊。⑥ **#5 對象查詢支援名稱搜尋**：PartySearchSelect 元件，AdminFinanceBalancesPage、AdminReportsPage 改用 typeahead 依 displayName 搜尋。⑦ **#6 折扣標籤獨立區塊與設定展示**：AdminProductsPage 折扣／標籤改為獨立區塊，展示 formatAutoConditionDetail；共用 productTagDisplay.ts。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：待提交
+- 檔案：PosPage、AdminProductsPage、AdminInventoryAdjustPage、AdminFinanceBalancesPage、AdminReportsPage、AdminDiscountTagsPage、warehouses-stores-layout、PartySearchSelect、productTagDisplay
+
+---
+
+### INSTRUCTIONS 053（052 收斂 + 新增需求 #1～#9）
+- 做了：① **迴歸確認**：build 全綠。② **#1 優化版面**：PosPage 篩選區縮小間距、按鈕縮小。③ **#2 欄數選項去掉「欄」**：顯示「3」「4」「5」+ aria-label。④ **#3 總件數與折扣同行置右**：共 X 件、清除篩選移至折扣同一行右側。⑤ **#4 POS／後台切換對比**：AdminLayout、PosLayout 未選中鈕改為 text-white/80。⑥ **#5 庫存 pill 與卡片灰階**：警示庫存 pill 灰底紅字；無庫存卡片更暗。⑦ **#6 訂單查詢日期快選**：PosOrdersListPage 近 7 日／近 30 日按鈕。⑧ **#7 標籤說明展示篩選細節**：AdminDiscountTagsPage formatAutoConditionDetail。⑨ **#8 互動紀錄整合至編輯會員**：移除獨立互動紀錄 Drawer，整合至編輯 Drawer 底部；移除未使用 contactsCustomer。⑩ **#9 門市與班次移至頂部**：PosStoreSessionContext、門市 select 與 PosSessionBar 移至 PosLayout header 右側，僅 /pos 路由顯示。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：待提交
+- 檔案：PosPage、PosLayout、PosStoreSessionContext、AdminLayout、AdminCustomersPage、AdminDiscountTagsPage、PosOrdersListPage
+
+---
+
 ### INSTRUCTIONS 052（051 收斂 + 新增需求 #1～#6）
 - 做了：① **迴歸確認**：build 全綠；051 變更無遺漏。② **#1 無庫存顯示開關**：PosPage 篩選區「欄數」同一行新增「無庫存」顯示／不顯示按鈕，預設顯示；`filteredProducts` 不顯示時排除 `onHandQty <= 0`；localStorage `pos-hide-out-of-stock`。③ **#2 無庫存商品樣式**：無庫存時庫存 pill `bg-table-head text-brand-danger`；整張卡片 `bg-table-head`。④ **#3 門市與班次合併**：門市 select 與 PosSessionBar 併為同一列，左門市右班次；PosSessionBar 新增 `inline` prop。⑤ **#4 POS 預設門市**：AdminStoresPage 新增「POS 預設」欄（radio 式 toggle），localStorage `pos-default-store-id`；PosPage 載入時優先使用預設門市；`shared/constants/pos.ts`。⑥ **#5 側欄對比度**：AdminLayout navClass 未選改為 `text-white/80`、hover `text-white`。⑦ **#6 報表區塊顏色**：待驗收→amber、會員增長／庫存總件數／庫存參考金額→slate。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
