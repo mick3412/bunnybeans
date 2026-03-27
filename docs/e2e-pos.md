@@ -112,6 +112,12 @@ pnpm exec playwright test
 - **操作指引**：依序執行 `pnpm --filter pos-erp-backend db:seed` 與 `pnpm --filter pos-erp-backend e2e:seed`（一般 profile 即含條碼與門市資料）；若仍不足，改用 **`E2E_PROFILE=full`** 並跑完整 `e2e:seed`（full profile 要求見上文「Full profile」一節）。
 - E2E 內已對此情況 **`test.skip`** 並提示 seed／full profile，避免在缺資料的環境硬失敗。
 
+#### INSTRUCTIONS 061 實測註記（隔離 DB）
+
+- 執行方式：`source .env.e2e` 後依序 `pnpm db:seed` → `E2E_PROFILE=full pnpm --filter pos-erp-backend e2e:seed` → Playwright（或見上文一鍵腳本）。
+- **full `e2e:seed`**：補貨建議驗證通過後，將條碼單品（`E2E-BC-0001`／`DEMO-TEE-BLK-M`）在預設門市倉之 **`InventoryBalance` 還原為足量**，以降低 `pos-refund`／`pos-return-stock` 等因 **`INVENTORY_INSUFFICIENT`** 條件式 skip。
+- 若仍 skip：確認未誤用 demo DB、seed／`e2e:seed` 成功（`wipeAll` 刪除順序錯誤會 P2003）。
+
 ## Full profile（E2E_PROFILE=full）
 
 當 `E2E_PROFILE=full` 時，代表資料/後端/seed 已就緒，**不允許長期 skip**。若缺 fixture 應直接 fail，並在錯誤訊息中指出缺少 DB/seed/後端/ADMIN_KEY 等條件。

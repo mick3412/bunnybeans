@@ -1,17 +1,18 @@
 # 上一輪整合（規格 Agent 每輪覆寫）
 
-**本輪對應 INSTRUCTIONS**：**060**（後端已收斂；前端 060 多項已完成待收斂提交）  
-**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **060** · 前端 **060**  
+**本輪對應 INSTRUCTIONS**：**061**（後端：共購分析／seed-e2e／文件；前端見 agent-log-frontend）  
+**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **061** · 前端 **061**（若尚未追加則以前一輪為準）  
 （路徑：[agent-collab/agent-log-backend.md](../agent-collab/agent-log-backend.md)、[agent-collab/agent-log-frontend.md](../agent-collab/agent-log-frontend.md)）
 
 ## 後端（收斂摘要）
 
-- **INSTRUCTIONS 060 主要進展**：
-  - `GET /finance/balances` 契約文件與實作對齊（含 `partyId`、`q`、分頁上限與回傳形狀）。
-  - 補 `finance.integration-spec` 的 `q` 篩選案例（displayName ILIKE）。
-  - `ci:backend-with-db` 的 `db:seed` 流程修補：`wipeAll` 先刪 `posReturn` 再刪 `posOrder`，避免 P2003。
-- **測試**：`pnpm --filter pos-erp-backend test` 全綠（22 suites、171 tests）；`pnpm ci:backend-with-db` 全綠。
-- **追溯補記**：已在 log 補上 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b) 與 [退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)。
+- **INSTRUCTIONS 060（前輪）**：`GET /finance/balances` 契約與測試；`wipeAll` 先刪 `posReturn`；`ci:backend-with-db` 綠。
+- **INSTRUCTIONS 061 主要進展**：
+  - **共購分析**：`GET /pos/reports/market-basket` 收斂（`promoFilter`、`limit`、`minSupport`、DTO）；`api-design-pos.md` §4.4 補契約；`pos-reports.integration-spec` 補 C(3,2)、空區間、minSupport／limit 迴歸。
+  - **E2E／seed**：full `e2e:seed` 在補貨建議驗證後還原條碼品項 `InventoryBalance`，降低售後類 Playwright 之 `INVENTORY_INSUFFICIENT`；`seed.ts` `wipeAll` 補 FK 順序註解；demo seed 可選大量共購樣本訂單。
+  - **其它**：`GET /finance/events/export` CSV 增 **`orderNumber`** 欄（由 `referenceId` 解析 POS 單號）。
+- **測試**：以本輪 agent-log 最新條目之 jest／ci 結果為準。
+- **追溯**：[共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b)。
 
 ## 前端（收斂摘要）
 
@@ -42,8 +43,8 @@
 | 項目 | 說明 |
 |------|------|
 | 前端 060 收斂提交 | agent-log 註記「commits: 待提交」，需在前端對話窗收斂 atomic commits，避免「已做未記錄」落差。 |
-| 售後 E2E 庫存前置 | full profile 下仍可能出現 `INVENTORY_INSUFFICIENT`，需強化 `store↔warehouse` fixture 一致性。 |
-| 共購分析（Market Basket） | transcript 顯示已進行開發，需在正式 log/commit/測試結果收斂，避免功能落在未提交工作區。 |
+| 售後 E2E 庫存前置 | full `e2e:seed` 已還原條碼品項庫存（061）；若仍 skip 請查 `.env.e2e` 與 seed 成敗。 |
+| 共購分析（Market Basket） | 後端已收斂；前端／Playwright 待各自 agent-log 提交。 |
 
 ---
 
@@ -63,7 +64,7 @@
 |------|------|------|
 | 前端 060 待提交 | 針對 #3～#11 產出最終 atomic commits 與對應驗收紀錄（build/E2E） | 高 |
 | e2e-pos 與 seed 流程 | 將 `E2E_PROFILE=full` + `.env.e2e` + fixture 一致性落成固定腳本與可重現檢查清單 | 高 |
-| 共購分析功能（14f transcript） | 後端 endpoint / DTO / tests + 前端頁面/路由/API + E2E 的正式提交與文件化 | 中高 |
+| 共購分析功能（14f transcript） | 後端已文件化／測試收斂（061）；前端頁面與 E2E 正式提交 | 中 |
 | erp-roadmap §0.1/0.2 | Product schema 進一步收斂與 ProductTag 主檔閉環（跨端） | 中 |
 
 ### 中長期缺口（roadmap）
@@ -81,7 +82,7 @@
 |------|------|------|------|
 | Finance balances | 完成 | 完成 | 契約、roadmap、測試對齊 |
 | POS 訂單/退換貨整併 | — | 進行中（主線已做） | 待提交收斂 |
-| 共購分析（Market Basket） | 進行中 | 進行中 | 以 transcript 追溯，待正式收斂 |
+| 共購分析（Market Basket） | **已完成（061）** | 進行中（前端頁面／路由） | 後端 API、契約、integration-spec；E2E 頁面見前端 |
 
 ---
 
