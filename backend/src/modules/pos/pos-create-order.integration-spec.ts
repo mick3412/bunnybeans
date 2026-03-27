@@ -1346,6 +1346,46 @@ describe('PosService (integration)', () => {
     expect(afterSalesOnly.items.some((r) => r.id === source.id)).toBe(true);
     expect(afterSalesOnly.items.some((r) => r.id === derived.id)).toBe(true);
 
+    await prisma.posReturn.create({
+      data: {
+        returnNumber: `RT-AS-${Date.now()}`,
+        orderId: returnOnly.id,
+        storeId: store.id,
+        customerId: null,
+        type: 'PARTIAL_RETURN',
+        status: 'COMPLETED',
+        returnSubtotal: 50,
+        discountShare: 0,
+        refundAmount: 50,
+        refundMethod: 'CASH',
+        note: 'after-sales panel fixture',
+        items: {
+          create: [
+            {
+              productId: product.id,
+              quantity: 1,
+              unitPrice: 50,
+              reason: 'CHANGED_MIND',
+              condition: 'GOOD',
+            },
+          ],
+        },
+      },
+    });
+
+    const detailForUi = await posService.getOrderById(returnOnly.id);
+    expect(Array.isArray((detailForUi as { refundRecords?: unknown[] }).refundRecords)).toBe(true);
+    expect(Array.isArray((detailForUi as { returnRecords?: unknown[] }).returnRecords)).toBe(true);
+    const returnRecord = (
+      detailForUi as unknown as {
+        returnRecords: Array<{ returnNumber: string; refundMethod: string; items: Array<{ productId: string }> }>;
+      }
+    ).returnRecords[0];
+    expect(returnRecord).toBeDefined();
+    expect(returnRecord.returnNumber).toMatch(/^RT-AS-/);
+    expect(returnRecord.refundMethod).toBe('CASH');
+    expect(returnRecord.items[0]?.productId).toBe(product.id);
+
     const page1 = await posService.listOrders({ storeId: store.id, page: 1, pageSize: 2 });
     const page2 = await posService.listOrders({ storeId: store.id, page: 2, pageSize: 2 });
     expect(page1.items.length).toBe(2);
@@ -1371,6 +1411,8 @@ describe('PosService (integration)', () => {
     await prisma.merchant.delete({ where: { id: emptyMerchant.id } });
 
     const orderIds = [refundOnly.id, returnOnly.id, source.id, derived.id];
+    await prisma.posReturnItem.deleteMany({ where: { posReturn: { orderId: { in: orderIds } } } });
+    await prisma.posReturn.deleteMany({ where: { orderId: { in: orderIds } } });
     await prisma.financeEvent.deleteMany({ where: { referenceId: { in: orderIds } } });
     await prisma.posOrderItem.deleteMany({ where: { orderId: { in: orderIds } } });
     await prisma.posOrderPayment.deleteMany({ where: { orderId: { in: orderIds } } });
