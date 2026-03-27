@@ -15,6 +15,36 @@
 
 ---
 
+### INSTRUCTIONS 059（本輪收尾：059 任務全數落地與提交）
+- 做了：依 `FRONTEND-INSTRUCTIONS 059.md` §1，#1 **商品列表契約對齊**（`posOrdersApi`/mock）、#2～#3 **售後 E2E 與 `docs/e2e-pos.md`**、#4 **購物車庫存警示時機**、#5 **結帳後清空購物車**、#6 **最新訂單可點連結**、#7 **商品總覽移除 Admin Key 輸入**、#8 **庫存總覽頁內 Tab**、#9 **PartySearchSelect 預覽**、#10 **「售後服務」→「退換貨」**（側欄/頁面/面板文案）；並含訂單明細 `AfterSalesPanel`／`PosOrderDetailPage` 等售後互動補強。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/pos-refund.spec.ts e2e/pos-return-stock.spec.ts e2e/pos-exchange-settlement-journey.spec.ts` ✅（本環境 3 skipped：未設 `E2E_PROFILE=full` 或缺 e2e-seed 可售庫存時之前置）
+- E2E skip 紀錄：`pos-refund.spec.ts | INVENTORY_INSUFFICIENT | 缺可售庫存 fixture（e2e-seed 未成功或庫存不足） | 執行 pnpm --filter pos-erp-backend db:seed && pnpm --filter pos-erp-backend e2e:seed，必要時 E2E_PROFILE=full`；`pos-return-stock.spec.ts | INVENTORY_INSUFFICIENT | 同上 | 同上`；`pos-exchange-settlement-journey.spec.ts | （E2E_PROFILE 非 full） | 換貨 settlement fixture 僅 full profile | 設定 E2E_PROFILE=full 並跑 full e2e:seed`
+- commits：`c9d2536f` [INSTRUCTIONS-059] feat(pos): after-sales panel, checkout UX, inventory hub tabs
+
+---
+
+### INSTRUCTIONS 059（本輪：契約驗收／POS 庫存提示／文案與文件）
+- 做了：① **GET /products 分頁契約**：`adminApi`/`posOrdersApi` 已解析 `{ items, total, page, pageSize }`，商品總覽與 POS 載入不會因形狀差異變空。② **POS 庫存警示**：加購超過上限時提示改為「庫存不足，最多可購買 N 件」（與購物車 + 一致）。③ **結帳後體驗**：結帳成功後自動清空購物車，並將「最新訂單」單號做成可點連結導向明細。④ **商品總覽**：移除頁內 `Admin Key` 輸入/保存/清除 UI，回歸使用 `VITE_ADMIN_API_KEY`。⑤ **庫存總覽**：`AdminInventoryQueryHubPage` 頁內 Tab 含「倉庫/門市」與「入庫」。⑥ **對象下拉**：`PartySearchSelect` 預覽已簡化 `CUSTOMER:` 為 customerId 前 5 碼。⑦ **本輪新增任務（INSTRUCTIONS #10）**：已在 `FRONTEND-INSTRUCTIONS 059.md` 新增「售後服務改名為退換貨」（目前僅新增任務，尚未實作到 UI 文案）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/pos-refund.spec.ts e2e/pos-return-stock.spec.ts e2e/pos-exchange-settlement-journey.spec.ts` ✅（3 skipped）
+- E2E skip 紀錄：`pos-refund.spec.ts | INVENTORY_INSUFFICIENT | 缺可售庫存 fixture（globalSetup 顯示 e2e-seed 未成功） | 執行 pnpm --filter pos-erp-backend db:seed && pnpm --filter pos-erp-backend e2e:seed，必要時切 E2E_PROFILE=full`；`pos-return-stock.spec.ts | INVENTORY_INSUFFICIENT | 缺可售庫存 fixture（globalSetup 顯示 e2e-seed 未成功） | 執行 pnpm --filter pos-erp-backend db:seed && pnpm --filter pos-erp-backend e2e:seed，必要時切 E2E_PROFILE=full`；`pos-exchange-settlement-journey.spec.ts | E2E_PROFILE_NOT_FULL | 非 full profile（spec 內建 skip） | 設定 E2E_PROFILE=full 並跑 full fixture`
+- commits：待提交
+
+---
+
+### INSTRUCTIONS 059（補記：退換貨系統修復補強 transcript）
+- 做了：補記修復補強內容來源：[退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)（重點含 `PosOrderDetailPage` 補傳 `productMap/onOrderUpdate`、`AfterSalesPanel` 送出成功後自動 reload 訂單、換貨品項搜尋支援名稱/SKU 下拉結果、售後流程互動補強；且本輪新進度已另彙整於上方 INSTRUCTIONS 059 條目，避免混淆「補記」與「本輪實作」範圍）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build`（依 transcript 記錄為成功）；另有既有非本次變更型別/環境錯誤已在 transcript 註明為 pre-existing。
+- commits：無（僅補協作追溯記錄）
+
+---
+
+### INSTRUCTIONS 058（補記：退換貨系統 transcript 追溯）
+- 做了：補上本輪相關對話紀錄來源：[退換貨系統計畫與實作摘要](fb81d243-90b1-4dce-9af1-dc0dda8b5912)（包含退換貨系統開發計畫、Phase 拆解、API/Schema/前端面板重構與 E2E 規劃等內容，供後續規格/協作追溯）。
+- 測試/驗收：不適用（僅補記錄）
+- commits：無
+
+---
+
 ### INSTRUCTIONS 058（補齊 commits + 售後 E2E 穩定驗收 + 後台金鑰輸入）
 - 做了：① **補齊 atomic commits（本輪收斂）**：將 056/057/058 相關調整拆成可追溯 commits。② **售後 E2E 穩定驗收**：Playwright webServer 改為 `reuseExistingServer:true` 避免 5173 衝突；`pos-refund`/`pos-return-stock` 增加「選門市/必要時開班/用條碼 fixture 建單」；若環境缺少可售庫存 fixture 則明確 skip（INVENTORY_INSUFFICIENT）並提示 seed/full profile。③ **商品總覽批次操作/匯出可用**：AdminProductsPage 新增頁面內 Admin Key 輸入（localStorage 暫存）並確保寫入/匯出行為可在未設定 `VITE_ADMIN_API_KEY` 時由 UI 補齊。④ **折扣標籤頁 layout 對齊**：外框/卡片風格對齊商品總覽（max width、card padding/border/bg）。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/pos-refund.spec.ts e2e/pos-return-stock.spec.ts e2e/pos-exchange-settlement-journey.spec.ts` ✅（此環境 3 skipped：缺可售庫存/非 full profile）

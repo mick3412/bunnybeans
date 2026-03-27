@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS-059（本輪收尾：工作區提交 + ops runJob 測試穩定）
+- 做了：依 `BACKEND-INSTRUCTIONS 059.md` §1，#1～#3 已完成並已於先前提交（`248cde11`、`91d9b54f`）；本輪補提交工作區殘差：`ops.integration-spec` 改以 `runLogId` 查表驗證，避免並行測試造成 `opsJobRunLog.count()` 競態；並含財務/庫存/退換貨與 POS 訂單流程相關調整（與退換貨模組一致）。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` ✅（22 suites、170 tests）；`pnpm ci:backend-with-db` ✅
+- commits：`c9d2536f` [INSTRUCTIONS-059] feat(pos): after-sales panel, checkout UX, inventory hub tabs
+
+---
+
 ### INSTRUCTIONS-059（058 收斂 + 商品列表契約凍結 + 效期篩選回歸）
 - 做了：依 `BACKEND-INSTRUCTIONS 059.md` §1 完成本輪任務。
   - **#1 補齊 058 待提交 commit**：檢查工作區，058「商品總覽」所述產品變更已在 `eccae3a3` 提交（無遺漏）；工作區殘留的 `pos-return.service.ts`/`pos-return.repository.ts` 改進（transaction client 傳遞、庫存事件邏輯修正）已補 atomic commit `248cde11`。
@@ -26,7 +33,7 @@
 ---
 
 ### INSTRUCTIONS-059（補記：退換貨系統修復補強 transcript）
-- 做了：補記修復補強內容來源：[退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)（重點含 `executeReturn` transaction client 修正、`SCRAP_LOSS` 流程修補為「先 RETURN_FROM_CUSTOMER 後 SCRAP_LOSS」避免庫存負數、以及相關 API/服務串接補強）。
+- 做了：補記修復補強內容來源：[退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)（重點含 `executeReturn` transaction client 修正、`SCRAP_LOSS` 流程修補為「先 RETURN_FROM_CUSTOMER 後 SCRAP_LOSS」避免庫存負數、以及相關 API/服務串接補強；且本輪後端新進度已由上方 INSTRUCTIONS-059 條目獨立彙整，避免混淆「補記」與「本輪實作」範圍）。
 - 測試/驗收：`pnpm --filter pos-erp-backend test`、後端編譯檢查（依 transcript 記錄為通過；另註記既有非本次變更錯誤不屬於本補記範圍）。
 - commits：無（僅補協作追溯記錄）
 
