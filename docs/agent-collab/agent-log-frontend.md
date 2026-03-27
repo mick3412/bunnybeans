@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 062（補齊 #2 全局資料驗收 UI 與 #8 tabs 規範）
+- 做了：① 全局資料完整度驗收 UI 補強：`AdminOpsJobsPage`、`AdminCrmJobsPage`、`LoyaltyDashboardPage`、`LoyaltyPointLedgerPage`、`LoyaltyReportActivityPage`、`PosReportsPage` 加上空態提示與排查文案（seed/排程/產生交易指引）。② tabs 統一規範落地：新增 `hubs/hubTabStyles.ts`，統一高度/間距/選中態，套用至 Product/Marketing/Member/Finance/Ops/Inventory/Procurement 等 hub tabs。③ 文件化規範與例外：新增 `docs/ui-tabs-guidelines.md`，記錄統一格式、已套用頁面、例外與原因。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅
+- commits：待提交
+
+---
+
 ### INSTRUCTIONS 062（售後 E2E 重寫與管理頁 UX 收斂）
 - 做了：① 重寫 `pos-refund.spec.ts`、`pos-return-stock.spec.ts`，改走「新 AfterSalesPanel」流程（全單/部分退貨、試算、確認）並移除 legacy skip 依賴。② 共購分析頁補強載入中互動回饋、缺商家錯誤態、空態排查文案；E2E 補上 table/chart/empty 最小穩定斷言。③ 採購中心將「供應商採購排行（近 30 日）」由 Hub 首屏移至「採購單」頁主表格底部。④ 儀表板「進行中活動」標籤改固定欄寬對齊；「最近點數異動」點數欄移除正號。⑤ 會員管理狀態顯示中文化（啟用/停用，僅顯示層）。⑥ 倉庫/門市表格欄寬收斂避免桌面橫捲，並將倉庫/門市頁左右區塊對調。⑦ POS 篩選區移除「篩選」標題列；結帳會員選取後改顯示姓名/電話/會員碼（送單仍用 customerId）。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/pos-refund.spec.ts` ✅；`pnpm exec playwright test e2e/pos-return-stock.spec.ts` ✅；`pnpm exec playwright test e2e/pos-market-basket.spec.ts` ✅（3 passed）
