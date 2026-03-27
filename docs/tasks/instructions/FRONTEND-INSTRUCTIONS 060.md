@@ -21,6 +21,8 @@
 | 1 | **售後 E2E 可重現跑通（或明文化 skip）** | 針對 `e2e/pos-refund.spec.ts`、`e2e/pos-return-stock.spec.ts`、`e2e/pos-exchange-settlement-journey.spec.ts`：在 **`E2E_PROFILE=full`** 且已跑 `e2e:seed` 之前提下，於本機或 CI **至少驗證一次非全 skip**；若環境無法滿足，須在 `docs/e2e-pos.md` 與 agent-log 以固定格式註記 skip 條件與解法。 |
 | 2 | **Loyalty 存摺 tab 中文顯示** | 依 [erp-roadmap.md](../../erp-roadmap.md) §0.6：點數存摺相關 tab／篩選不得只顯示 `EARNED`/`BURNED` 等英文 enum，需改為使用者可讀中文（與既有 enum mapping 一致）。 |
 | 3 | **POS 購物車排版穩定（空車／有品項無折讓／有折讓）** | `PosPage` 右側購物車在三種狀態下避免「區塊高度／摘要列」跳動：品項列表區維持合理 `min-height`；「共 N 件」在空車時可顯示 `共 0 件`（muted）；有品項時 **固定顯示「促銷折讓」列**（無折讓時顯示 `—` 或 muted，有折讓時維持綠色金額），使「前往結帳」按鈕位置相對穩定。 |
+| 4 | **收銀篩選列重排（不跳行）** | `PosPage` 篩選列調整為：①「無庫存（顯示/不顯示）」獨立到下一行；②「共 X 件」移到欄數區塊左側；③ 欄數切換按鈕維持該區塊右側，避免不同狀態下資訊位移。 |
+| 5 | **無庫存 filter 與折扣同行、置右** | `PosPage` 將「無庫存（顯示/不顯示）」移回與「折扣」篩選**同一行**：左側為折扣標籤與折扣 tag 按鈕；**右側**為無庫存切換（建議 `flex` + `justify-between` / `ml-auto` 等，窄螢幕必要時可折行，但語意維持「左折扣、右無庫存」）。 |
 
 ### 任務執行中（每項必做）
 
