@@ -767,6 +767,324 @@ describe('PosReportsService (integration)', () => {
     }
   }, 15000);
 
+  it('market-basket returns co-purchase pairs for multi-item orders', async () => {
+    if (!process.env.DATABASE_URL) return;
+    await prisma.financePeriodClose.deleteMany({});
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `MR-MB-${Date.now()}`, name: 'MB Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SR-MB-${Date.now()}`, name: 'MB Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: { code: `WR-MB-${Date.now()}`, name: 'MB WH', merchantId: merchant.id, storeId: store.id },
+    });
+    const pA = await prisma.product.create({ data: { sku: `MB-A-${Date.now()}`, name: 'Product A' } });
+    const pB = await prisma.product.create({ data: { sku: `MB-B-${Date.now()}`, name: 'Product B' } });
+    const pC = await prisma.product.create({ data: { sku: `MB-C-${Date.now()}`, name: 'Product C' } });
+
+    for (const p of [pA, pB, pC]) {
+      await prisma.inventoryBalance.upsert({
+        where: { productId_warehouseId: { productId: p.id, warehouseId: warehouse.id } },
+        create: { productId: p.id, warehouseId: warehouse.id, onHandQty: 50 },
+        update: { onHandQty: 50 },
+      });
+      await prisma.inventoryEvent.create({
+        data: { productId: p.id, warehouseId: warehouse.id, type: 'PURCHASE_IN', quantity: 50, occurredAt: new Date(), note: 'mb seed' },
+      });
+    }
+
+    // Order 1: A + B (no promo)
+    await posService.createOrder({
+      storeId: store.id,
+      items: [
+        { productId: pA.id, quantity: 1, unitPrice: 100 },
+        { productId: pB.id, quantity: 1, unitPrice: 200 },
+      ],
+      payments: [{ method: 'CASH', amount: 300 }],
+    });
+    // Order 2: A + B + C (no promo)
+    await posService.createOrder({
+      storeId: store.id,
+      items: [
+        { productId: pA.id, quantity: 1, unitPrice: 100 },
+        { productId: pB.id, quantity: 2, unitPrice: 200 },
+        { productId: pC.id, quantity: 1, unitPrice: 50 },
+      ],
+      payments: [{ method: 'CASH', amount: 550 }],
+    });
+    // Order 3: single item (should not produce pairs)
+    await posService.createOrder({
+      storeId: store.id,
+      items: [{ productId: pC.id, quantity: 1, unitPrice: 50 }],
+      payments: [{ method: 'CASH', amount: 50 }],
+    });
+
+    const out = await reports.getMarketBasket({
+      merchantId: merchant.id,
+      preset: 'today',
+      storeId: store.id,
+    });
+
+    expect(out.totalOrders).toBe(3);
+    expect(out.multiItemOrders).toBe(2);
+    expect(out.promoFilter).toBe('all');
+    expect(out.pairs.length).toBeGreaterThanOrEqual(1);
+
+    const abPair = out.pairs.find(
+      (p) =>
+        (p.productA.id === pA.id && p.productB.id === pB.id) ||
+        (p.productA.id === pB.id && p.productB.id === pA.id),
+    );
+    expect(abPair).toBeDefined();
+    expect(abPair!.coCount).toBe(2);
+    expect(abPair!.support).toBeGreaterThan(0);
+    expect(abPair!.confidenceAB).toBeGreaterThan(0);
+    expect(abPair!.lift).toBeGreaterThan(0);
+    expect(abPair!.avgBasketValue).toBeGreaterThan(0);
+
+    // without_promo should include all (none had promos)
+    const outNoPromo = await reports.getMarketBasket({
+      merchantId: merchant.id,
+      preset: 'today',
+      storeId: store.id,
+      promoFilter: 'without_promo',
+    });
+    expect(outNoPromo.totalOrders).toBe(3);
+    expect(outNoPromo.pairs.length).toBeGreaterThanOrEqual(1);
+
+    // with_promo should return 0 pairs (none had promos)
+    const outWithPromo = await reports.getMarketBasket({
+      merchantId: merchant.id,
+      preset: 'today',
+      storeId: store.id,
+      promoFilter: 'with_promo',
+    });
+    expect(outWithPromo.totalOrders).toBe(0);
+    expect(outWithPromo.pairs.length).toBe(0);
+
+    // Cleanup
+    await prisma.posOrderItem.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrderPayment.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrder.deleteMany({ where: { storeId: store.id } });
+    await prisma.financeEvent.deleteMany({ where: { partyId: merchant.id } });
+    await prisma.inventoryEvent.deleteMany({ where: { productId: { in: [pA.id, pB.id, pC.id] } } });
+    await prisma.inventoryBalance.deleteMany({ where: { productId: { in: [pA.id, pB.id, pC.id] } } });
+    await prisma.product.deleteMany({ where: { id: { in: [pA.id, pB.id, pC.id] } } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 30000);
+
+  it('market-basket: three distinct products in one order yield three pairs (C(3,2))', async () => {
+    if (!process.env.DATABASE_URL) return;
+    await prisma.financePeriodClose.deleteMany({});
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `MR-MB3-${Date.now()}`, name: 'MB3 Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SR-MB3-${Date.now()}`, name: 'MB3 Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: { code: `WR-MB3-${Date.now()}`, name: 'MB3 WH', merchantId: merchant.id, storeId: store.id },
+    });
+    const pA = await prisma.product.create({ data: { sku: `MB3-A-${Date.now()}`, name: 'MB3 A' } });
+    const pB = await prisma.product.create({ data: { sku: `MB3-B-${Date.now()}`, name: 'MB3 B' } });
+    const pC = await prisma.product.create({ data: { sku: `MB3-C-${Date.now()}`, name: 'MB3 C' } });
+
+    for (const p of [pA, pB, pC]) {
+      await prisma.inventoryBalance.upsert({
+        where: { productId_warehouseId: { productId: p.id, warehouseId: warehouse.id } },
+        create: { productId: p.id, warehouseId: warehouse.id, onHandQty: 50 },
+        update: { onHandQty: 50 },
+      });
+      await prisma.inventoryEvent.create({
+        data: {
+          productId: p.id,
+          warehouseId: warehouse.id,
+          type: 'PURCHASE_IN',
+          quantity: 50,
+          occurredAt: new Date(),
+          note: 'mb3 seed',
+        },
+      });
+    }
+
+    await posService.createOrder({
+      storeId: store.id,
+      items: [
+        { productId: pA.id, quantity: 1, unitPrice: 10 },
+        { productId: pB.id, quantity: 1, unitPrice: 20 },
+        { productId: pC.id, quantity: 1, unitPrice: 30 },
+      ],
+      payments: [{ method: 'CASH', amount: 60 }],
+    });
+
+    const out = await reports.getMarketBasket({
+      merchantId: merchant.id,
+      preset: 'today',
+      storeId: store.id,
+    });
+
+    expect(out.totalOrders).toBe(1);
+    expect(out.multiItemOrders).toBe(1);
+    expect(out.pairs.length).toBe(3);
+
+    const keys = new Set(
+      out.pairs.map((x) => [x.productA.id, x.productB.id].sort().join('|')),
+    );
+    expect(keys.size).toBe(3);
+    expect(keys.has([pA.id, pB.id].sort().join('|'))).toBe(true);
+    expect(keys.has([pA.id, pC.id].sort().join('|'))).toBe(true);
+    expect(keys.has([pB.id, pC.id].sort().join('|'))).toBe(true);
+
+    for (const pr of out.pairs) {
+      expect(pr.coCount).toBe(1);
+      expect(pr.support).toBe(1);
+      expect(pr.confidenceAB).toBe(1);
+      expect(pr.lift).toBeGreaterThan(0);
+    }
+
+    await prisma.posOrderItem.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrderPayment.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrder.deleteMany({ where: { storeId: store.id } });
+    await prisma.financeEvent.deleteMany({ where: { partyId: merchant.id } });
+    await prisma.inventoryEvent.deleteMany({ where: { productId: { in: [pA.id, pB.id, pC.id] } } });
+    await prisma.inventoryBalance.deleteMany({ where: { productId: { in: [pA.id, pB.id, pC.id] } } });
+    await prisma.product.deleteMany({ where: { id: { in: [pA.id, pB.id, pC.id] } } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 30000);
+
+  it('market-basket: no orders in date range returns empty pairs', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `MR-MB0-${Date.now()}`, name: 'MB Empty Merchant' },
+    });
+    try {
+      const out = await reports.getMarketBasket({
+        merchantId: merchant.id,
+        from: '2099-01-01',
+        to: '2099-01-31',
+      });
+      expect(out.totalOrders).toBe(0);
+      expect(out.multiItemOrders).toBe(0);
+      expect(out.pairs).toEqual([]);
+    } finally {
+      await prisma.merchant.delete({ where: { id: merchant.id } });
+    }
+  }, 15000);
+
+  it('market-basket: minSupport and limit constrain pairs', async () => {
+    if (!process.env.DATABASE_URL) return;
+    await prisma.financePeriodClose.deleteMany({});
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `MR-MBL-${Date.now()}`, name: 'MBL Merchant' },
+    });
+    const store = await prisma.store.create({
+      data: { code: `SR-MBL-${Date.now()}`, name: 'MBL Store', merchantId: merchant.id },
+    });
+    const warehouse = await prisma.warehouse.create({
+      data: { code: `WR-MBL-${Date.now()}`, name: 'MBL WH', merchantId: merchant.id, storeId: store.id },
+    });
+    const pA = await prisma.product.create({ data: { sku: `MBL-A-${Date.now()}`, name: 'MBL A' } });
+    const pB = await prisma.product.create({ data: { sku: `MBL-B-${Date.now()}`, name: 'MBL B' } });
+    const pC = await prisma.product.create({ data: { sku: `MBL-C-${Date.now()}`, name: 'MBL C' } });
+
+    for (const p of [pA, pB, pC]) {
+      await prisma.inventoryBalance.upsert({
+        where: { productId_warehouseId: { productId: p.id, warehouseId: warehouse.id } },
+        create: { productId: p.id, warehouseId: warehouse.id, onHandQty: 50 },
+        update: { onHandQty: 50 },
+      });
+      await prisma.inventoryEvent.create({
+        data: {
+          productId: p.id,
+          warehouseId: warehouse.id,
+          type: 'PURCHASE_IN',
+          quantity: 50,
+          occurredAt: new Date(),
+          note: 'mbl seed',
+        },
+      });
+    }
+
+    // Two orders A+B → AB coCount 2; one order A+C → AC coCount 1; totalOrders 3
+    await posService.createOrder({
+      storeId: store.id,
+      items: [
+        { productId: pA.id, quantity: 1, unitPrice: 10 },
+        { productId: pB.id, quantity: 1, unitPrice: 20 },
+      ],
+      payments: [{ method: 'CASH', amount: 30 }],
+    });
+    await posService.createOrder({
+      storeId: store.id,
+      items: [
+        { productId: pA.id, quantity: 1, unitPrice: 10 },
+        { productId: pB.id, quantity: 1, unitPrice: 20 },
+      ],
+      payments: [{ method: 'CASH', amount: 30 }],
+    });
+    await posService.createOrder({
+      storeId: store.id,
+      items: [
+        { productId: pA.id, quantity: 1, unitPrice: 10 },
+        { productId: pC.id, quantity: 1, unitPrice: 30 },
+      ],
+      payments: [{ method: 'CASH', amount: 40 }],
+    });
+
+    const full = await reports.getMarketBasket({
+      merchantId: merchant.id,
+      preset: 'today',
+      storeId: store.id,
+    });
+    expect(full.totalOrders).toBe(3);
+    const ab = full.pairs.find(
+      (p) =>
+        (p.productA.id === pA.id && p.productB.id === pB.id) ||
+        (p.productA.id === pB.id && p.productB.id === pA.id),
+    );
+    expect(ab).toBeDefined();
+    expect(ab!.coCount).toBe(2);
+    expect(ab!.support).toBeCloseTo(2 / 3, 4);
+
+    const highMin = await reports.getMarketBasket({
+      merchantId: merchant.id,
+      preset: 'today',
+      storeId: store.id,
+      minSupport: 0.7,
+    });
+    // AB support 2/3, AC support 1/3 — both below 0.7
+    expect(highMin.pairs.length).toBe(0);
+
+    const top1 = await reports.getMarketBasket({
+      merchantId: merchant.id,
+      preset: 'today',
+      storeId: store.id,
+      limit: 1,
+    });
+    expect(top1.pairs.length).toBe(1);
+    expect(top1.pairs[0].coCount).toBe(2);
+
+    await prisma.posOrderItem.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrderPayment.deleteMany({ where: { order: { storeId: store.id } } });
+    await prisma.posOrder.deleteMany({ where: { storeId: store.id } });
+    await prisma.financeEvent.deleteMany({ where: { partyId: merchant.id } });
+    await prisma.inventoryEvent.deleteMany({ where: { productId: { in: [pA.id, pB.id, pC.id] } } });
+    await prisma.inventoryBalance.deleteMany({ where: { productId: { in: [pA.id, pB.id, pC.id] } } });
+    await prisma.product.deleteMany({ where: { id: { in: [pA.id, pB.id, pC.id] } } });
+    await prisma.warehouse.delete({ where: { id: warehouse.id } });
+    await prisma.store.delete({ where: { id: store.id } });
+    await prisma.merchant.delete({ where: { id: merchant.id } });
+  }, 35000);
+
   it('POS summary and Finance summary consistent for same period (cross-check)', async () => {
     if (!process.env.DATABASE_URL) return;
 

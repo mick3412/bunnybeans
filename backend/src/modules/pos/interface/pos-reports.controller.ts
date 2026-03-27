@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { MerchantService } from '../../merchant/application/merchant.service';
-import { PosReportsQueryDto } from '../dto/pos-reports-query.dto';
+import { PosReportsQueryDto, MarketBasketQueryDto } from '../dto/pos-reports-query.dto';
 import { throwBadRequest } from '../../../shared/utils/throw-exceptions';
 import { PosReportsService } from '../application/pos-reports.service';
 
@@ -81,6 +81,22 @@ export class PosReportsController {
       from,
       to,
       storeId,
+    });
+  }
+
+  /** 共購分析（Market Basket）；promoFilter 可區分有/無促銷 */
+  @Get('market-basket')
+  async marketBasket(@Query() query: MarketBasketQueryDto) {
+    const resolved = await this.resolveMerchantId(query.merchantId);
+    return this.reports.getMarketBasket({
+      merchantId: resolved,
+      preset: query.preset,
+      from: query.from,
+      to: query.to,
+      storeId: query.storeId,
+      promoFilter: query.promoFilter,
+      limit: query.limit,
+      minSupport: query.minSupport,
     });
   }
 }

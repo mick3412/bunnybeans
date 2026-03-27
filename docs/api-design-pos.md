@@ -491,6 +491,15 @@ interface PosOrderListResponse {
 - **Query**（同 summary）：`preset`、`from`、`to`、`storeId`、`merchantId`。
 - **Response**：`buckets: { label, min, max, count, revenue }[]`。固定區間：0–200、200–500、500–1000、1000–2000、2000+（依 totalAmount 落入分桶）。
 
+**GET /pos/reports/market-basket**（共購分析，**stable**）
+
+- **Query**：`merchantId?`（多商家時必填；單一商家可省略）、`preset`（today｜last7d｜last30d｜currentMonth｜last60d｜lastHalfYear）或 **`from`／`to`**（ISO 日期，與 preset 二擇一）、`storeId?`、**`promoFilter`**（`all`｜`with_promo`｜`without_promo`，預設 `all`）、**`limit`**（預設 20，上限 50）、**`minSupport`**（0～1，預設 0；僅保留 `support`≥此值之 pair）。
+- **篩單邏輯**：僅納入區間內 **`PosOrder`**（依 `createdAt`）；`with_promo` 為 `promotionApplied.applied` 存在且至少一筆 `discount>0`；`without_promo` 為不符合者。**空單／無訂單**：`totalOrders=0`、`pairs=[]`。**單品單**（訂單僅一個相異 productId）：不產生 pair，不計入 `multiItemOrders`。
+- **Pair 產生**：每筆訂單取**相異** `productId` 後排序，對所有 `(i,j)`（i&lt;j）組合計數；同一訂單內 **N 個相異品項**可產生 **C(N,2)** 個 pair。
+- **指標**（每筆 pair）：`coCount`（同現兩品同單之訂單數）；`support = coCount / totalOrders`（`totalOrders` 為篩選後訂單筆數）；`confidenceAB = coCount / freq(A)`、`confidenceBA = coCount / freq(B)`（freq 為該品出現於幾筆訂單）；`lift = support / (pA * pB)`，其中 `pA=freq(A)/totalOrders`、`pB=freq(B)/totalOrders`；`avgBasketValue` 為該 pair 出現訂單之 `totalAmount` 平均（整數）。
+- **排序**：依 **`coCount` 降序**；再 **`limit` 截斷**。
+- **Response**：`period: { from, to, preset? }`、`promoFilter`、`totalOrders`、`multiItemOrders`（至少兩個相異品項之訂單數）、`pairs: [{ productA, productB, coCount, support, confidenceAB, confidenceBA, lift, avgBasketValue }]`。
+
 **報表錯誤碼**（見 [backend-error-format.md](backend-error-format.md)）：當同時帶 `from`、`to` 時，若 `from`＞`to` 或無法解析為日期 → **400 `REPORT_INVALID_RANGE`**；若區間超過 366 天 → **400 `REPORT_RANGE_TOO_LARGE`**。
 
 ---

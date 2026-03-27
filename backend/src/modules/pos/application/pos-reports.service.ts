@@ -59,6 +59,25 @@ function parseFromToOrThrow(
   return { start, end };
 }
 
+export interface MarketBasketPairDto {
+  productA: { id: string; name: string; sku?: string };
+  productB: { id: string; name: string; sku?: string };
+  coCount: number;
+  support: number;
+  confidenceAB: number;
+  confidenceBA: number;
+  lift: number;
+  avgBasketValue: number;
+}
+
+export interface MarketBasketResponseDto {
+  period: { from: string; to: string; preset?: string };
+  promoFilter: 'all' | 'with_promo' | 'without_promo';
+  totalOrders: number;
+  multiItemOrders: number;
+  pairs: MarketBasketPairDto[];
+}
+
 export interface MemberContributionDto {
   memberRevenue: number;
   memberOrdersCount: number;
@@ -567,6 +586,185 @@ export class PosReportsService {
       buckets,
       from: start.toISOString().slice(0, 10),
       to: end.toISOString().slice(0, 10),
+    };
+  }
+
+  /**
+   * GET /pos/reports/market-basket — 共購分析（Market Basket Analysis）
+   */
+  async getMarketBasket(filter: {
+    merchantId: string;
+    preset?: string;
+    from?: string;
+    to?: string;
+    storeId?: string;
+    promoFilter?: 'all' | 'with_promo' | 'without_promo';
+    limit?: number;
+    minSupport?: number;
+  }): Promise<MarketBasketResponseDto> {
+    let start: Date;
+    let end: Date;
+    let presetUsed: string | undefined;
+
+    const fromTo = parseFromToOrThrow(filter.from, filter.to);
+    if (fromTo) {
+      start = fromTo.start;
+      end = fromTo.end;
+    } else {
+      const p: string = PRESETS.includes((filter.preset ?? '') as (typeof PRESETS)[0])
+        ? (filter.preset as string)
+        : 'last30d';
+      presetUsed = p;
+      const range = parsePresetToRange(p);
+      start = range.start;
+      end = range.end;
+    }
+
+    const merchantId = filter.merchantId?.trim();
+    if (!merchantId) {
+      throwBadRequest('VALIDATION_ERROR', 'merchantId is required');
+    }
+
+    const orderWhere: {
+      createdAt: { gte: Date; lte: Date };
+      storeId?: string;
+      store?: { merchantId: string };
+    } = {
+      createdAt: { gte: start, lte: end },
+      store: { merchantId },
+    };
+    if (filter.storeId?.trim()) {
+      const storeId = filter.storeId.trim();
+      await this.assertStoreBelongsToMerchant(storeId, merchantId);
+      orderWhere.storeId = storeId;
+    }
+
+    const promoFilter = filter.promoFilter ?? 'all';
+    const limit = Math.min(50, Math.max(1, filter.limit ?? 20));
+    const minSupport = filter.minSupport ?? 0;
+
+    const orders = await this.prisma.posOrder.findMany({
+      where: orderWhere,
+      select: {
+        id: true,
+        totalAmount: true,
+        promotionApplied: true,
+        items: { select: { productId: true } },
+      },
+    });
+
+    const hasPromotion = (o: { promotionApplied: unknown }): boolean => {
+      const raw = o.promotionApplied as
+        | { applied?: Array<{ discount?: number }> }
+        | null
+        | undefined;
+      return (
+        Array.isArray(raw?.applied) &&
+        raw!.applied.length > 0 &&
+        raw!.applied.some((a) => (a.discount ?? 0) > 0)
+      );
+    };
+
+    const filtered = orders.filter((o) => {
+      if (promoFilter === 'with_promo') return hasPromotion(o);
+      if (promoFilter === 'without_promo') return !hasPromotion(o);
+      return true;
+    });
+
+    const totalOrders = filtered.length;
+
+    const productFreq = new Map<string, number>();
+    const pairMap = new Map<string, { count: number; totalBasketValue: number }>();
+    let multiItemOrders = 0;
+
+    for (const o of filtered) {
+      const distinctProducts = [...new Set(o.items.map((i) => i.productId))].sort();
+      for (const pid of distinctProducts) {
+        productFreq.set(pid, (productFreq.get(pid) ?? 0) + 1);
+      }
+      if (distinctProducts.length < 2) continue;
+      multiItemOrders++;
+      const basketValue = Number(o.totalAmount);
+      for (let i = 0; i < distinctProducts.length; i++) {
+        for (let j = i + 1; j < distinctProducts.length; j++) {
+          const key = `${distinctProducts[i]}||${distinctProducts[j]}`;
+          const cur = pairMap.get(key);
+          if (!cur) {
+            pairMap.set(key, { count: 1, totalBasketValue: basketValue });
+          } else {
+            cur.count++;
+            cur.totalBasketValue += basketValue;
+          }
+        }
+      }
+    }
+
+    let pairEntries = Array.from(pairMap.entries()).map(([key, v]) => {
+      const [aId, bId] = key.split('||');
+      const freqA = productFreq.get(aId) ?? 0;
+      const freqB = productFreq.get(bId) ?? 0;
+      const support = totalOrders > 0 ? v.count / totalOrders : 0;
+      const confidenceAB = freqA > 0 ? v.count / freqA : 0;
+      const confidenceBA = freqB > 0 ? v.count / freqB : 0;
+      const pA = totalOrders > 0 ? freqA / totalOrders : 0;
+      const pB = totalOrders > 0 ? freqB / totalOrders : 0;
+      const lift = pA * pB > 0 ? support / (pA * pB) : 0;
+      return {
+        aId,
+        bId,
+        coCount: v.count,
+        support: Math.round(support * 10000) / 10000,
+        confidenceAB: Math.round(confidenceAB * 10000) / 10000,
+        confidenceBA: Math.round(confidenceBA * 10000) / 10000,
+        lift: Math.round(lift * 100) / 100,
+        avgBasketValue: v.count > 0 ? Math.round(v.totalBasketValue / v.count) : 0,
+      };
+    });
+
+    if (minSupport > 0) {
+      pairEntries = pairEntries.filter((p) => p.support >= minSupport);
+    }
+
+    pairEntries.sort((a, b) => b.coCount - a.coCount);
+    pairEntries = pairEntries.slice(0, limit);
+
+    const productIds = [
+      ...new Set(pairEntries.flatMap((p) => [p.aId, p.bId])),
+    ];
+    const products =
+      productIds.length > 0
+        ? await this.prisma.product.findMany({
+            where: { id: { in: productIds } },
+            select: { id: true, name: true, sku: true },
+          })
+        : [];
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const pairs: MarketBasketPairDto[] = pairEntries.map((p) => {
+      const pa = productMap.get(p.aId);
+      const pb = productMap.get(p.bId);
+      return {
+        productA: { id: p.aId, name: pa?.name ?? p.aId, sku: pa?.sku },
+        productB: { id: p.bId, name: pb?.name ?? p.bId, sku: pb?.sku },
+        coCount: p.coCount,
+        support: p.support,
+        confidenceAB: p.confidenceAB,
+        confidenceBA: p.confidenceBA,
+        lift: p.lift,
+        avgBasketValue: p.avgBasketValue,
+      };
+    });
+
+    return {
+      period: {
+        from: start.toISOString().slice(0, 10),
+        to: end.toISOString().slice(0, 10),
+        ...(presetUsed && { preset: presetUsed }),
+      },
+      promoFilter,
+      totalOrders,
+      multiItemOrders,
+      pairs,
     };
   }
 }
