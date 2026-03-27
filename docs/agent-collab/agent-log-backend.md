@@ -15,6 +15,17 @@
 
 ---
 
+### INSTRUCTIONS-061（共購分析 Market Basket + e2e seed 庫存還原 + 財務 CSV orderNumber）
+- 做了：依 `BACKEND-INSTRUCTIONS 061.md` §1 完成。
+  - **共購分析**：收斂 `GET /pos/reports/market-basket`（`promoFilter`、`limit`、`minSupport`、回傳 period／pairs 指標）；`api-design-pos.md` §4.4 契約；`pos-reports.integration-spec` 補 C(3,2)、空日期區間、minSupport／limit，並沿用既有 promo 過濾案例。
+  - **E2E／seed**：full `e2e:seed` 於補貨建議驗證後 upsert 條碼品項 `InventoryBalance`，降低售後 Playwright 之 `INVENTORY_INSUFFICIENT`；`prisma/seed.ts` `wipeAll` 補 FK 刪除順序註解；demo seed 可選大量共購樣本訂單。
+  - **財務 CSV**：`exportFinanceEventsCsv` 增 **`orderNumber`** 欄（由 `referenceId` 解析 POS 單號）；integration-spec 表頭一併對齊。
+  - **進度文件**：`integrated-last-cycle.md`、`docs/e2e-pos.md` 與本輪 `BACKEND-INSTRUCTIONS 061.md` 任務表對齊 061。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（22 suites、175 tests）；`pnpm ci:backend-with-db` 全綠。
+- commits：`9f985881` feat(pos): market basket report API, contract, integration tests；`e54508a7` feat(finance): add orderNumber to finance events CSV export；`d81b67d1` chore(seed): e2e barcode inventory restore, wipeAll notes, demo market-basket samples；`adb5eb04` docs: progress 061, e2e seed note, backend task table
+
+---
+
 ### INSTRUCTIONS-060（補記：跨輪 transcript 開發追溯）
 - 做了：補記本輪／相關開發紀錄來源，追溯至 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b) 與 [退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)。前者重點為 `GET /pos/reports/market-basket`（含 promoFilter 與指標計算）相關實作脈絡；後者重點為退換貨 transaction client／庫存事件修補與 API 串接補強。
 - 測試/驗收：依各 transcript 記錄（後端 jest / build / e2e seed）為準；本補記僅做協作追溯整合。
