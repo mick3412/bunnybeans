@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS 062（售後 E2E 重寫與管理頁 UX 收斂）
+- 做了：① 重寫 `pos-refund.spec.ts`、`pos-return-stock.spec.ts`，改走「新 AfterSalesPanel」流程（全單/部分退貨、試算、確認）並移除 legacy skip 依賴。② 共購分析頁補強載入中互動回饋、缺商家錯誤態、空態排查文案；E2E 補上 table/chart/empty 最小穩定斷言。③ 採購中心將「供應商採購排行（近 30 日）」由 Hub 首屏移至「採購單」頁主表格底部。④ 儀表板「進行中活動」標籤改固定欄寬對齊；「最近點數異動」點數欄移除正號。⑤ 會員管理狀態顯示中文化（啟用/停用，僅顯示層）。⑥ 倉庫/門市表格欄寬收斂避免桌面橫捲，並將倉庫/門市頁左右區塊對調。⑦ POS 篩選區移除「篩選」標題列；結帳會員選取後改顯示姓名/電話/會員碼（送單仍用 customerId）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/pos-refund.spec.ts` ✅；`pnpm exec playwright test e2e/pos-return-stock.spec.ts` ✅；`pnpm exec playwright test e2e/pos-market-basket.spec.ts` ✅（3 passed）
+- commits：待提交
+
+---
+
 ### INSTRUCTIONS 061（補記：三份 transcript 整合追溯）
 - 做了：補記本輪跨對話開發脈絡，整合 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b)、[退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)、[SEED 全局缺口補強](0e085e74-807a-403d-837b-a91630159665)。重點涵蓋共購分析頁與 E2E、售後整併互動修補、以及「前端哪些頁面沒資料」的 seed 補強追溯。
 - 測試/驗收：依三份 transcript 內對應測試記錄（frontend build / Playwright / seed 驗證）為準；本條目僅補協作追溯整合。
