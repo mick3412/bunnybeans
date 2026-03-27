@@ -15,6 +15,16 @@
 
 ---
 
+### INSTRUCTIONS-060（Finance balances 契約與文件對齊 + seed wipeAll）
+- 做了：依 `BACKEND-INSTRUCTIONS 060.md` §1 完成。
+  - **#1 Finance balances 契約與文件對齊**：更新 **`api-design-inventory-finance.md` §5.0d** 與總表列（`partyId` 精確、`q` displayName ILIKE、`pageSize` 上限 **100** 與實作一致、回傳形狀）；**`erp-roadmap.md` §0.3** 標為已收斂；**`finance-accounting-roadmap.md` §6.2／§9** 補 **totals**／**q**／分頁敘述。
+  - **整合測試**：新增 **`getBalances supports q filter on Party.displayName (ILIKE)`**（不重複既有 partyId／kind／分頁案例）。
+  - **ci:backend-with-db**：`seed.ts` **`wipeAll`** 於刪除 `PosOrder` 前先 **`posReturn.deleteMany()`**，避免退換貨資料導致 `db:seed` P2003。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（22 suites、171 tests）；`pnpm ci:backend-with-db` 全綠。
+- commits：`b198a707` [INSTRUCTIONS-060] docs(finance): align GET /finance/balances contract; test q filter；`8e0d0132` [INSTRUCTIONS-060] fix(seed): delete PosReturn before PosOrder in wipeAll
+
+---
+
 ### INSTRUCTIONS-059（本輪收尾：工作區提交 + ops runJob 測試穩定）
 - 做了：依 `BACKEND-INSTRUCTIONS 059.md` §1，#1～#3 已完成並已於先前提交（`248cde11`、`91d9b54f`）；本輪補提交工作區殘差：`ops.integration-spec` 改以 `runLogId` 查表驗證，避免並行測試造成 `opsJobRunLog.count()` 競態；並含財務/庫存/退換貨與 POS 訂單流程相關調整（與退換貨模組一致）。
 - 測試/驗收：`pnpm --filter pos-erp-backend test` ✅（22 suites、170 tests）；`pnpm ci:backend-with-db` ✅
