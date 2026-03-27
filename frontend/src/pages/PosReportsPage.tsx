@@ -226,6 +226,8 @@ export const PosReportsPage: React.FC = () => {
               資料來源 GET /pos/reports/summary；區間：{periodLabel}
               {' · '}
               <Link className="text-brand-primary hover:underline" to="/admin/reports">金流報表</Link>
+              {' · '}
+              <Link className="text-brand-primary hover:underline" to="/pos/reports/market-basket">共購分析</Link>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

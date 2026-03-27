@@ -439,6 +439,57 @@ export async function getPosOrderValueDistribution(
   return out.data;
 }
 
+// --- Market Basket (共購分析) ---
+
+export type PromoFilter = 'all' | 'with_promo' | 'without_promo';
+
+export interface MarketBasketPair {
+  productA: { id: string; name: string; sku?: string };
+  productB: { id: string; name: string; sku?: string };
+  coCount: number;
+  support: number;
+  confidenceAB: number;
+  confidenceBA: number;
+  lift: number;
+  avgBasketValue: number;
+}
+
+export interface MarketBasketResponse {
+  period: { from: string; to: string; preset?: string };
+  promoFilter: PromoFilter;
+  totalOrders: number;
+  multiItemOrders: number;
+  pairs: MarketBasketPair[];
+}
+
+export async function getPosMarketBasket(
+  params: {
+    merchantId?: string;
+    preset?: PosReportsPreset;
+    from?: string;
+    to?: string;
+    storeId?: string;
+    promoFilter?: PromoFilter;
+    limit?: number;
+    minSupport?: number;
+  },
+  traceId?: string,
+): Promise<MarketBasketResponse | ApiError> {
+  const q = new URLSearchParams();
+  if (params.preset) q.set('preset', params.preset);
+  if (params.from) q.set('from', params.from);
+  if (params.to) q.set('to', params.to);
+  if (params.storeId) q.set('storeId', params.storeId);
+  if (params.merchantId) q.set('merchantId', params.merchantId);
+  if (params.promoFilter) q.set('promoFilter', params.promoFilter);
+  if (params.limit != null) q.set('limit', String(params.limit));
+  if (params.minSupport != null) q.set('minSupport', String(params.minSupport));
+  const path = `pos/reports/market-basket${q.toString() ? `?${q.toString()}` : ''}`;
+  const out = await request<MarketBasketResponse>(path, { traceId: traceId ?? genTraceId() });
+  if (!out.ok) return out.error;
+  return out.data;
+}
+
 export interface PromotionPreviewResult {
   subtotal: number;
   discount: number;

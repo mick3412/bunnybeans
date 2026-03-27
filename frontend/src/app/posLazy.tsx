@@ -17,3 +17,6 @@ export const PosPromosPageLazy = lazy(() =>
 export const PosReportsPageLazy = lazy(() =>
   import('../pages/PosReportsPage').then((m) => ({ default: m.PosReportsPage })),
 );
+export const PosMarketBasketPageLazy = lazy(() =>
+  import('../pages/PosMarketBasketPage').then((m) => ({ default: m.PosMarketBasketPage })),
+);
