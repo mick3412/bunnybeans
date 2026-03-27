@@ -1,39 +1,39 @@
 # 上一輪整合（規格 Agent 每輪覆寫）
 
-**本輪對應 INSTRUCTIONS**：**059**（後端／前端皆已收斂並提交）  
-**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **059** · 前端 **059**  
+**本輪對應 INSTRUCTIONS**：**060**（後端已收斂；前端 060 多項已完成待收斂提交）  
+**最新 agent-log（以 INSTRUCTIONS 編號為準）**：後端 **060** · 前端 **060**  
 （路徑：[agent-collab/agent-log-backend.md](../agent-collab/agent-log-backend.md)、[agent-collab/agent-log-frontend.md](../agent-collab/agent-log-frontend.md)）
 
 ## 後端（收斂摘要）
 
-- **INSTRUCTIONS 059 主要進展**：
-  - 058 收斂之 `pos-return`／repository 與庫存事件邏輯已與後續調整一併提交；`GET /products` 分頁契約與 `minDaysUntilExpiry` 回歸測試已落地（見 `91d9b54f` 等）。
-  - **Ops**：`runJob records OpsJobRunLog` 整合測試改以 `runLogId` 查表驗證，避免並行測試下 `count()` 競態（flaky）。
-  - **財務／庫存／POS**：與退換貨、訂單流程相關之服務層調整已併入本輪主提交（`c9d2536f`）。
-- **測試**：`pnpm --filter pos-erp-backend test` 全綠；`pnpm ci:backend-with-db` 全綠。
+- **INSTRUCTIONS 060 主要進展**：
+  - `GET /finance/balances` 契約文件與實作對齊（含 `partyId`、`q`、分頁上限與回傳形狀）。
+  - 補 `finance.integration-spec` 的 `q` 篩選案例（displayName ILIKE）。
+  - `ci:backend-with-db` 的 `db:seed` 流程修補：`wipeAll` 先刪 `posReturn` 再刪 `posOrder`，避免 P2003。
+- **測試**：`pnpm --filter pos-erp-backend test` 全綠（22 suites、171 tests）；`pnpm ci:backend-with-db` 全綠。
+- **追溯補記**：已在 log 補上 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b) 與 [退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)。
 
 ## 前端（收斂摘要）
 
-- **INSTRUCTIONS 059 主要進展**：
-  - **商品列表**：`GET /products` 分頁形狀 `{ items, total, page, pageSize }` 與 mock 對齊。
-  - **POS**：購物車庫存警示僅在超賣時提示；結帳成功清空購物車；「最新訂單」可連結至明細。
-  - **後台**：商品總覽移除頁內 Admin Key；庫存總覽整併「倉庫/門市」「入庫」為頁內 Tab。
-  - **共用**：`PartySearchSelect` 預覽簡化 customerId；側欄／售後頁「退換貨」文案一致。
-  - **售後明細**：`AfterSalesPanel`／`PosOrderDetailPage` 等互動與 API 串接補強。
-  - **E2E／文件**：售後三支 spec 與 `docs/e2e-pos.md` 補完；修復 `pos-exchange-settlement-journey.spec.ts` 結尾括號。
-- **測試**：`pnpm --filter pos-erp-frontend build` 全綠；指定售後 E2E 可執行，**本機未設 `E2E_PROFILE=full` 或缺 e2e-seed 可售庫存時仍可能全數 skip**（屬環境前置，非程式阻擋）。
+- **INSTRUCTIONS 060 主要進展（log 最新條目）**：
+  - 訂單/退換貨入口整併，舊 `after-sales` 路由轉址至訂單頁 tab。
+  - 退換貨列表欄位與互動補強（原訂單/退換貨訂單、退貨單號連結）、移除長期空白 tab。
+  - 訂單明細補門市名稱（fallback ID）與促銷折扣細節；Loyalty 顯示中文化補漏。
+  - E2E 隔離流程改採 `.env.e2e`，並在 full profile 下達成「非全 skip」最小驗收。
+- **測試**：`pnpm --filter pos-erp-frontend build` ✅；指定售後 E2E `1 passed / 2 skipped`（仍有 `INVENTORY_INSUFFICIENT` 前置依賴）。
+- **追溯補記**：已在 log 補上 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b) 與 [退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)。
 
 ---
 
-## 059 主題：058 收斂 + POS 售後／契約／UX 一併落地
+## 060 主題：財務契約收斂 + POS 訂單/退換貨頁整併
 
 | 項目 | 狀態 |
 |------|------|
-| 後端 #1 補齊 commit / 058 殘差 | 完成（含 `c9d2536f`） |
-| 後端 #2 商品列表契約凍結 | 完成 |
-| 後端 #3 效期篩選與分頁回歸 | 完成 |
-| 後端 ops runJob 測試穩定 | 完成 |
-| 前端 #1～#10 | 完成（含「退換貨」文案） |
+| 後端 #1 Finance balances 契約與測試 | 完成 |
+| 後端 seed wipeAll 相容性 | 完成 |
+| 前端 #1 E2E 非全 skip 驗收 | 完成（仍有條件式 skip） |
+| 前端 #2 Loyalty 中文顯示 | 完成（log 記載） |
+| 前端 #3～#11（UI/文案/欄位調整） | 多數已完成，待統一提交與最終回歸 |
 
 ---
 
@@ -41,36 +41,37 @@
 
 | 項目 | 說明 |
 |------|------|
-| 售後 E2E skip | 需 **`E2E_PROFILE=full`** 並執行 **`pnpm --filter pos-erp-backend e2e:seed`**（或依 `docs/e2e-pos.md`）才可期望三支 spec 實跑而非全 skip。 |
-| 財務文件與實作 | `GET /finance/balances` 已實作但 roadmap／api-design 敘述需持續對齊（見下方全局缺口）。 |
+| 前端 060 收斂提交 | agent-log 註記「commits: 待提交」，需在前端對話窗收斂 atomic commits，避免「已做未記錄」落差。 |
+| 售後 E2E 庫存前置 | full profile 下仍可能出現 `INVENTORY_INSUFFICIENT`，需強化 `store↔warehouse` fixture 一致性。 |
+| 共購分析（Market Basket） | transcript 顯示已進行開發，需在正式 log/commit/測試結果收斂，避免功能落在未提交工作區。 |
 
 ---
 
-## 全局審查缺口清單（059 後剩餘）
+## 全局審查缺口清單（060 後剩餘）
 
-### 已收斂（059）
+### 已收斂（060）
 
 | 來源 | 狀態 |
 |------|------|
-| 商品列表分頁與效期欄位／篩選 | 後端測試 + 前端契約對齊已落地 |
-| POS 售後主要 UX（退換貨文案、結帳後狀態） | 已落地 |
-| Ops `runJob` 整合測試 flaky | 已改為 `runLogId` 驗證 |
+| erp-roadmap §0.3 Finance balances 契約落差 | 已收斂 |
+| ci:backend-with-db seed P2003 | 已收斂 |
+| POS 訂單/退換貨命名與整併主線 | 前端主線已落地（待提交收斂） |
 
-### 待處理（建議下一輪 060）
+### 待處理（建議下一輪 061）
 
 | 來源 | 缺口 | 優先 |
 |------|------|------|
-| erp-roadmap §0.3 | Finance balances：**API 已存在**，需補齊契約文件、`finance-accounting-roadmap.md` §9 狀態與測試敘述一致 | 高 |
-| erp-roadmap §0.6 | Loyalty 存摺 tab 仍顯示英文 enum，需改中文 | 中 |
-| E2E | 售後三支 spec 在一般環境易全 skip；需 **full profile 驗證路徑**或 CI 明文化 | 中 |
-| erp-roadmap Phase 1 | Product schema 擴充（`specCapacity` 等）、ProductTag 後端 master | 中長期 |
+| 前端 060 待提交 | 針對 #3～#11 產出最終 atomic commits 與對應驗收紀錄（build/E2E） | 高 |
+| e2e-pos 與 seed 流程 | 將 `E2E_PROFILE=full` + `.env.e2e` + fixture 一致性落成固定腳本與可重現檢查清單 | 高 |
+| 共購分析功能（14f transcript） | 後端 endpoint / DTO / tests + 前端頁面/路由/API + E2E 的正式提交與文件化 | 中高 |
+| erp-roadmap §0.1/0.2 | Product schema 進一步收斂與 ProductTag 主檔閉環（跨端） | 中 |
 
 ### 中長期缺口（roadmap）
 
 | 來源 | 缺口 | 說明 |
 |------|------|------|
-| erp-roadmap Phase 2+ | Party 視圖、補貨閉環進階、行銷成效 | 待排程 |
-| ops-roadmap | Job 監控可觀測性 | 需搭配流量與前端監控頁 |
+| erp-roadmap Phase 2+ | Party 視圖升級、補貨閉環進階、行銷活動成效 | 待排程 |
+| ops-roadmap | 監控可觀測性與 click-audit 成效收斂 | 需配合真實流量檢驗 |
 
 ---
 
@@ -78,10 +79,10 @@
 
 | 模組 | 後端 | 前端 | 備註 |
 |------|------|------|------|
-| 商品總覽（分頁／效期） | 完成 | 完成 | 契約測試已補 |
-| POS 售後（退換貨／明細面板） | 完成 | 完成 | E2E 依環境可能 skip |
-| Ops jobs | 完成 | — | runJob 測試已穩定化 |
+| Finance balances | 完成 | 完成 | 契約、roadmap、測試對齊 |
+| POS 訂單/退換貨整併 | — | 進行中（主線已做） | 待提交收斂 |
+| 共購分析（Market Basket） | 進行中 | 進行中 | 以 transcript 追溯，待正式收斂 |
 
 ---
 
-本檔為**實際進度總結**，下一輪具體任務見 [tasks/instructions/](../tasks/instructions/)（目前最新為 **INSTRUCTIONS 060**）§1。
+本檔為**實際進度總結**，下一輪具體任務見 [tasks/instructions/](../tasks/instructions/)（目前最新將更新為 **INSTRUCTIONS 061**）§1。

@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS-060（補記：跨輪 transcript 開發追溯）
+- 做了：補記本輪／相關開發紀錄來源，追溯至 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b) 與 [退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)。前者重點為 `GET /pos/reports/market-basket`（含 promoFilter 與指標計算）相關實作脈絡；後者重點為退換貨 transaction client／庫存事件修補與 API 串接補強。
+- 測試/驗收：依各 transcript 記錄（後端 jest / build / e2e seed）為準；本補記僅做協作追溯整合。
+- commits：無（僅補協作追溯記錄）
+
+---
+
 ### INSTRUCTIONS-060（Finance balances 契約與文件對齊 + seed wipeAll）
 - 做了：依 `BACKEND-INSTRUCTIONS 060.md` §1 完成。
   - **#1 Finance balances 契約與文件對齊**：更新 **`api-design-inventory-finance.md` §5.0d** 與總表列（`partyId` 精確、`q` displayName ILIKE、`pageSize` 上限 **100** 與實作一致、回傳形狀）；**`erp-roadmap.md` §0.3** 標為已收斂；**`finance-accounting-roadmap.md` §6.2／§9** 補 **totals**／**q**／分頁敘述。

@@ -15,6 +15,21 @@
 
 ---
 
+### INSTRUCTIONS 060（補記：跨輪 transcript 開發追溯）
+- 做了：補記本輪／相關開發紀錄來源，追溯至 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b) 與 [退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)。前者重點含共購分析頁/路由/API 串接與報表互動；後者重點含售後面板與訂單明細互動補強。
+- 測試/驗收：依各 transcript 記錄（`pnpm --filter pos-erp-frontend build`、指定 E2E）為準；本補記僅做協作追溯整合。
+- commits：無（僅補協作追溯記錄）
+
+---
+
+### INSTRUCTIONS 060（訂單/退換貨整併、明細補強與 E2E 隔離驗收）
+- 做了：① 完成 `PosLayout`/`App`/`PosOrdersListPage`：側欄只保留「訂單」，頁內可切換「訂單總覽／退換貨明細」，舊路由 `/pos/after-sales` 轉址到 `/pos/orders?tab=after-sales`。② `PosAfterSalesPage` 移除長期空白的「退換貨記錄」tab，並調整列表欄位為「原訂單／退換貨訂單」，退換貨單號可點回對應明細。③ `AfterSalesPanel` 成功訊息中的退貨單號改為可點擊連結（帶 `returnId`）。④ `PosOrderDetailPage` + `OrderContent` 補門市名稱顯示（無名稱才 fallback ID）與促銷折扣資訊（折扣總額、規則明細、無促銷文案）。⑤ Loyalty 存摺相關中文化補漏（Dashboard 將 `BURNED` 等 enum 顯示為中文）。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；以 `.env.e2e` + `E2E_PROFILE=full` 跑 `pnpm exec playwright test e2e/pos-refund.spec.ts e2e/pos-return-stock.spec.ts e2e/pos-exchange-settlement-journey.spec.ts` → `1 passed / 2 skipped`（非全 skip，已達最小驗收）。
+- E2E skip 紀錄：`pos-refund.spec.ts | INVENTORY_INSUFFICIENT | full profile 但門市可售庫存 fixture 仍不足（store↔warehouse 庫存綁定） | 以 .env.e2e 重新執行 migrate+db:seed+E2E_PROFILE=full e2e:seed，確認 E2E-BC-0001 已寫入對應門市倉`；`pos-return-stock.spec.ts | INVENTORY_INSUFFICIENT | 同上 | 同上`
+- commits：待提交
+
+---
+
 ### INSTRUCTIONS 059（本輪收尾：059 任務全數落地與提交）
 - 做了：依 `FRONTEND-INSTRUCTIONS 059.md` §1，#1 **商品列表契約對齊**（`posOrdersApi`/mock）、#2～#3 **售後 E2E 與 `docs/e2e-pos.md`**、#4 **購物車庫存警示時機**、#5 **結帳後清空購物車**、#6 **最新訂單可點連結**、#7 **商品總覽移除 Admin Key 輸入**、#8 **庫存總覽頁內 Tab**、#9 **PartySearchSelect 預覽**、#10 **「售後服務」→「退換貨」**（側欄/頁面/面板文案）；並含訂單明細 `AfterSalesPanel`／`PosOrderDetailPage` 等售後互動補強。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`pnpm exec playwright test e2e/pos-refund.spec.ts e2e/pos-return-stock.spec.ts e2e/pos-exchange-settlement-journey.spec.ts` ✅（本環境 3 skipped：未設 `E2E_PROFILE=full` 或缺 e2e-seed 可售庫存時之前置）

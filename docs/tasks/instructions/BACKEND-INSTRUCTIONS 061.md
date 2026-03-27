@@ -6,19 +6,21 @@
 
 ## 1. 本輪必做
 
-> 後端 Agent **只讀本節**，完成後於 agent-log 以 **INSTRUCTIONS 060** 追加一筆。
+> 後端 Agent **只讀本節**，完成後於 agent-log 以 **INSTRUCTIONS 061** 追加一筆。
 
 ### 前置（必做，快檢查）
 
 - **工作區與依賴檢查**：先看 `git status` / `git diff`，確認本輪起點與未提交項目；同時確認測試所需環境可啟動（DB、env、seed）。
-- **先做最小可行驗證**：先跑關鍵 smoke 測試（例：`pnpm --filter pos-erp-backend test -- finance.integration-spec.ts`），避免做到一半才發現環境阻塞。
+- **先做最小可行驗證**：先跑關鍵 smoke（例：`pnpm --filter pos-erp-backend test -- pos-reports.integration-spec.ts`），避免做到一半才發現環境阻塞。
 - **E2E DB 隔離（必做）**：涉及 seed/E2E 時一律使用 `.env.e2e`（或 `./scripts/e2e-one-click-isolated.sh`）指向隔離測試 DB；**禁止**將 seed/E2E 指向 demo DB（`pos_erp`）。
 
-### 本輪任務（059 收斂後）
+### 本輪任務（060 收斂後）
 
 | # | 任務 | 說明 |
 |---|------|------|
-| 1 | **Finance balances 契約與文件對齊** | 依 [erp-roadmap.md](../../erp-roadmap.md) §0.3：確認 `GET /finance/balances` 回傳形狀與 `?partyId=` 行為；更新 `api-design-inventory-finance.md`（或對應 finance 設計檔）、修正 `finance-accounting-roadmap.md` §9 與實作不一致之敘述；必要時補 `finance.integration-spec` 契約斷言（不重複既有測試前提下補缺口）。 |
+| 1 | **共購分析 API 正式收斂（Market Basket）** | 依 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b) 收斂 `GET /pos/reports/market-basket`：查詢參數（含 `promoFilter`）、回傳 DTO（support/confidence/lift）、邊界（空單/單品單）與排序行為需固定；補齊或修正 integration-spec。 |
+| 2 | **共購分析契約文件對齊** | 將 market basket endpoint 及參數/回傳結構補入對應 API 設計文件（`api-design-pos.md` 或專章），並在 roadmap/整合文檔註明狀態，避免「已實作未文件化」。 |
+| 3 | **售後 E2E fixture 後端前置穩定化** | 針對 `INVENTORY_INSUFFICIENT` 的常見 skip，補強 e2e seed 中 store↔warehouse 可售庫存 fixture 一致性（至少讓 full profile 下可重現非全 skip）；必要時補最小驗證腳本或明確錯誤訊息。 |
 
 ### 任務執行中（每項必做）
 
