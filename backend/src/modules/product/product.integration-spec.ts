@@ -237,6 +237,164 @@ describe('ProductService importFromCsvBuffer (integration)', () => {
     }
   }, 10000);
 
+  it('listProducts returns { items, total, page, pageSize } with expiry fields', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const ts = Date.now();
+    const prodDate = new Date('2026-01-01T00:00:00Z');
+    const expDate = new Date('2027-06-15T00:00:00Z');
+    const p = await prisma.product.create({
+      data: {
+        sku: `LP-${ts}`,
+        name: `List Product ${ts}`,
+        productionDate: prodDate,
+        shelfLifeMonths: 12,
+        expiryDate: expDate,
+        listPrice: 100,
+        salePrice: 80,
+      },
+    });
+    try {
+      const result = await productService.listProducts(
+        { sku: `LP-${ts}` },
+        { page: 1, pageSize: 10 },
+      );
+      expect(result).toHaveProperty('items');
+      expect(result).toHaveProperty('total');
+      expect(result).toHaveProperty('page', 1);
+      expect(result).toHaveProperty('pageSize', 10);
+      expect(result.total).toBeGreaterThanOrEqual(1);
+
+      const found = result.items.find((i) => i.id === p.id);
+      expect(found).toBeDefined();
+      expect(found!.productionDate).toBe(prodDate.toISOString());
+      expect(found!.shelfLifeMonths).toBe(12);
+      expect(found!.expiryDate).toBe(expDate.toISOString());
+    } finally {
+      await prisma.product.delete({ where: { id: p.id } });
+    }
+  }, 15000);
+
+  it('listProducts with minDaysUntilExpiry filters via expiryDate path', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const ts = Date.now();
+    const now = new Date();
+    const farExpiry = new Date(now);
+    farExpiry.setUTCDate(farExpiry.getUTCDate() + 90);
+    const nearExpiry = new Date(now);
+    nearExpiry.setUTCDate(nearExpiry.getUTCDate() + 3);
+
+    const pFar = await prisma.product.create({
+      data: { sku: `MDU-FAR-${ts}`, name: 'Far Expiry', expiryDate: farExpiry, listPrice: 10, salePrice: 10 },
+    });
+    const pNear = await prisma.product.create({
+      data: { sku: `MDU-NEAR-${ts}`, name: 'Near Expiry', expiryDate: nearExpiry, listPrice: 10, salePrice: 10 },
+    });
+    try {
+      const result = await productService.listProducts({ minDaysUntilExpiry: 30 });
+      const ids = result.items.map((i) => i.id);
+      expect(ids).toContain(pFar.id);
+      expect(ids).not.toContain(pNear.id);
+    } finally {
+      await prisma.product.deleteMany({ where: { id: { in: [pFar.id, pNear.id] } } });
+    }
+  }, 15000);
+
+  it('listProducts with minDaysUntilExpiry filters via productionDate+shelfLifeMonths path', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const ts = Date.now();
+    const now = new Date();
+    const prodFar = await prisma.product.create({
+      data: {
+        sku: `MDU-COMP-FAR-${ts}`,
+        name: 'Computed Far',
+        productionDate: now,
+        shelfLifeMonths: 6,
+        expiryDate: null,
+        listPrice: 10,
+        salePrice: 10,
+      },
+    });
+    const recentProd = new Date(now);
+    recentProd.setUTCMonth(recentProd.getUTCMonth() - 1);
+    const prodNear = await prisma.product.create({
+      data: {
+        sku: `MDU-COMP-NEAR-${ts}`,
+        name: 'Computed Near',
+        productionDate: recentProd,
+        shelfLifeMonths: 1,
+        expiryDate: null,
+        listPrice: 10,
+        salePrice: 10,
+      },
+    });
+    try {
+      const result = await productService.listProducts({ minDaysUntilExpiry: 30 });
+      const ids = result.items.map((i) => i.id);
+      expect(ids).toContain(prodFar.id);
+      expect(ids).not.toContain(prodNear.id);
+    } finally {
+      await prisma.product.deleteMany({ where: { id: { in: [prodFar.id, prodNear.id] } } });
+    }
+  }, 15000);
+
+  it('listProducts with minDaysUntilExpiry applies filter-then-paginate correctly', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const ts = Date.now();
+    const now = new Date();
+    const farExpiry = new Date(now);
+    farExpiry.setUTCDate(farExpiry.getUTCDate() + 120);
+
+    const products: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const p = await prisma.product.create({
+        data: {
+          sku: `MDU-PAGE-${ts}-${i}`,
+          name: `Page Test ${i}`,
+          expiryDate: farExpiry,
+          listPrice: 10,
+          salePrice: 10,
+        },
+      });
+      products.push(p.id);
+    }
+    const nearExpiry = new Date(now);
+    nearExpiry.setUTCDate(nearExpiry.getUTCDate() + 2);
+    const pNear = await prisma.product.create({
+      data: {
+        sku: `MDU-PAGE-NEAR-${ts}`,
+        name: 'Page Near',
+        expiryDate: nearExpiry,
+        listPrice: 10,
+        salePrice: 10,
+      },
+    });
+    products.push(pNear.id);
+
+    try {
+      const page1 = await productService.listProducts(
+        { minDaysUntilExpiry: 30 },
+        { page: 1, pageSize: 3 },
+      );
+      const page2 = await productService.listProducts(
+        { minDaysUntilExpiry: 30 },
+        { page: 2, pageSize: 3 },
+      );
+      expect(page1.pageSize).toBe(3);
+      expect(page1.items.length).toBeLessThanOrEqual(3);
+
+      const allIds = [...page1.items.map((i) => i.id), ...page2.items.map((i) => i.id)];
+      expect(allIds).not.toContain(pNear.id);
+
+      expect(page1.total).toBeGreaterThanOrEqual(5);
+    } finally {
+      await prisma.product.deleteMany({ where: { id: { in: products } } });
+    }
+  }, 20000);
+
   it('getProduct with includeBalances returns balances', async () => {
     if (!process.env.DATABASE_URL) return;
 
