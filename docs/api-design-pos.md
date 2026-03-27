@@ -499,6 +499,11 @@ interface PosOrderListResponse {
 - **指標**（每筆 pair）：`coCount`（同現兩品同單之訂單數）；`support = coCount / totalOrders`（`totalOrders` 為篩選後訂單筆數）；`confidenceAB = coCount / freq(A)`、`confidenceBA = coCount / freq(B)`（freq 為該品出現於幾筆訂單）；`lift = support / (pA * pB)`，其中 `pA=freq(A)/totalOrders`、`pB=freq(B)/totalOrders`；`avgBasketValue` 為該 pair 出現訂單之 `totalAmount` 平均（整數）。
 - **排序**：依 **`coCount` 降序**；再 **`limit` 截斷**。
 - **Response**：`period: { from, to, preset? }`、`promoFilter`、`totalOrders`、`multiItemOrders`（至少兩個相異品項之訂單數）、`pairs: [{ productA, productB, coCount, support, confidenceAB, confidenceBA, lift, avgBasketValue }]`。
+- **契約預留（062 規劃）**：
+  - **維持向後相容**：現有欄位不刪除、不改名；新切面只加在 `meta?` 或 pair 擴充欄位，舊前端可忽略。
+  - `meta?.promoDefinition?`：明確記錄 `with_promo`／`without_promo` 判定規則版本（預設 `promotionApplied.applied[*].discount > 0`）。
+  - `meta?.facet?`：預留 `ruleId`、`ruleType`、`campaignId` 等切面（預設 `all`），供下一階段 drill-down，不影響本版查詢參數。
+  - TODO：若啟用 `facet` 查詢，需同步補 integration-spec（多切面 + 無資料 + limit/minSupport）並更新 `docs/progress/integrated-last-cycle.md`。
 
 **報表錯誤碼**（見 [backend-error-format.md](backend-error-format.md)）：當同時帶 `from`、`to` 時，若 `from`＞`to` 或無法解析為日期 → **400 `REPORT_INVALID_RANGE`**；若區間超過 366 天 → **400 `REPORT_RANGE_TOO_LARGE`**。
 
