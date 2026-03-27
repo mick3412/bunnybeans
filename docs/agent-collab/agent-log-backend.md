@@ -15,6 +15,13 @@
 
 ---
 
+### INSTRUCTIONS-061（補記：三份 transcript 整合追溯）
+- 做了：補記本輪跨對話開發脈絡，整合 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b)、[退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)、[SEED 全局缺口補強](0e085e74-807a-403d-837b-a91630159665)。重點涵蓋 market-basket 報表收斂、退換貨流程修補、以及 seed 完整度與前端空資料區塊補強追溯。
+- 測試/驗收：依三份 transcript 內對應測試記錄（backend test / ci / seed 驗證）為準；本條目僅補協作追溯整合。
+- commits：無（僅補協作追溯記錄）
+
+---
+
 ### INSTRUCTIONS-061（共購分析 Market Basket + e2e seed 庫存還原 + 財務 CSV orderNumber）
 - 做了：依 `BACKEND-INSTRUCTIONS 061.md` §1 完成。
   - **共購分析**：收斂 `GET /pos/reports/market-basket`（`promoFilter`、`limit`、`minSupport`、回傳 period／pairs 指標）；`api-design-pos.md` §4.4 契約；`pos-reports.integration-spec` 補 C(3,2)、空日期區間、minSupport／limit，並沿用既有 promo 過濾案例。

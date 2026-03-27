@@ -6,7 +6,7 @@
 
 ## 1. 本輪必做
 
-> 前端 Agent **只讀本節**，完成後於 agent-log 以 **INSTRUCTIONS 061** 追加一筆。
+> 前端 Agent **只讀本節**，完成後於 agent-log 以 **INSTRUCTIONS 062** 追加一筆。
 
 ### 前置（必做，快檢查）
 
@@ -14,14 +14,16 @@
 - **先做最小可行驗證**：先跑關鍵 smoke（例：`pnpm --filter pos-erp-frontend build`），避免做到一半才發現環境阻塞。
 - **E2E DB 隔離（必做）**：跑 E2E 時一律使用 `.env.e2e`（或 `./scripts/e2e-one-click-isolated.sh`）指向隔離測試 DB；**禁止**將 seed/E2E 指向 demo DB（`pos_erp`）。
 
-### 本輪任務（060 收斂後）
+### 本輪任務（061 收斂後）
 
 | # | 任務 | 說明 |
 |---|------|------|
-| 1 | **060 任務收斂提交（atomic）** | 針對 060 已完成但尚未正式收斂的 UI/互動調整（POS 篩選列、購物車穩定、訂單/退換貨整併、欄位文案、明細補強等），整理成可驗收的 atomic commits，並在 log 明確對照每項任務完成狀態。 |
-| 2 | **售後 E2E full profile 可重現** | 以 `.env.e2e` + `E2E_PROFILE=full` 重新驗證 `pos-refund` / `pos-return-stock` / `pos-exchange-settlement-journey`；若仍有 skip，需在 `docs/e2e-pos.md` 與 agent-log 以固定格式更新「skip code + 條件 + 解法」。 |
-| 3 | **共購分析頁（Market Basket）前端收斂** | 依 [共購分析開發實作](14f5c10d-0865-4a19-82e1-1900b5883e6b) 收斂頁面、路由、API 串接與可用性（篩選/空態/錯誤態）；確認 `/pos/reports/market-basket` 從報表入口可到達且互動穩定。 |
-| 4 | **共購分析 E2E/驗收補齊** | 補最小可用驗收（至少 1 支 page-load + promoFilter 切換）；若受 fixture 限制，需明文化前置條件與 fallback 驗收方式。 |
+| 1 | **售後 E2E 重寫（移除 legacy skip 依賴）** | 針對 `pos-refund.spec.ts`、`pos-return-stock.spec.ts`，改寫成對齊「訂單整併 + 新 AfterSalesPanel」互動流程的斷言；目標是減少 `POS_*_LEGACY_UI_REMOVED` 類 skip，轉為可執行驗收。 |
+| 2 | **全局頁面/報表資料完整度驗收 UI** | 依 [SEED 全局缺口補強](0e085e74-807a-403d-837b-a91630159665) 逐頁驗證（Ops Jobs、CRM Jobs、Loyalty、POS 報表、退換貨明細）是否有可測試資料；若仍空白，補前端提示文案與排查指引。 |
+| 3 | **效期/剩餘天數顯示一致性** | 針對食品與飼料頁面檢查 `productDaysUntilExpiry` 顯示與排序/篩選一致；避免存在資料但 UI 顯示 `—` 或算式不一致。 |
+| 4 | **共購分析頁 UX 二次收斂** | `PosMarketBasketPage` 補強空態/錯誤態/載入態、篩選互動回饋與文案一致性，並確認由 `PosReportsPage` 導航往返體驗。 |
+| 5 | **共購分析 E2E 穩定化** | `e2e/pos-market-basket.spec.ts` 補最小穩定斷言（table/chart/filter 切換），若受 seed 波動影響需記錄前置條件與 fallback 驗收。 |
+| 6 | **062 前端工作區 atomic 收斂提交** | 本輪前端改動按「E2E 重寫 / UX 修整 / 文件」拆 commit，並在 agent-log 對照任務與測試結果。 |
 
 ### 任務執行中（每項必做）
 
