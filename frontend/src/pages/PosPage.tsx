@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '../shared/components/Button';
 import { usePosCart, POS_TAX_RATE } from '../modules/pos/usePosCart';
 import type { PosProduct, PosProductDisplay } from '../modules/pos/types';
@@ -243,11 +244,12 @@ export const PosPage: React.FC = () => {
       const qty = typeof product.onHandQty === 'number' ? product.onHandQty : null;
       const cartQty = items.filter((i) => i.productId === product.id).reduce((s, i) => s + i.quantity, 0);
       const wouldExceed = qty !== null && cartQty + 1 > qty;
-      addProduct(product as PosProduct);
       if (wouldExceed) {
-        setStockOverflowHint(`${product.name} 庫存不足（庫存 ${qty}，已加入 ${cartQty + 1}）`);
+        setStockOverflowHint(`${product.name} 庫存不足，最多可購買 ${qty} 件`);
         setTimeout(() => setStockOverflowHint(null), 4000);
+        return;
       }
+      addProduct(product as PosProduct);
     },
     [items, addProduct],
   );
@@ -781,11 +783,6 @@ export const PosPage: React.FC = () => {
                     <div className="text-xs text-muted">
                       ${line.unitPrice} × {line.quantity}
                     </div>
-                    {outOfStockForCart || reachStockLimit ? (
-                      <div className="mt-1 inline-flex rounded bg-brand-danger/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-danger">
-                        庫存不足，最多可購買 {Math.max(stock ?? 0, 0)} 件
-                      </div>
-                    ) : null}
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -803,8 +800,15 @@ export const PosPage: React.FC = () => {
                           ? 'cursor-not-allowed border-brand-surface bg-table-head text-muted'
                           : 'border-brand-surface bg-white'
                       }`}
-                      onClick={() => changeQuantity(line.id, line.quantity + 1)}
-                      disabled={reachStockLimit || outOfStockForCart}
+                      onClick={() => {
+                        if (reachStockLimit || outOfStockForCart) {
+                          const max = Math.max(stock ?? 0, 0);
+                          setStockOverflowHint(`${line.name} 庫存不足，最多可購買 ${max} 件`);
+                          setTimeout(() => setStockOverflowHint(null), 2500);
+                          return;
+                        }
+                        changeQuantity(line.id, line.quantity + 1);
+                      }}
                       title={reachStockLimit || outOfStockForCart ? `庫存不足，最多 ${Math.max(stock ?? 0, 0)} 件` : undefined}
                     >
                       +
@@ -922,7 +926,13 @@ export const PosPage: React.FC = () => {
           </Button>
           {lastOrderResult?.body && (
             <div className="mt-2 rounded-lg bg-brand-success/10 px-2 py-1.5 text-xs text-brand-success">
-              最近單號 {lastOrderResult.body.orderNumber}
+              最新訂單{' '}
+              <Link
+                to={`/pos/orders/${lastOrderResult.body.id}`}
+                className="font-semibold underline underline-offset-2 hover:text-brand-primary"
+              >
+                {lastOrderResult.body.orderNumber}
+              </Link>
               {lastOrderResult.body.credit ? '（掛帳）' : ''}
             </div>
           )}
@@ -936,7 +946,16 @@ export const PosPage: React.FC = () => {
         totalAmount={promoPreview?.total ?? summary.total}
         storeId={storeId}
         merchantId={apiMerchantId ?? ''}
-        onOrderCreated={setLastOrderResult}
+        onOrderCreated={(result) => {
+          setLastOrderResult(result);
+          if (result.statusCode >= 200 && result.statusCode < 300) {
+            clearCart();
+            setPromoPreview(null);
+            setPreviewMemberRaw('');
+            setPreviewSelectedCustomer(null);
+            setPreviewMemberSearchResults([]);
+          }
+        }}
         initialMemberInput={previewMemberRaw}
       />
       <PosRetrieveHeldModal

@@ -13,6 +13,8 @@ export type FinanceEventRow = {
   occurredAt: Date;
   referenceId: string | null;
   referenceKind: 'posOrder' | 'receivingNote' | 'unknown';
+  /** referenceId 對應 PosOrder 時之單號；無法解析則為 null */
+  orderNumber: string | null;
   note: string | null;
   createdAt: Date;
 };
@@ -24,7 +26,7 @@ function inferReferenceKind(e: FinanceEvent): 'posOrder' | 'receivingNote' | 'un
   return 'unknown';
 }
 
-function toRow(e: FinanceEvent): FinanceEventRow {
+function toRow(e: FinanceEvent, orderNumber: string | null = null): FinanceEventRow {
   return {
     id: e.id,
     type: e.type,
@@ -35,6 +37,7 @@ function toRow(e: FinanceEvent): FinanceEventRow {
     occurredAt: e.occurredAt,
     referenceId: e.referenceId,
     referenceKind: inferReferenceKind(e),
+    orderNumber,
     note: e.note,
     createdAt: e.createdAt,
   };
@@ -103,7 +106,12 @@ export class FinanceService {
       eventType: input.type,
     });
 
-    return toRow(created);
+    let orderNumber: string | null = null;
+    if (created.referenceId?.trim()) {
+      const map = await this.repo.findPosOrderNumbersByIds([created.referenceId.trim()]);
+      orderNumber = map.get(created.referenceId.trim()) ?? null;
+    }
+    return toRow(created, orderNumber);
   }
 
   async listFinanceEvents(q: {
@@ -157,8 +165,18 @@ export class FinanceService {
       page,
       pageSize,
     });
+    const refIds = [
+      ...new Set(
+        items
+          .map((i) => i.referenceId?.trim())
+          .filter((x): x is string => Boolean(x)),
+      ),
+    ];
+    const orderNumMap = await this.repo.findPosOrderNumbersByIds(refIds);
     return {
-      items: items.map(toRow),
+      items: items.map((e) =>
+        toRow(e, e.referenceId?.trim() ? orderNumMap.get(e.referenceId.trim()) ?? null : null),
+      ),
       page,
       pageSize,
       total,

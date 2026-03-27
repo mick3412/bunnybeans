@@ -81,6 +81,34 @@ export interface PosOrderDetail extends PosOrderSummary {
   subtotalAmount?: number;
   discountAmount?: number;
   promotionApplied?: unknown;
+  /** 售後歷程：該訂單的退款事件紀錄 */
+  refundRecords?: Array<{
+    id: string;
+    amount: number;
+    occurredAt: string;
+    note: string | null;
+  }>;
+  /** 售後歷程：該訂單的退換貨單紀錄 */
+  returnRecords?: Array<{
+    id: string;
+    returnNumber: string;
+    type: string;
+    status: string;
+    refundAmount: number;
+    refundMethod: string;
+    pointsDeducted: number;
+    pointsReturned: number;
+    exchangeOrderId: string | null;
+    note: string | null;
+    createdAt: string;
+    items: Array<{
+      productId: string;
+      quantity: number;
+      unitPrice: number;
+      reason: string;
+      condition: string;
+    }>;
+  }>;
 }
 
 export interface PosOrderListResponse {

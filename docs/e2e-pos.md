@@ -75,8 +75,15 @@ pnpm exec playwright test
 
 若你已在其他終端啟動 `pnpm --filter pos-erp-frontend dev`，Playwright 會嘗試再起一次 Vite，導致報錯。
 
-- 解法：保持前端 dev 常駐即可，Playwright 會**重用既有 5173**（`reuseExistingServer:true`）。
+- 解法：保持前端 dev 常駐即可，Playwright 會**重用既有 5173**（`reuseExistingServer:true`，見 repo 根目錄 `playwright.config.ts`）。
 - 或改用自訂網址：`E2E_BASE_URL=http://127.0.0.1:5173 pnpm exec playwright test`
+
+### 常見問題：結帳回傳 `409` + `INVENTORY_INSUFFICIENT`（退換貨 E2E）
+
+`e2e/pos-refund.spec.ts`、`e2e/pos-return-stock.spec.ts` 等會先以條碼 `E2E-BC-0001` 建單；若後端回 **庫存不足**，代表環境**沒有可售庫存 fixture**（或與門市/倉庫綁定不一致）。
+
+- **操作指引**：依序執行 `pnpm --filter pos-erp-backend db:seed` 與 `pnpm --filter pos-erp-backend e2e:seed`（一般 profile 即含條碼與門市資料）；若仍不足，改用 **`E2E_PROFILE=full`** 並跑完整 `e2e:seed`（full profile 要求見上文「Full profile」一節）。
+- E2E 內已對此情況 **`test.skip`** 並提示 seed／full profile，避免在缺資料的環境硬失敗。
 
 ## Full profile（E2E_PROFILE=full）
 

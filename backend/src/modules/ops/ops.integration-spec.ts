@@ -345,13 +345,12 @@ describe('OpsService listJobs (integration)', () => {
 
   it('runJob records OpsJobRunLog (integration)', async () => {
     if (!process.env.DATABASE_URL) return;
-    const before = await prisma.opsJobRunLog.count();
     const out = await opsService.runJob({ kind: 'finance-snapshot', asOfDate: '2026-03-01', snapshotType: 'daily' });
     expect(out.ok).toBe(true);
-    const after = await prisma.opsJobRunLog.count();
-    expect(after).toBe(before + 1);
-    const last = await prisma.opsJobRunLog.findFirst({ orderBy: { lastRunAt: 'desc' } });
-    expect(last?.jobType).toBe('finance-snapshot');
+    const runLogId = (out as { runLogId?: string }).runLogId;
+    expect(runLogId).toBeTruthy();
+    const row = await prisma.opsJobRunLog.findUnique({ where: { id: runLogId! } });
+    expect(row?.jobType).toBe('finance-snapshot');
   }, 15000);
 
   it('recordReportClickAudit records resolvedKind and success (integration)', async () => {

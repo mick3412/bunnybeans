@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { throwBadRequest, throwNotFound, throwConflict } from '../../../shared/utils/throw-exceptions';
 import { randomUUID } from 'crypto';
-import { InventoryEventType } from '@prisma/client';
+import { InventoryEventType, type InventoryEvent } from '@prisma/client';
 import { PrismaService } from '../../../shared/database/prisma.service';
 import { InventoryRepository } from '../infrastructure/inventory.repository';
 import {
@@ -457,7 +457,7 @@ export class InventoryService {
     const page = filter.page && filter.page > 0 ? filter.page : 1;
     const pageSize = filter.pageSize && filter.pageSize > 0 ? filter.pageSize : 50;
 
-    return this.repo.findEvents({
+    const result = await this.repo.findEvents({
       productId: filter.productId,
       warehouseId: filter.warehouseId,
       type: filter.type,
@@ -466,6 +466,49 @@ export class InventoryService {
       page,
       pageSize,
     });
+    const items = await this.attachPosOrderNumberToInventoryEvents(result.items);
+    return { ...result, items };
+  }
+
+  /**
+   * referenceId 可能為 PosOrder.id 或 PosReturn.id；解析為對應訂單單號供列表顯示。
+   */
+  private async attachPosOrderNumberToInventoryEvents(
+    items: InventoryEvent[],
+  ): Promise<Array<InventoryEvent & { orderNumber: string | null }>> {
+    const refs = [
+      ...new Set(
+        items
+          .map((i) => i.referenceId?.trim())
+          .filter((x): x is string => Boolean(x)),
+      ),
+    ];
+    if (refs.length === 0) {
+      return items.map((i) => ({ ...i, orderNumber: null }));
+    }
+    const orderRows = await this.prisma.posOrder.findMany({
+      where: { id: { in: refs } },
+      select: { id: true, orderNumber: true },
+    });
+    const map = new Map<string, string>();
+    for (const o of orderRows) {
+      map.set(o.id, o.orderNumber);
+    }
+    const stillMissing = refs.filter((r) => !map.has(r));
+    if (stillMissing.length > 0) {
+      const posReturns = await this.prisma.posReturn.findMany({
+        where: { id: { in: stillMissing } },
+        select: { id: true, order: { select: { orderNumber: true } } },
+      });
+      for (const pr of posReturns) {
+        const num = pr.order?.orderNumber;
+        if (num) map.set(pr.id, num);
+      }
+    }
+    return items.map((i) => ({
+      ...i,
+      orderNumber: i.referenceId?.trim() ? map.get(i.referenceId.trim()) ?? null : null,
+    }));
   }
 
   /**

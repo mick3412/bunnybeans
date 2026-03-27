@@ -35,11 +35,13 @@ function headerTitle(
     return '營運';
   }
   if (pathname.startsWith('/admin/performance')) return '業績';
-  if (pathname.startsWith('/admin/inventory/adjust')) return '入庫／盤點';
+  if (pathname.startsWith('/admin/inventory/adjust')) return '入庫';
   if (pathname.startsWith('/admin/inventory/expiring')) return '即期庫存';
   if (pathname.startsWith('/admin/inventory')) {
     if (inventoryTab === 'expiring') return '即期庫存';
     if (inventoryTab === 'slowMoving') return '滯銷品';
+    if (inventoryTab === 'adjust') return '入庫';
+    if (inventoryTab === 'warehouses') return '倉庫/門市';
     return '庫存報表';
   }
   if (pathname.startsWith('/admin/products')) {
@@ -275,12 +277,6 @@ export const AdminLayout: React.FC = () => {
             {/* 第一層：採購/入庫（不可點） */}
             <div className="mb-1 shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted">採購/入庫</div>
             {/* 第二層：主入口（可點） */}
-            <NavLink to="/admin/inventory/adjust" className={navClass}>
-              入庫／盤點
-            </NavLink>
-            <NavLink to="/admin/warehouses" className={navClass}>
-              倉庫/門市
-            </NavLink>
             <NavLink to="/admin/procurement" className={navClass}>
               採購總覽
             </NavLink>

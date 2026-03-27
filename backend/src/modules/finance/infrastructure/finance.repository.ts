@@ -80,6 +80,17 @@ export class FinanceRepository {
     return { items: rows, total };
   }
 
+  /** 依 PosOrder.id 批次查詢對應單號（供金流列表顯示用） */
+  async findPosOrderNumbersByIds(ids: string[]): Promise<Map<string, string>> {
+    const uniq = [...new Set(ids.filter((id) => id?.trim()))];
+    if (uniq.length === 0) return new Map();
+    const rows = await this.prisma.posOrder.findMany({
+      where: { id: { in: uniq } },
+      select: { id: true, orderNumber: true },
+    });
+    return new Map(rows.map((r) => [r.id, r.orderNumber]));
+  }
+
   /** 與 listEvents 相同篩選；最多 1 萬筆；匯出用 */
   async listEventsExport(params: {
     partyId?: string;

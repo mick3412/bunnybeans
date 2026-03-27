@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getOrderById,
   getProducts,
@@ -17,7 +17,6 @@ import { OrderHeader } from './pos/orderDetail/OrderHeader';
 import { OrderContent } from './pos/orderDetail/OrderContent';
 import { PaymentSection } from './pos/orderDetail/PaymentSection';
 import { AfterSalesPanel } from './pos/orderDetail/AfterSalesPanel';
-import { ExchangeRelation } from './pos/orderDetail/ExchangeRelation';
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   CASH: '現金',
@@ -33,7 +32,6 @@ function paymentMethodLabel(method: string): string {
 export const PosOrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo');
   const [order, setOrder] = useState<PosOrderDetail | null>(null);
@@ -267,12 +265,6 @@ export const PosOrderDetailPage: React.FC = () => {
       }
     : null;
 
-  const jumpToRefund = () => setAfterSalesTab('refund');
-  const jumpToTopup = () => {
-    const el = document.getElementById('append-payment');
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   return (
     <div className="mx-auto max-w-6xl rounded-2xl border border-brand-surface bg-white p-6 shadow-sm">
       <OrderHeader
@@ -334,17 +326,8 @@ export const PosOrderDetailPage: React.FC = () => {
                 }
                 onReturnSubmit={() => void handleReturnToStock()}
                 onGoPos={() => navigate('/pos')}
-              />
-              <ExchangeRelation
-                order={order}
-                selfReturnTo={`${location.pathname}${location.search}`}
-                onJumpRefund={jumpToRefund}
-                onJumpTopup={jumpToTopup}
-                onOpenOrder={(orderId) => {
-                  const qs = new URLSearchParams();
-                  qs.set('returnTo', `${location.pathname}${location.search}`);
-                  navigate(`/pos/orders/${encodeURIComponent(orderId)}?${qs.toString()}`);
-                }}
+                productMap={productMap}
+                onOrderUpdate={(updated) => setOrder(updated)}
               />
             </div>
           ) : null}

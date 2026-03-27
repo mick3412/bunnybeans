@@ -44,6 +44,17 @@ export function PartySearchSelect({
     ).slice(0, 20);
   }, [options, query]);
 
+  const formatPartyIdPreview = useCallback((partyId: string): string => {
+    const raw = (partyId ?? '').trim();
+    const customerPrefixRe = /^customer:/i;
+    const customerId = raw.replace(customerPrefixRe, '');
+    if (customerId !== raw) {
+      const head = customerId.slice(0, 5);
+      return head ? `${head}...` : '...';
+    }
+    return raw;
+  }, []);
+
   const handleBlurCommit = useCallback(() => {
     if (query.trim()) {
       const exact = options.find(
@@ -149,7 +160,7 @@ export function PartySearchSelect({
               }}
             >
               <span className="font-medium text-content">{opt.displayName}</span>
-              <span className="ml-2 font-mono text-xs text-muted">{opt.partyId}</span>
+              <span className="ml-2 font-mono text-xs text-muted">{formatPartyIdPreview(opt.partyId)}</span>
             </li>
           ))}
         </ul>

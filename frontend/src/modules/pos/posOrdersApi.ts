@@ -99,6 +99,8 @@ export interface PosFinanceEventRow {
   amount: number;
   occurredAt: string;
   referenceId: string | null;
+  /** referenceId 為 PosOrder.id 時之單號 */
+  orderNumber?: string | null;
   note?: string | null;
 }
 
@@ -108,6 +110,8 @@ export interface PosInventoryEventRow {
   quantity: number;
   occurredAt: string;
   referenceId?: string | null;
+  /** referenceId 對應訂單或退貨單所解析之 POS 單號 */
+  orderNumber?: string | null;
 }
 
 async function request<T>(

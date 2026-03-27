@@ -60,7 +60,8 @@ test.describe('POS 退貨入庫', () => {
       throw new Error(`checkout POST /pos/orders status=${checkoutResp.status()}${detail ? ` (${detail})` : ''}`);
     }
     await expect(page.getByTestId('e2e-checkout-modal')).toBeHidden({ timeout: 20_000 });
-    await page.goto('/pos/after-sales');
+    await page.getByRole('link', { name: '退換貨' }).click();
+    await expect(page).toHaveURL(/\/pos\/after-sales/);
     await expect(page.getByTestId('e2e-pos-after-sales')).toBeVisible({ timeout: 15_000 });
     await page.getByRole('button', { name: '退貨' }).click();
     await page.getByRole('button', { name: '查看明細' }).first().click();

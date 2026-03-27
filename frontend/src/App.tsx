@@ -64,10 +64,10 @@ export const App: React.FC = () => {
         <Route index element={<AdminOpsMonitoringHubPageLazy initialTab="overview" />} />
         <Route path="inventory" element={<AdminInventoryQueryHubPageLazy initialTab="balances" />} />
         <Route path="inventory/expiring" element={<AdminInventoryQueryHubPageLazy initialTab="expiring" />} />
-        <Route path="inventory/adjust" element={<AdminInventoryAdjustPageLazy />} />
+        <Route path="inventory/adjust" element={<AdminInventoryQueryHubPageLazy initialTab="adjust" />} />
         <Route path="products" element={<AdminProductHubPageLazy initialTab="products" />} />
-        <Route path="warehouses" element={<AdminWarehousesStoresPageLazy />} />
-        <Route path="stores" element={<Navigate to="/admin/warehouses" replace />} />
+        <Route path="warehouses" element={<AdminInventoryQueryHubPageLazy initialTab="warehouses" />} />
+        <Route path="stores" element={<AdminInventoryQueryHubPageLazy initialTab="warehouses" />} />
         <Route path="categories" element={<AdminProductHubPageLazy initialTab="categories" />} />
         <Route path="discount-tags" element={<AdminProductHubPageLazy initialTab="discountTags" />} />
         <Route path="reports" element={<AdminFinanceHubPageLazy initialTab="reports" />} />

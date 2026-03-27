@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePersistentTableColumnWidths } from '../../shared/hooks/usePersistentTableColumnWidths';
 import {
@@ -33,7 +33,7 @@ import { StandardFloatBar } from '../../shared/components/StandardFloatBar';
 import { TextInput } from '../../shared/components/TextInput';
 import { useAdminToast } from './AdminToastContext';
 import { pollImportJob } from '../../shared/utils/pollImportJob';
-import { getAdminApiKey, hasAdminApiKey, setAdminApiKey } from '../../shared/rbac/adminKey';
+import { hasAdminApiKey } from '../../shared/rbac/adminKey';
 import { DEFAULT_TAGS } from '../../shared/utils/adminTagMaster';
 
 const PRODUCTS_TABLE_COL_STORAGE = 'admin-products-table-col-widths-v3';
@@ -122,13 +122,9 @@ export const AdminProductsPage: React.FC = () => {
   const location = useLocation();
   const merchantId = useDefaultMerchantId();
   const { showToast } = useAdminToast();
-  const hasKeyNow = hasAdminApiKey();
-  const adminKeyInputRef = useRef<HTMLInputElement | null>(null);
-  const [adminKeyDraft, setAdminKeyDraft] = useState(() => getAdminApiKey());
   const ensureAdminKey = useCallback((): boolean => {
-    if (getAdminApiKey()) return true;
-    showToast('此操作需要管理金鑰（Admin Key）。請先於右側區塊輸入並保存。', 'err');
-    setTimeout(() => adminKeyInputRef.current?.focus(), 0);
+    if (hasAdminApiKey()) return true;
+    showToast('此操作需要管理金鑰（Admin Key）。請設定 VITE_ADMIN_API_KEY 後重試。', 'err');
     return false;
   }, [showToast]);
   const [tagOptions, setTagOptions] = useState<string[]>([]);
@@ -799,47 +795,6 @@ export const AdminProductsPage: React.FC = () => {
             </Alert>
           )}
               </details>
-            </div>
-            <div className="mt-2 rounded-xl border border-brand-surface bg-white px-3 py-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">Admin Key</span>
-                <input
-                  ref={adminKeyInputRef}
-                  type="password"
-                  placeholder="輸入後台管理金鑰（本機暫存）"
-                  className="h-8 w-56 rounded-lg border border-brand-surface bg-table-head px-2 text-xs placeholder:text-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                  value={adminKeyDraft}
-                  onChange={(e) => setAdminKeyDraft(e.target.value)}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="primary"
-                  onClick={() => {
-                    const v = adminKeyDraft.trim();
-                    setAdminApiKey(v);
-                    setAdminKeyDraft(v);
-                    showToast(v ? '已保存管理金鑰（本機暫存）。' : '已清除管理金鑰。', v ? 'ok' : 'err');
-                  }}
-                >
-                  保存
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    setAdminKeyDraft('');
-                    setAdminApiKey('');
-                    showToast('已清除管理金鑰。', 'ok');
-                  }}
-                >
-                  清除
-                </Button>
-                <span className="text-[11px] text-muted">
-                  {hasKeyNow ? '已就緒（可寫入）' : '未設定（僅能唯讀）'}
-                </span>
-              </div>
             </div>
           </div>
         </div>

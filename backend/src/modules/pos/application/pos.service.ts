@@ -501,8 +501,10 @@ export class PosService {
       const sourceOrderId = detail.exchangeFromOrderId;
       const sourceId = sourceOrderId || order.id;
 
-      const [derived, source, refundedAgg, refundEvents, selfRefundAgg, selfReturnAgg, selfDerivedCount] =
-        await Promise.all([
+      const [
+        derived, source, refundedAgg, refundEvents, selfRefundAgg, selfReturnAgg, selfDerivedCount,
+        selfRefundEvents, selfReturnRecords,
+      ] = await Promise.all([
         this.prisma.posOrder.findMany({
           where: { exchangeFromOrderId: sourceId },
           select: { id: true, totalAmount: true, payments: { select: { amount: true } } },
@@ -532,6 +534,18 @@ export class PosService {
           _sum: { quantity: true },
         }),
         this.prisma.posOrder.count({ where: { exchangeFromOrderId: order.id } }),
+        this.prisma.financeEvent.findMany({
+          where: { referenceId: order.id, type: 'SALE_REFUND' },
+          orderBy: { occurredAt: 'desc' },
+          select: { id: true, amount: true, occurredAt: true, note: true },
+          take: 50,
+        }),
+        this.prisma.posReturn.findMany({
+          where: { orderId: order.id },
+          orderBy: { createdAt: 'desc' },
+          include: { items: true },
+          take: 50,
+        }),
       ]);
 
       const sourceTotal = source ? toNum(source.totalAmount) : 0;
@@ -582,6 +596,33 @@ export class PosService {
         topupStatus:
           deltaAmount > 0 && derivedRemaining > 0.01 ? 'REQUIRED' : deltaAmount > 0 ? 'SETTLED' : 'NOT_NEEDED',
       };
+
+      (detail as Record<string, unknown>).refundRecords = selfRefundEvents.map((e) => ({
+        id: e.id,
+        amount: Number(e.amount),
+        occurredAt: e.occurredAt.toISOString(),
+        note: e.note ?? null,
+      }));
+      (detail as Record<string, unknown>).returnRecords = selfReturnRecords.map((r) => ({
+        id: r.id,
+        returnNumber: r.returnNumber,
+        type: r.type,
+        status: r.status,
+        refundAmount: Number(r.refundAmount),
+        refundMethod: r.refundMethod,
+        pointsDeducted: r.pointsDeducted,
+        pointsReturned: r.pointsReturned,
+        exchangeOrderId: r.exchangeOrderId ?? null,
+        note: r.note ?? null,
+        createdAt: r.createdAt.toISOString(),
+        items: r.items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+          reason: i.reason,
+          condition: i.condition,
+        })),
+      }));
     } catch {
       detail.exchange = {
         sourceOrderId: detail.exchangeFromOrderId,
@@ -593,6 +634,8 @@ export class PosService {
       detail.hasReturns = false;
       detail.hasExchangeDerived = false;
       detail.exchangeSettlement = null;
+      (detail as Record<string, unknown>).refundRecords = [];
+      (detail as Record<string, unknown>).returnRecords = [];
     }
     return detail;
   }

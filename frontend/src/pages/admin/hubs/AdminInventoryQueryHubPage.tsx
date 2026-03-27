@@ -4,13 +4,17 @@ import { Button } from '../../../shared/components/Button';
 import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchParams';
 import { AdminInventoryPage } from '../AdminInventoryPage';
 import { AdminExpiringInventoryPage } from '../AdminExpiringInventoryPage';
+import { AdminInventoryAdjustPage } from '../AdminInventoryAdjustPage';
+import { AdminWarehousesStoresPage } from '../AdminWarehousesStoresPage';
 
-export type InventoryQueryHubTabKey = 'balances' | 'slowMoving' | 'expiring';
+export type InventoryQueryHubTabKey = 'balances' | 'slowMoving' | 'expiring' | 'adjust' | 'warehouses';
 
 const TAB_OPTIONS: Array<{ key: InventoryQueryHubTabKey; label: string }> = [
   { key: 'balances', label: '庫存餘額' },
   { key: 'slowMoving', label: '滯銷品' },
   { key: 'expiring', label: '即期庫存' },
+  { key: 'adjust', label: '入庫' },
+  { key: 'warehouses', label: '倉庫/門市' },
 ];
 
 function tabButtonClass(active: boolean) {
@@ -32,6 +36,8 @@ export function AdminInventoryQueryHubPage(props: { initialTab?: InventoryQueryH
   const tabFromPathname = useMemo<InventoryQueryHubTabKey | null>(() => {
     const p = location.pathname;
     if (p === '/admin/inventory/expiring') return 'expiring';
+    if (p === '/admin/inventory/adjust') return 'adjust';
+    if (p === '/admin/warehouses' || p === '/admin/stores') return 'warehouses';
     return null;
   }, [location.pathname]);
 
@@ -84,6 +90,10 @@ export function AdminInventoryQueryHubPage(props: { initialTab?: InventoryQueryH
       </div>
       {activeTab === 'expiring' ? (
         <AdminExpiringInventoryPage />
+      ) : activeTab === 'adjust' ? (
+        <AdminInventoryAdjustPage />
+      ) : activeTab === 'warehouses' ? (
+        <AdminWarehousesStoresPage />
       ) : (
         <AdminInventoryPage embeddedInHub />
       )}

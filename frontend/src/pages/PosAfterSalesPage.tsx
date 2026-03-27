@@ -129,7 +129,7 @@ export const PosAfterSalesPage: React.FC = () => {
           refunds.push({
             id: r.id,
             orderId: oid || r.id,
-            orderNumber: oid ? oid.slice(0, 8) : '退款事件',
+            orderNumber: r.orderNumber?.trim() || '—',
             createdAt: r.occurredAt,
             type: 'refund',
             amount: Math.abs(r.amount),
@@ -170,7 +170,7 @@ export const PosAfterSalesPage: React.FC = () => {
                 returns.push({
                   id: ev.id,
                   orderId: ev.referenceId ?? ev.id,
-                  orderNumber: (ev.referenceId ?? '').slice(0, 8) || '退貨事件',
+                  orderNumber: ev.orderNumber?.trim() || '—',
                   createdAt: ev.occurredAt,
                   type: 'return',
                   quantity: Math.abs(ev.quantity),
@@ -225,12 +225,12 @@ export const PosAfterSalesPage: React.FC = () => {
 
   return (
     <StandardListLayout
-      title="售後服務"
+      title="退換貨"
       description="退換貨與退款總覽"
       loading={loading}
       error={error ?? undefined}
       empty={!loading && !error && rows.length === 0}
-      emptyMessage="目前無售後資料"
+      emptyMessage="目前無退換貨資料"
       testId="e2e-pos-after-sales"
       filters={
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -327,7 +327,7 @@ export const PosAfterSalesPage: React.FC = () => {
                       {r.returnNumber}
                     </td>
                     <td className="px-3 py-2 text-muted">
-                      {r.orderNumber ?? r.orderId.slice(0, 8)}
+                      {r.orderNumber?.trim() || '—'}
                     </td>
                     <td className="px-3 py-2">
                       <span className="rounded-full bg-table-head px-2 py-0.5 text-[11px] text-content">
