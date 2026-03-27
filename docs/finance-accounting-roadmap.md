@@ -128,7 +128,7 @@
 ### 6.2 API（已實作）
 
 - **GET /finance/summary**：已支援 `groupBy=type`、`groupBy=partyId`、`groupBy=day`、`groupBy=week`；見 api-design-inventory-finance。
-- **GET /finance/balances**：已實作；依 merchantId（必填或單一商家時自動帶入）查詢應收／應付餘額；支援 partyId、kind（customer/supplier）、分頁；與事件表可重算一致。
+- **GET /finance/balances**：已實作；依 merchantId（必填或單一商家時自動帶入）查詢應收／應付餘額；支援 **partyId**（精確）、**kind**（customer/supplier）、**q**（`Party.displayName` 模糊）、**page**／**pageSize**（上限 100）；回傳 **items**、**total**、**totals** 等；與事件表可重算一致。詳見 **api-design-inventory-finance.md §5.0d**。
 
 ### 6.3 Party 視圖（決策：已採用）
 
@@ -241,7 +241,7 @@
 | 寫入來源 — 採購驗收 | **已實作** | ReceivingNote complete 寫 PURCHASE_PAYABLE。 |
 | 寫入來源 — 退供應商 | **已實作** | return-to-supplier 寫 PURCHASE_RETURN。 |
 | GET /finance/summary | **已實作** | 支援 groupBy=type、groupBy=partyId、preset、from/to；回傳 byType 或 byParty 彙總。 |
-| 應收應付餘額表／API | **已實作** | GET /finance/balances；回傳 `{ items: [{ partyId, receivable, payable, displayName?, kind? }] }`；支援 partyId、kind、分頁；**單一商家 merchantId fallback**：未傳 merchantId 且 DB 僅一筆 Merchant 時自動使用。 |
+| 應收應付餘額表／API | **已實作** | GET /finance/balances；回傳 `{ items, page, pageSize, total, totals }`，items 為 `{ partyId, receivable, payable, displayName?, kind? }[]`；支援 **partyId**（精確）、**kind**、**q**（displayName 模糊）、分頁（pageSize≤100）；**單一商家 merchantId fallback**：未傳 merchantId 且 DB 僅一筆 Merchant 時自動使用。 |
 | 關帳／Periods／Audit／Snapshot | **已實作** | GET/POST /finance/periods（close/unlock）、GET /finance/audit-log、POST /finance/snapshots、GET /finance/snapshots（list/get/download）；integration-spec 已涵蓋。 |
 
 ### 9.2 前端
@@ -259,7 +259,7 @@
 
 | 項目 | 狀態 | 說明 |
 |------|------|------|
-| api-design-inventory-finance.md | **已有** | §5 為 Finance API 詳細規格；§5.0d GET /finance/balances 含回傳格式、Query（partyId、kind）、Response 範例；integration-spec 涵蓋 balances 測試。 |
+| api-design-inventory-finance.md | **已有** | §5 為 Finance API 詳細規格；§5.0d GET /finance/balances 含回傳格式、Query（partyId、kind、**q**、page／pageSize 上限 100）、Response 範例；integration-spec 涵蓋 balances 測試。 |
 | inventory-finance-immutability.md | **已有** | 原則與雙軌、關帳、Audit、備份；本 roadmap §二、§六、§七 引用即可。 |
 | api-design.md §4 金流 | **draft** | 簡短；可改為「詳見 api-design-inventory-finance 與 finance-accounting-roadmap」。 |
 

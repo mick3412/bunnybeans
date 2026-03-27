@@ -441,6 +441,59 @@ describe('FinanceService (integration)', () => {
     await prisma.merchant.delete({ where: { id: merchant.id } });
   }, 10000);
 
+  it('getBalances supports q filter on Party.displayName (ILIKE)', async () => {
+    if (!process.env.DATABASE_URL) return;
+
+    const merchant = await prisma.merchant.create({
+      data: { code: `M-BAL-Q-${Date.now()}`, name: 'Balances Q Merchant' },
+    });
+    const cAlpha = await prisma.customer.create({
+      data: {
+        merchantId: merchant.id,
+        name: 'QFilterAlphaUniqueToken',
+        phone: `bal-q-alpha-${Date.now()}`,
+      },
+    });
+    const cBeta = await prisma.customer.create({
+      data: {
+        merchantId: merchant.id,
+        name: 'QFilterBetaOtherToken',
+        phone: `bal-q-beta-${Date.now()}`,
+      },
+    });
+    const pAlpha = `customer:${cAlpha.id}`;
+    const pBeta = `customer:${cBeta.id}`;
+    await financeService.recordFinanceEvent({
+      type: 'SALE_RECEIVABLE',
+      partyId: pAlpha,
+      currency: 'TWD',
+      amount: 100,
+    });
+    await financeService.recordFinanceEvent({
+      type: 'SALE_RECEIVABLE',
+      partyId: pBeta,
+      currency: 'TWD',
+      amount: 200,
+    });
+    try {
+      const filtered = await financeService.getBalances({
+        merchantId: merchant.id,
+        q: 'AlphaUnique',
+      });
+      expect(filtered.items.length).toBe(1);
+      expect(filtered.items[0].partyId).toBe(pAlpha);
+      expect(filtered.total).toBe(1);
+      expect(filtered.totals.receivable).toBe(100);
+
+      const all = await financeService.getBalances({ merchantId: merchant.id });
+      expect(all.items.length).toBeGreaterThanOrEqual(2);
+    } finally {
+      await prisma.financeEvent.deleteMany({ where: { partyId: { in: [pAlpha, pBeta] } } });
+      await prisma.customer.deleteMany({ where: { id: { in: [cAlpha.id, cBeta.id] } } });
+      await prisma.merchant.delete({ where: { id: merchant.id } });
+    }
+  }, 10000);
+
   it('getBalances: prefixed partyId resolves via Party view; unknown partyId has no kind/displayName', async () => {
     if (!process.env.DATABASE_URL) return;
     const merchant = await prisma.merchant.create({

@@ -81,7 +81,7 @@ interface PagedResult<T> {
 | `/finance/events/export` | GET | 金流事件 CSV（query 同 GET events；最多 1 萬列；BOM；**X-Admin-Key** 若已設） | Finance | **stable** |
 | `/finance/events`       | POST   | 新增一筆金流事件（append-only） | Finance    | **stable** |
 | `/finance/summary`     | GET    | 金流彙總（query：from、to、preset=last30d、**groupBy=type｜partyId｜day｜week**；回應 byType / byParty / trend；**groupBy=partyId** 時 `byParty[]` 每筆含 **`displayName?`**、**`kind?`**（與 balances 相同解析） | Finance | **stable** |
-| `/finance/balances`   | GET    | 應收／應付餘額（Phase 4；query **merchantId** 選填；**單一商家友善**：未傳 merchantId 且 DB 僅一筆 Merchant 時自動使用該 merchant；回傳 partyId、receivable、payable、**displayName?**、**kind?**；kind 篩選：`customer`｜`supplier`） | Finance | **stable** |
+| `/finance/balances`   | GET    | 應收／應付餘額（Phase 4；query **merchantId** 選填；**單一商家友善**：未傳 merchantId 且 DB 僅一筆 Merchant 時自動使用該 merchant；**partyId** 精確比對；**kind**=`customer`｜`supplier`；**q**=依 `Party.displayName` 模糊（ILIKE）；**page**／**pageSize**（預設 50，上限 **100**）；回傳 **items**、**page**、**pageSize**、**total**、**totals**；每筆 **partyId**、receivable、payable、**displayName?**、**kind?**） | Finance | **stable** |
 
 金流報表（GET /finance/events、GET /finance/summary）若未來對 `from`／`to` 做區間驗證，將與 POS 報表一致回傳 **`REPORT_INVALID_RANGE`**／**`REPORT_RANGE_TOO_LARGE`**，見 [backend-error-format.md](backend-error-format.md)。
 
@@ -486,9 +486,10 @@ interface PagedResult<T> {
 
 - **Query**：
   - `merchantId`（必填）：商家 UUID（多商家資料隔離；單一商家時可未傳，後端自動解析）
-  - `partyId`（可選）：精確比對，例 `customer:{uuid}`、`supplier:{uuid}`
-  - `kind`（可選）：`customer`｜`supplier`，篩選 party 類型
-  - `page`（預設 `1`）、`pageSize`（預設 `50`，上限 `200`）
+  - `partyId`（可選）：**精確比對**（與 `FinanceEvent.partyId` 相等），例 `customer:{uuid}`、`supplier:{uuid}`；空字串視同未帶
+  - `kind`（可選）：`customer`｜`supplier`，篩選 party 類型（與 `Party.kind` 一致）
+  - `q`（可選）：依 **`Party.displayName`** 模糊搜尋（ILIKE `%q%`）；若與 `partyId` 併用，先限縮至該 party 之彙總列再套用 `q`（AND）
+  - `page`（預設 `1`）、`pageSize`（預設 `50`，上限 **`100`**，與 `FinanceService.getBalances` 一致）
 - **回應**：`{ items, page, pageSize, total, totals }`
   - `items`: `[{ partyId, receivable, payable, displayName?, kind? }]`
   - `totals`: `{ receivable, payable }`（為**篩選後**全集合的加總）

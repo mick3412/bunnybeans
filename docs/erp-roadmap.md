@@ -27,9 +27,9 @@
 
 ### 0.3 Finance balances 契約不完整
 
-- **現況**：後端 `GET /finance/balances` 已有實作（`finance.repository.ts` 的 `balancesByPartyId`），但 `finance-accounting-roadmap.md` §9.1 仍標「應收應付餘額表／API — **未實作**」，與實際 code 矛盾；`api-design-inventory-finance.md` 對 `GET /finance/balances` 的回傳格式和 `partyId` 查詢參數的說明不夠具體。
-- **問題**：前端 `AdminFinanceBalancesPage` 雖然能呼叫並顯示資料，但 API 契約文件與整合測試未對齊。
-- **修正計畫**：Phase 1 後端補齊契約文件（`api-design-inventory-finance.md`）與 `finance.integration-spec.ts` 中的 balances 整合測試，確認回傳 `{ items: [{ partyId, receivable, payable }] }` 並支援 `?partyId=` 查詢。
+- **現況（已收斂）**：`GET /finance/balances` 已實作（`finance.repository.ts` → `balancesByPartyId`）；契約見 **`api-design-inventory-finance.md` §5.0d**（回傳 `items`／`page`／`pageSize`／`total`／`totals`；Query：`merchantId`、`partyId` 精確比對、`kind`、`q`（displayName 模糊）、分頁）；**`finance-accounting-roadmap.md` §9** 與 **`finance.integration-spec.ts`**（balances 多則）已對齊實作。
+- **問題**：（已解決）先前文件標「未實作」與 code 矛盾、契約敘述不足。
+- **修正計畫**：（已完成）契約文件、`partyId`／`kind`／`q` 行為與整合測試對齊；後續僅依 API 變更同步更新 §5.0d。
 
 ### 0.4 側欄導覽與頁面重複
 
