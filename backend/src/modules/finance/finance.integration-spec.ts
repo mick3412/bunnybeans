@@ -114,7 +114,9 @@ describe('FinanceService (integration)', () => {
       note: 'csv row',
     });
     const csv = await financeService.exportFinanceEventsCsv({ referenceId: ref });
-    expect(csv).toContain('id,type,partyId,currency,amount,taxAmount,occurredAt,referenceId,note,createdAt');
+    expect(csv).toContain(
+      'id,type,partyId,currency,amount,taxAmount,occurredAt,referenceId,orderNumber,note,createdAt',
+    );
     expect(csv).toContain(ref);
     expect(csv).toContain('SALE_RECEIVABLE');
     expect(csv).toContain('99');

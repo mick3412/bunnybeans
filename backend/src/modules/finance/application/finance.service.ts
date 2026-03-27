@@ -223,6 +223,14 @@ export class FinanceService {
       from,
       to,
     });
+    const refIds = [
+      ...new Set(
+        rows
+          .map((r) => r.referenceId?.trim())
+          .filter((x): x is string => Boolean(x)),
+      ),
+    ];
+    const orderNumMap = await this.repo.findPosOrderNumbersByIds(refIds);
     const header = [
       'id',
       'type',
@@ -232,6 +240,7 @@ export class FinanceService {
       'taxAmount',
       'occurredAt',
       'referenceId',
+      'orderNumber',
       'note',
       'createdAt',
     ].join(',');
@@ -245,6 +254,9 @@ export class FinanceService {
         this.csvCell(r.taxAmount != null ? Number(r.taxAmount) : ''),
         this.csvCell(r.occurredAt.toISOString()),
         this.csvCell(r.referenceId),
+        this.csvCell(
+          r.referenceId?.trim() ? orderNumMap.get(r.referenceId.trim()) ?? '' : '',
+        ),
         this.csvCell(r.note),
         this.csvCell(r.createdAt.toISOString()),
       ].join(','),
