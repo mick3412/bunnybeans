@@ -149,7 +149,10 @@ export const LoyaltyPointLedgerPage: React.FC = () => {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={customerId ? 7 : 8} className="p-0">
-                  <EmptyState message="尚無流水" />
+                  <EmptyState
+                    message="尚無流水"
+                    description="若為測試環境，請先完成至少一筆贈點或扣點交易（下單、折抵、退款）後再查。"
+                  />
                 </td>
               </tr>
             )}

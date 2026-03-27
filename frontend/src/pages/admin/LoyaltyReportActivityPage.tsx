@@ -142,7 +142,10 @@ export const LoyaltyReportActivityPage: React.FC = () => {
         </div>
       )}
       {!loading && !err && !data ? (
-        <EmptyState message="尚未查詢" description="" />
+        <EmptyState
+          message="尚未查詢"
+          description="先設定區間並查詢；若仍無資料，請確認測試資料已 seed 且有發券/用券紀錄。"
+        />
       ) : null}
       {data && (
         <div className="space-y-4">

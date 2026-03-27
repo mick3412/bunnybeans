@@ -465,7 +465,7 @@ export const PosReportsPage: React.FC = () => {
       )}
       {!topItemsLoading && !topItemsErr && topItems.length === 0 && data && (
         <div className="mt-8 rounded-2xl border border-dashed border-brand-surface bg-white p-4 text-sm text-muted">
-          此區間內沒有任何銷售品項。
+          此區間內沒有任何銷售品項。若為測試環境，請先完成下單再回到報表。
         </div>
       )}
       {topItems.length > 0 && !topItemsLoading && (

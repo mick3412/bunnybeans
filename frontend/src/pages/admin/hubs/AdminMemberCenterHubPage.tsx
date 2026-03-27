@@ -8,6 +8,7 @@ import { LoyaltySettingsPage } from '../loyalty/LoyaltySettingsPage';
 import { LoyaltyTierRulesPage } from '../loyalty/LoyaltyTierRulesPage';
 import { LoyaltyReportActivityPage } from '../LoyaltyReportActivityPage';
 import { AdminCustomersPage } from '../AdminCustomersPage';
+import { HUB_TAB_ROW_CLASS, hubTabButtonClass } from './hubTabStyles';
 
 export type MemberCenterHubTabKey =
   | 'dashboard'
@@ -25,15 +26,6 @@ const TAB_OPTIONS: Array<{ key: MemberCenterHubTabKey; label: string }> = [
   { key: 'settings', label: '集點設定' },
   { key: 'tierRules', label: '會員等級規則' },
 ];
-
-function tabButtonClass(active: boolean) {
-  return [
-    'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-    active
-      ? '!bg-forge-sidebar !text-white shadow-sm ring-2 ring-brand-primary/40'
-      : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
-  ].join(' ');
-}
 
 export function AdminMemberCenterHubPage(props: { initialTab?: MemberCenterHubTabKey }) {
   const { initialTab } = props;
@@ -100,14 +92,14 @@ export function AdminMemberCenterHubPage(props: { initialTab?: MemberCenterHubTa
   return (
     <div className="min-h-[calc(100vh-8rem)] min-w-0 overflow-auto p-4 lg:p-6" data-testid="e2e-admin-loyalty">
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2 border-b border-brand-surface pb-3">
+        <div className={HUB_TAB_ROW_CLASS}>
           {TAB_OPTIONS.map((t) => (
             <Button
               key={t.key}
               type="button"
               size="sm"
               variant="secondary"
-              className={tabButtonClass(activeTab === t.key)}
+              className={hubTabButtonClass(activeTab === t.key)}
               onClick={() => navigate(toPath[t.key])}
             >
               {t.label}

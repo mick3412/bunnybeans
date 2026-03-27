@@ -5,6 +5,7 @@ import { useScopedSearchParams } from '../../../shared/utils/useScopedSearchPara
 import { AdminDashboardPage } from '../AdminDashboardPage';
 import { AdminOpsJobsPage } from '../AdminOpsJobsPage';
 import { AdminOpsReportClicksPage } from '../AdminOpsReportClicksPage';
+import { HUB_TAB_ROW_CLASS, hubTabButtonClass } from './hubTabStyles';
 
 export type OpsMonitoringHubTabKey = 'overview' | 'jobs' | 'clicks';
 
@@ -13,15 +14,6 @@ const TAB_OPTIONS: Array<{ key: OpsMonitoringHubTabKey; label: string }> = [
   { key: 'jobs', label: 'Job 監控' },
   { key: 'clicks', label: '穿透點擊審計' },
 ];
-
-function tabButtonClass(active: boolean) {
-  return [
-    'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-    active
-      ? '!bg-forge-sidebar !text-white shadow-sm ring-2 ring-brand-primary/40'
-      : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
-  ].join(' ');
-}
 
 export function AdminOpsMonitoringHubPage(props: { initialTab?: OpsMonitoringHubTabKey }) {
   const { initialTab } = props;
@@ -75,14 +67,14 @@ export function AdminOpsMonitoringHubPage(props: { initialTab?: OpsMonitoringHub
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 border-b border-brand-surface pb-3">
+      <div className={HUB_TAB_ROW_CLASS}>
         {TAB_OPTIONS.map((t) => (
           <Button
             key={t.key}
             type="button"
             size="sm"
             variant="secondary"
-            className={tabButtonClass(activeTab === t.key)}
+            className={hubTabButtonClass(activeTab === t.key)}
             onClick={() => navigate(toPath[t.key])}
           >
             {t.label}

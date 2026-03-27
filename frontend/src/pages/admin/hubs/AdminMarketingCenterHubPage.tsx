@@ -8,6 +8,7 @@ import { AdminMarketingRulesPage } from '../AdminMarketingRulesPage';
 import { LoyaltyCouponsPage } from '../loyalty/LoyaltyCouponsPage';
 import { AdminSegmentsPage } from '../AdminSegmentsPage';
 import { AdminDispatchRulesPage } from '../AdminDispatchRulesPage';
+import { HUB_TAB_ROW_CLASS, hubTabButtonClass } from './hubTabStyles';
 
 export type MarketingCenterHubTabKey = 'promotions' | 'coupons' | 'segments' | 'dispatchRules' | 'jobs' | 'marketingRules';
 
@@ -19,15 +20,6 @@ const TAB_OPTIONS: Array<{ key: MarketingCenterHubTabKey; label: string }> = [
   { key: 'jobs', label: '行銷工作台（Jobs）' },
   { key: 'marketingRules', label: '行銷規則（常駐）' },
 ];
-
-function tabButtonClass(active: boolean) {
-  return [
-    'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-    active
-      ? '!bg-forge-sidebar !text-white shadow-sm ring-2 ring-brand-primary/40'
-      : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
-  ].join(' ');
-}
 
 export function AdminMarketingCenterHubPage(props: { initialTab?: MarketingCenterHubTabKey }) {
   const { initialTab } = props;
@@ -94,14 +86,14 @@ export function AdminMarketingCenterHubPage(props: { initialTab?: MarketingCente
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 border-b border-brand-surface pb-3">
+      <div className={HUB_TAB_ROW_CLASS}>
         {TAB_OPTIONS.map((t) => (
           <Button
             key={t.key}
             type="button"
             size="sm"
             variant="secondary"
-            className={tabButtonClass(activeTab === t.key)}
+            className={hubTabButtonClass(activeTab === t.key)}
             onClick={() => navigate(toPath[t.key])}
           >
             {t.label}

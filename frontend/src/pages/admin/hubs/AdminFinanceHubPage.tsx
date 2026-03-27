@@ -7,6 +7,7 @@ import { AdminFinanceBalancesPage } from '../AdminFinanceBalancesPage';
 import { AdminFinancePeriodsPage } from '../AdminFinancePeriodsPage';
 import { AdminFinanceAuditPage } from '../AdminFinanceAuditPage';
 import { AdminFinanceSnapshotsPage } from '../AdminFinanceSnapshotsPage';
+import { HUB_TAB_ROW_CLASS, hubTabButtonClass } from './hubTabStyles';
 
 export type FinanceHubTabKey = 'reports' | 'balances' | 'periods' | 'audit' | 'snapshots';
 
@@ -17,15 +18,6 @@ const TAB_OPTIONS: Array<{ key: FinanceHubTabKey; label: string }> = [
   { key: 'audit', label: '稽核紀錄' },
   { key: 'snapshots', label: '金流快照' },
 ];
-
-function tabButtonClass(active: boolean) {
-  return [
-    'rounded-full px-3 py-1.5 text-xs font-semibold transition',
-    active
-      ? '!bg-forge-sidebar !text-white shadow-sm ring-2 ring-brand-primary/40'
-      : 'bg-white text-muted ring-1 ring-brand-surface hover:bg-table-head',
-  ].join(' ');
-}
 
 export function AdminFinanceHubPage(props: { initialTab?: FinanceHubTabKey }) {
   const { initialTab } = props;
@@ -94,14 +86,14 @@ export function AdminFinanceHubPage(props: { initialTab?: FinanceHubTabKey }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 border-b border-brand-surface pb-3">
+      <div className={HUB_TAB_ROW_CLASS}>
         {TAB_OPTIONS.map((t) => (
           <Button
             key={t.key}
             type="button"
             size="sm"
             variant="secondary"
-            className={tabButtonClass(activeTab === t.key)}
+            className={hubTabButtonClass(activeTab === t.key)}
             onClick={() => {
               // Hub tabs 是「跨路由」切換：用 navigate 確保不被 pathname 同步打回。
               navigate(toPath[t.key]);

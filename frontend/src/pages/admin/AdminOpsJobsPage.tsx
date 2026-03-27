@@ -113,7 +113,11 @@ export const AdminOpsJobsPage: React.FC = () => {
       ) : null}
       empty={!loading && !err && items.length === 0}
       emptyMessage="沒有紀錄"
-      emptyDescription={from.trim() || to.trim() ? `目前條件：${kindLabel} · ${from.trim() || '—'} ～ ${to.trim() || '—'}` : `目前條件：${kindLabel}`}
+      emptyDescription={
+        from.trim() || to.trim()
+          ? `目前條件：${kindLabel} · ${from.trim() || '—'} ～ ${to.trim() || '—'}。若預期有資料，請先確認 seed 後觸發一次排程。`
+          : `目前條件：${kindLabel}。若預期有資料，請先確認 seed 後觸發一次排程。`
+      }
       testId="e2e-admin-ops-jobs"
       filters={
         <div className="flex flex-wrap items-center gap-3">

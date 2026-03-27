@@ -150,7 +150,10 @@ export const LoyaltyDashboardPage: React.FC = () => {
           <ul className="space-y-2 text-sm">
             {promos.length === 0 && (
               <li>
-                <EmptyState message="尚無進行中促銷（或皆為草稿）" />
+                <EmptyState
+                  message="尚無進行中促銷（或皆為草稿）"
+                  description="可先到促銷規則建立活動並設定生效區間，再回來查看。"
+                />
               </li>
             )}
             {promos.map((p) => (

@@ -273,6 +273,9 @@ export const AdminCrmJobsPage: React.FC = () => {
         ) : items.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted">
             <div className="font-medium text-content">沒有紀錄</div>
+            <div className="mt-1 text-xs text-muted">
+              若預期有資料，請先確認活動/發券規則已建立並執行排程（seed 後再查）。
+            </div>
             <div className="mt-3">
               <Button type="button" variant="secondary" size="sm" onClick={() => void load()}>
                 重試
