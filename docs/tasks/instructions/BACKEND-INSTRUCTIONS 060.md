@@ -12,6 +12,7 @@
 
 - **工作區與依賴檢查**：先看 `git status` / `git diff`，確認本輪起點與未提交項目；同時確認測試所需環境可啟動（DB、env、seed）。
 - **先做最小可行驗證**：先跑關鍵 smoke 測試（例：`pnpm --filter pos-erp-backend test -- finance.integration-spec.ts`），避免做到一半才發現環境阻塞。
+- **E2E DB 隔離（必做）**：涉及 seed/E2E 時一律使用 `.env.e2e`（或 `./scripts/e2e-one-click-isolated.sh`）指向隔離測試 DB；**禁止**將 seed/E2E 指向 demo DB（`pos_erp`）。
 
 ### 本輪任務（059 收斂後）
 
