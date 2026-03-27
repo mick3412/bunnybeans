@@ -15,6 +15,30 @@
 
 ---
 
+### INSTRUCTIONS-059（058 收斂 + 商品列表契約凍結 + 效期篩選回歸）
+- 做了：依 `BACKEND-INSTRUCTIONS 059.md` §1 完成本輪任務。
+  - **#1 補齊 058 待提交 commit**：檢查工作區，058「商品總覽」所述產品變更已在 `eccae3a3` 提交（無遺漏）；工作區殘留的 `pos-return.service.ts`/`pos-return.repository.ts` 改進（transaction client 傳遞、庫存事件邏輯修正）已補 atomic commit `248cde11`。
+  - **#2 商品列表契約凍結驗收**：確認 `GET /products` 回傳 `{ items, total, page, pageSize }`，items 含 `productionDate`/`shelfLifeMonths`/`expiryDate`；新增 `listProducts returns { items, total, page, pageSize } with expiry fields` 整合測試。
+  - **#3 效期篩選與分頁回歸測試**：新增 3 則 `minDaysUntilExpiry` 回歸測試 — expiryDate 路徑、productionDate+shelfLifeMonths 推算路徑、filter-then-paginate 行為（先篩後分頁，不漏資料）。
+- 測試/驗收：`pnpm --filter pos-erp-backend test` 全綠（22 suites、170 tests）；`pnpm ci:backend-with-db` 全綠。
+- commits：`248cde11` [INSTRUCTIONS-058] fix(pos-return): pass tx through repository and fix inventory event logic；`91d9b54f` [INSTRUCTIONS-059] test(products): add listProducts contract and minDaysUntilExpiry regression tests
+
+---
+
+### INSTRUCTIONS-059（補記：退換貨系統修復補強 transcript）
+- 做了：補記修復補強內容來源：[退換貨系統修復補強](fb81d243-90b1-4dce-9af1-dc0dda8b5912)（重點含 `executeReturn` transaction client 修正、`SCRAP_LOSS` 流程修補為「先 RETURN_FROM_CUSTOMER 後 SCRAP_LOSS」避免庫存負數、以及相關 API/服務串接補強）。
+- 測試/驗收：`pnpm --filter pos-erp-backend test`、後端編譯檢查（依 transcript 記錄為通過；另註記既有非本次變更錯誤不屬於本補記範圍）。
+- commits：無（僅補協作追溯記錄）
+
+---
+
+### INSTRUCTIONS-058（補記：退換貨系統 transcript 追溯）
+- 做了：補上本輪相關對話紀錄來源：[退換貨系統計畫與實作摘要](fb81d243-90b1-4dce-9af1-dc0dda8b5912)（包含退換貨系統設計與分期實作構想：PosReturn/Item、StoreCredit、ReturnPolicy、SCRAP_LOSS、preview/execute API 等，供後續規格/協作追溯）。
+- 測試/驗收：不適用（僅補記錄）
+- commits：無
+
+---
+
 ### INSTRUCTIONS-058（商品總覽：列表回應形狀 / 效期欄位與篩選一致性）
 - 做了：
   - **#1 商品列表契約補齊**：`GET /products` 列表回應補上 `productionDate`、`shelfLifeMonths`、`expiryDate`，以支援前端計算「到期日／剩餘天數」。
