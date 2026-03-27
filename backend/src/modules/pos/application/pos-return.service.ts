@@ -401,7 +401,7 @@ export class PosReturnService {
       deltaAmount = round2(exchangeTotal - proration.refundAmount);
     }
 
-    const result = await this.prisma.$transaction(async () => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const posReturn = await this.returnRepo.create({
         returnNumber,
         orderId: order.id,
@@ -423,20 +423,20 @@ export class PosReturnService {
           condition: item.condition,
           note: item.note,
         })),
-      });
+      }, tx);
 
       for (const item of validatedItems) {
-        if (item.condition === 'GOOD') {
-          await this.inventoryService.recordInventoryEvent({
-            productId: item.productId,
-            warehouseId: warehouse.id,
-            type: 'RETURN_FROM_CUSTOMER',
-            quantity: item.quantity,
-            occurredAt: occurredAtStr,
-            referenceId: posReturn.id,
-            note: `RTN ${returnNumber} return-to-stock`,
-          });
-        } else {
+        await this.inventoryService.recordInventoryEvent({
+          productId: item.productId,
+          warehouseId: warehouse.id,
+          type: 'RETURN_FROM_CUSTOMER',
+          quantity: item.quantity,
+          occurredAt: occurredAtStr,
+          referenceId: posReturn.id,
+          note: `RTN ${returnNumber} ${item.condition === 'GOOD' ? 'return-to-stock' : 'return-then-scrap'}`,
+        });
+
+        if (item.condition !== 'GOOD') {
           await this.inventoryService.recordInventoryEvent({
             productId: item.productId,
             warehouseId: warehouse.id,
@@ -445,6 +445,7 @@ export class PosReturnService {
             occurredAt: occurredAtStr,
             referenceId: posReturn.id,
             note: `RTN ${returnNumber} defective scrap`,
+            skipReferenceIdCheck: true,
           });
         }
       }
@@ -468,12 +469,12 @@ export class PosReturnService {
         order.customerId
       ) {
         if (input.type !== 'EXCHANGE') {
-          const prevCredit = await this.prisma.storeCreditLedger.findFirst({
+          const prevCredit = await tx.storeCreditLedger.findFirst({
             where: { customerId: order.customerId },
             orderBy: { createdAt: 'desc' },
           });
           const prevBalance = toNum(prevCredit?.balanceAfter);
-          await this.prisma.storeCreditLedger.create({
+          await tx.storeCreditLedger.create({
             data: {
               merchantId: store!.merchantId,
               customerId: order.customerId,
@@ -590,10 +591,7 @@ export class PosReturnService {
           });
         }
 
-        await this.prisma.posReturn.update({
-          where: { id: posReturn.id },
-          data: { exchangeOrderId: created.id },
-        });
+        await this.returnRepo.updateExchangeOrderId(posReturn.id, created.id, tx);
 
         exchangeOrder = {
           id: created.id,

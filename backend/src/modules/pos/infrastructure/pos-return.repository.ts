@@ -8,7 +8,13 @@ import {
   ItemCondition,
   RefundMethod,
   Prisma,
+  PrismaClient,
 } from '@prisma/client';
+
+export type TxClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
 
 export interface CreatePosReturnData {
   returnNumber: string;
@@ -38,8 +44,9 @@ export interface CreatePosReturnData {
 export class PosReturnRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreatePosReturnData) {
-    return this.prisma.posReturn.create({
+  async create(data: CreatePosReturnData, tx?: TxClient) {
+    const client = tx ?? this.prisma;
+    return client.posReturn.create({
       data: {
         returnNumber: data.returnNumber,
         orderId: data.orderId,
@@ -66,6 +73,14 @@ export class PosReturnRepository {
         },
       },
       include: { items: true },
+    });
+  }
+
+  async updateExchangeOrderId(id: string, exchangeOrderId: string, tx?: TxClient) {
+    const client = tx ?? this.prisma;
+    return client.posReturn.update({
+      where: { id },
+      data: { exchangeOrderId },
     });
   }
 
