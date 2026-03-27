@@ -13,6 +13,33 @@
 ./scripts/e2e-local.sh
 ```
 
+---
+
+## 最簡單隔離 demo DB（推薦）
+
+> 因為 `pnpm --filter pos-erp-backend db:seed` 會先 `wipeAll()` 清空業務表再重建完整 demo 數據，若你把 `DATABASE_URL` 指到 demo DB，**就會把 demo DB 清掉**。  
+> 解法是：**專門準備一個 E2E DB**，E2E 相關指令一律用它。
+
+### 一次性設定
+
+1. 準備一個獨立 DB（例：`pos_erp_e2e`）
+2. 建立 `.env.e2e`（此檔已被 gitignore）
+
+```bash
+cp .env.e2e.example .env.e2e
+```
+
+並把 `.env.e2e` 的 `DATABASE_URL` 改指向你的 E2E DB（例如 `.../pos_erp_e2e`）。
+
+### 一鍵跑（完全不動 demo DB）
+
+```bash
+./scripts/e2e-one-click-isolated.sh
+```
+
+它會使用 `.env.e2e` 的 `DATABASE_URL` 來執行：
+`migrate deploy → db:seed（wipe+full demo）→ e2e:seed → 後端 dev(:3003) → playwright`。
+
 **盡量一鍵**（未起後端時會背景啟動 backend，需 DB / `DATABASE_URL`）：
 
 ```bash
