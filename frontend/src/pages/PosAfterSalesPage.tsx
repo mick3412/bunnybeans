@@ -6,39 +6,22 @@ import { formatMoney } from '../shared/utils/formatMoney';
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import {
   getPosFinanceEvents,
-  getPosInventoryEvents,
   getPosReportsSummary,
   getStores,
-  getWarehouses,
   listOrders,
   listReturns,
   type StoreDto,
   type PosReportsSummaryDto,
-  type ReturnListItem,
 } from '../modules/pos/posOrdersApi';
 import type { PosOrderSummary } from '../modules/pos/posOrdersMockService';
 
-type TabKey = 'all' | 'refund' | 'return' | 'exchange' | 'returns-record';
-
-const REASON_LABEL: Record<string, string> = {
-  SIZE_WRONG: '尺寸不合',
-  DEFECTIVE: '瑕疵品',
-  CHANGED_MIND: '改變心意',
-  WRONG_ITEM: '拿錯商品',
-  DUPLICATE_PURCHASE: '重複購買',
-  OTHER: '其他',
-};
-
-const TYPE_LABEL: Record<string, string> = {
-  FULL_RETURN: '全單退貨',
-  PARTIAL_RETURN: '部分退貨',
-  EXCHANGE: '換貨',
-};
+type TabKey = 'all' | 'refund' | 'return' | 'exchange';
 
 type AfterSalesRow = {
   id: string;
-  orderId: string;
-  orderNumber: string;
+  sourceOrderId: string;
+  sourceOrderNumber: string;
+  returnOrderNumber: string;
   createdAt: string;
   type: TabKey;
   amount?: number;
@@ -75,7 +58,6 @@ export const PosAfterSalesPage: React.FC = () => {
   const [refundRows, setRefundRows] = useState<AfterSalesRow[]>([]);
   const [returnRows, setReturnRows] = useState<AfterSalesRow[]>([]);
   const [exchangeRows, setExchangeRows] = useState<AfterSalesRow[]>([]);
-  const [returnRecords, setReturnRecords] = useState<ReturnListItem[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -100,7 +82,7 @@ export const PosAfterSalesPage: React.FC = () => {
       const from = toIsoStart(fromDate);
       const to = toIsoEnd(toDate);
 
-      const [sumRes, refundRes, exchangeRes, whRes] = await Promise.all([
+      const [sumRes, refundRes, exchangeRes, retRes] = await Promise.all([
         getPosReportsSummary({ from, to, storeId: storeId || undefined }),
         getPosFinanceEvents({ from, to, type: 'SALE_REFUND', page: 1, pageSize: 200 }),
         listOrders({
@@ -111,7 +93,13 @@ export const PosAfterSalesPage: React.FC = () => {
           to,
           hasExchange: true,
         }),
-        getWarehouses(),
+        listReturns({
+          storeId: storeId || undefined,
+          from,
+          to,
+          page: 1,
+          pageSize: 200,
+        }),
       ]);
 
       if (!mounted) return;
@@ -128,8 +116,9 @@ export const PosAfterSalesPage: React.FC = () => {
           const oid = (r.referenceId ?? '').trim();
           refunds.push({
             id: r.id,
-            orderId: oid || r.id,
-            orderNumber: r.orderNumber?.trim() || '—',
+            sourceOrderId: oid || r.id,
+            sourceOrderNumber: r.orderNumber?.trim() || '—',
+            returnOrderNumber: '—',
             createdAt: r.occurredAt,
             type: 'refund',
             amount: Math.abs(r.amount),
@@ -143,8 +132,11 @@ export const PosAfterSalesPage: React.FC = () => {
         (exchangeRes.items as PosOrderSummary[]).forEach((o) => {
           exchanges.push({
             id: o.id,
-            orderId: o.id,
-            orderNumber: o.orderNumber,
+            sourceOrderId: o.exchangeFromOrderId ?? o.id,
+            sourceOrderNumber: o.exchangeFromOrderId
+              ? `${o.exchangeFromOrderId.slice(0, 8)}…`
+              : o.orderNumber,
+            returnOrderNumber: o.orderNumber,
             createdAt: o.createdAt,
             type: 'exchange',
             amount: o.totalAmount,
@@ -155,43 +147,21 @@ export const PosAfterSalesPage: React.FC = () => {
       setExchangeRows(exchanges);
 
       const returns: AfterSalesRow[] = [];
-      if (Array.isArray(whRes)) {
-        const forStore = whRes.filter((w) => !storeId || w.storeId === storeId).map((w) => w.id);
-        const invResults = await Promise.all(forStore.map((wid) => getPosInventoryEvents({ warehouseId: wid, page: 1, pageSize: 200 })));
-        if (!mounted) return;
-        invResults.forEach((inv) => {
-          if ('items' in inv && Array.isArray(inv.items)) {
-            inv.items
-              .filter((ev) => ev.type === 'RETURN_FROM_CUSTOMER')
-              .forEach((ev) => {
-                const d = ev.occurredAt.slice(0, 10);
-                if (fromDate && d < fromDate) return;
-                if (toDate && d > toDate) return;
-                returns.push({
-                  id: ev.id,
-                  orderId: ev.referenceId ?? ev.id,
-                  orderNumber: ev.orderNumber?.trim() || '—',
-                  createdAt: ev.occurredAt,
-                  type: 'return',
-                  quantity: Math.abs(ev.quantity),
-                });
-              });
-          }
+      if ('items' in retRes && Array.isArray(retRes.items)) {
+        retRes.items.forEach((r) => {
+          returns.push({
+            id: r.id,
+            sourceOrderId: r.orderId,
+            sourceOrderNumber: r.orderNumber?.trim() || '—',
+            returnOrderNumber: r.returnNumber,
+            createdAt: r.createdAt,
+            type: 'return',
+            quantity: r.itemCount,
+            amount: r.refundAmount,
+          });
         });
       }
       setReturnRows(returns);
-
-      const retRes = await listReturns({
-        storeId: storeId || undefined,
-        from,
-        to,
-        page: 1,
-        pageSize: 200,
-      });
-      if (!mounted) return;
-      if ('items' in retRes && Array.isArray(retRes.items)) {
-        setReturnRecords(retRes.items);
-      }
 
       setLoading(false);
     })();
@@ -201,22 +171,11 @@ export const PosAfterSalesPage: React.FC = () => {
   }, [fromDate, toDate, storeId]);
 
   const rows = useMemo(() => {
-    if (tab === 'returns-record') return [];
     if (tab === 'refund') return refundRows;
     if (tab === 'return') return returnRows;
     if (tab === 'exchange') return exchangeRows;
     return [...refundRows, ...returnRows, ...exchangeRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [tab, refundRows, returnRows, exchangeRows]);
-
-  const reasonStats = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of returnRecords) {
-      if (r.topReason) m.set(r.topReason, (m.get(r.topReason) ?? 0) + 1);
-    }
-    return [...m.entries()]
-      .map(([reason, count]) => ({ reason, label: REASON_LABEL[reason] ?? reason, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [returnRecords]);
 
   const todayReturnQty = useMemo(
     () => returnRows.filter((r) => r.createdAt.slice(0, 10) === toYmd(new Date())).reduce((s, r) => s + (r.quantity ?? 0), 0),
@@ -225,7 +184,7 @@ export const PosAfterSalesPage: React.FC = () => {
 
   return (
     <StandardListLayout
-      title="退換貨"
+      title="退換貨明細"
       description="退換貨與退款總覽"
       loading={loading}
       error={error ?? undefined}
@@ -275,7 +234,6 @@ export const PosAfterSalesPage: React.FC = () => {
           ['refund', '退款'],
           ['return', '退貨'],
           ['exchange', '換貨'],
-          ['returns-record', '退換貨記錄'],
         ] as const).map(([k, label]) => (
           <button
             key={k}
@@ -289,133 +247,61 @@ export const PosAfterSalesPage: React.FC = () => {
           </button>
         ))}
       </div>
-      {tab === 'returns-record' ? (
-        <>
-          {reasonStats.length > 0 && (
-            <div className="mb-3 grid gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {reasonStats.map((s) => (
-                <div
-                  key={s.reason}
-                  className="rounded-xl border border-brand-surface bg-table-head px-3 py-2 text-xs"
-                >
-                  <div className="text-muted">{s.label}</div>
-                  <div className="mt-1 font-semibold text-content tabular-nums">
-                    {s.count} 筆
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="overflow-x-auto rounded-xl border border-brand-surface bg-white">
-            <table className="w-full min-w-[640px] text-left text-xs">
-              <thead className="border-b border-brand-surface bg-table-head text-muted">
-                <tr>
-                  <th className="px-3 py-2">退貨單號</th>
-                  <th className="px-3 py-2">原訂單</th>
-                  <th className="px-3 py-2">類型</th>
-                  <th className="px-3 py-2 text-right">退款金額</th>
-                  <th className="px-3 py-2">退款方式</th>
-                  <th className="px-3 py-2">主要原因</th>
-                  <th className="px-3 py-2">時間</th>
-                  <th className="px-3 py-2 text-right">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {returnRecords.map((r) => (
-                  <tr key={r.id} className="border-t border-brand-surface">
-                    <td className="px-3 py-2 font-medium text-content">
-                      {r.returnNumber}
-                    </td>
-                    <td className="px-3 py-2 text-muted">
-                      {r.orderNumber?.trim() || '—'}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="rounded-full bg-table-head px-2 py-0.5 text-[11px] text-content">
-                        {TYPE_LABEL[r.type] ?? r.type}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-brand-danger">
-                      {formatMoney(r.refundAmount)}
-                    </td>
-                    <td className="px-3 py-2 text-muted">
-                      {r.refundMethod === 'CASH' ? '退現金' : '購物金'}
-                    </td>
-                    <td className="px-3 py-2 text-muted">
-                      {REASON_LABEL[r.topReason ?? ''] ?? '—'}
-                    </td>
-                    <td className="px-3 py-2 text-muted">
-                      {new Date(r.createdAt).toLocaleString('zh-TW')}
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          navigate(
-                            `/pos/orders/${encodeURIComponent(r.orderId)}`,
-                          )
-                        }
-                      >
-                        查看訂單
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-                {returnRecords.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="px-3 py-6 text-center text-muted">
-                      無退換貨記錄
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-brand-surface bg-white">
-          <table className="w-full min-w-[640px] text-left text-xs">
-            <thead className="border-b border-brand-surface bg-table-head text-muted">
-              <tr>
-                <th className="px-3 py-2">訂單</th>
-                <th className="px-3 py-2">時間</th>
-                <th className="px-3 py-2">類型</th>
-                <th className="px-3 py-2 text-right">金額/件數</th>
-                <th className="px-3 py-2">客戶</th>
-                <th className="px-3 py-2 text-right">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={`${r.type}-${r.id}`} className="border-t border-brand-surface">
-                  <td className="px-3 py-2 font-medium text-content">{r.orderNumber}</td>
-                  <td className="px-3 py-2 text-muted">{new Date(r.createdAt).toLocaleString('zh-TW')}</td>
-                  <td className="px-3 py-2">
-                    <span className="rounded-full bg-table-head px-2 py-0.5 text-[11px] text-content">
-                      {r.type === 'refund' ? '退款' : r.type === 'return' ? '退貨' : '換貨'}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {typeof r.amount === 'number' ? formatMoney(r.amount) : `${r.quantity ?? 0} 件`}
-                  </td>
-                  <td className="px-3 py-2 text-muted">{r.customerName ?? '—'}</td>
-                  <td className="px-3 py-2 text-right">
-                    <Button
+      <div className="overflow-x-auto rounded-xl border border-brand-surface bg-white">
+        <table className="w-full min-w-[700px] text-left text-xs">
+          <thead className="border-b border-brand-surface bg-table-head text-muted">
+            <tr>
+              <th className="px-3 py-2">原訂單</th>
+              <th className="px-3 py-2">退換貨訂單</th>
+              <th className="px-3 py-2">時間</th>
+              <th className="px-3 py-2">類型</th>
+              <th className="px-3 py-2 text-right">金額/件數</th>
+              <th className="px-3 py-2">客戶</th>
+              <th className="px-3 py-2 text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={`${r.type}-${r.id}`} className="border-t border-brand-surface">
+                <td className="px-3 py-2 font-medium text-content">{r.sourceOrderNumber}</td>
+                <td className="px-3 py-2 text-content">
+                  {r.returnOrderNumber !== '—' && r.sourceOrderId ? (
+                    <button
                       type="button"
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => navigate(`/pos/orders/${encodeURIComponent(r.orderId)}`)}
+                      className="font-medium text-brand-primary underline underline-offset-2"
+                      onClick={() => navigate(`/pos/orders/${encodeURIComponent(r.sourceOrderId)}?returnId=${encodeURIComponent(r.id)}`)}
                     >
-                      查看明細
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      {r.returnOrderNumber}
+                    </button>
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="px-3 py-2 text-muted">{new Date(r.createdAt).toLocaleString('zh-TW')}</td>
+                <td className="px-3 py-2">
+                  <span className="rounded-full bg-table-head px-2 py-0.5 text-[11px] text-content">
+                    {r.type === 'refund' ? '退款' : r.type === 'return' ? '退貨' : '換貨'}
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums">
+                  {typeof r.amount === 'number' ? formatMoney(r.amount) : `${r.quantity ?? 0} 件`}
+                </td>
+                <td className="px-3 py-2 text-muted">{r.customerName ?? '—'}</td>
+                <td className="px-3 py-2 text-right">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => navigate(`/pos/orders/${encodeURIComponent(r.sourceOrderId)}`)}
+                  >
+                    查看明細
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </StandardListLayout>
   );
 };

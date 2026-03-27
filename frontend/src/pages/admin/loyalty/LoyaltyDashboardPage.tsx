@@ -44,6 +44,13 @@ function typeTag(t: string) {
   return 'bg-table-head text-muted';
 }
 
+const LEDGER_TYPE_LABEL: Record<string, string> = {
+  EARNED: '贈點',
+  BURNED: '扣點',
+  LOCKED: '鎖定',
+  EXPIRED: '已過期',
+};
+
 export const LoyaltyDashboardPage: React.FC = () => {
   const merchantId = useDefaultMerchantId();
   const [data, setData] = useState<LoyaltyDashboardDto | null>(null);
@@ -84,7 +91,7 @@ export const LoyaltyDashboardPage: React.FC = () => {
         <Card
           title="累計兌回點數"
           value={data?.totalPointsBurnedLifetime ?? '—'}
-          sub="歷史 BURNED 絕對值合計"
+          sub="歷史扣點絕對值合計"
           accent="amber"
         />
         <Card title="進行中活動" value={data?.ongoingPromotionsCount ?? '—'} sub="促銷規則 draft=false 且檔期內" accent="slate" />
@@ -123,7 +130,9 @@ export const LoyaltyDashboardPage: React.FC = () => {
                   <tr key={r.id}>
                     <td className="max-w-[100px] truncate py-1.5 pr-2 font-medium">{r.customerName}</td>
                     <td className="py-1.5 pr-2">
-                      <span className={`rounded px-1.5 py-0.5 font-medium ${typeTag(r.type)}`}>{r.type}</span>
+                      <span className={`rounded px-1.5 py-0.5 font-medium ${typeTag(r.type)}`}>
+                        {LEDGER_TYPE_LABEL[r.type] ?? r.type}
+                      </span>
                     </td>
                     <td className="py-1.5 pr-2 text-right tabular-nums">{r.amount > 0 ? `+${r.amount}` : r.amount}</td>
                     <td className="py-1.5 pr-2 text-right tabular-nums text-muted">{r.balanceAfter}</td>

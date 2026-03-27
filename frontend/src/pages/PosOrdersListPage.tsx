@@ -5,8 +5,9 @@ import { listOrders, getStores } from '../modules/pos/posOrdersApi';
 import { fetchCsvExport } from '../modules/admin/adminApi';
 import { getErrorMessage } from '../shared/errors/errorMessages';
 import type { PosOrderSummary } from '../modules/pos/posOrdersMockService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { formatMoney } from '../shared/utils/formatMoney';
+import { PosAfterSalesPage } from './PosAfterSalesPage';
 
 const PAGE_SIZE = 20;
 
@@ -25,6 +26,7 @@ function orderAfterSalesBadges(o: PosOrderSummary): Array<{ key: string; text: s
 }
 
 export const PosOrdersListPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<PosOrderSummary[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -38,7 +40,32 @@ export const PosOrdersListPage: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [includeLines, setIncludeLines] = useState(false);
   const navigate = useNavigate();
+  const viewTab = searchParams.get('tab') === 'after-sales' ? 'after-sales' : 'overview';
   const hasAdminKey = Boolean((import.meta.env.VITE_ADMIN_API_KEY as string | undefined)?.trim());
+  const orderTabs = (
+    <div className="mb-2 flex flex-wrap gap-1">
+      {([
+        ['overview', '訂單總覽'],
+        ['after-sales', '退換貨明細'],
+      ] as const).map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => {
+            const next = new URLSearchParams(searchParams);
+            if (id === 'after-sales') next.set('tab', 'after-sales');
+            else next.delete('tab');
+            setSearchParams(next, { replace: true });
+          }}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${
+            viewTab === id ? 'bg-brand-primary text-white' : 'bg-table-head text-content hover:bg-brand-surface'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 
   const storeNameMap = useMemo(() => {
     const m: Record<string, string> = {};
@@ -93,10 +120,20 @@ export const PosOrdersListPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load]);
 
+  if (viewTab === 'after-sales') {
+    return (
+      <div>
+        {orderTabs}
+        <PosAfterSalesPage />
+      </div>
+    );
+  }
+
   return (
     <StandardListLayout
-      title="訂單查詢"
+      title="訂單總覽"
       description={`共 ${total} 筆`}
+      aboveContent={orderTabs}
       filters={
           <div className="flex flex-wrap items-end justify-between gap-3 text-xs">
             <div className="flex flex-wrap items-end gap-2">

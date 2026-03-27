@@ -455,7 +455,8 @@ export const PosPage: React.FC = () => {
                     </button>
                   );
                 })}
-                <span className="mx-1 text-xs text-muted">·</span>
+              </div>
+              <div className="mb-1 flex flex-wrap items-center gap-0.5">
                 <span className="mr-0.5 text-xs font-medium text-muted">無庫存</span>
                 {(['show', 'hide'] as const).map((opt) => {
                   const selected = (opt === 'hide') === hideOutOfStock;
@@ -477,18 +478,6 @@ export const PosPage: React.FC = () => {
                     </button>
                   );
                 })}
-              </div>
-              <div className="flex items-center justify-end gap-1.5 text-xs text-muted">
-                <span>共 {filteredProducts.length} 件</span>
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="font-medium underline hover:text-content"
-                  >
-                    清除篩選
-                  </button>
-                )}
               </div>
             </div>
 
@@ -559,21 +548,37 @@ export const PosPage: React.FC = () => {
                   </div>
                 </div>
               ) : null}
-              <div className="flex flex-wrap items-center gap-1 rounded-xl bg-table-head px-2.5 py-1.5 text-xs min-[640px]:col-start-2 min-[640px]:row-start-2">
-                <span className="mr-0.5 shrink-0 text-muted">欄數</span>
-                {([3, 4, 5] as const).map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setGridCols(n)}
-                    className={`rounded px-1.5 py-0.5 font-medium ${
-                      gridCols === n ? 'bg-brand-primary text-white' : 'bg-table-head text-muted hover:bg-brand-surface'
-                    }`}
-                    aria-label={`${n} 欄`}
-                  >
-                    {n}
-                  </button>
-                ))}
+              <div className="rounded-xl bg-table-head px-2.5 py-1.5 text-xs min-[640px]:col-start-2 min-[640px]:row-start-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-xs text-muted">
+                    <span>共 {filteredProducts.length} 件</span>
+                    {hasActiveFilters && (
+                      <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="font-medium underline hover:text-content"
+                      >
+                        清除篩選
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="mr-0.5 shrink-0 text-muted">欄數</span>
+                    {([3, 4, 5] as const).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setGridCols(n)}
+                        className={`rounded px-1.5 py-0.5 font-medium ${
+                          gridCols === n ? 'bg-brand-primary text-white' : 'bg-table-head text-muted hover:bg-brand-surface'
+                        }`}
+                        aria-label={`${n} 欄`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

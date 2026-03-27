@@ -12,10 +12,11 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
       : 'border-transparent text-white hover:bg-white/[0.06]',
   ].join(' ');
 
-function posHeaderTitle(pathname: string): string {
+function posHeaderTitle(pathname: string, search: string): string {
+  const tab = new URLSearchParams(search).get('tab');
   if (pathname === '/pos' || pathname === '/pos/') return '門市收銀';
-  if (pathname.startsWith('/pos/orders')) return '訂單查詢';
-  if (pathname.startsWith('/pos/after-sales')) return '退換貨';
+  if (pathname.startsWith('/pos/orders')) return tab === 'after-sales' ? '退換貨明細' : '訂單總覽';
+  if (pathname.startsWith('/pos/after-sales')) return '退換貨明細';
   if (pathname.startsWith('/pos/promos')) return '促銷';
   if (pathname.startsWith('/pos/reports')) return '報表';
   return '收銀';
@@ -68,7 +69,7 @@ const PosStoreSessionHeaderBlock: React.FC = () => {
 const PosLayoutInner: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const title = useMemo(() => posHeaderTitle(location.pathname), [location.pathname]);
+  const title = useMemo(() => posHeaderTitle(location.pathname, location.search), [location.pathname, location.search]);
   const dateStr = useMemo(
     () =>
       new Date().toLocaleDateString('zh-TW', {
@@ -101,7 +102,6 @@ const PosLayoutInner: React.FC = () => {
         <nav className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 flex flex-col gap-0.5">
           <NavLink to="/pos" className={navClass} end title="收銀">收銀</NavLink>
           <NavLink to="/pos/orders" className={navClass} data-testid="e2e-nav-orders" title="訂單">訂單</NavLink>
-          <NavLink to="/pos/after-sales" className={navClass} title="退換貨">退換貨</NavLink>
           <NavLink to="/pos/promos" className={navClass} title="促銷">促銷</NavLink>
           <NavLink to="/pos/reports" className={navClass} title="報表">報表</NavLink>
         </nav>

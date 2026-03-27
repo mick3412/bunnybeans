@@ -4,12 +4,12 @@ import { ErrorBoundary } from './shared/components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { PosLayout } from './pages/PosLayout';
 import {
-  PosAfterSalesPageLazy,
   PosOrderDetailPageLazy,
   PosOrdersListPageLazy,
   PosPageLazy,
   PosPromosPageLazy,
   PosReportsPageLazy,
+  PosMarketBasketPageLazy,
 } from './app/posLazy';
 import { NotFoundPage } from './pages/NotFoundPage';
 import {
@@ -47,9 +47,10 @@ export const App: React.FC = () => {
         <Route index element={<PosPageLazy />} />
         <Route path="orders" element={<PosOrdersListPageLazy />} />
         <Route path="orders/:id" element={<PosOrderDetailPageLazy />} />
-        <Route path="after-sales" element={<PosAfterSalesPageLazy />} />
+        <Route path="after-sales" element={<Navigate to="/pos/orders?tab=after-sales" replace />} />
         <Route path="promos" element={<PosPromosPageLazy />} />
         <Route path="reports" element={<PosReportsPageLazy />} />
+        <Route path="reports/market-basket" element={<PosMarketBasketPageLazy />} />
       </Route>
       <Route
         path="/admin"

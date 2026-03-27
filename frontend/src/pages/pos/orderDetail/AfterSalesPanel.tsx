@@ -95,6 +95,11 @@ export const AfterSalesPanel: React.FC<{
   const [submitLoading, setSubmitLoading] = useState(false);
   const [returnError, setReturnError] = useState<string | null>(null);
   const [returnSuccess, setReturnSuccess] = useState<string | null>(null);
+  const [returnSuccessMeta, setReturnSuccessMeta] = useState<{
+    returnId: string;
+    returnNumber: string;
+    refundAmount: number;
+  } | null>(null);
   const [exchangeItems, setExchangeItems] = useState<ExchangeItemInput[]>([]);
   const [exchangeSearch, setExchangeSearch] = useState('');
   const [exchangeCatalog, setExchangeCatalog] = useState<PosProductWithStockDto[]>([]);
@@ -241,11 +246,12 @@ export const AfterSalesPanel: React.FC<{
     });
     setSubmitLoading(false);
     if (res.statusCode >= 200 && res.statusCode < 300 && res.body) {
-      setReturnSuccess(
-        returnType === 'EXCHANGE'
-          ? `換貨完成（退貨單 ${res.body.returnNumber}）`
-          : `退貨完成（退貨單 ${res.body.returnNumber}，退款 $${res.body.refundAmount}）`,
-      );
+      setReturnSuccess(returnType === 'EXCHANGE' ? '換貨完成' : '退貨完成');
+      setReturnSuccessMeta({
+        returnId: res.body.id,
+        returnNumber: res.body.returnNumber,
+        refundAmount: res.body.refundAmount,
+      });
       setMode('menu');
       if (onOrderUpdate) {
         const reloaded = await getOrderById(order.id);
@@ -279,6 +285,7 @@ export const AfterSalesPanel: React.FC<{
     setExchangeItems([]);
     setReturnNote('');
     setReturnSuccess(null);
+    setReturnSuccessMeta(null);
   };
 
   if (mode === 'return') {
@@ -600,6 +607,19 @@ export const AfterSalesPanel: React.FC<{
       {returnSuccess && (
         <div className="mt-2 rounded bg-brand-success/10 px-2 py-1.5 text-[11px] text-brand-success">
           {returnSuccess}
+          {returnSuccessMeta ? (
+            <>
+              （退貨單{' '}
+              <button
+                type="button"
+                className="font-semibold underline underline-offset-2"
+                onClick={() => navigate(`/pos/orders/${encodeURIComponent(order.id)}?returnId=${encodeURIComponent(returnSuccessMeta.returnId)}`)}
+              >
+                {returnSuccessMeta.returnNumber}
+              </button>
+              ，退款 ${returnSuccessMeta.refundAmount}）
+            </>
+          ) : null}
         </div>
       )}
 

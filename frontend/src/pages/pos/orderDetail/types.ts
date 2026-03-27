@@ -2,6 +2,7 @@ import type { PosOrderDetail } from '../../../modules/pos/posOrdersMockService';
 
 export type ProductMetaMap = Record<string, { id: string; sku?: string; name?: string; categoryId?: string }>;
 export type CategoryMetaMap = Record<string, { id: string; name: string }>;
+export type StoreMetaMap = Record<string, { id: string; name: string }>;
 
 export interface OrderDetailComputed {
   displayPaid: number;
@@ -34,4 +35,5 @@ export interface OrderContextData {
   computed: OrderDetailComputed;
   productMap: ProductMetaMap;
   categoryMap: CategoryMetaMap;
+  storeMap: StoreMetaMap;
 }

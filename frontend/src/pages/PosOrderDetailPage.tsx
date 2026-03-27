@@ -4,6 +4,7 @@ import {
   getOrderById,
   getProducts,
   getCategories,
+  getStores,
   appendOrderPayment,
   postRefund,
   postReturnToStock,
@@ -41,6 +42,7 @@ export const PosOrderDetailPage: React.FC = () => {
     Record<string, { id: string; sku?: string; name?: string; categoryId?: string }>
   >({});
   const [categoryMap, setCategoryMap] = useState<Record<string, { id: string; name: string }>>({});
+  const [storeMap, setStoreMap] = useState<Record<string, { id: string; name: string }>>({});
   const [payMethod, setPayMethod] = useState<'CASH' | 'CARD' | 'TRANSFER'>('CASH');
   const [payAmount, setPayAmount] = useState('');
   const [paySubmitting, setPaySubmitting] = useState(false);
@@ -89,7 +91,7 @@ export const PosOrderDetailPage: React.FC = () => {
     if (!order) return;
     let mounted = true;
     (async () => {
-      const [productsRes, categoriesRes] = await Promise.all([getProducts(), getCategories()]);
+      const [productsRes, categoriesRes, storesRes] = await Promise.all([getProducts(), getCategories(), getStores()]);
       if (!mounted) return;
       if (Array.isArray(productsRes)) {
         const next: Record<string, { id: string; sku?: string; name?: string; categoryId?: string }> = {};
@@ -104,6 +106,13 @@ export const PosOrderDetailPage: React.FC = () => {
           next[c.id] = { id: c.id, name: c.name };
         }
         setCategoryMap(next);
+      }
+      if (Array.isArray(storesRes)) {
+        const next: Record<string, { id: string; name: string }> = {};
+        for (const s of storesRes) {
+          next[s.id] = { id: s.id, name: s.name };
+        }
+        setStoreMap(next);
       }
     })();
     return () => {
@@ -262,6 +271,7 @@ export const PosOrderDetailPage: React.FC = () => {
         computed: { displayPaid, remainingAmount, credit, paymentMethodsText },
         productMap,
         categoryMap,
+        storeMap,
       }
     : null;
 

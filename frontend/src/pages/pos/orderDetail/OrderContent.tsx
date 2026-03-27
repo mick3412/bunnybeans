@@ -5,7 +5,23 @@ import type { OrderContextData } from './types';
 export const OrderContent: React.FC<{
   ctx: OrderContextData;
 }> = ({ ctx }) => {
-  const { order, customerIdDisplay, customerNameDisplay, customerCodeDisplay, computed, productMap, categoryMap } = ctx;
+  const { order, customerIdDisplay, customerNameDisplay, customerCodeDisplay, computed, productMap, categoryMap, storeMap } = ctx;
+  const storeName = storeMap[order.storeId]?.name || (order as { storeName?: string | null }).storeName || order.storeId;
+  const discountAmount = typeof order.discountAmount === 'number' ? order.discountAmount : 0;
+  const promotionDetailLines = (() => {
+    const applied = (order as { promotionApplied?: unknown }).promotionApplied as
+      | { ruleName?: string; applied?: Array<{ name?: string; off?: number; discount?: number }> }
+      | undefined;
+    if (!applied || typeof applied !== 'object') return [] as Array<{ name: string; amount: number | null }>;
+    if (Array.isArray(applied.applied) && applied.applied.length > 0) {
+      return applied.applied.map((x) => ({
+        name: x.name || applied.ruleName || '促銷折扣',
+        amount: typeof x.off === 'number' ? x.off : typeof x.discount === 'number' ? x.discount : null,
+      }));
+    }
+    if (applied.ruleName) return [{ name: applied.ruleName, amount: null }];
+    return [];
+  })();
   return (
     <div className="space-y-3 text-xs">
       <div className="rounded-lg border border-brand-surface bg-table-head/90 px-3 py-2 sm:px-4">
@@ -33,7 +49,7 @@ export const OrderContent: React.FC<{
       </div>
       <div className="flex justify-between border-b border-brand-surface pb-2">
         <span className="text-muted">門市</span>
-        <span className="break-all text-right text-content">{order.storeId}</span>
+        <span className="break-all text-right text-content">{storeName || order.storeId}</span>
       </div>
       <div className="flex justify-between border-b border-brand-surface pb-2">
         <span className="text-muted">建立時間</span>
@@ -81,6 +97,25 @@ export const OrderContent: React.FC<{
       </div>
 
       <div className="space-y-2 border-t border-brand-surface pt-2 text-sm">
+        <div className="rounded-lg border border-brand-surface bg-table-head/70 px-2 py-2 text-xs">
+          <div className="mb-1 font-semibold text-content">促銷折扣</div>
+          <div className="flex justify-between text-muted">
+            <span>折扣總額</span>
+            <span className="tabular-nums">{discountAmount > 0 ? `-${formatMoney(discountAmount)}` : '—'}</span>
+          </div>
+          {promotionDetailLines.length > 0 ? (
+            <div className="mt-1.5 space-y-1 border-t border-brand-surface pt-1.5">
+              {promotionDetailLines.map((line, idx) => (
+                <div key={`${line.name}-${idx}`} className="flex justify-between text-muted">
+                  <span className="truncate pr-2">{line.name}</span>
+                  <span className="tabular-nums">{line.amount != null ? `-${formatMoney(line.amount)}` : '—'}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-1 text-muted">未套用促銷</div>
+          )}
+        </div>
         <div className="flex justify-between font-semibold">
           <span>應收金額</span>
           <span className="tabular-nums">{formatMoney(order.totalAmount)}</span>
