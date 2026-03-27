@@ -30,6 +30,7 @@ async function wipeAll() {
   await prisma.purchaseOrderLine.deleteMany();
   await prisma.purchaseOrder.deleteMany();
   await prisma.supplier.deleteMany();
+  await prisma.posReturn.deleteMany();
   await prisma.posOrderPayment.deleteMany();
   await prisma.posOrderItem.deleteMany();
   await prisma.posOrder.deleteMany();
