@@ -49,6 +49,15 @@ pnpm e2e:one
 
 ---
 
+## INSTRUCTIONS 062 實測註記
+
+- `e2e/pos-refund.spec.ts`：改為新 `AfterSalesPanel`（部分退貨 → 試算退款 → 確認退貨）流程，`1 passed`
+- `e2e/pos-return-stock.spec.ts`：改為新 `AfterSalesPanel`（全單退貨 → 試算退款 → 確認退貨）流程，`1 passed`
+- `e2e/pos-market-basket.spec.ts`：補 table/chart/empty 最小穩定斷言與篩選切換，`3 passed`
+- 本輪 skip：`無`
+
+---
+
 ## 前置條件
 
 | 項目 | 說明 |

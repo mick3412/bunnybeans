@@ -37,6 +37,10 @@ test.describe('共購分析 (Market Basket)', () => {
 
     await promoFilterGroup.getByText('全部').click();
     await expect(page.url()).not.toMatch(/promoFilter=/);
+
+    const emptyHint = container.getByText('此條件下尚無共購組合');
+    const table = container.getByRole('table');
+    await expect(table.or(emptyHint)).toBeVisible();
   });
 
   test('preset 與門市篩選同步 URL', async ({ page }) => {
@@ -50,6 +54,10 @@ test.describe('共購分析 (Market Basket)', () => {
     const presetSelect = container.getByTestId('e2e-mb-preset');
     await presetSelect.selectOption('last7d');
     await expect(page).toHaveURL(/preset=last7d/);
+
+    const chartTitle = container.getByText('Top 10 共購組合');
+    const emptyHint = container.getByText('此條件下尚無共購組合');
+    await expect(chartTitle.or(emptyHint)).toBeVisible();
 
     const storeSelect = container.getByTestId('e2e-mb-store');
     await expect(storeSelect).toBeVisible();

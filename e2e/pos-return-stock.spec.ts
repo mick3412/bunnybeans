@@ -1,94 +1,68 @@
 import { test, expect } from '@playwright/test';
 
+async function checkoutOneOrder(page: import('@playwright/test').Page) {
+  await page.goto('/');
+  await page.getByTestId('e2e-login-submit').click();
+  await expect(page).toHaveURL(/\/pos$/);
+
+  const storeSelect = page.getByTestId('e2e-pos-store-select');
+  await expect(storeSelect).toBeVisible({ timeout: 15_000 });
+  const storeValue = await storeSelect.inputValue();
+  if (!storeValue) {
+    await storeSelect.selectOption({ index: 1 });
+  }
+
+  await expect(page.getByTestId('e2e-pos-session-bar')).toBeVisible({ timeout: 15_000 });
+  const openBtn = page.getByTestId('e2e-pos-session-open-btn');
+  if (await openBtn.isEnabled()) {
+    await openBtn.click();
+    await expect(page.getByTestId('e2e-pos-open-amount')).toBeVisible({ timeout: 10_000 });
+    await page.getByTestId('e2e-pos-open-submit').click();
+    await expect(page.getByTestId('e2e-pos-open-amount')).toHaveCount(0, { timeout: 15_000 });
+  }
+
+  await page.getByTestId('e2e-pos-barcode-input').fill('E2E-BC-0001');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('e2e-pos-cart-empty')).toHaveCount(0, { timeout: 15_000 });
+  await page.getByTestId('e2e-checkout-open').click();
+  await expect(page.getByTestId('e2e-checkout-modal')).toBeVisible();
+
+  const checkoutRespPromise = page.waitForResponse(
+    (r) => r.url().includes('/pos/orders') && r.request().method() === 'POST',
+    { timeout: 20_000 },
+  );
+  await page.getByTestId('e2e-checkout-submit').click();
+  const checkoutResp = await checkoutRespPromise;
+  if (checkoutResp.status() < 200 || checkoutResp.status() >= 300) {
+    let code = '';
+    let message = '';
+    try {
+      const j = (await checkoutResp.json()) as { message?: string; code?: string };
+      code = String(j.code ?? '').trim();
+      message = String(j.message ?? '').trim();
+    } catch {
+      // ignore
+    }
+    if (checkoutResp.status() === 409 && code === 'INVENTORY_INSUFFICIENT') {
+      test.skip(true, `此環境缺少可售庫存 fixture：${message || 'INVENTORY_INSUFFICIENT'}（請先 db:seed/e2e:seed 或切 full profile）`);
+    }
+    throw new Error(`checkout POST /pos/orders status=${checkoutResp.status()}`);
+  }
+  await expect(page.getByTestId('e2e-checkout-modal')).toBeHidden({ timeout: 20_000 });
+}
+
 test.describe('POS 退貨入庫', () => {
-  test('全額結帳 → 明細 → 退貨入庫 1 件', async ({ page }) => {
-    await page.goto('/');
-    await page.getByTestId('e2e-login-submit').click();
-    await expect(page).toHaveURL(/\/pos$/);
+  test('全額結帳 → 退換貨明細 → 全單退貨完成', async ({ page }) => {
+    await checkoutOneOrder(page);
 
-    // 確保已選門市（未選時結帳會被 disable / 後端也可能拒絕）
-    const storeSelect = page.getByTestId('e2e-pos-store-select');
-    await expect(storeSelect).toBeVisible({ timeout: 15_000 });
-    const storeValue = await storeSelect.inputValue();
-    if (!storeValue) {
-      const opts = await storeSelect.locator('option').allTextContents();
-      const idx =
-        opts.findIndex((t) => t.includes('S001')) >= 0
-          ? opts.findIndex((t) => t.includes('S001'))
-          : opts.findIndex((t) => t.includes('總店') || t.includes('示範') || t.includes('預設'));
-      await storeSelect.selectOption({ index: Math.max(1, idx >= 0 ? idx : 1) });
-    }
-
-    // 若尚未開班，先開班（否則建單可能被後端拒絕）
-    await expect(page.getByTestId('e2e-pos-session-bar')).toBeVisible({ timeout: 15_000 });
-    const openBtn = page.getByTestId('e2e-pos-session-open-btn');
-    if (await openBtn.isEnabled()) {
-      await openBtn.click();
-      await expect(page.getByTestId('e2e-pos-open-amount')).toBeVisible({ timeout: 10_000 });
-      await page.getByTestId('e2e-pos-open-submit').click();
-      await expect(page.getByTestId('e2e-pos-open-amount')).toHaveCount(0, { timeout: 15_000 });
-    }
-
-    // 用條碼 fixture 加入購物車（避免商品卡點擊受 z-index 影響）
-    await page.getByTestId('e2e-pos-barcode-input').fill('E2E-BC-0001');
-    await page.keyboard.press('Enter');
-    await expect(page.getByTestId('e2e-pos-cart-empty')).toHaveCount(0, { timeout: 15_000 });
-    await expect(page.getByTestId('e2e-checkout-open')).toBeEnabled({ timeout: 15_000 });
-    await page.getByTestId('e2e-checkout-open').click();
-    await expect(page.getByTestId('e2e-checkout-modal')).toBeVisible();
-    const checkoutRespPromise = page.waitForResponse(
-      (r) => r.url().includes('/pos/orders') && r.request().method() === 'POST',
-      { timeout: 20_000 },
-    );
-    await page.getByTestId('e2e-checkout-submit').click();
-    const checkoutResp = await checkoutRespPromise;
-    if (checkoutResp.status() < 200 || checkoutResp.status() >= 300) {
-      let detail = '';
-      let code = '';
-      let message = '';
-      try {
-        const j = (await checkoutResp.json()) as { message?: string; code?: string };
-        code = String(j.code ?? '').trim();
-        message = String(j.message ?? '').trim();
-        detail = ` code=${code} message=${message}`.trim();
-      } catch {
-        // ignore
-      }
-      if (checkoutResp.status() === 409 && code === 'INVENTORY_INSUFFICIENT') {
-        test.skip(true, `此環境缺少可售庫存 fixture：${message || 'INVENTORY_INSUFFICIENT'}（請先 db:seed/e2e:seed 或切 full profile）`);
-      }
-      throw new Error(`checkout POST /pos/orders status=${checkoutResp.status()}${detail ? ` (${detail})` : ''}`);
-    }
-    await expect(page.getByTestId('e2e-checkout-modal')).toBeHidden({ timeout: 20_000 });
-    await page.getByRole('link', { name: '訂單' }).click();
-    await expect(page).toHaveURL(/\/pos\/orders/);
-    await page.getByRole('button', { name: '退換貨明細' }).click();
-    await expect(page).toHaveURL(/\/pos\/orders\?tab=after-sales/);
-    await expect(page.getByTestId('e2e-pos-after-sales')).toBeVisible({ timeout: 15_000 });
-    await page.getByRole('button', { name: '退貨' }).click();
-    if (await page.getByRole('button', { name: '查看明細' }).count() === 0) {
-      test.skip(true, 'POS_RETURN_LIST_EMPTY：退換貨明細列表無可操作資料（需對應 fixture）');
-    }
-    await page.getByRole('button', { name: '查看明細' }).first().click();
+    await page.getByText('最新訂單').locator('..').getByRole('link').click();
     await expect(page).toHaveURL(/\/pos\/orders\//);
-    await page.getByRole('button', { name: '退貨入庫' }).click();
-    if (await page.getByTestId('e2e-detail-return-qty').count() === 0) {
-      test.skip(true, 'POS_RETURN_LEGACY_UI_REMOVED：退貨入庫舊欄位已下線，待新退貨流程 E2E 更新');
-    }
-    await expect(page.getByTestId('e2e-detail-return-qty')).toBeVisible({ timeout: 10_000 });
-    await page.getByTestId('e2e-detail-return-qty').fill('1');
 
-    const respPromise = page.waitForResponse(
-      (r) =>
-        r.url().includes('/pos/orders/') &&
-        (r.url().includes('/returns/stock') || r.url().includes('/return-to-stock')) &&
-        r.request().method() === 'POST',
-      { timeout: 15_000 },
-    );
-    await page.getByTestId('e2e-detail-return-submit').click();
-    const resp = await respPromise;
-    expect(resp.status(), `return-to-stock HTTP status (body may hint error)`).toBe(201);
-
-    await expect(page.getByTestId('e2e-detail-return-success')).toBeVisible({ timeout: 5_000 });
+    await page.getByRole('button', { name: '全單退貨' }).click();
+    await page.getByRole('button', { name: '試算退款' }).click();
+    await expect(page.getByText('退款試算')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: '確認退貨' }).click();
+    await expect(page.getByText('退貨完成')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('退貨單')).toBeVisible({ timeout: 15_000 });
   });
 });
