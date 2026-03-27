@@ -21,7 +21,7 @@
   - **SEED 覆蓋檢查（機器驗證）**：`prisma/seed.ts` 新增 `assertSeedCoverage()`（報表/KPI/列表最小資料非空）與 `assertExpiryGuardForFoodAndFeed()`（食品/飼料效期守衛）；新增 `seed-coverage.integration-spec.ts` 可重複驗證。
   - **共購分析契約預留**：`docs/api-design-pos.md` 在 market-basket 區塊補上 `meta?.promoDefinition?` / `meta?.facet?` 的向後相容擴充草案與 TODO。
 - 測試/驗收：`pnpm --filter pos-erp-backend test -- pos-create-order.integration-spec.ts` ✅；`pnpm --filter pos-erp-backend db:seed` ✅；`pnpm --filter pos-erp-backend test -- seed-coverage.integration-spec.ts` ✅；`pnpm --filter pos-erp-backend test` ✅（23 suites / 177 tests）；`pnpm ci:backend-with-db` ✅。
-- commits：`808a4c50` test(pos): verify after-sales detail payload for e2e model；`a99e7219` feat(seed): add coverage and expiry guards with integration checks；（本條目文件提交見本輪 docs commit）
+- commits：`808a4c50` test(pos): verify after-sales detail payload for e2e model；`a99e7219` feat(seed): add coverage and expiry guards with integration checks；`77602ef4` docs(pos): reserve market-basket facets and log backend completion
 
 ---
 
