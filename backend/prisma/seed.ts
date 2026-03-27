@@ -67,6 +67,56 @@ async function wipeAll() {
   console.log('wipeAll: 已清除所有業務表（含測試資料）');
 }
 
+async function assertSeedCoverage(merchantId: string) {
+  const [products, customers, inventoryBalances, posOrders, financeEvents, reportAudits] =
+    await Promise.all([
+      prisma.product.count(),
+      prisma.customer.count({ where: { merchantId } }),
+      prisma.inventoryBalance.count(),
+      prisma.posOrder.count({ where: { store: { merchantId } } }),
+      prisma.financeEvent.count(),
+      prisma.reportClickAudit.count({ where: { merchantId } }),
+    ]);
+
+  const missing: string[] = [];
+  if (products < 1) missing.push('products');
+  if (customers < 1) missing.push('customers');
+  if (inventoryBalances < 1) missing.push('inventory balances');
+  if (posOrders < 1) missing.push('pos orders');
+  if (financeEvents < 1) missing.push('finance events');
+  if (reportAudits < 1) missing.push('report click audits');
+  if (missing.length > 0) {
+    throw new Error(`[seed coverage] 缺少最小資料覆蓋：${missing.join(', ')}`);
+  }
+}
+
+async function assertExpiryGuardForFoodAndFeed() {
+  const rows = await prisma.product.findMany({
+    where: {
+      expiryDescription: { not: null },
+      category: {
+        code: { in: ['cat-feed', 'cat-hay', 'cat-snacks'] },
+      },
+      NOT: {
+        OR: [
+          { expiryDate: { not: null } },
+          {
+            AND: [{ productionDate: { not: null } }, { shelfLifeMonths: { not: null } }],
+          },
+        ],
+      },
+    },
+    select: { sku: true, name: true },
+  });
+  if (rows.length > 0) {
+    throw new Error(
+      `[seed expiry guard] 食品/飼料效期資料不完整：${rows
+        .map((r) => `${r.sku}(${r.name})`)
+        .join(', ')}`,
+    );
+  }
+}
+
 async function main() {
   await wipeAll();
   const now = new Date();
@@ -449,6 +499,19 @@ async function main() {
         memberCode: c.memberCode,
         joinDate: new Date(now.getTime() - c.daysAgo * 86400000),
       },
+    });
+  }
+  /** 補齊會員 email：若未填且有會員 code，統一生成可測試信箱 */
+  const customersWithoutEmail = await prisma.customer.findMany({
+    where: { merchantId: merchant.id, email: null, code: { not: null } },
+    select: { id: true, code: true },
+  });
+  for (const c of customersWithoutEmail) {
+    const code = c.code?.trim();
+    if (!code) continue;
+    await prisma.customer.update({
+      where: { id: c.id },
+      data: { email: `${code.toLowerCase()}@demo.local` },
     });
   }
 
@@ -2420,6 +2483,9 @@ async function main() {
   await prisma.reportClickAudit.create({
     data: { merchantId: merchant.id, source: 'finance-events', field: 'referenceId', referenceId: rnFull.id, resolvedKind: 'receivingNote', success: true, resultCode: 'ok' },
   });
+
+  await assertSeedCoverage(merchant.id);
+  await assertExpiryGuardForFoodAndFeed();
 
   console.log('Seed OK (wipe + full demo). Merchant', merchant.code);
   console.log('Customers:', await prisma.customer.count(), '| Suppliers:', await prisma.supplier.count());
