@@ -12,6 +12,7 @@
 
 - **工作區與依賴檢查**：先看 `git status` / `git diff`，確認本輪起點與未提交項目；同時確認前端驗收所需環境可啟動（dev server、fixture、env）。
 - **先做最小可行驗證**：先跑關鍵 smoke（例：`pnpm --filter pos-erp-frontend build`），避免做到一半才發現環境阻塞。
+- **E2E DB 隔離（必做）**：跑 E2E 時一律使用 `.env.e2e`（或 `./scripts/e2e-one-click-isolated.sh`）指向隔離測試 DB；**禁止**將 seed/E2E 指向 demo DB（`pos_erp`）。
 
 ### 本輪任務（059 收斂後）
 
@@ -19,6 +20,7 @@
 |---|------|------|
 | 1 | **售後 E2E 可重現跑通（或明文化 skip）** | 針對 `e2e/pos-refund.spec.ts`、`e2e/pos-return-stock.spec.ts`、`e2e/pos-exchange-settlement-journey.spec.ts`：在 **`E2E_PROFILE=full`** 且已跑 `e2e:seed` 之前提下，於本機或 CI **至少驗證一次非全 skip**；若環境無法滿足，須在 `docs/e2e-pos.md` 與 agent-log 以固定格式註記 skip 條件與解法。 |
 | 2 | **Loyalty 存摺 tab 中文顯示** | 依 [erp-roadmap.md](../../erp-roadmap.md) §0.6：點數存摺相關 tab／篩選不得只顯示 `EARNED`/`BURNED` 等英文 enum，需改為使用者可讀中文（與既有 enum mapping 一致）。 |
+| 3 | **POS 購物車排版穩定（空車／有品項無折讓／有折讓）** | `PosPage` 右側購物車在三種狀態下避免「區塊高度／摘要列」跳動：品項列表區維持合理 `min-height`；「共 N 件」在空車時可顯示 `共 0 件`（muted）；有品項時 **固定顯示「促銷折讓」列**（無折讓時顯示 `—` 或 muted，有折讓時維持綠色金額），使「前往結帳」按鈕位置相對穩定。 |
 
 ### 任務執行中（每項必做）
 

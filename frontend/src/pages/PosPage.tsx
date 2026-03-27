@@ -763,9 +763,11 @@ export const PosPage: React.FC = () => {
           {holdError && (
             <div className="mb-2 text-xs text-brand-danger">{holdError}</div>
           )}
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto text-xs">
+          <div className="flex min-h-[7rem] flex-1 flex-col space-y-2 overflow-y-auto text-xs">
             {items.length === 0 ? (
-              <div className="py-8 text-center text-muted" data-testid="e2e-pos-cart-empty">尚無品項</div>
+              <div className="flex min-h-[7rem] items-center justify-center py-4 text-center text-muted" data-testid="e2e-pos-cart-empty">
+                尚無品項
+              </div>
             ) : (
               items.map((line) => (
                 (() => {
@@ -883,21 +885,27 @@ export const PosPage: React.FC = () => {
             </div>
           )}
           <div className="mt-2 space-y-1 border-t border-brand-surface pt-2 text-xs text-muted">
-            {summary.totalQuantity > 0 && (
-              <div className="flex justify-between text-muted">
-                <span>共 {summary.totalQuantity} 件</span>
-              </div>
-            )}
-            <div className="flex justify-between">
+            <div className={`flex justify-between ${summary.totalQuantity > 0 ? 'text-muted' : 'text-muted/70'}`}>
+              <span>共 {summary.totalQuantity} 件</span>
+            </div>
+            <div className="flex justify-between text-muted">
               <span>小計</span>
               <span className="tabular-nums">
                 {formatMoney(promoPreview?.subtotal ?? summary.subtotal)}
               </span>
             </div>
-            {promoPreview && promoPreview.discount > 0 && (
-              <div className="flex justify-between text-brand-success">
+            {items.length > 0 && (
+              <div
+                className={`flex justify-between ${
+                  promoPreview && promoPreview.discount > 0 ? 'text-brand-success' : 'text-muted'
+                }`}
+              >
                 <span>促銷折讓</span>
-                <span className="tabular-nums">-{formatMoney(promoPreview.discount)}</span>
+                <span className="tabular-nums">
+                  {promoPreview && promoPreview.discount > 0
+                    ? `-${formatMoney(promoPreview.discount)}`
+                    : '—'}
+                </span>
               </div>
             )}
             {POS_TAX_RATE > 0 && (
