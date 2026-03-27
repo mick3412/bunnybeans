@@ -134,7 +134,7 @@ export const LoyaltyDashboardPage: React.FC = () => {
                         {LEDGER_TYPE_LABEL[r.type] ?? r.type}
                       </span>
                     </td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums">{r.amount > 0 ? `+${r.amount}` : r.amount}</td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums">{Math.abs(r.amount)}</td>
                     <td className="py-1.5 pr-2 text-right tabular-nums text-muted">{r.balanceAfter}</td>
                     <td className="whitespace-nowrap py-1.5 text-muted">
                       {new Date(r.createdAt).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
@@ -156,13 +156,13 @@ export const LoyaltyDashboardPage: React.FC = () => {
             {promos.map((p) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-brand-surface bg-table-head px-3 py-2"
+                className="grid grid-cols-[minmax(0,1fr)_72px_72px] items-center gap-2 rounded-lg border border-brand-surface bg-table-head px-3 py-2"
               >
                 <span className="min-w-0 truncate font-medium text-content">{p.name}</span>
-                <span className="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                <span className="inline-flex w-[72px] justify-center rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
                   進行中
                 </span>
-                <span className="shrink-0 text-xs tabular-nums text-muted">使用 {p.usageCount}</span>
+                <span className="w-[72px] text-right text-xs tabular-nums text-muted">使用 {p.usageCount}</span>
               </li>
             ))}
           </ul>

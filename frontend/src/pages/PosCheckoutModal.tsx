@@ -71,6 +71,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
   const [method, setMethod] = useState<'CASH' | 'CARD' | 'TRANSFER'>('CASH');
   const [receivedAmount, setReceivedAmount] = useState<number>(totalAmount);
   const [memberInput, setMemberInput] = useState('');
+  const [selectedMember, setSelectedMember] = useState<CustomerSearchItem | null>(null);
   const [pointsToRedeem, setPointsToRedeem] = useState<number>(0);
   const [memberSearchResults, setMemberSearchResults] = useState<CustomerSearchItem[]>([]);
   const [memberSearchLoading, setMemberSearchLoading] = useState(false);
@@ -84,6 +85,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
     if (open) {
       setReceivedAmount(totalAmount);
       setMemberInput(initialMemberInput?.trim() ?? '');
+      setSelectedMember(null);
       setPointsToRedeem(0);
       setMemberSearchResults([]);
       setPointBalance(null);
@@ -93,7 +95,19 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
     }
   }, [open, totalAmount, initialMemberInput]);
 
-  const parsed = useMemo(() => parseMemberLookup(memberInput), [memberInput]);
+  const parsedInput = useMemo(() => parseMemberLookup(memberInput), [memberInput]);
+  const parsed = useMemo(
+    () =>
+      selectedMember
+        ? {
+            customerId: selectedMember.id,
+            customerPhone: null,
+            customerEmail: null,
+            kind: 'uuid' as const,
+          }
+        : parsedInput,
+    [selectedMember, parsedInput],
+  );
 
   useEffect(() => {
     if (!parsed.customerId) {
@@ -130,7 +144,7 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
   }, [merchantId]);
 
   useEffect(() => {
-    if (!merchantId || !memberInput.trim()) {
+    if (!merchantId || !memberInput.trim() || selectedMember) {
       setMemberSearchResults([]);
       return;
     }
@@ -138,9 +152,11 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
       searchMembers(memberInput);
     }, 280);
     return () => clearTimeout(t);
-  }, [merchantId, memberInput, searchMembers]);
+  }, [merchantId, memberInput, selectedMember, searchMembers]);
   const kindLabel =
-    parsed.kind === 'empty'
+    selectedMember
+      ? '已選會員'
+      : parsed.kind === 'empty'
       ? null
       : parsed.kind === 'uuid'
         ? '會員 ID（UUID）'
@@ -272,7 +288,10 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
                 label="會員識別"
                 placeholder="UUID、手機或 Email（選填）"
                 value={memberInput}
-                onChange={(e) => setMemberInput(e.target.value)}
+                onChange={(e) => {
+                  setMemberInput(e.target.value);
+                  setSelectedMember(null);
+                }}
                 className="!py-1.5 !text-xs"
                 data-testid="e2e-checkout-member"
               />
@@ -287,7 +306,11 @@ export const PosCheckoutModal: React.FC<PosCheckoutModalProps> = ({
                         type="button"
                         className="w-full px-2 py-1.5 text-left text-xs hover:bg-table-head"
                         onClick={() => {
-                          setMemberInput(c.id);
+                          const label = [c.name, c.phone, c.memberCode ? `(${c.memberCode})` : '']
+                            .filter(Boolean)
+                            .join(' · ');
+                          setMemberInput(label);
+                          setSelectedMember(c);
                           setMemberSearchResults([]);
                         }}
                       >

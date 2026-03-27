@@ -16,10 +16,10 @@ export const AdminWarehousesStoresPage: React.FC = () => {
       </div>
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <div className={cardClass}>
-          <AdminStoresPage embedded />
+          <AdminWarehousesPage embedded />
         </div>
         <div className={cardClass}>
-          <AdminWarehousesPage embedded />
+          <AdminStoresPage embedded />
         </div>
       </div>
     </div>

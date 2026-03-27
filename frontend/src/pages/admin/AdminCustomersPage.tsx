@@ -22,6 +22,11 @@ import { useAdminToast } from './AdminToastContext';
 import { Modal } from '../../shared/components/Modal';
 import { getErrorMessage, showAdminApiErrorToast } from '../../shared/errors/errorMessages';
 
+const STATUS_LABEL: Record<string, string> = {
+  ACTIVE: '啟用',
+  BLOCKED: '停用',
+};
+
 export const AdminCustomersPage: React.FC = () => {
   const merchantId = useDefaultMerchantId();
   const { showToast } = useAdminToast();
@@ -165,7 +170,7 @@ export const AdminCustomersPage: React.FC = () => {
                       selected ? 'bg-brand-primary text-white' : 'bg-white text-content hover:bg-brand-surface border border-brand-surface'
                     }`}
                   >
-                    {v || '全部'}
+                    {v ? (STATUS_LABEL[v] ?? v) : '全部'}
                   </button>
                 );
               })}
@@ -390,7 +395,7 @@ export const AdminCustomersPage: React.FC = () => {
                     <td className="px-3 py-2">
                       {r.status ? (
                         <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${r.status === 'BLOCKED' ? 'bg-brand-danger/20 text-brand-danger' : 'bg-brand-success/20 text-brand-success'}`}>
-                          {r.status}
+                          {STATUS_LABEL[r.status] ?? r.status}
                         </span>
                       ) : (
                         '—'

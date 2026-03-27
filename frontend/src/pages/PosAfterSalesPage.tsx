@@ -190,6 +190,7 @@ export const PosAfterSalesPage: React.FC = () => {
       error={error ?? undefined}
       empty={!loading && !error && rows.length === 0}
       emptyMessage="目前無退換貨資料"
+      emptyDescription="若為測試環境，請先建立訂單並完成至少一次退貨／退款，或重新執行 e2e:seed（full profile）。"
       testId="e2e-pos-after-sales"
       filters={
         <div className="flex flex-wrap items-end justify-between gap-3">

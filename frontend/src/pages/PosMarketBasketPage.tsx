@@ -125,6 +125,7 @@ export const PosMarketBasketPage: React.FC = () => {
               value={preset}
               onChange={(e) => setPreset(e.target.value as PosReportsPreset)}
               data-testid="e2e-mb-preset"
+              disabled={loading}
             >
               <option value="today">今日</option>
               <option value="last7d">近 7 日</option>
@@ -139,6 +140,7 @@ export const PosMarketBasketPage: React.FC = () => {
               value={storeId}
               onChange={(e) => setStoreId(e.target.value)}
               data-testid="e2e-mb-store"
+              disabled={loading}
             >
               <option value="">全部門市</option>
               {stores.map((s) => (
@@ -157,14 +159,20 @@ export const PosMarketBasketPage: React.FC = () => {
                       : 'bg-white text-content hover:bg-brand-surface'
                   }`}
                   onClick={() => setPromoFilter(opt.value)}
+                  disabled={loading}
                 >
                   {opt.label}
                 </button>
               ))}
             </div>
+            {loading ? <span className="text-xs text-muted">資料更新中…</span> : null}
           </div>
         </div>
       </div>
+
+      {!merchantId && (
+        <Alert variant="error" className="mt-4">缺少商家設定，請先選擇商家後再查看共購分析。</Alert>
+      )}
 
       {err && (
         <Alert variant="error" className="mt-4">{err}</Alert>
@@ -232,7 +240,7 @@ export const PosMarketBasketPage: React.FC = () => {
                       <th className="px-3 py-1.5">商品 A</th>
                       <th className="px-3 py-1.5">商品 B</th>
                       <SortTh current={sortKey} k="coCount" label="共現次數" set={setSortKey} />
-                      <SortTh current={sortKey} k="support" label="支援度" set={setSortKey} />
+                      <SortTh current={sortKey} k="support" label="組合滲透率" set={setSortKey} />
                       <SortTh current={sortKey} k="confidenceAB" label="信賴度 A→B" set={setSortKey} />
                       <SortTh current={sortKey} k="confidenceBA" label="信賴度 B→A" set={setSortKey} />
                       <SortTh current={sortKey} k="lift" label="提升度" set={setSortKey} />
@@ -261,7 +269,7 @@ export const PosMarketBasketPage: React.FC = () => {
 
           {sortedPairs.length === 0 && !loading && (
             <div className="mt-6 rounded-2xl border border-dashed border-brand-surface bg-white p-4 text-sm text-muted">
-              此條件下尚無共購組合（可能訂單不足或皆為單品訂單）。
+              此條件下尚無共購組合（可能訂單不足或皆為單品訂單）。建議切換門市、改看近 30 日，或先確認測試資料已 seed。
             </div>
           )}
         </>

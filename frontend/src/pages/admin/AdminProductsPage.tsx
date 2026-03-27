@@ -353,7 +353,7 @@ export const AdminProductsPage: React.FC = () => {
                       ? num(a.costPrice)
                         : sortBy === 'stock'
                         ? stockByProduct[a.id] ?? 0
-                        : productExpiryDisplay(a);
+                        : productDaysUntilExpiry(a) ?? Number.POSITIVE_INFINITY;
       const bv =
         sortBy === 'sku'
           ? b.sku
@@ -373,7 +373,7 @@ export const AdminProductsPage: React.FC = () => {
                       ? num(b.costPrice)
                         : sortBy === 'stock'
                         ? stockByProduct[b.id] ?? 0
-                        : productExpiryDisplay(b);
+                        : productDaysUntilExpiry(b) ?? Number.POSITIVE_INFINITY;
       const delta =
         typeof av === 'number' && typeof bv === 'number'
           ? av - bv

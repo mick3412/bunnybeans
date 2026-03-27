@@ -391,7 +391,6 @@ export const PosPage: React.FC = () => {
         <section className="flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl bg-white p-2 shadow-sm shadow-black/5 sm:p-3 lg:min-w-0 lg:flex-[3]">
           <div className="mb-2 grid grid-cols-1 gap-1.5 min-[640px]:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] min-[640px]:grid-rows-[auto_auto]">
             <div className="rounded-xl bg-table-head px-2.5 py-1.5 min-[640px]:row-span-2">
-              <div className="mb-0.5 text-xs font-semibold text-muted">篩選</div>
               <div className="mb-1 flex flex-wrap items-center gap-0.5">
                 <span className="mr-0.5 text-xs font-medium text-muted">品項</span>
                 {[{ id: ALL_ID, name: '全部' }, ...categories].map((c) => {

@@ -141,7 +141,7 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
         <div>
           <label className="mb-1 block text-xs text-muted">名稱</label>
           <input
-            className={`${WH_STORES_FIELD_CLASS} min-w-[140px]`}
+            className={`${WH_STORES_FIELD_CLASS} w-full sm:w-44`}
             placeholder="名稱"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -150,7 +150,7 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
         <div>
           <label className="mb-1 block text-xs text-muted">門市（可空）</label>
           <select
-            className={`${WH_STORES_FIELD_CLASS} max-w-[180px]`}
+            className={`${WH_STORES_FIELD_CLASS} w-full sm:w-48`}
             value={storeId}
             onChange={(e) => setStoreId(e.target.value)}
           >
@@ -172,7 +172,7 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
             <tr>
               <th className="px-4 py-2 font-medium">代碼</th>
               <th className="px-4 py-2 font-medium">名稱</th>
-              <th className="min-w-[140px] px-4 py-2 font-medium">門市</th>
+              <th className="px-4 py-2 font-medium">門市</th>
               <th className={WH_STORES_TH_OP_CLASS}>操作</th>
             </tr>
           </thead>
@@ -197,7 +197,7 @@ export const AdminWarehousesPage: React.FC<{ embedded?: boolean }> = ({ embedded
                     </td>
                     <td className="px-4 py-2">
                       <select
-                        className={`${WH_STORES_FIELD_CLASS} w-full min-w-[140px]`}
+                        className={`${WH_STORES_FIELD_CLASS} w-full`}
                         value={editStoreId}
                         onChange={(e) => setEditStoreId(e.target.value)}
                         aria-label="綁定門市"

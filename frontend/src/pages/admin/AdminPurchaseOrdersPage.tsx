@@ -6,6 +6,7 @@ import { StandardListLayout } from '../../shared/components/StandardListLayout';
 import {
   listPurchaseOrders,
   listSuppliers,
+  getSupplierRankings,
   getPurchaseOrder,
   createPurchaseOrder,
   submitPo,
@@ -14,6 +15,7 @@ import {
   listReceivingNotes,
   type ReceivingNoteDto,
   type PurchaseOrderDto,
+  type SupplierRankingItem,
   type PoStatus,
   type ApiError,
 } from '../../modules/admin/purchaseApi';
@@ -80,6 +82,8 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [createPoSubmitting, setCreatePoSubmitting] = useState(false);
+  const [supplierRankings, setSupplierRankings] = useState<SupplierRankingItem[]>([]);
+  const [rankingsErr, setRankingsErr] = useState<string | null>(null);
 
   const detailProgress = useMemo(() => {
     if (!detail) return { ordered: 0, received: 0, pct: 0 };
@@ -129,6 +133,24 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!merchantId) return;
+    void (async () => {
+      setRankingsErr(null);
+      const t = new Date();
+      const to = t.toISOString().slice(0, 10);
+      t.setDate(t.getDate() - 30);
+      const from = t.toISOString().slice(0, 10);
+      const out = await getSupplierRankings({ merchantId, from, to });
+      if ('statusCode' in out) {
+        setRankingsErr(out.message ?? '載入失敗');
+        setSupplierRankings([]);
+        return;
+      }
+      setSupplierRankings(out.items ?? []);
+    })();
+  }, [merchantId]);
 
   /** 搜尋 debounce：務必呼叫 loadRef，避免 timer 閉包仍為 MOCK_MERCHANT 而把列表洗空 */
   useEffect(() => {
@@ -334,6 +356,42 @@ export const AdminPurchaseOrdersPage: React.FC = () => {
               </tbody>
             </table>
       </div>
+      )}
+      {merchantId && (
+        <div className="mt-4 rounded-xl border border-brand-surface bg-white p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-content">供應商採購排行（近 30 日）</h3>
+          {rankingsErr ? (
+            <p className="text-sm text-red-600">{rankingsErr}</p>
+          ) : supplierRankings.length === 0 ? (
+            <p className="text-sm text-muted">
+              尚無驗收完成資料
+              <span className="mt-1 block text-xs">
+                若為首次使用，請先執行 <code className="rounded bg-brand-surface px-1 py-0.5">pnpm db:seed</code> 建立示範資料
+              </span>
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-brand-surface text-muted">
+                  <tr>
+                    <th className="px-3 py-1.5">供應商</th>
+                    <th className="px-3 py-1.5 text-right">驗收筆數</th>
+                    <th className="px-3 py-1.5 text-right">採購金額</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {supplierRankings.slice(0, 10).map((r) => (
+                    <tr key={r.supplierId} className="border-t border-brand-surface">
+                      <td className="px-3 py-1.5 font-medium">{r.supplierName ?? r.supplierCode}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{r.receivingNotesCount}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums">{formatMoney(r.totalAmount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
     </StandardListLayout>
 

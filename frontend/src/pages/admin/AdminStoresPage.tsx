@@ -145,7 +145,7 @@ export const AdminStoresPage: React.FC<{ embedded?: boolean }> = ({ embedded }) 
         <div>
           <label className="mb-1 block text-xs text-muted">名稱</label>
           <input
-            className={`${WH_STORES_FIELD_CLASS} min-w-[140px]`}
+            className={`${WH_STORES_FIELD_CLASS} w-full sm:w-44`}
             placeholder="名稱"
             value={name}
             onChange={(e) => setName(e.target.value)}
