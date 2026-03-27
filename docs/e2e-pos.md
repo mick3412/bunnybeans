@@ -117,6 +117,10 @@ pnpm exec playwright test
 - 執行方式：`source .env.e2e` 後依序 `pnpm db:seed` → `E2E_PROFILE=full pnpm --filter pos-erp-backend e2e:seed` → Playwright（或見上文一鍵腳本）。
 - **full `e2e:seed`**：補貨建議驗證通過後，將條碼單品（`E2E-BC-0001`／`DEMO-TEE-BLK-M`）在預設門市倉之 **`InventoryBalance` 還原為足量**，以降低 `pos-refund`／`pos-return-stock` 等因 **`INVENTORY_INSUFFICIENT`** 條件式 skip。
 - 若仍 skip：確認未誤用 demo DB、seed／`e2e:seed` 成功（`wipeAll` 刪除順序錯誤會 P2003）。
+- 本輪結果（2026-03-27）：`e2e/pos-market-basket.spec.ts`（3 tests）+ `e2e/pos-exchange-settlement-journey.spec.ts` pass；`e2e/pos-refund.spec.ts`、`e2e/pos-return-stock.spec.ts` 為條件式 skip。
+- skip code（固定格式）：
+  - `pos-refund.spec.ts | POS_REFUND_LEGACY_UI_REMOVED | 舊退款欄位(e2e-detail-refund-amount)已移除 | 改寫 spec 對齊新退換貨流程（AfterSalesPanel）`
+  - `pos-return-stock.spec.ts | POS_RETURN_LIST_EMPTY / POS_RETURN_LEGACY_UI_REMOVED | 退換貨明細列表無可操作列或舊退貨入庫欄位已移除 | 補強 fixture 並改寫 spec 對齊新流程`
 
 ## Full profile（E2E_PROFILE=full）
 

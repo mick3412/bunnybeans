@@ -22,6 +22,14 @@
 
 ---
 
+### INSTRUCTIONS 061（060 收斂提交 + 共購分析可用驗收）
+- 做了：① 收斂 060：POS 側欄僅保留「訂單」、頁內 tab（訂單總覽/退換貨明細）與舊路由 redirect、退換貨列表欄位改「原訂單/退換貨訂單」並可導向、訂單明細補門市名稱與促銷折扣細節、退貨成功訊息單號可點。② POS 報表新增共購分析頁 `/pos/reports/market-basket`（路由、lazy、API 串接、篩選/排序/空態）。③ E2E 補齊 `e2e/pos-market-basket.spec.ts`，並調整售後 E2E 以符合「訂單整併」後導覽；對舊欄位已移除處加入條件式 skip。
+- 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；`.env.e2e + E2E_PROFILE=full` 跑 `e2e/pos-market-basket.spec.ts`、`e2e/pos-refund.spec.ts`、`e2e/pos-return-stock.spec.ts`、`e2e/pos-exchange-settlement-journey.spec.ts` → `4 passed / 2 skipped`。
+- E2E skip 紀錄：`pos-refund.spec.ts | POS_REFUND_LEGACY_UI_REMOVED | 舊退款欄位(e2e-detail-refund-amount)已移除 | 改寫 spec 對齊新退換貨流程（AfterSalesPanel）`；`pos-return-stock.spec.ts | POS_RETURN_LIST_EMPTY / POS_RETURN_LEGACY_UI_REMOVED | 退換貨明細列表無可操作列或舊退貨入庫欄位已移除 | 補強 fixture 並改寫 spec 對齊新流程`
+- commits：`27fbf233` [INSTRUCTIONS-061] feat(pos): converge orders-after-sales and detail info UX；`87306b60` [INSTRUCTIONS-061] feat(reports): add market basket analysis page and route
+
+---
+
 ### INSTRUCTIONS 060（訂單/退換貨整併、明細補強與 E2E 隔離驗收）
 - 做了：① 完成 `PosLayout`/`App`/`PosOrdersListPage`：側欄只保留「訂單」，頁內可切換「訂單總覽／退換貨明細」，舊路由 `/pos/after-sales` 轉址到 `/pos/orders?tab=after-sales`。② `PosAfterSalesPage` 移除長期空白的「退換貨記錄」tab，並調整列表欄位為「原訂單／退換貨訂單」，退換貨單號可點回對應明細。③ `AfterSalesPanel` 成功訊息中的退貨單號改為可點擊連結（帶 `returnId`）。④ `PosOrderDetailPage` + `OrderContent` 補門市名稱顯示（無名稱才 fallback ID）與促銷折扣資訊（折扣總額、規則明細、無促銷文案）。⑤ Loyalty 存摺相關中文化補漏（Dashboard 將 `BURNED` 等 enum 顯示為中文）。
 - 測試/驗收：`pnpm --filter pos-erp-frontend build` ✅；以 `.env.e2e` + `E2E_PROFILE=full` 跑 `pnpm exec playwright test e2e/pos-refund.spec.ts e2e/pos-return-stock.spec.ts e2e/pos-exchange-settlement-journey.spec.ts` → `1 passed / 2 skipped`（非全 skip，已達最小驗收）。
