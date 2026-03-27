@@ -19,7 +19,12 @@ function ean13Taiwan(base: string): string {
   return digits.join('') + check;
 }
 
-/** 清除所有業務表（含 E2E 測試資料），依 FK 從子表到父表順序 */
+/**
+ * 清除所有業務表（含 E2E 測試資料），依 FK 從子表到父表順序。
+ * 關鍵依賴：`PosReturn.orderId` → `PosOrder`（須先刪 `posReturn`）；
+ * `PosOrderItem`／`PosOrderPayment` → `PosOrder`；`InventoryEvent`／`InventoryBalance` 在訂單之後；
+ * `FinanceEvent` 可早於或晚於訂單（無 FK 至 PosOrder id 時）；`Customer` 前須清 `pointLedger` 等。
+ */
 async function wipeAll() {
   await prisma.loyaltyCouponIssue.deleteMany();
   await prisma.crmCouponDispatchRule.deleteMany();
@@ -1766,6 +1771,77 @@ async function main() {
   const orderT3 = await posSaleGuest({ orderNumber: `DEMO-POS-${y}-T3`, subtotal: 99, discount: 0, total: 99, method: 'CASH', occurredAt: daysAgo(2), lines: [{ productId: pBowl.id, qty: 1, unitPrice: 99 }], note: '近7日' });
   const orderT4 = await posSale({ orderNumber: `DEMO-POS-${y}-T4`, customerId: custMem1.id, subtotal: 198, discount: 0, total: 198, method: 'CASH', occurredAt: daysAgo(3), lines: [{ productId: pBowl.id, qty: 2, unitPrice: 99 }], note: '近7日' });
   const orderT5 = await posSale({ orderNumber: `DEMO-POS-${y}-T5`, customerId: custMem2.id, subtotal: 150, discount: 0, total: 150, method: 'CASH', occurredAt: daysAgo(5), lines: [{ productId: pTee.id, qty: 1, unitPrice: 150 }], note: '近7日' });
+  /**
+   * 共構分析用大量訂單：加大樣本量（分散近 60 天）。
+   * - 先補庫存，避免大量 SALE_OUT 造成負庫存。
+   * - 混合會員與匿名客，保留會員貢獻、付款方式、分類分布的可觀察性。
+   */
+  await addBalanceIncrement(pHay.id, 1200, 'SEED-BULK-ANALYTICS', '共構分析大量訂單補庫：牧草', daysAgo(60));
+  await addBalanceIncrement(pBowl.id, 1200, 'SEED-BULK-ANALYTICS', '共構分析大量訂單補庫：食盆', daysAgo(60));
+  await addBalanceIncrement(pSnack.id, 1200, 'SEED-BULK-ANALYTICS', '共構分析大量訂單補庫：零食', daysAgo(60));
+  await addBalanceIncrement(pBottle.id, 1200, 'SEED-BULK-ANALYTICS', '共構分析大量訂單補庫：水壺', daysAgo(60));
+  await addBalanceIncrement(pFeed.id, 1200, 'SEED-BULK-ANALYTICS', '共構分析大量訂單補庫：飼料', daysAgo(60));
+
+  const analyticsOrderCount = 300;
+  const analyticsCustomers = [
+    custVip!.id,
+    custGold.id,
+    custMem1.id,
+    custMem2.id,
+    custMem3.id,
+    custMem5.id,
+    custMem6.id,
+    custMem7.id,
+    custMem8.id,
+    custMem9.id,
+    custMem10.id,
+    custMem17.id,
+    custMem20.id,
+    custMem25.id,
+    custMem30.id,
+  ];
+  const analyticsProducts = [
+    { productId: pHay.id, price: 150 },
+    { productId: pBowl.id, price: 99 },
+    { productId: pSnack.id, price: 49 },
+    { productId: pBottle.id, price: 129 },
+    { productId: pFeed.id, price: 280 },
+  ];
+  for (let i = 0; i < analyticsOrderCount; i++) {
+    const item = analyticsProducts[i % analyticsProducts.length]!;
+    const qty = i % 4 === 0 ? 2 : 1;
+    const subtotal = item.price * qty;
+    const discount = i % 10 === 0 ? Math.min(20, Math.floor(subtotal * 0.05)) : 0;
+    const total = subtotal - discount;
+    const method = i % 5 === 0 ? 'CARD' : 'CASH';
+    const occurredAt = new Date(daysAgo(i % 60).getTime() + (i % 12) * 3600000 + (i % 60) * 60000);
+    const orderNumber = `DEMO-POS-${y}-MASS-${String(i + 1).padStart(3, '0')}`;
+    const lines = [{ productId: item.productId, qty, unitPrice: item.price }];
+    if (i % 4 === 0) {
+      await posSaleGuest({
+        orderNumber,
+        subtotal,
+        discount,
+        total,
+        method,
+        occurredAt,
+        lines,
+        note: '共構分析樣本（匿名）',
+      });
+    } else {
+      await posSale({
+        orderNumber,
+        customerId: analyticsCustomers[i % analyticsCustomers.length]!,
+        subtotal,
+        discount,
+        total,
+        method,
+        occurredAt,
+        lines,
+        note: '共構分析樣本（會員）',
+      });
+    }
+  }
   const ts = (d: number, offsetMin = 1) => new Date(daysAgo(d).getTime() + offsetMin * 60000);
   const ledgerRows: {
     customerId: string;

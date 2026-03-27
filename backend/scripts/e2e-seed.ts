@@ -629,6 +629,22 @@ export async function runE2ESeed(opts?: { profile?: string; client?: PrismaClien
       );
     }
 
+    // Replenishment 區塊將同一品項（DEMO-TEE-BLK-M = 條碼 E2E-BC-0001）庫存打低；驗證通過後還原 `InventoryBalance`，避免 POS 結帳／售後 E2E（pos-refund、pos-return-stock）409 INVENTORY_INSUFFICIENT。
+    await client.inventoryBalance.upsert({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      update: { onHandQty: 500 },
+      create: { productId: product.id, warehouseId: warehouse.id, onHandQty: 500 },
+    });
+    const restockBal = await client.inventoryBalance.findUnique({
+      where: { productId_warehouseId: { productId: product.id, warehouseId: warehouse.id } },
+      select: { onHandQty: true },
+    });
+    if ((restockBal?.onHandQty ?? 0) < 50) {
+      throw new Error(
+        `E2E fixture invalid: POS barcode stock not restored after replenishment block (productId=${product.id} warehouseId=${warehouse.id} onHandQty=${restockBal?.onHandQty ?? 0})`,
+      );
+    }
+
     // ---- Expiring inventory: full gate expects the UI to find at least one batch ----
     // Admin expiring inventory page default `daysAhead` is 30.
     const expiringDaysAhead = 30;
